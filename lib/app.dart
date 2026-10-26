@@ -40,6 +40,7 @@ class _SabzineAppState extends State<SabzineApp> {
       Future<void>.delayed(widget.splashDuration),
       if (widget.restoreOnStart) store.restoreQuestionnaire(),
       if (widget.restoreOnStart) store.restoreNutritionLog(),
+      if (widget.restoreOnStart) store.restoreWorkspaceSettings(),
     ]);
     if (mounted) setState(() => starting = false);
   }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'questionnaire_storage.dart';
 import 'nutrition_log_storage.dart';
 import 'day.dart';
+import 'form_config.dart';
+import 'workspace_settings_storage.dart';
 
 enum AppRole { user, expert, admin }
 
@@ -78,6 +80,7 @@ class QuestionnaireData {
   String budget = 'متوسط', cooking = 'کمتر از ۳۰ دقیقه', dislikes = '';
   final Set<String> health = {'موردی ندارم'};
   bool consent = false;
+  final Map<String, dynamic> extraAnswers = {};
   bool get pregnant => lifeStage == 'باردار هستم';
   bool get weightGoal => goal == 'کاهش وزن' || goal == 'افزایش وزن';
   QuestionnaireData copy() => QuestionnaireData.fromJson(toJson());
@@ -109,6 +112,11 @@ class QuestionnaireData {
     cooking = other.cooking;
     dislikes = other.dislikes;
     consent = other.consent;
+    extraAnswers
+      ..clear()
+      ..addAll(
+        jsonDecode(jsonEncode(other.extraAnswers)) as Map<String, dynamic>,
+      );
     health
       ..clear()
       ..addAll((copy['health'] as List).cast<String>());
@@ -190,6 +198,7 @@ class QuestionnaireData {
     'cooking': cooking,
     'dislikes': dislikes.trim(),
     'consent': consent,
+    'extraAnswers': extraAnswers,
   };
   factory QuestionnaireData.fromJson(Map<String, dynamic> json) {
     final q = QuestionnaireData.empty();
@@ -228,6 +237,11 @@ class QuestionnaireData {
     q.cooking = text('cooking', 'کمتر از ۳۰ دقیقه');
     q.dislikes = text('dislikes');
     q.consent = json['consent'] == true;
+    if (json['extraAnswers'] is Map) {
+      q.extraAnswers.addAll(
+        jsonDecode(jsonEncode(json['extraAnswers'])) as Map<String, dynamic>,
+      );
+    }
     return q;
   }
   Map<String, String> get summary => {
@@ -505,10 +519,16 @@ class DietRequest {
 }
 
 class ChatMessage {
-  const ChatMessage(this.text, this.sender, {this.support = false});
+  const ChatMessage(
+    this.text,
+    this.sender, {
+    this.support = false,
+    this.threadId = '',
+  });
   final String text;
   final AppRole sender;
   final bool support;
+  final String threadId;
 }
 
 class FoodRecord {
@@ -517,10 +537,72 @@ class FoodRecord {
 }
 
 class ExpertRecord {
-  ExpertRecord(this.name, this.specialty, this.active, this.capacity);
-  String name, specialty;
+  ExpertRecord(
+    this.name,
+    this.specialty,
+    this.active,
+    this.capacity, {
+    this.medicalCode = '',
+    this.address = '',
+    this.clinicPhone = '',
+    this.mobile = '',
+    this.city = '',
+    this.degree = '',
+    this.experience = '',
+    this.hours = '',
+    this.bio = '',
+  });
+  String name,
+      specialty,
+      medicalCode,
+      address,
+      clinicPhone,
+      mobile,
+      city,
+      degree,
+      experience,
+      hours,
+      bio;
   bool active;
   int capacity;
+  ExpertRecord copy() => ExpertRecord.fromJson(toJson());
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'specialty': specialty,
+    'active': active,
+    'capacity': capacity,
+    'medicalCode': medicalCode,
+    'address': address,
+    'clinicPhone': clinicPhone,
+    'mobile': mobile,
+    'city': city,
+    'degree': degree,
+    'experience': experience,
+    'hours': hours,
+    'bio': bio,
+  };
+  factory ExpertRecord.fromJson(Map<String, dynamic> j) => ExpertRecord(
+    j['name'] as String,
+    j['specialty'] as String,
+    j['active'] == true,
+    j['capacity'] as int? ?? 10,
+    medicalCode: j['medicalCode'] as String? ?? '',
+    address: j['address'] as String? ?? '',
+    clinicPhone: j['clinicPhone'] as String? ?? '',
+    mobile: j['mobile'] as String? ?? '',
+    city: j['city'] as String? ?? '',
+    degree: j['degree'] as String? ?? '',
+    experience: j['experience'] as String? ?? '',
+    hours: j['hours'] as String? ?? '',
+    bio: j['bio'] as String? ?? '',
+  );
+}
+
+class ChatThread {
+  ChatThread(this.id, this.patientName, {this.support = false});
+  final String id;
+  String patientName;
+  final bool support;
 }
 
 /// Demo UI data. Only the questionnaire has optional local persistence; no backend.
@@ -528,8 +610,10 @@ class DemoStore extends ChangeNotifier {
   DemoStore({
     QuestionnaireStorage? storage,
     NutritionLogStorage? nutritionStorage,
+    WorkspaceSettingsStorage? settingsStorage,
     DateTime Function()? clock,
   }) : _storage = storage,
+       _settingsStorage = settingsStorage,
        _nutritionStorage = nutritionStorage,
        _clock = clock ?? DateTime.now {
     final approved = requests[4];
@@ -543,6 +627,135 @@ class DemoStore extends ChangeNotifier {
     requests.last.revisionRequested = true;
     requests.last.revisionReason = 'زمان تهیهٔ غذاها زیاده';
   }
+  final WorkspaceSettingsStorage? _settingsStorage;
+  FormConfiguration formConfiguration = FormConfiguration();
+  Map<String, Object?> settingsSnapshot({
+    FormConfiguration? form,
+    ExpertRecord? expert,
+  }) => {
+    'version': 1,
+    'form': (form ?? formConfiguration).toJson(),
+    'expert': (expert ?? experts.first).toJson(),
+  };
+  Future<void> restoreWorkspaceSettings() async {
+    try {
+      final raw = await _settingsStorage?.read();
+      if (raw == null) return;
+      final data = jsonDecode(raw);
+      if (data is! Map<String, dynamic> || data['version'] != 1) return;
+      if (data['form'] is Map) {
+        final form = FormConfiguration.fromJson(
+          Map<String, dynamic>.from(data['form'] as Map),
+        );
+        if (form.valid) formConfiguration = form;
+      }
+      if (data['expert'] is Map) {
+        _applyExpert(
+          ExpertRecord.fromJson(
+            Map<String, dynamic>.from(data['expert'] as Map),
+          ),
+        );
+      }
+      if (questionnaireComplete &&
+          formConfiguration.validateExtras(questionnaire.extraAnswers) !=
+              null) {
+        questionnaireComplete = false;
+        questionnaireNeedsReview = true;
+      }
+      update();
+    } catch (_) {
+      debugPrint('Workspace settings restore unavailable.');
+    }
+  }
+
+  Future<void> saveFormConfiguration(FormConfiguration next) async {
+    final copy = next.copy();
+    if (!copy.valid) throw StateError('سؤال‌ها و گزینه‌ها را بررسی کن.');
+    await _settingsStorage?.write(jsonEncode(settingsSnapshot(form: copy)));
+    formConfiguration = copy;
+    if (questionnaire.hasBasicAnswers) {
+      questionnaireComplete =
+          questionnaire.isComplete &&
+          copy.validateExtras(questionnaire.extraAnswers) == null;
+      questionnaireNeedsReview = !questionnaireComplete;
+    }
+    update();
+  }
+
+  void _applyExpert(ExpertRecord next) {
+    final previous = experts.first.name;
+    experts[0] = next.copy();
+    for (final r in requests) {
+      if (r.specialist == previous) r.specialist = next.name;
+    }
+  }
+
+  Future<void> saveExpertProfile(ExpertRecord next) async {
+    final copy = next.copy();
+    await _settingsStorage?.write(jsonEncode(settingsSnapshot(expert: copy)));
+    _applyExpert(copy);
+    update();
+  }
+
+  ExpertRecord? get assignedDoctor =>
+      experts.where((e) => e.name == userRequest.specialist).firstOrNull;
+  final chatThreads = <ChatThread>[
+    ChatThread('user-main', 'سارا احمدی'),
+    ChatThread('patient-amir', 'امیر حسینی'),
+    ChatThread('patient-neda', 'ندا محمدی'),
+    ChatThread('support-main', 'سارا احمدی', support: true),
+    ChatThread('support-amir', 'امیر حسینی', support: true),
+  ];
+  final Map<AppRole, Set<ChatMessage>> _seenMessages = {};
+  String messageThread(ChatMessage m) => m.threadId.isNotEmpty
+      ? m.threadId
+      : (m.support ? 'support-main' : 'user-main');
+  List<ChatMessage> threadMessages(String id) =>
+      messages.where((m) => messageThread(m) == id).toList();
+  ChatThread thread(String id) => chatThreads.firstWhere((t) => t.id == id);
+  String patientName(ChatThread t) =>
+      t.id == 'user-main' || t.id == 'support-main'
+      ? questionnaire.name
+      : t.patientName;
+  String threadTitle(ChatThread t, AppRole role) => role == AppRole.user
+      ? (t.support ? 'پشتیبانی سبزینه' : userRequest.specialist)
+      : patientName(t);
+  bool incoming(ChatMessage m, AppRole role) => role == AppRole.user
+      ? m.sender != AppRole.user
+      : m.sender == AppRole.user;
+  int unreadCount(ChatThread t, AppRole role) => threadMessages(t.id)
+      .where(
+        (m) =>
+            incoming(m, role) && !(_seenMessages[role]?.contains(m) ?? false),
+      )
+      .length;
+  void markThreadRead(String id, AppRole role) {
+    (_seenMessages[role] ??= <ChatMessage>{}).addAll(threadMessages(id));
+  }
+
+  List<ChatThread> visibleThreads(AppRole role, {bool support = false}) {
+    final result = chatThreads
+        .where(
+          (t) => role == AppRole.user
+              ? (support
+                    ? t.id == 'support-main'
+                    : t.id == 'user-main' || t.id == 'support-main')
+              : t.support == (role == AppRole.admin),
+        )
+        .toList();
+    result.sort(
+      (a, b) => messages
+          .lastIndexWhere((m) => messageThread(m) == b.id)
+          .compareTo(messages.lastIndexWhere((m) => messageThread(m) == a.id)),
+    );
+    return result;
+  }
+
+  List<ChatThread> receivedThreads(AppRole role, {bool support = false}) =>
+      visibleThreads(role, support: support)
+          .where((t) => threadMessages(t.id).any((m) => incoming(m, role)))
+          .toList();
+
   final QuestionnaireStorage? _storage;
   final NutritionLogStorage? _nutritionStorage;
   final DateTime Function() _clock;
@@ -639,8 +852,10 @@ class DemoStore extends ChangeNotifier {
       if (!restored.hasBasicAnswers) return;
       latestWeight = double.parse(latinDigits(restored.weight));
       questionnaire.copyFrom(restored);
-      questionnaireComplete = restored.isComplete;
-      questionnaireNeedsReview = !restored.isComplete;
+      questionnaireComplete =
+          restored.isComplete &&
+          formConfiguration.validateExtras(restored.extraAnswers) == null;
+      questionnaireNeedsReview = !questionnaireComplete;
       userRequest.name = restored.name;
       userRequest.goal = restored.goal;
       update();
@@ -656,7 +871,8 @@ class DemoStore extends ChangeNotifier {
     required bool onboarding,
   }) async {
     final snapshot = answers.copy();
-    if (!snapshot.isComplete) {
+    if (!snapshot.isComplete ||
+        formConfiguration.validateExtras(snapshot.extraAnswers) != null) {
       throw StateError('اطلاعات ضروری پرسش‌نامه کامل نشده است.');
     }
     await _storage?.write(
@@ -710,6 +926,28 @@ class DemoStore extends ChangeNotifier {
       AppRole.admin,
       support: true,
     ),
+    const ChatMessage(
+      'برای وعدهٔ ناهار جایگزین ساده‌تری می‌خواهم.',
+      AppRole.user,
+      threadId: 'patient-amir',
+    ),
+    const ChatMessage(
+      'امروز پیاده‌روی را شروع کردم؛ زمان میان‌وعده مناسب است؟',
+      AppRole.user,
+      threadId: 'patient-neda',
+    ),
+    const ChatMessage(
+      'نسخهٔ برنامه‌ام را در بخش برنامه نمی‌بینم.',
+      AppRole.user,
+      support: true,
+      threadId: 'support-main',
+    ),
+    const ChatMessage(
+      'لطفاً زمان بررسی درخواستم را پیگیری کنید.',
+      AppRole.user,
+      support: true,
+      threadId: 'support-amir',
+    ),
   ];
   final requests = <DietRequest>[
     DietRequest(
@@ -762,7 +1000,21 @@ class DemoStore extends ChangeNotifier {
     FoodRecord('پنیر', 'لبنیات', 'گرم', 'لبنیات'),
   ];
   final experts = <ExpertRecord>[
-    ExpertRecord('دکتر نازنین رضایی', 'تغذیه و رژیم‌درمانی', true, 10),
+    ExpertRecord(
+      'دکتر نازنین رضایی',
+      'تغذیه و رژیم‌درمانی',
+      true,
+      10,
+      medicalCode: '۱۲۳۴۵۶',
+      address: 'خیابان نمونه، ساختمان سلامت، طبقهٔ دوم',
+      clinicPhone: '۰۲۱۰۰۰۰۰۰۰۰',
+      mobile: '۰۹۱۲۰۰۰۰۰۰۰',
+      city: 'تهران',
+      degree: 'دکترای تخصصی تغذیه',
+      experience: '۸',
+      hours: 'شنبه تا چهارشنبه، ۱۶ تا ۲۰',
+      bio: 'همراه شما برای ساختن عادت‌های غذایی پایدار.',
+    ),
     ExpertRecord('دکتر مهدی کاظمی', 'تغذیه بالینی', true, 8),
     ExpertRecord('دکتر سحر مرادی', 'تغذیه و رژیم‌درمانی', false, 6),
   ];
@@ -943,14 +1195,24 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
-  void send(String text, {bool support = false}) {
+  void send(String text, {bool support = false, String? threadId}) {
     if (text.trim().isEmpty) return;
+    final id = threadId ?? (support ? 'support-main' : 'user-main'),
+        target = thread(id),
+        sender = role ?? AppRole.user;
+    if (sender == AppRole.user && id != 'user-main' && id != 'support-main') {
+      return;
+    }
+    if (sender == AppRole.expert && target.support ||
+        sender == AppRole.admin && !target.support) {
+      return;
+    }
     messages.add(
-      ChatMessage(text.trim(), role ?? AppRole.user, support: support),
+      ChatMessage(text.trim(), sender, support: target.support, threadId: id),
     );
-    if (role == AppRole.user &&
-        userRequest.status == PlanStatus.needsInfo &&
-        !support) {
+    if (sender == AppRole.user &&
+        id == 'user-main' &&
+        userRequest.status == PlanStatus.needsInfo) {
       userRequest.status = PlanStatus.reviewing;
     }
     update();

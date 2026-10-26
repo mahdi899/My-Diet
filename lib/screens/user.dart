@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets/ui.dart';
 import 'questionnaire.dart';
 import 'shared.dart';
+import 'doctor.dart';
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key, required this.onPlan});
@@ -119,10 +120,11 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                 ),
               const WeightJourneyCard(),
               Surface(
+                onTap: () => pushPage(context, const DoctorDetailsScreen()),
                 padding: 16,
                 child: Row(
                   children: [
-                    const PersonAvatar('نازنین', color: Color(0xFFF3E5D6)),
+                    PersonAvatar(r.specialist, color: const Color(0xFFF3E5D6)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -934,7 +936,7 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Tag(
                   expert
-                      ? 'متخصص نمونه'
+                      ? 'کد نظام پزشکی: ${store.experts.first.medicalCode.isEmpty ? 'ثبت نشده' : store.experts.first.medicalCode}'
                       : store.questionnaireComplete
                       ? 'اطلاعات تکمیل شده'
                       : 'حساب نمایشی',
@@ -959,6 +961,12 @@ class ProfileScreen extends StatelessWidget {
                       context,
                       const QuestionnaireScreen(editing: true),
                     ),
+                  ),
+                if (!expert)
+                  MenuRow(
+                    'مشخصات دکتر',
+                    Icons.medical_information_outlined,
+                    onTap: () => pushPage(context, const DoctorDetailsScreen()),
                   ),
                 if (!expert)
                   MenuRow(
@@ -1004,12 +1012,13 @@ class ProfileScreen extends StatelessWidget {
                     store.update();
                   },
                 ),
-                MenuRow(
-                  'پشتیبانی',
-                  Icons.support_agent,
-                  onTap: () =>
-                      pushPage(context, const MessagesScreen(support: true)),
-                ),
+                if (!expert)
+                  MenuRow(
+                    'پشتیبانی',
+                    Icons.support_agent,
+                    onTap: () =>
+                        pushPage(context, const MessagesScreen(support: true)),
+                  ),
                 MenuRow(
                   'حریم خصوصی',
                   Icons.privacy_tip_outlined,
@@ -1100,6 +1109,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    if (store.role == AppRole.expert) return const ExpertProfileEditor();
     if (!initialized) {
       controller.text = store.role == AppRole.expert
           ? store.experts.first.name

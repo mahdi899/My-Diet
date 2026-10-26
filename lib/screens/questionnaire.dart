@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/extra_questions.dart';
 
 class QuestionnaireScreen extends StatefulWidget {
   const QuestionnaireScreen({
@@ -58,6 +59,13 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
   bool validStep() {
     if (!form.currentState!.validate()) return false;
+    final error = DemoScope.of(
+      context,
+    ).formConfiguration.validateExtras(answers.extraAnswers, section: step);
+    if (error != null) {
+      showToast(context, error);
+      return false;
+    }
     final selected = switch (step) {
       1 => QuestionnaireData.goals.contains(answers.goal),
       2 => answers.health.isNotEmpty,
@@ -99,7 +107,15 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     child: TextFormField(
       key: ValueKey(label),
       initialValue: value,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: DemoScope.of(
+          context,
+        ).formConfiguration.labelForOriginal(label),
+        helperText: DemoScope.of(
+          context,
+        ).formConfiguration.helperForOriginal(label),
+        helperMaxLines: 3,
+      ),
       onChanged: onChanged,
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
@@ -119,19 +135,38 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     String selected,
     List<(String, String, IconData)> choices,
     ValueChanged<String> choose,
-  ) => Column(
-    children: choices
-        .map(
-          (c) => ChoiceCard(
-            c.$1,
+  ) {
+    final config = DemoScope.of(context).formConfiguration;
+    final id = choices.first.$1 == 'کاهش وزن'
+        ? 'goal'
+        : choices.first.$1 == 'بیشتر نشسته'
+        ? 'activity'
+        : 'preference';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          config.label(id),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        if (config.question(id).helper.isNotEmpty)
+          Text(
+            config.question(id).helper,
+            style: const TextStyle(color: muted, fontSize: 12),
+          ),
+        const SizedBox(height: 10),
+        for (final c in choices)
+          ChoiceCard(
+            config.choice(id, c.$1),
             subtitle: c.$2,
             icon: c.$3,
             selected: selected == c.$1,
             onTap: () => setState(() => choose(c.$1)),
           ),
-        )
-        .toList(),
-  );
+      ],
+    );
+  }
+
   Widget select(
     String key,
     String label,
@@ -145,13 +180,22 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       key: ValueKey(key),
       initialValue: values.contains(value) ? value : null,
       isExpanded: true,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: DemoScope.of(context).formConfiguration.label(key, label),
+        helperText:
+            DemoScope.of(context).formConfiguration.question(key).helper.isEmpty
+            ? null
+            : DemoScope.of(context).formConfiguration.question(key).helper,
+        helperMaxLines: 3,
+      ),
       items: values
           .map(
             (v) => DropdownMenuItem(
               value: v,
               child: Text(
-                display?.call(v) ?? v,
+                DemoScope.of(
+                  context,
+                ).formConfiguration.choice(key, display?.call(v) ?? v),
                 style: const TextStyle(fontSize: 13),
               ),
             ),
@@ -360,8 +404,8 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       2 => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'بیماری یا شرایطی که پزشک تشخیص داده را انتخاب کن؛ می‌توانی چند مورد را بزنی.',
+          Text(
+            store.formConfiguration.label('health'),
             style: TextStyle(fontSize: 12, color: muted, height: 1.9),
           ),
           const SizedBox(height: 12),
@@ -385,7 +429,10 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 if (q.pregnant) 'بارداری پرخطر با نظر پزشک',
               ])
                 FilterChip(
-                  label: Text(item, style: const TextStyle(fontSize: 12)),
+                  label: Text(
+                    store.formConfiguration.choice('health', item),
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   selected: q.health.contains(item),
                   onSelected: (v) => setState(() {
                     if (item == 'موردی ندارم') {
@@ -529,7 +576,12 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       ),
       _ => Column(
         children: [
-          Surface(child: InfoRows(q.summary)),
+          Surface(
+            child: InfoRows({
+              ...q.summary,
+              ...store.formConfiguration.extraSummary(q.extraAnswers),
+            }),
+          ),
           const SizedBox(height: 16),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
@@ -615,19 +667,28 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
               ),
             ),
             Heading(
-              [
-                'کمی با هم آشنا بشیم',
-                'هدف و شرایط بدنی تو',
-                'سلامت و محدودیت‌های پزشکی',
-                'فعالیت و عادت‌های روزانه',
-                'سلیقهٔ غذایی تو',
-                'همه‌چیز درسته؟',
-              ][step],
+              store.formConfiguration.sections[step],
               subtitle: widget.editing
                   ? 'جواب‌های قبلی آمادهٔ ویرایش هستند.'
                   : 'تا جای ممکن فقط گزینهٔ مناسب خودت رو انتخاب کن.',
             ),
-            Form(key: form, child: content),
+            Form(
+              key: form,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  content,
+                  if (step < 5)
+                    for (final question
+                        in store.formConfiguration.extraQuestions(step))
+                      ExtraQuestionField(
+                        key: ValueKey(question.id),
+                        question: question,
+                        answers: q.extraAnswers,
+                      ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

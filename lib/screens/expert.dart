@@ -14,114 +14,131 @@ class ExpertHome extends StatelessWidget {
   const ExpertHome({super.key});
   @override
   Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    final pending = store.requests
-        .where((r) => r.status != PlanStatus.ready)
-        .length;
-    final revised = store.requests.where((r) => r.revisionRequested).length;
+    final s = DemoScope.of(context),
+        pending = s.requests.where((r) => r.status != PlanStatus.ready).length;
+    final revisions = s.requests.where((r) => r.revisionRequested).toList(),
+        threads = s.receivedThreads(AppRole.expert);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('روز بخیر، دکتر رضایی'),
-        actions: [
-          IconButton(
-            tooltip: 'پیام‌ها',
-            onPressed: () => pushPage(context, const MessagesScreen()),
-            icon: const Icon(Icons.chat_bubble_outline),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text('روز بخیر، ${s.experts.first.name}')),
       body: PageBody(
         children: [
-          const Heading(
-            'امروز هم همراهیم',
-            subtitle: 'هر برنامه، یک قدم برای حال بهتر یک نفر.',
+          const Surface(
+            child: Heading(
+              'با دانش تو، یک قدم نزدیک‌تر به سلامت',
+              subtitle: 'هر گفت‌وگو فرصتی برای همراهی بهتر با کاربر است.',
+            ),
           ),
           MetricGrid(
             items: [
-              Metric(
-                'در انتظار و بررسی',
-                fa(pending),
-                Icons.assignment_outlined,
-              ),
-              Metric('درخواست اصلاح', fa(revised), Icons.edit_note_rounded),
+              for (final metric in [
+                ('در انتظار و بررسی', pending, Icons.assignment_outlined),
+                (
+                  'درخواست تغییر برنامه',
+                  revisions.length,
+                  Icons.edit_note_outlined,
+                ),
+              ])
+                Surface(
+                  color: pine,
+                  padding: 17,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(metric.$3, color: const Color(0xFFCCE6AD)),
+                      const SizedBox(height: 10),
+                      Text(
+                        fa(metric.$2),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 27,
+                        ),
+                      ),
+                      Text(
+                        metric.$1,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
-          Surface(
-            color: pine,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'ادامهٔ بررسی',
-                  style: TextStyle(color: Color(0xFFBFD5AA), fontSize: 12),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'پروندهٔ ${store.userRequest.name}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'اطلاعات و پیش‌نویس نمونه برای بررسی در دسترس است.',
-                  style: TextStyle(color: Color(0xFFCEDCC3), fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: sage,
-                    foregroundColor: pine,
-                  ),
-                  onPressed: () => openReview(context, store.userRequest),
-                  child: const Text('بررسی برنامه'),
-                ),
-              ],
+          Heading(
+            'پیام‌های دریافت‌شده',
+            subtitle: 'آخرین پیام کاربران',
+            action: TextButton(
+              onPressed: () => pushPage(context, const MessagesScreen()),
+              child: const Text('همهٔ گفتگوها'),
             ),
           ),
-          const Heading('دسترسی سریع'),
-          Surface(
-            padding: 12,
-            child: Column(
-              children: [
-                MenuRow(
-                  'برنامه‌های بررسی‌شده',
-                  Icons.task_alt,
-                  onTap: () => pushPage(
-                    context,
-                    const RequestListScreen(initialFilter: 'بررسی‌شده'),
-                  ),
-                ),
-                MenuRow(
-                  'درخواست‌های اصلاح',
-                  Icons.edit_outlined,
-                  onTap: () => pushPage(
-                    context,
-                    const RequestListScreen(initialFilter: 'اصلاح‌ها'),
-                  ),
-                ),
-                MenuRow(
-                  'منتظر پاسخ کاربر',
-                  Icons.hourglass_empty,
-                  onTap: () => pushPage(
-                    context,
-                    const RequestListScreen(initialFilter: 'منتظر پاسخ'),
-                  ),
-                ),
-                MenuRow(
-                  'کاربران من',
-                  Icons.people_outline,
-                  onTap: () => pushPage(context, const ExpertPatientsScreen()),
-                ),
-              ],
+          if (threads.isEmpty)
+            const EmptyPanel(
+              'پیام تازه‌ای نیست',
+              'پیام‌های کاربران اینجا قرار می‌گیرند.',
+              icon: Icons.chat_bubble_outline,
+            ),
+          for (final thread in threads.take(4))
+            ConversationTile(thread: thread, receivedOnly: true),
+          Heading(
+            'درخواست‌های تغییر برنامه',
+            subtitle: '${fa(revisions.length)} درخواست اصلاح',
+            action: TextButton(
+              onPressed: () => pushPage(
+                context,
+                const RequestListScreen(initialFilter: 'اصلاح‌ها'),
+              ),
+              child: const Text('همه'),
             ),
           ),
-          const Heading('درخواست‌های اخیر'),
-          ...store.requests
-              .take(3)
-              .map((r) => RequestTile(r, onTap: () => openReview(context, r))),
+          if (revisions.isEmpty)
+            const EmptyPanel(
+              'درخواست تغییری نیست',
+              'وقتی کاربری تغییر برنامه بخواهد، اینجا نمایش داده می‌شود.',
+              icon: Icons.edit_note_outlined,
+            ),
+          for (final r in revisions)
+            Surface(
+              onTap: () => openReview(context, r),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Heading(r.name, subtitle: 'درخواست ${fa(r.id)}'),
+                  const SizedBox(height: 10),
+                  Tag(
+                    r.revisionReason.isEmpty
+                        ? 'درخواست تغییر برنامه'
+                        : r.revisionReason,
+                    warning: true,
+                  ),
+                  if (r.revisionDetails.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      r.revisionDetails,
+                      style: const TextStyle(
+                        color: muted,
+                        fontSize: 12,
+                        height: 1.8,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  const Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'بررسی درخواست تغییر',
+                          style: TextStyle(color: pine, fontSize: 12),
+                        ),
+                      ),
+                      Icon(Icons.chevron_left, color: pine),
+                    ],
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -600,7 +617,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
               const SizedBox(height: 15),
               InfoRows(
                 isUser
-                    ? store.questionnaire.summary
+                    ? {
+                        ...store.questionnaire.summary,
+                        ...store.formConfiguration.extraSummary(
+                          store.questionnaire.extraAnswers,
+                        ),
+                      }
                     : {
                         'پرونده': 'اطلاعات نمونه',
                         'هدف': store.request(widget.requestId).goal,

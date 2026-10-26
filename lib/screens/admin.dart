@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
+import 'shared.dart';
+import 'question_admin.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
@@ -15,6 +17,33 @@ class AdminHome extends StatelessWidget {
           const Heading(
             'نمای کلی مجموعه',
             subtitle: 'آمار و اطلاعات این نسخه نمونه هستند.',
+          ),
+          Surface(
+            color: sage,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.quiz_outlined, color: pine, size: 30),
+                const SizedBox(height: 10),
+                const Heading(
+                  'مدیریت پرسش‌نامه',
+                  subtitle:
+                      'متن سؤال‌ها، گزینه‌ها و سؤال‌های تکمیلی را مدیریت کن.',
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${fa(store.formConfiguration.questions.length)} سؤال در ${fa(store.formConfiguration.sections.length)} مرحله',
+                  style: const TextStyle(color: muted, fontSize: 12),
+                ),
+                const SizedBox(height: 14),
+                PrimaryButton(
+                  'ویرایش سؤال‌ها',
+                  onPressed: () =>
+                      pushPage(context, const QuestionAdminScreen()),
+                  icon: Icons.edit_note_outlined,
+                ),
+              ],
+            ),
           ),
           MetricGrid(
             items: [
@@ -100,62 +129,23 @@ class AdminHome extends StatelessWidget {
               ],
             ),
           ),
-          Surface(
-            color: const Color(0xFFFFF4DD),
-            onTap: () =>
-                pushPage(context, const AdminRequestsScreen(standalone: true)),
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline, color: amber),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'درخواست‌های نیازمند توجه را بررسی کن.',
-                    style: TextStyle(color: amber),
-                  ),
-                ),
-                Icon(Icons.chevron_left, color: amber),
-              ],
+          Heading(
+            'آخرین پیام‌های پشتیبانی',
+            subtitle: 'پیام‌های دریافت‌شده از کاربران',
+            action: TextButton(
+              onPressed: () => pushPage(context, const SupportScreen()),
+              child: const Text('همهٔ گفتگوها'),
             ),
           ),
-          const Heading('دسترسی سریع'),
-          Surface(
-            padding: 12,
-            child: Column(
-              children: [
-                MenuRow(
-                  'کاربران و متخصصان',
-                  Icons.people_outline,
-                  onTap: () =>
-                      pushPage(context, const PeopleScreen(standalone: true)),
-                ),
-                MenuRow(
-                  'همهٔ برنامه‌ها',
-                  Icons.calendar_month_outlined,
-                  onTap: () => pushPage(
-                    context,
-                    const AdminRequestsScreen(standalone: true),
-                  ),
-                ),
-                MenuRow(
-                  'بانک غذا',
-                  Icons.eco_outlined,
-                  onTap: () => pushPage(context, const FoodsScreen()),
-                ),
-                MenuRow(
-                  'پشتیبانی',
-                  Icons.support_agent,
-                  onTap: () => pushPage(context, const SupportScreen()),
-                ),
-              ],
+          if (store.receivedThreads(AppRole.admin, support: true).isEmpty)
+            const EmptyPanel(
+              'پیامی دریافت نشده',
+              'پیام‌های کاربران برای پشتیبانی اینجا نمایش داده می‌شوند.',
+              icon: Icons.support_agent,
             ),
-          ),
-          const Heading('آخرین درخواست‌ها'),
-          ...store.requests
-              .take(2)
-              .map(
-                (r) => RequestTile(r, onTap: () => requestDetails(context, r)),
-              ),
+          for (final thread
+              in store.receivedThreads(AppRole.admin, support: true).take(5))
+            ConversationTile(thread: thread, receivedOnly: true),
         ],
       ),
     );
@@ -183,8 +173,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               switch (filter) {
                 'باز' => r.status != PlanStatus.ready,
                 'تأییدشده' => r.status == PlanStatus.ready,
-                'نیازمند توجه' =>
-                  r.priority || r.status == PlanStatus.needsInfo,
                 _ => true,
               },
         )
@@ -201,7 +189,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             hint: 'نام کاربر یا شمارهٔ درخواست',
           ),
           Filters(
-            values: const ['همه', 'باز', 'تأییدشده', 'نیازمند توجه'],
+            values: const ['همه', 'باز', 'تأییدشده'],
             selected: filter,
             onSelected: (v) => setState(() => filter = v),
           ),
@@ -553,11 +541,6 @@ class AdminMoreScreen extends StatelessWidget {
                 Icons.support_agent,
                 onTap: () => pushPage(context, const SupportScreen()),
               ),
-              MenuRow(
-                'تنظیمات و دسترسی‌ها',
-                Icons.admin_panel_settings_outlined,
-                onTap: () => pushPage(context, const AdminSettingsScreen()),
-              ),
             ],
           ),
         ),
@@ -741,74 +724,6 @@ Future<void> editFood(BuildContext context, {FoodRecord? record}) async {
   allergens.dispose();
 }
 
-class QuestionAdminScreen extends StatelessWidget {
-  const QuestionAdminScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    return Scaffold(
-      appBar: AppBar(title: const Text('مدیریت پرسش‌نامه')),
-      body: PageBody(
-        children: [
-          const Notice(
-            'این بخش عنوان مرحله‌ها را در فهرست مدیریتی ویرایش می‌کند؛ ساختار سؤال‌های اپ در کد تعریف شده است.',
-          ),
-          ...store.questionTitles.asMap().entries.map(
-            (e) => Surface(
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: sage,
-                    child: Text(
-                      fa(e.key + 1),
-                      style: const TextStyle(color: pine),
-                    ),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(child: Text(e.value)),
-                  IconButton(
-                    tooltip: 'ویرایش عنوان',
-                    icon: const Icon(Icons.edit_outlined, color: pine),
-                    onPressed: () async {
-                      final text = TextEditingController(text: e.value);
-                      final result = await showDialog<String>(
-                        context: context,
-                        builder: (d) => AlertDialog(
-                          title: const Text('عنوان مرحله'),
-                          content: TextField(controller: text),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(d),
-                              child: const Text('انصراف'),
-                            ),
-                            FilledButton(
-                              onPressed: () {
-                                if (text.text.trim().isNotEmpty) {
-                                  Navigator.pop(d, text.text.trim());
-                                }
-                              },
-                              child: const Text('ثبت'),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (result != null) {
-                        store.questionTitles[e.key] = result;
-                        store.update();
-                      }
-                      text.dispose();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
   @override
@@ -891,29 +806,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    return Scaffold(
-      appBar: AppBar(title: const Text('پشتیبانی')),
-      body: PageBody(
-        children: [
-          ...store.supportTickets.map(
-            (t) => Surface(
-              onTap: () => pushPage(context, TicketScreen(ticket: t)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Heading(t['title']!, subtitle: t['name']),
-                  const SizedBox(height: 12),
-                  Tag(t['status']!, warning: t['status'] != 'حل‌شده'),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const MessagesScreen(support: true);
 }
 
 class TicketScreen extends StatefulWidget {
