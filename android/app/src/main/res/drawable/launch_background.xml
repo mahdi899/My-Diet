@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:drawable="@color/sabzine_splash_background" />
+  <item android:gravity="center" android:width="104dp" android:height="104dp"
+    android:drawable="@drawable/sabzine_splash" />
+</layer-list>
