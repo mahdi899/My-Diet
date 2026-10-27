@@ -82,7 +82,7 @@ void main() {
   });
 
   test('Revision keeps the approved program available', () {
-    final store = DemoStore()..login(AppRole.user);
+    final store = DemoStore()..loginDemoUser();
     store.approveActiveUserRequest();
     store.requestRevision('تهیهٔ غذا سخته', 'جایگزین ساده‌تر');
     expect(store.userRequest.isPublished, isTrue);
@@ -115,7 +115,7 @@ void main() {
     () async {
       final store = DemoStore(storage: MemoryStorage());
       await store.saveQuestionnaire(validAnswers(), onboarding: true);
-      store.login(AppRole.user);
+      store.loginDemoUser();
       store.approveActiveUserRequest();
       final id = store.userRequestId, count = store.requests.length;
       final published = store.userRequest.published;
@@ -245,13 +245,13 @@ void main() {
       for (var i = 0; i < 5; i++) {
         await next(tester);
       }
-      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
       await tester.pumpAndSettle();
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
       expect(store.requests.length, count);
-      expect(store.role, AppRole.user);
+      expect(store.role, isNull);
       expect(store.userSignedIn, isFalse);
-      expect(find.text('شما برنامه‌ای ندارید'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       store.dispose();
     },
@@ -300,34 +300,25 @@ void main() {
       await next(tester);
       await tester.tap(find.text('غذای ایرانی'));
       await next(tester);
-      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
       await tester.pumpAndSettle();
       expect(store.questionnaireComplete, isFalse);
       await tester.ensureVisible(find.byType(CheckboxListTile));
       await tester.tap(find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
       await tester.pumpAndSettle();
       expect(store.questionnaireComplete, isTrue);
       expect(store.hasUserRequest, isFalse);
-      expect(store.entryStage, EntryStage.home);
-      expect(store.role, AppRole.user);
+      expect(store.entryStage, EntryStage.login);
+      expect(store.role, isNull);
       expect(store.userSignedIn, isFalse);
-      expect(find.text('شما برنامه‌ای ندارید'), findsOneWidget);
-      expect(find.byType(NavigationBar), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('دریافت برنامه غذایی'),
-        120,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('دریافت برنامه غذایی'));
-      await tester.pumpAndSettle();
       expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
       await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
       await tester.pumpAndSettle();
       expect(store.userSignedIn, isTrue);
-      expect(store.userRequest.status, PlanStatus.queued);
+      expect(store.hasUserRequest, isFalse);
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(storage.value, isNotNull);
       expect(tester.takeException(), isNull);
@@ -347,7 +338,7 @@ void main() {
         ..clear()
         ..add('حساسیت غذایی دارم');
       store.questionnaire.healthDetails = 'توضیح قبلی حساسیت';
-      store.login(AppRole.user);
+      store.loginDemoUser();
       final count = store.requests.length;
       await tester.pumpWidget(
         SabzineApp(store: store, splashDuration: Duration.zero),
@@ -415,7 +406,7 @@ void main() {
         validAnswers()..weight = '۸۱',
         onboarding: true,
       );
-      store.login(AppRole.user);
+      store.loginDemoUser();
       await tester.pumpWidget(
         SabzineApp(store: store, splashDuration: Duration.zero),
       );

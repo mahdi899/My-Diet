@@ -31,7 +31,7 @@ void main() {
   test(
     'Conversations isolate patients and support replies and unread state',
     () {
-      final s = DemoStore()..login(AppRole.user);
+      final s = DemoStore()..loginDemoUser();
       final other = s.threadMessages('patient-amir').length;
       s.send('پیام فقط برای متخصص من');
       expect(s.threadMessages('patient-amir').length, other);
@@ -223,7 +223,7 @@ void main() {
       await tapVisible(t, find.text('ثبت اطلاعات متخصص'));
       expect(find.text('کد نظام پزشکی: ۸۸۹۹'), findsOneWidget);
       expect(s.questionnaire.name, userName);
-      s.login(AppRole.user);
+      s.loginDemoUser();
       await t.pumpAndSettle();
       await t.tap(find.byType(NavigationDestination).at(3));
       await t.pumpAndSettle();
@@ -269,7 +269,7 @@ void main() {
       final added = s.formConfiguration.questions.last;
       t.state<NavigatorState>(find.byType(Navigator).first).pop();
       await t.pumpAndSettle();
-      s.login(AppRole.user);
+      s.loginDemoUser();
       await t.pumpAndSettle();
       await t.tap(find.byType(NavigationDestination).at(3));
       await t.pumpAndSettle();
@@ -291,7 +291,7 @@ void main() {
     },
   );
   test('Program reviews require admin approval before public dashboard', () {
-    final s = DemoStore()..login(AppRole.user);
+    final s = DemoStore()..loginDemoUser();
     s.questionnaire.name = 'سارا احمدی';
     expect(s.approvedReviewsForDashboard().length, 2);
     s.submitProgramReview('برنامهٔ من عالی بود.');
@@ -303,7 +303,7 @@ void main() {
       (r) => r.authorName == 'سارا احمدی',
     );
     s.approveProgramReview(pending.id);
-    s.login(AppRole.user);
+    s.loginDemoUser();
     s.questionnaire.name = 'رضا موسوی';
     expect(
       s.approvedReviewsForDashboard().any((r) => r.authorName == 'سارا احمدی'),
@@ -335,7 +335,7 @@ void main() {
     'Support message reaches admin dashboard and reply stays in support conversation',
     (t) async {
       mobile(t);
-      final s = DemoStore()..login(AppRole.user);
+      final s = DemoStore()..loginDemoUser();
       s.send('پیگیری ویژهٔ کاربر', support: true);
       s.login(AppRole.admin);
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));

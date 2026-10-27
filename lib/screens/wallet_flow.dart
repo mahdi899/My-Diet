@@ -1,0 +1,886 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../data/demo_store.dart';
+import '../data/wallet_catalog.dart';
+import '../theme.dart';
+import '../widgets/ui.dart';
+
+const walletPricingRoute = '/wallet/plan-services';
+
+Future<void> openPlanServices(BuildContext context) async {
+  final store = DemoScope.of(context);
+  if (!store.userSignedIn) {
+    store.openUserLogin();
+    return;
+  }
+  if (store.walletPricingOpen) return;
+  store.walletPricingOpen = true;
+  try {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: walletPricingRoute),
+        builder: (_) => const PlanServicesScreen(),
+      ),
+    );
+  } finally {
+    store.walletPricingOpen = false;
+  }
+}
+
+class TokenWalletChip extends StatelessWidget {
+  const TokenWalletChip({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final balance = DemoScope.of(context).tokenBalance;
+    return Semantics(
+      label: 'کیف پول: ${formatTokenNumber(balance)} توکن',
+      button: true,
+      child: Material(
+        color: sage,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: () => openPlanServices(context),
+          borderRadius: BorderRadius.circular(22),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.monetization_on_outlined,
+                    color: amber,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      '${formatTokenNumber(balance)} توکن',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: pine,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class GetPlanHeroButton extends StatelessWidget {
+  const GetPlanHeroButton({super.key});
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    child: Surface(
+      key: const ValueKey('get-food-plan'),
+      color: pine,
+      padding: 18,
+      onTap: () => openPlanServices(context),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(
+              Icons.restaurant_menu_outlined,
+              color: Colors.white,
+              size: 27,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'دریافت برنامه غذایی',
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'انتخاب سرویس و پرداخت با توکن کیف پول',
+                  style: TextStyle(fontSize: 10, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_back_rounded, color: Colors.white70, size: 21),
+        ],
+      ),
+    ),
+  );
+}
+
+class WalletDebugPanel extends StatefulWidget {
+  const WalletDebugPanel({super.key});
+  @override
+  State<WalletDebugPanel> createState() => _WalletDebugPanelState();
+}
+
+class _WalletDebugPanelState extends State<WalletDebugPanel> {
+  final controller = TextEditingController(), form = GlobalKey<FormState>();
+  bool initialized = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!initialized) {
+      controller.text = formatTokenNumber(DemoScope.of(context).tokenBalance);
+      initialized = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!kDebugMode) return const SizedBox.shrink();
+    final s = DemoScope.of(context);
+    return Surface(
+      padding: 4,
+      color: const Color(0xFFFFF8E8),
+      child: ExpansionTile(
+        key: const ValueKey('wallet-debug'),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        title: const Text('ابزار تست کیف پول', style: TextStyle(fontSize: 12)),
+        subtitle: const Text(
+          'فقط حالت توسعه',
+          style: TextStyle(fontSize: 10, color: muted),
+        ),
+        leading: const Icon(Icons.tune, size: 21, color: amber),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Form(
+              key: form,
+              child: Column(
+                children: [
+                  TextFormField(
+                    key: const ValueKey('wallet-debug-balance'),
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'موجودی دلخواه / توکن',
+                    ),
+                    validator: (v) {
+                      final n = int.tryParse(
+                        latinDigits(v ?? '').replaceAll(',', '').trim(),
+                      );
+                      return n == null || n < 0
+                          ? 'یک عدد صحیح صفر یا بیشتر وارد کن.'
+                          : null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            if (form.currentState!.validate()) {
+                              s.setDebugTokenBalance(
+                                int.parse(
+                                  latinDigits(
+                                    controller.text,
+                                  ).replaceAll(',', '').trim(),
+                                ),
+                              );
+                              FocusScope.of(context).unfocus();
+                            }
+                          },
+                          child: const Text('اعمال موجودی'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            s.resetWalletDebug();
+                            form.currentState!.reset();
+                            controller.text = formatTokenNumber(
+                              kInitialTokenBalance,
+                            );
+                          },
+                          child: const Text('ریست پیش‌فرض'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PlanServicesScreen extends StatefulWidget {
+  const PlanServicesScreen({super.key});
+  @override
+  State<PlanServicesScreen> createState() => _PlanServicesScreenState();
+}
+
+class _PlanServicesScreenState extends State<PlanServicesScreen> {
+  bool processing = false, charging = false, dialogAnswered = false;
+  Future<void> purchase() async {
+    if (processing) return;
+    final s = DemoScope.of(context),
+        offer = planServiceById(DemoScope.of(context).selectedPlanServiceId);
+    if (offer == null) return;
+    if (!s.canAffordTokens(offer.tokenCost)) {
+      charge();
+      return;
+    }
+    setState(() => processing = true);
+    try {
+      final ok = s.tryPurchasePlanService(
+        offer.id,
+        operationId: s.nextWalletOperationId(),
+      );
+      if (!ok || !mounted) return;
+      final balance = s.tokenBalance;
+      dialogAnswered = false;
+      final action = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (d) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            icon: const Icon(Icons.check_circle_rounded, color: pine, size: 44),
+            title: const Text('خرید با موفقیت انجام شد ✅'),
+            content: Text(
+              '${offer.successLine}\nموجودی شما ${formatTokenNumber(balance)} توکن باقی ماند.',
+              style: const TextStyle(height: 2),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (dialogAnswered) return;
+                  dialogAnswered = true;
+                  Navigator.pop(d, 'home');
+                },
+                child: const Text('باشه'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (dialogAnswered) return;
+                  dialogAnswered = true;
+                  Navigator.pop(d, 'charge');
+                },
+                child: const Text('شارژ کیف پول'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (!mounted) return;
+      if (action == 'home') {
+        Navigator.of(context).popUntil((r) => r.isFirst);
+      } else if (action == 'charge') {
+        await charge();
+      }
+    } finally {
+      if (mounted) setState(() => processing = false);
+    }
+  }
+
+  Future<void> charge() async {
+    if (charging) return;
+    setState(() => charging = true);
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/wallet/token-packages'),
+          builder: (_) => const TokenPackagesScreen(),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => charging = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = DemoScope.of(context),
+        selected = planServiceById(DemoScope.of(context).selectedPlanServiceId),
+        balance = s.tokenBalance;
+    final enough = selected != null && s.canAffordTokens(selected.tokenCost);
+    return Scaffold(
+      appBar: AppBar(title: const Text('تعرفه برنامه‌ها')),
+      body: PageBody(
+        children: [
+          const Heading(
+            'قدم بعدی مسیرت را انتخاب کن',
+            subtitle: 'هزینهٔ هر سرویس با توکن کیف پول پرداخت می‌شود.',
+          ),
+          for (final offer in planServiceOffers)
+            _OfferCard(
+              key: ValueKey('service-${offer.id}'),
+              title: offer.title,
+              subtitle: offer.subtitle,
+              price: '${formatTokenNumber(offer.tokenCost)} توکن',
+              icon: offer.icon,
+              selected: selected?.id == offer.id,
+              onTap: processing || charging
+                  ? null
+                  : () {
+                      s.selectedPlanServiceId = offer.id;
+                      s.update();
+                    },
+            ),
+          const Notice(
+            'این مسیر کاملاً نمایشی است؛ پولی پرداخت نمی‌شود و درخواستی به سرور ارسال نمی‌شود.',
+            icon: Icons.science_outlined,
+          ),
+          if (kDebugMode) const WalletDebugPanel(),
+        ],
+      ),
+      bottomNavigationBar: _WalletBottom(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (selected == null) ...[
+              _BalanceLine(balance: balance),
+              const SizedBox(height: 8),
+              const Text(
+                'برای ادامه یک سرویس انتخاب کن.',
+                style: TextStyle(color: muted, fontSize: 11),
+              ),
+              const SizedBox(height: 10),
+              const PrimaryButton(
+                'برداشت از کیف پول',
+                onPressed: null,
+                icon: Icons.account_balance_wallet_outlined,
+              ),
+            ] else if (enough) ...[
+              Text(
+                'توکن قابل پرداخت: ${formatTokenNumber(selected.tokenCost)} توکن',
+                key: const ValueKey('payable-tokens'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _BalanceLine(balance: balance, enough: true),
+              const SizedBox(height: 12),
+              PrimaryButton(
+                processing ? 'در حال پردازش…' : 'برداشت از کیف پول',
+                onPressed: processing || charging ? null : purchase,
+                icon: Icons.account_balance_wallet_outlined,
+              ),
+            ] else ...[
+              Text(
+                'توکن قابل پرداخت: ${formatTokenNumber(selected.tokenCost)} توکن',
+                key: const ValueKey('payable-tokens'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 12),
+              PrimaryButton(
+                'شارژ کیف پول',
+                onPressed: processing || charging ? null : charge,
+                icon: Icons.add_card_outlined,
+              ),
+              const SizedBox(height: 10),
+              _BalanceLine(balance: balance, enough: false),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WalletBottom extends StatelessWidget {
+  const _WalletBottom({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              alignment: Alignment.bottomCenter,
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _BalanceLine extends StatelessWidget {
+  const _BalanceLine({required this.balance, this.enough});
+  final int balance;
+  final bool? enough;
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 7,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      Text(
+        'موجودی توکن کیف پول شما: ${formatTokenNumber(balance)} توکن',
+        key: const ValueKey('wallet-balance-line'),
+        style: const TextStyle(fontSize: 12, color: muted),
+      ),
+      if (enough != null)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            color: enough! ? sage : const Color(0xFFFDE9E7),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Text(
+            enough! ? 'موجودی کافی' : 'موجودی ناکافی',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: enough! ? pine : const Color(0xFFB13532),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+class TokenPackagesScreen extends StatefulWidget {
+  const TokenPackagesScreen({super.key});
+  @override
+  State<TokenPackagesScreen> createState() => _TokenPackagesScreenState();
+}
+
+class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
+  bool navigating = false, failed = false;
+  Future<void> buy(TokenPackageOffer offer) async {
+    if (navigating) return;
+    setState(() => navigating = true);
+    try {
+      final result = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/wallet/mock-payment'),
+          builder: (_) => MockPaymentScreen(package: offer),
+        ),
+      );
+      if (!mounted) return;
+      if (result == true) {
+        Navigator.pop(context);
+      } else {
+        setState(() => failed = true);
+      }
+    } finally {
+      if (mounted) setState(() => navigating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = DemoScope.of(context),
+        selected = tokenPackageById(
+          DemoScope.of(context).selectedTokenPackageId,
+        );
+    return Scaffold(
+      appBar: AppBar(title: const Text('تعرفه توکن')),
+      body: PageBody(
+        children: [
+          Surface(
+            color: sage,
+            child: Row(
+              children: [
+                const Icon(Icons.savings_outlined, color: pine, size: 30),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'موجودی فعلی کیف پول',
+                        style: TextStyle(fontSize: 12, color: muted),
+                      ),
+                      Text(
+                        '${formatTokenNumber(s.tokenBalance)} توکن',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: pine,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Heading('پکیج مناسب خودت را انتخاب کن'),
+          if (failed)
+            Container(
+              key: const ValueKey('mock-payment-error'),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDE9E7),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                'پرداخت ناموفق بود یا لغو شد. موجودی تغییری نکرد؛ می‌توانی دوباره تلاش کنی.',
+                style: TextStyle(
+                  color: Color(0xFFB13532),
+                  fontSize: 12,
+                  height: 1.8,
+                ),
+              ),
+            ),
+          for (final offer in tokenPackageOffers)
+            _OfferCard(
+              key: ValueKey('package-${offer.id}'),
+              title: '${formatTokenNumber(offer.tokens)} توکن',
+              subtitle: 'اعتبار قابل استفاده برای سرویس‌های برنامه غذایی',
+              price: formatToman(offer.priceToman),
+              icon: Icons.token_outlined,
+              selected: selected?.id == offer.id,
+              onTap: navigating
+                  ? null
+                  : () {
+                      s.selectedTokenPackageId = offer.id;
+                      s.update();
+                      setState(() => failed = false);
+                    },
+            ),
+          const Text(
+            'قیمت‌ها برای نمایش فلو هستند و خرید واقعی انجام نمی‌شود.',
+            style: TextStyle(color: muted, fontSize: 11),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _WalletBottom(
+        child: PrimaryButton(
+          'خرید توکن',
+          onPressed: selected == null || navigating
+              ? null
+              : () => buy(selected),
+          icon: Icons.shopping_cart_checkout_outlined,
+        ),
+      ),
+    );
+  }
+}
+
+class MockPaymentScreen extends StatefulWidget {
+  const MockPaymentScreen({super.key, required this.package});
+  final TokenPackageOffer package;
+  @override
+  State<MockPaymentScreen> createState() => _MockPaymentScreenState();
+}
+
+class _MockPaymentScreenState extends State<MockPaymentScreen> {
+  bool busy = false, acknowledged = false;
+  String? attempt;
+  Future<void> complete(bool success) async {
+    if (busy) return;
+    setState(() => busy = true);
+    final s = DemoScope.of(context);
+    if (!success) {
+      Navigator.pop(context, false);
+      return;
+    }
+    attempt ??= s.nextWalletOperationId();
+    final credited = s.completeMockTokenPayment(widget.package.id, attempt!);
+    if (!credited) {
+      if (mounted) {
+        setState(() => busy = false);
+        showToast(context, 'این پرداخت قبلاً ثبت شده است.');
+      }
+      return;
+    }
+    final balance = s.tokenBalance;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (d) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          icon: const Icon(Icons.check_circle_rounded, color: pine, size: 44),
+          title: const Text('خرید با موفقیت انجام شد ✅'),
+          content: Text(
+            'موجودی توکن شما ${formatTokenNumber(balance)} توکن است.',
+            style: const TextStyle(height: 2),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () {
+                if (acknowledged) return;
+                acknowledged = true;
+                Navigator.pop(d);
+              },
+              child: const Text('باشه'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: Scaffold(
+      appBar: AppBar(title: const Text('درگاه پرداخت نمایشی')),
+      body: PageBody(
+        children: [
+          const Notice(
+            'شبیه‌ساز پرداخت · اطلاعات بانکی وارد نکن. فیلدها فقط ظاهری‌اند و هیچ پولی جابه‌جا نمی‌شود.',
+            icon: Icons.science_outlined,
+          ),
+          Surface(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.account_balance_outlined, color: pine),
+                    SizedBox(width: 10),
+                    Text(
+                      'پرداخت نمونهٔ سبزینه',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                InfoRows({
+                  'پکیج انتخابی':
+                      '${formatTokenNumber(widget.package.tokens)} توکن',
+                  'مبلغ پرداختی': formatToman(widget.package.priceToman),
+                  'پذیرنده': 'سبزینه · نسخهٔ آزمایشی',
+                }),
+              ],
+            ),
+          ),
+          const _PaymentField('شماره کارت', '۶۰۳۷ ـ ۰۰۰۰ ـ ۰۰۰۰ ـ ۱۲۳۴'),
+          const Row(
+            children: [
+              Expanded(child: _PaymentField('CVV2', '۱۲۳')),
+              SizedBox(width: 12),
+              Expanded(child: _PaymentField('تاریخ انقضا', '۰۸ / ۱۴۰۶')),
+            ],
+          ),
+          const _PaymentField('رمز دوم', '••••••'),
+          Surface(
+            padding: 14,
+            child: Row(
+              children: [
+                const Expanded(child: _PaymentField('کپچا', '۴۵۲۹')),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: sage,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    '۴ ۵ ۲ ۹',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: pine,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Text(
+            'برای بررسی مسیر، یکی از نتیجه‌های زیر را انتخاب کن.',
+            style: TextStyle(fontSize: 11, color: muted),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _WalletBottom(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PrimaryButton(
+              busy ? 'در حال ثبت…' : 'پرداخت موفق',
+              onPressed: busy ? null : () => complete(true),
+              icon: Icons.check_circle_outline,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: busy ? null : () => complete(false),
+              child: const Text('پرداخت ناموفق / انصراف'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _PaymentField extends StatelessWidget {
+  const _PaymentField(this.label, this.placeholder);
+  final String label, placeholder;
+  @override
+  Widget build(BuildContext context) => TextField(
+    readOnly: true,
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.left,
+    showCursor: false,
+    enableInteractiveSelection: false,
+    keyboardType: TextInputType.none,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: placeholder,
+      hintTextDirection: TextDirection.ltr,
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+    ),
+  );
+}
+
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.price,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+  final String title, subtitle, price;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    selected: selected,
+    button: true,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: selected ? pine : const Color(0xFFE4EAD9),
+          width: selected ? 2 : 1,
+        ),
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: pine.withValues(alpha: .08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: selected ? const Color(0xFFF1F7E9) : Colors.white,
+        borderRadius: BorderRadius.circular(21),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: selected ? pine : sage,
+                  child: Icon(
+                    icon,
+                    color: selected ? Colors.white : pine,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          height: 1.7,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: muted,
+                          height: 1.8,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      Text(
+                        price,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: pine,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: selected ? pine : const Color(0xFFB6C1AD),
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}

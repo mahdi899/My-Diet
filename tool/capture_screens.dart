@@ -69,6 +69,8 @@ void main() {
     await shot('00-login');
     await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
     await tester.pumpAndSettle();
+    store.attachDemoUserRequest();
+    await tester.pumpAndSettle();
     await shot('01-user-home');
     store.approveActiveUserRequest();
     await tester.pumpAndSettle();

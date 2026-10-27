@@ -43,7 +43,7 @@ void main() {
           date = DateTime(2026, 10, 26),
           tomorrow = DateTime(2026, 10, 27);
       final s = DemoStore(nutritionStorage: log, clock: () => date)
-        ..login(AppRole.user);
+        ..loginDemoUser();
       s.approveActiveUserRequest();
       final energy = s.mealsOn(date).first.calories;
       expect(
@@ -57,7 +57,7 @@ void main() {
       expect(s.mealEaten(tomorrow, 0), false);
       await s.setMealEaten(tomorrow, 0, true);
       final restored = DemoStore(nutritionStorage: log, clock: () => date)
-        ..login(AppRole.user);
+        ..loginDemoUser();
       restored.approveActiveUserRequest();
       await restored.restoreNutritionLog();
       expect(restored.mealEaten(date, 0), true);
@@ -76,7 +76,7 @@ void main() {
   test(
     'All seven days publish distinct meals and drafts cannot change them',
     () {
-      final s = DemoStore()..login(AppRole.user);
+      final s = DemoStore()..loginDemoUser();
       final r = s.userRequest;
       s.approve(r.id);
       expect(
@@ -152,7 +152,7 @@ void main() {
       final date = DateTime(2026, 10, 26),
           s = DemoStore(clock: () => DateTime(2026, 10, 26));
       s.questionnaireComplete = true;
-      s.login(AppRole.user);
+      s.loginDemoUser();
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();

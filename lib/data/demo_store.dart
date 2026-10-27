@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'wallet_catalog.dart';
 import 'package:flutter/material.dart';
 import 'questionnaire_storage.dart';
 import 'nutrition_log_storage.dart';
@@ -716,6 +718,7 @@ class DemoStore extends ChangeNotifier {
     if (userRequestId == null) return experts.firstOrNull;
     return experts.where((e) => e.name == userRequest.specialist).firstOrNull;
   }
+
   final chatThreads = <ChatThread>[
     ChatThread('user-main', 'سارا احمدی'),
     ChatThread('patient-amir', 'امیر حسینی'),
@@ -787,6 +790,7 @@ class DemoStore extends ChangeNotifier {
     if (userRequestId == null) return const [];
     return userRequest.mealsForDay(weekDayIndex(date));
   }
+
   int calorieTarget(DateTime date) =>
       mealsOn(date).fold(0, (n, m) => n + m.calories);
   int consumedCalories(DateTime date) => _mealCalories.entries
@@ -913,6 +917,94 @@ class DemoStore extends ChangeNotifier {
     questionnaireComplete = true;
     update();
   }
+
+  // UI-only wallet. A full restart resets the mock balance; no payment API.
+  int tokenBalance = kInitialTokenBalance;
+  String? selectedPlanServiceId, selectedTokenPackageId;
+  bool walletPurchaseBusy = false, walletPricingOpen = false;
+  int _walletSequence = 0;
+  final Set<String> _appliedWalletOperations = {};
+  final List<MockWalletTransaction> walletTransactions = [];
+  String nextWalletOperationId() => 'mock-wallet-${++_walletSequence}';
+  bool canAffordTokens(int amount) => amount > 0 && tokenBalance >= amount;
+  bool tryPurchasePlanService(String serviceId, {String? operationId}) {
+    final offer = planServiceById(serviceId),
+        key = operationId ?? nextWalletOperationId();
+    if (walletPurchaseBusy ||
+        offer == null ||
+        !canAffordTokens(offer.tokenCost) ||
+        _appliedWalletOperations.contains(key)) {
+      return false;
+    }
+    walletPurchaseBusy = true;
+    try {
+      tokenBalance -= offer.tokenCost;
+      _appliedWalletOperations.add(key);
+      walletTransactions.insert(
+        0,
+        MockWalletTransaction(
+          operationId: key,
+          title: offer.title,
+          tokens: offer.tokenCost,
+          balanceAfter: tokenBalance,
+          credit: false,
+        ),
+      );
+      if (offer.id == 'new-plan') {
+        submitQuestionnaire();
+      } else if (hasUserRequest) {
+        userRequest.revisionRequested = true;
+        userRequest.revisionReason = offer.id == 'ai-change'
+            ? 'تغییر برنامه با هوش مصنوعی'
+            : 'تغییر برنامه با متخصص';
+        userRequest.revisionDetails =
+            'درخواست نمایشی با پرداخت ${formatTokenNumber(offer.tokenCost)} توکن ثبت شد.';
+      }
+      notices.insert(0, '${offer.successLine} (نمایشی)');
+      return true;
+    } finally {
+      walletPurchaseBusy = false;
+      update();
+    }
+  }
+
+  bool addPurchasedTokens(int tokens, {String? operationId}) {
+    final key = operationId ?? nextWalletOperationId();
+    if (tokens <= 0 || _appliedWalletOperations.contains(key)) return false;
+    _appliedWalletOperations.add(key);
+    tokenBalance += tokens;
+    walletTransactions.insert(
+      0,
+      MockWalletTransaction(
+        operationId: key,
+        title: 'شارژ نمایشی کیف پول',
+        tokens: tokens,
+        balanceAfter: tokenBalance,
+        credit: true,
+      ),
+    );
+    update();
+    return true;
+  }
+
+  bool completeMockTokenPayment(String packageId, String attemptId) {
+    final offer = tokenPackageById(packageId);
+    if (offer == null) return false;
+    final result = addPurchasedTokens(offer.tokens, operationId: attemptId);
+    if (result) {
+      selectedTokenPackageId = null;
+      update();
+    }
+    return result;
+  }
+
+  void setDebugTokenBalance(int value) {
+    if (!kDebugMode || value < 0) return;
+    tokenBalance = value;
+    update();
+  }
+
+  void resetWalletDebug() => setDebugTokenBalance(kInitialTokenBalance);
 
   AppRole? role;
   AppRole? selectedRole;
@@ -1132,14 +1224,15 @@ class DemoStore extends ChangeNotifier {
     entryStage = EntryStage.home;
     if (value == AppRole.user) {
       userSignedIn = true;
-      if (userRequestId == null) {
-        if (questionnaireComplete) {
-          submitQuestionnaire();
-        } else {
-          attachDemoUserRequest();
-        }
-      }
     }
+    update();
+  }
+
+  // Explicit fixture helper for local previews/tests; production login never
+  // creates a service request before a mock wallet purchase.
+  void loginDemoUser() {
+    login(AppRole.user);
+    attachDemoUserRequest();
     update();
   }
 
@@ -1249,14 +1342,12 @@ class DemoStore extends ChangeNotifier {
       throw StateError('متن نظر را وارد کن.');
     }
     final name = questionnaire.name.trim();
-    programReviews.removeWhere((r) => r.authorName.trim() == name && !r.approved);
+    programReviews.removeWhere(
+      (r) => r.authorName.trim() == name && !r.approved,
+    );
     programReviews.insert(
       0,
-      ProgramReview(
-        id: 'rev-${_reviewSeq++}',
-        authorName: name,
-        text: trimmed,
-      ),
+      ProgramReview(id: 'rev-${_reviewSeq++}', authorName: name, text: trimmed),
     );
     update();
   }

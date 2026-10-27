@@ -529,7 +529,8 @@ class AdminMoreScreen extends StatelessWidget {
               MenuRow(
                 'تأیید نظرات کاربران',
                 Icons.rate_review_outlined,
-                onTap: () => pushPage(context, const ProgramReviewsModerationScreen()),
+                onTap: () =>
+                    pushPage(context, const ProgramReviewsModerationScreen()),
               ),
               MenuRow(
                 'مدیریت پرسش‌نامه',
@@ -788,7 +789,10 @@ class ProgramReviewsModerationScreen extends StatelessWidget {
                         child: FilledButton(
                           onPressed: () {
                             store.approveProgramReview(review.id);
-                            showToast(context, 'نظر برای نمایش عمومی تأیید شد.');
+                            showToast(
+                              context,
+                              'نظر برای نمایش عمومی تأیید شد.',
+                            );
                           },
                           child: const Text('تأیید نمایش'),
                         ),

@@ -687,7 +687,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
       kind: slot == 'میان‌وعده' ? 2 : 0,
       calories: 350,
     );
-    final edited = await _editMealSheet(context, m, heading: 'تعیین مقدار و انرژی');
+    final edited = await _editMealSheet(
+      context,
+      m,
+      heading: 'تعیین مقدار و انرژی',
+    );
     if (edited != null) store.addMeal(r.id, edited, day: reviewDay);
   }
 

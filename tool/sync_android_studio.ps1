@@ -58,9 +58,17 @@ Write-Host "Sync Cursor -> Android Studio"
 Write-Host "  From: $Source"
 Write-Host "  To:   $Target"
 
-& robocopy $Source $Target /E /NFL /NDL /NJH /NJS /NC /NS /XD ".git" "build" ".dart_tool" ".gradle" /XF | Out-Null
+if ([string]::Equals((Resolve-Path -LiteralPath $Source).Path, (Resolve-Path -LiteralPath $Target).Path, [StringComparison]::OrdinalIgnoreCase)) {
+    Write-Host "Source and target are the same project. Nothing to copy."
+    exit 0
+}
+
+& robocopy $Source $Target /E /XJ /NFL /NDL /NJH /NJS /NC /NS /XD ".git" "build" ".dart_tool" ".gradle" "ephemeral" ".idea" /XF "local.properties" ".flutter-plugins-dependencies" "*.iml" "generated_plugin_registrant.cc" "generated_plugin_registrant.h" "generated_plugins.cmake" | Out-Null
 if ($LASTEXITCODE -gt 7) {
     Write-Error "robocopy failed with exit code $LASTEXITCODE"
 }
 
 Write-Host "Done. In Android Studio: Sync Gradle if needed, then Hot Restart or Stop + Run."
+
+# Robocopy uses exit codes 0..7 for successful copies.
+exit 0

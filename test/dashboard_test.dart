@@ -21,8 +21,7 @@ void main() {
     'Compact energy retains its metrics and pastel message follows immediately',
     (t) async {
       mobile(t);
-      final s = DemoStore(clock: () => DateTime(2026, 10, 26))
-        ..login(AppRole.user);
+      final s = DemoStore(clock: () => DateTime(2026, 10, 26))..loginDemoUser();
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
@@ -86,8 +85,7 @@ void main() {
     'Past days are locked in a seven-day Persian week and future meals are read-only',
     (t) async {
       mobile(t);
-      final s = DemoStore(clock: () => DateTime(2026, 10, 29))
-        ..login(AppRole.user);
+      final s = DemoStore(clock: () => DateTime(2026, 10, 29))..loginDemoUser();
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
@@ -122,8 +120,7 @@ void main() {
     'Successful meal check celebrates once then disables the whole meal',
     (t) async {
       mobile(t);
-      final s = DemoStore(clock: () => DateTime(2026, 10, 26))
-        ..login(AppRole.user);
+      final s = DemoStore(clock: () => DateTime(2026, 10, 26))..loginDemoUser();
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();

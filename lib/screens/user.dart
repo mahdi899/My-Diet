@@ -9,6 +9,8 @@ import '../widgets/ui.dart';
 import 'questionnaire.dart';
 import 'shared.dart';
 import 'doctor.dart';
+import 'wallet_flow.dart';
+import '../data/wallet_catalog.dart';
 import 'admin.dart' show FoodsScreen;
 
 class UserHome extends StatefulWidget {
@@ -55,6 +57,10 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
           floating: true,
           title: Text('سلام ${s.questionnaire.name.split(' ').first} 🌿'),
           actions: [
+            const Padding(
+              padding: EdgeInsetsDirectional.only(end: 8),
+              child: Center(child: TokenWalletChip()),
+            ),
             IconButton(
               tooltip: 'پیام‌ها',
               onPressed: () => pushPage(context, const MessagesScreen()),
@@ -102,16 +108,18 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Heading(
+                      Heading(
                         'شما برنامه‌ای ندارید',
-                        subtitle:
-                            'با ورود و ثبت درخواست، برنامهٔ غذایی شخصی‌سازی‌شده دریافت می‌کنی.',
+                        subtitle: s.userSignedIn
+                            ? 'با انتخاب سرویس و پرداخت توکن، درخواست برنامه را ثبت کن.'
+                            : 'با ورود و ثبت درخواست، برنامهٔ غذایی شخصی‌سازی‌شده دریافت می‌کنی.',
                       ),
                       const SizedBox(height: 16),
                       PrimaryButton(
                         'دریافت برنامه غذایی',
+                        key: const ValueKey('get-food-plan'),
                         icon: Icons.restaurant_menu_outlined,
-                        onPressed: s.openUserLogin,
+                        onPressed: () => openPlanServices(context),
                       ),
                     ],
                   ),
@@ -397,7 +405,7 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
               action: PrimaryButton(
                 'دریافت برنامه غذایی',
                 icon: Icons.restaurant_menu_outlined,
-                onPressed: s.openUserLogin,
+                onPressed: () => openPlanServices(context),
               ),
             ),
           ],
@@ -1001,6 +1009,13 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 if (!expert)
                   MenuRow(
+                    'کیف پول و تعرفه‌ها',
+                    Icons.account_balance_wallet_outlined,
+                    subtitle: '${formatTokenNumber(store.tokenBalance)} توکن',
+                    onTap: () => openPlanServices(context),
+                  ),
+                if (!expert)
+                  MenuRow(
                     'ویرایش پرسش‌نامه',
                     Icons.assignment_outlined,
                     onTap: () => pushPage(
@@ -1180,8 +1195,7 @@ class _ProgramReviewSubmitScreenState extends State<ProgramReviewSubmitScreen> {
             'نظر شما پس از بررسی مدیر در داشبورد سایر کاربران نمایش داده می‌شود.',
             icon: Icons.admin_panel_settings_outlined,
           ),
-          if (pending != null)
-            Tag('در انتظار تأیید مدیر', warning: true),
+          if (pending != null) Tag('در انتظار تأیید مدیر', warning: true),
           TextField(
             controller: controller,
             minLines: 5,
