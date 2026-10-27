@@ -70,7 +70,7 @@ void main() {
     await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
     await tester.pumpAndSettle();
     await shot('01-user-home');
-    store.approve(store.userRequestId);
+    store.approveActiveUserRequest();
     await tester.pumpAndSettle();
     final firstCheck = find.descendant(
       of: find.byType(ScheduledMealTile).first,

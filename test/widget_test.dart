@@ -82,8 +82,8 @@ void main() {
   });
 
   test('Revision keeps the approved program available', () {
-    final store = DemoStore();
-    store.approve(store.userRequestId);
+    final store = DemoStore()..login(AppRole.user);
+    store.approveActiveUserRequest();
     store.requestRevision('تهیهٔ غذا سخته', 'جایگزین ساده‌تر');
     expect(store.userRequest.isPublished, isTrue);
     expect(store.userRequest.revisionRequested, isTrue);
@@ -100,7 +100,7 @@ void main() {
         ..dislikes = 'قارچ';
       final count = first.requests.length;
       await first.saveQuestionnaire(answers, onboarding: true);
-      expect(first.requests.length, count + 1);
+      expect(first.requests.length, count);
       final restarted = DemoStore(storage: storage);
       await restarted.restoreQuestionnaire();
       expect(restarted.questionnaireComplete, isTrue);
@@ -115,7 +115,8 @@ void main() {
     () async {
       final store = DemoStore(storage: MemoryStorage());
       await store.saveQuestionnaire(validAnswers(), onboarding: true);
-      store.approve(store.userRequestId);
+      store.login(AppRole.user);
+      store.approveActiveUserRequest();
       final id = store.userRequestId, count = store.requests.length;
       final published = store.userRequest.published;
       final edited = store.questionnaire.copy()
@@ -244,14 +245,13 @@ void main() {
       for (var i = 0; i < 5; i++) {
         await next(tester);
       }
-      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
       await tester.pumpAndSettle();
-      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(NavigationBar), findsOneWidget);
       expect(store.requests.length, count);
-      expect(store.role, isNull);
-      await tester.tap(find.byTooltip('بازگشت به آنبوردینگ'));
-      await tester.pumpAndSettle();
-      expect(find.text('مرور پرسش‌نامه و ادامه'), findsOneWidget);
+      expect(store.role, AppRole.user);
+      expect(store.userSignedIn, isFalse);
+      expect(find.text('شما برنامه‌ای ندارید'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       store.dispose();
     },
@@ -300,22 +300,34 @@ void main() {
       await next(tester);
       await tester.tap(find.text('غذای ایرانی'));
       await next(tester);
-      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
       await tester.pumpAndSettle();
       expect(store.questionnaireComplete, isFalse);
       await tester.ensureVisible(find.byType(CheckboxListTile));
       await tester.tap(find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
       await tester.pumpAndSettle();
       expect(store.questionnaireComplete, isTrue);
-      expect(store.userRequest.status, PlanStatus.queued);
-      expect(store.entryStage, EntryStage.login);
-      expect(store.role, isNull);
+      expect(store.hasUserRequest, isFalse);
+      expect(store.entryStage, EntryStage.home);
+      expect(store.role, AppRole.user);
+      expect(store.userSignedIn, isFalse);
+      expect(find.text('شما برنامه‌ای ندارید'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('دریافت برنامه غذایی'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('دریافت برنامه غذایی'));
+      await tester.pumpAndSettle();
       expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
       await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
       await tester.pumpAndSettle();
+      expect(store.userSignedIn, isTrue);
+      expect(store.userRequest.status, PlanStatus.queued);
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(storage.value, isNotNull);
       expect(tester.takeException(), isNull);
@@ -417,7 +429,7 @@ void main() {
       store.addWeight(79.5);
       await tester.pumpAndSettle();
       expect(find.text('۷۹٫۵'), findsOneWidget);
-      store.approve(store.userRequestId);
+      store.approveActiveUserRequest();
       await tester.pumpAndSettle();
       expect(find.text('وضعیت برنامه'), findsNothing);
       expect(find.text('برنامهٔ امروز'), findsOneWidget);
@@ -426,7 +438,7 @@ void main() {
       }
       final original = store.mealsOn(store.today).first.title;
       store.editMeal(
-        store.userRequestId,
+        store.userRequestId!,
         0,
         store.userRequest
             .draftForDay((store.today.weekday + 1) % 7)
@@ -439,7 +451,12 @@ void main() {
       expect(find.text(original), findsOneWidget);
       expect(find.text('ویرایش منتشرنشده'), findsNothing);
       final full = find.text('برنامهٔ کامل');
-      await tester.ensureVisible(full);
+      await tester.scrollUntilVisible(
+        full,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(full);
       await tester.pumpAndSettle();
       expect(find.text('برنامهٔ غذایی من'), findsOneWidget);

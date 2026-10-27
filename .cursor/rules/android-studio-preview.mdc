@@ -1,0 +1,26 @@
+---
+description: Keep Android Studio preview folder in sync with this workspace
+alwaysApply: true
+---
+
+# Android Studio preview (سبزینه)
+
+This workspace is the source of truth:
+
+`C:\Users\Mohamadi\Desktop\sabzine\sabzine`
+
+Android Studio is opened on a second copy:
+
+`%USERPROFILE%\source\repos\سبزینه`
+
+After you **create, edit, or delete** any project file (especially under `lib/`, `test/`, `assets/`, `android/`, `pubspec.yaml`), run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool/sync_android_studio.ps1
+```
+
+Do this before ending the task so the user can preview in Android Studio without manual copy.
+
+Do not edit only the `source\repos\سبزینه` path; always change files in this workspace, then sync.
+
+Optional long-term fix: close Android Studio, rename the old `source\repos\سبزینه` folder, and create a directory junction to this workspace so sync is unnecessary.

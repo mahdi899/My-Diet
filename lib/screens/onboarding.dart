@@ -36,7 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         editing: store.questionnaireComplete || store.questionnaireNeedsReview,
         initialData: draft!,
         onExit: () => setState(() => started = false),
-        onSaved: store.continueToLogin,
+        onSaved: store.continueToUserHome,
       );
     }
     final items = user

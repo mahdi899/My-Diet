@@ -9,6 +9,7 @@ import '../widgets/ui.dart';
 import 'questionnaire.dart';
 import 'shared.dart';
 import 'doctor.dart';
+import 'admin.dart' show FoodsScreen;
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key, required this.onPlan});
@@ -43,9 +44,11 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final s = DemoScope.of(context),
-        r = s.userRequest,
+        hasPlan = s.hasUserRequest && s.userRequest.isPublished,
+        r = s.hasUserRequest ? s.userRequest : null,
         date = s.today,
-        meals = s.mealsOn(date);
+        meals = s.mealsOn(date),
+        specialist = r?.specialist ?? s.experts.first.name;
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -53,11 +56,12 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
           title: Text('سلام ${s.questionnaire.name.split(' ').first} 🌿'),
           actions: [
             IconButton(
-              tooltip: 'اعلان‌ها',
-              onPressed: () => pushPage(context, const NoticesScreen()),
-              icon: const Badge(
+              tooltip: 'پیام‌ها',
+              onPressed: () => pushPage(context, const MessagesScreen()),
+              icon: Badge(
+                isLabelVisible: s.messages.isNotEmpty,
                 smallSize: 7,
-                child: Icon(Icons.notifications_none_rounded),
+                child: const Icon(Icons.chat_bubble_outline),
               ),
             ),
           ],
@@ -78,7 +82,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
             children: [
               EnergyCard(date: date),
               DailyAdviceCard(date: date),
-              if (r.isPublished) ...[
+              if (hasPlan) ...[
                 Heading(
                   'برنامهٔ امروز',
                   subtitle: 'غذا را لمس کن تا مقدار دقیقش را ببینی',
@@ -87,13 +91,32 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                     child: const Text('برنامهٔ کامل'),
                   ),
                 ),
-                if (r.revisionRequested)
+                if (r!.revisionRequested)
                   const Notice(
                     'درخواست اصلاح در حال بررسی است؛ برنامهٔ تأییدشدهٔ فعلی همچنان در دسترس است.',
                   ),
                 for (var i = 0; i < meals.length; i++)
                   ScheduledMealTile(date: date, index: i),
-              ] else
+              ] else if (!s.userSignedIn || r == null)
+                Surface(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Heading(
+                        'شما برنامه‌ای ندارید',
+                        subtitle:
+                            'با ورود و ثبت درخواست، برنامهٔ غذایی شخصی‌سازی‌شده دریافت می‌کنی.',
+                      ),
+                      const SizedBox(height: 16),
+                      PrimaryButton(
+                        'دریافت برنامه غذایی',
+                        icon: Icons.restaurant_menu_outlined,
+                        onPressed: s.openUserLogin,
+                      ),
+                    ],
+                  ),
+                )
+              else
                 Surface(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,14 +147,14 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                 padding: 16,
                 child: Row(
                   children: [
-                    PersonAvatar(r.specialist, color: const Color(0xFFF3E5D6)),
+                    PersonAvatar(specialist, color: const Color(0xFFF3E5D6)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            r.specialist,
+                            specialist,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const Text(
@@ -358,7 +381,30 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
   int? selectedDay;
   @override
   Widget build(BuildContext context) {
-    final s = DemoScope.of(context), r = s.userRequest;
+    final s = DemoScope.of(context);
+    if (!s.hasUserRequest) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('برنامهٔ غذایی من'),
+          automaticallyImplyLeading: !widget.embedded,
+        ),
+        body: PageBody(
+          children: [
+            EmptyPanel(
+              'شما برنامه‌ای ندارید',
+              'برای دیدن برنامهٔ هفتگی، ابتدا درخواست برنامه را ثبت کن.',
+              icon: Icons.calendar_month_outlined,
+              action: PrimaryButton(
+                'دریافت برنامه غذایی',
+                icon: Icons.restaurant_menu_outlined,
+                onPressed: s.openUserLogin,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final r = s.userRequest;
     final day = (selectedDay ?? weekDayIndex(s.today)).clamp(
           weekDayIndex(s.today),
           6,
@@ -974,44 +1020,54 @@ class ProfileScreen extends StatelessWidget {
                     Icons.history,
                     onTap: () => pushPage(context, const HistoryScreen()),
                   ),
-                MenuRow(
-                  'پیام‌ها',
-                  Icons.chat_bubble_outline,
-                  onTap: () => pushPage(context, const MessagesScreen()),
-                ),
+                if (!expert)
+                  MenuRow(
+                    'ثبت نظر دربارهٔ برنامه',
+                    Icons.rate_review_outlined,
+                    onTap: () =>
+                        pushPage(context, const ProgramReviewSubmitScreen()),
+                  ),
+                if (expert)
+                  MenuRow(
+                    'بانک غذا',
+                    Icons.eco_outlined,
+                    onTap: () => pushPage(context, const FoodsScreen()),
+                  ),
                 MenuRow(
                   'سفارش‌ها و پرداخت‌ها',
                   Icons.credit_card_outlined,
                   onTap: () => pushPage(context, const OrdersScreen()),
                 ),
-                SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  title: const Text(
-                    'اعلان‌های برنامه',
-                    style: TextStyle(fontSize: 14),
+                if (!expert)
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    title: const Text(
+                      'اعلان‌های برنامه',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    value: store.notificationsEnabled,
+                    onChanged: (v) {
+                      store.notificationsEnabled = v;
+                      store.update();
+                    },
                   ),
-                  value: store.notificationsEnabled,
-                  onChanged: (v) {
-                    store.notificationsEnabled = v;
-                    store.update();
-                  },
-                ),
-                SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  title: const Text(
-                    'یادآوری وعده‌ها',
-                    style: TextStyle(fontSize: 14),
+                if (!expert)
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    title: const Text(
+                      'یادآوری وعده‌ها',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    subtitle: const Text(
+                      'تنظیم نمایشی؛ اعلان زمان‌بندی نمی‌شود.',
+                      style: TextStyle(fontSize: 10),
+                    ),
+                    value: store.mealReminders,
+                    onChanged: (v) {
+                      store.mealReminders = v;
+                      store.update();
+                    },
                   ),
-                  subtitle: const Text(
-                    'تنظیم نمایشی؛ اعلان زمان‌بندی نمی‌شود.',
-                    style: TextStyle(fontSize: 10),
-                  ),
-                  value: store.mealReminders,
-                  onChanged: (v) {
-                    store.mealReminders = v;
-                    store.update();
-                  },
-                ),
                 if (!expert)
                   MenuRow(
                     'پشتیبانی',
@@ -1041,7 +1097,7 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-          if (!expert)
+          if (!expert && store.hasUserRequest)
             Surface(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1084,6 +1140,69 @@ class ProfileScreen extends StatelessWidget {
             },
             icon: const Icon(Icons.switch_account_outlined),
             label: const Text('تعویض پنل نمایشی'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProgramReviewSubmitScreen extends StatefulWidget {
+  const ProgramReviewSubmitScreen({super.key});
+  @override
+  State<ProgramReviewSubmitScreen> createState() =>
+      _ProgramReviewSubmitScreenState();
+}
+
+class _ProgramReviewSubmitScreenState extends State<ProgramReviewSubmitScreen> {
+  final controller = TextEditingController();
+  bool initialized = false;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final pending = store.userPendingReview();
+    if (!initialized) {
+      controller.text = pending?.text ?? '';
+      initialized = true;
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('نظر دربارهٔ برنامه')),
+      body: PageBody(
+        children: [
+          const Notice(
+            'نظر شما پس از بررسی مدیر در داشبورد سایر کاربران نمایش داده می‌شود.',
+            icon: Icons.admin_panel_settings_outlined,
+          ),
+          if (pending != null)
+            Tag('در انتظار تأیید مدیر', warning: true),
+          TextField(
+            controller: controller,
+            minLines: 5,
+            maxLines: 8,
+            decoration: const InputDecoration(
+              labelText: 'متن نظر',
+              hintText: 'تجربه‌ات از برنامه، متخصص یا اپ را بنویس…',
+            ),
+          ),
+          PrimaryButton(
+            'ارسال برای تأیید مدیر',
+            icon: Icons.send_outlined,
+            onPressed: () {
+              try {
+                store.submitProgramReview(controller.text);
+                showToast(context, 'نظر ثبت شد و برای مدیر ارسال شد.');
+                Navigator.pop(context);
+              } on StateError catch (e) {
+                showToast(context, e.message);
+              }
+            },
           ),
         ],
       ),

@@ -23,7 +23,7 @@ void main() {
       mobile(t);
       final s = DemoStore(clock: () => DateTime(2026, 10, 26))
         ..login(AppRole.user);
-      s.approve(s.userRequestId);
+      s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
       final energy = find.byKey(const ValueKey('daily-energy-card')),
@@ -88,7 +88,7 @@ void main() {
       mobile(t);
       final s = DemoStore(clock: () => DateTime(2026, 10, 29))
         ..login(AppRole.user);
-      s.approve(s.userRequestId);
+      s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
       await t.tap(find.byType(NavigationDestination).at(1));
@@ -124,7 +124,7 @@ void main() {
       mobile(t);
       final s = DemoStore(clock: () => DateTime(2026, 10, 26))
         ..login(AppRole.user);
-      s.approve(s.userRequestId);
+      s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
       final tile = find.byType(ScheduledMealTile).first;

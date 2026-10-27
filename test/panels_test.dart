@@ -73,7 +73,7 @@ void main() {
         ..clinicPhone = '۰۲۱۱۲۳۴۵۶۷۸';
       await s.saveExpertProfile(expert);
       expect(s.questionnaire.name, name);
-      expect(s.userRequest.specialist, expert.name);
+      expect(s.request('1042').specialist, expert.name);
       expect(s.assignedDoctor!.medicalCode, '۸۸۹۹');
       final form = s.formConfiguration.copy();
       form.question('name').title = 'نام کامل شما';
@@ -290,6 +290,47 @@ void main() {
       s.dispose();
     },
   );
+  test('Program reviews require admin approval before public dashboard', () {
+    final s = DemoStore()..login(AppRole.user);
+    s.questionnaire.name = 'سارا احمدی';
+    expect(s.approvedReviewsForDashboard().length, 2);
+    s.submitProgramReview('برنامهٔ من عالی بود.');
+    expect(s.pendingProgramReviews().length, 2);
+    expect(s.userPendingReview()?.text, 'برنامهٔ من عالی بود.');
+    expect(s.approvedReviewsForDashboard().length, 2);
+    s.login(AppRole.admin);
+    final pending = s.pendingProgramReviews().firstWhere(
+      (r) => r.authorName == 'سارا احمدی',
+    );
+    s.approveProgramReview(pending.id);
+    s.login(AppRole.user);
+    s.questionnaire.name = 'رضا موسوی';
+    expect(
+      s.approvedReviewsForDashboard().any((r) => r.authorName == 'سارا احمدی'),
+      true,
+    );
+    s.dispose();
+  });
+  test('Expert can add and remove draft meals', () {
+    final s = DemoStore()..login(AppRole.expert);
+    final id = '1042';
+    final before = s.request(id).draft.length;
+    s.addMeal(
+      id,
+      const Meal(
+        name: 'میان‌وعده',
+        title: 'ماست',
+        time: '۱۶:۰۰',
+        amount: '۱ لیوان',
+        details: 'نمونه',
+        calories: 180,
+      ),
+    );
+    expect(s.request(id).draft.length, before + 1);
+    s.removeMeal(id, before);
+    expect(s.request(id).draft.length, before);
+    s.dispose();
+  });
   testWidgets(
     'Support message reaches admin dashboard and reply stays in support conversation',
     (t) async {

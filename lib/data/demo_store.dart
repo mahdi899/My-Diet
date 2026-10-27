@@ -291,18 +291,20 @@ class Meal {
   final String name, title, time, amount, details;
   final int kind, calories;
   Meal copyWith({
+    String? name,
     String? title,
     String? time,
     String? amount,
     String? details,
+    int? kind,
     int? calories,
   }) => Meal(
-    name: name,
+    name: name ?? this.name,
     title: title ?? this.title,
     time: time ?? this.time,
     amount: amount ?? this.amount,
     details: details ?? this.details,
-    kind: kind,
+    kind: kind ?? this.kind,
     calories: calories ?? this.calories,
   );
 }
@@ -536,6 +538,19 @@ class FoodRecord {
   String name, group, unit, allergens;
 }
 
+class ProgramReview {
+  ProgramReview({
+    required this.id,
+    required this.authorName,
+    required this.text,
+    this.approved = false,
+  });
+  final String id;
+  final String authorName;
+  String text;
+  bool approved;
+}
+
 class ExpertRecord {
   ExpertRecord(
     this.name,
@@ -697,8 +712,10 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
-  ExpertRecord? get assignedDoctor =>
-      experts.where((e) => e.name == userRequest.specialist).firstOrNull;
+  ExpertRecord? get assignedDoctor {
+    if (userRequestId == null) return experts.firstOrNull;
+    return experts.where((e) => e.name == userRequest.specialist).firstOrNull;
+  }
   final chatThreads = <ChatThread>[
     ChatThread('user-main', 'سارا احمدی'),
     ChatThread('patient-amir', 'امیر حسینی'),
@@ -718,7 +735,9 @@ class DemoStore extends ChangeNotifier {
       ? questionnaire.name
       : t.patientName;
   String threadTitle(ChatThread t, AppRole role) => role == AppRole.user
-      ? (t.support ? 'پشتیبانی سبزینه' : userRequest.specialist)
+      ? (t.support
+            ? 'پشتیبانی سبزینه'
+            : (hasUserRequest ? userRequest.specialist : experts.first.name))
       : patientName(t);
   bool incoming(ChatMessage m, AppRole role) => role == AppRole.user
       ? m.sender != AppRole.user
@@ -764,8 +783,10 @@ class DemoStore extends ChangeNotifier {
   bool savingMeal = false;
   String mealLogKey(DateTime date, int index) =>
       '${dateKey(date)}|$index|${mealsOn(date)[index].title}|${mealsOn(date)[index].calories}';
-  List<Meal> mealsOn(DateTime date) =>
-      userRequest.mealsForDay(weekDayIndex(date));
+  List<Meal> mealsOn(DateTime date) {
+    if (userRequestId == null) return const [];
+    return userRequest.mealsForDay(weekDayIndex(date));
+  }
   int calorieTarget(DateTime date) =>
       mealsOn(date).fold(0, (n, m) => n + m.calories);
   int consumedCalories(DateTime date) => _mealCalories.entries
@@ -856,8 +877,10 @@ class DemoStore extends ChangeNotifier {
           restored.isComplete &&
           formConfiguration.validateExtras(restored.extraAnswers) == null;
       questionnaireNeedsReview = !questionnaireComplete;
-      userRequest.name = restored.name;
-      userRequest.goal = restored.goal;
+      if (userRequestId != null) {
+        userRequest.name = restored.name;
+        userRequest.goal = restored.goal;
+      }
       update();
     } catch (error) {
       // A missing/corrupt local preference must not block opening the app.
@@ -887,20 +910,17 @@ class DemoStore extends ChangeNotifier {
     }
     questionnaire.copyFrom(snapshot);
     questionnaireNeedsReview = false;
-    if (onboarding) {
-      submitQuestionnaire();
-    } else {
-      questionnaireComplete = true;
-      update();
-    }
+    questionnaireComplete = true;
+    update();
   }
 
   AppRole? role;
   AppRole? selectedRole;
   EntryStage entryStage = EntryStage.roles;
-  String userRequestId = '1042';
-  final userRequestIds = <String>{'1042'};
-  bool notificationsEnabled = true,
+  String? userRequestId;
+  final userRequestIds = <String>{};
+  bool userSignedIn = false,
+      notificationsEnabled = true,
       mealReminders = false,
       questionnaireComplete = false;
   double latestWeight = 72;
@@ -999,6 +1019,28 @@ class DemoStore extends ChangeNotifier {
     FoodRecord('تخم‌مرغ آب‌پز', 'پروتئین', 'عدد', 'تخم‌مرغ'),
     FoodRecord('پنیر', 'لبنیات', 'گرم', 'لبنیات'),
   ];
+  final programReviews = <ProgramReview>[
+    ProgramReview(
+      id: 'rev-1',
+      authorName: 'نگار محمدی',
+      text:
+          'برنامهٔ هفتگی خیلی منظم بود و مقدارها برای آشپزخانهٔ خانگی قابل‌اجرا بود.',
+      approved: true,
+    ),
+    ProgramReview(
+      id: 'rev-2',
+      authorName: 'امیر حسینی',
+      text: 'پیگیری متخصص و امکان اصلاح برنامه حس خوبی می‌دهد.',
+      approved: true,
+    ),
+    ProgramReview(
+      id: 'rev-3',
+      authorName: 'مریم کریمی',
+      text: 'دوست دارم بعد از تأیید، خلاصهٔ هفتگی هم در خانه دیده شود.',
+      approved: false,
+    ),
+  ];
+  int _reviewSeq = 4;
   final experts = <ExpertRecord>[
     ExpertRecord(
       'دکتر نازنین رضایی',
@@ -1040,7 +1082,9 @@ class DemoStore extends ChangeNotifier {
     'سلیقهٔ غذایی',
     'بازبینی و تأیید',
   ];
-  DietRequest get userRequest => request(userRequestId);
+  bool get hasUserRequest => userRequestId != null;
+
+  DietRequest get userRequest => request(userRequestId!);
   DietRequest request(String id) => requests.firstWhere((r) => r.id == id);
   void update() => notifyListeners();
   void selectRole(AppRole value) {
@@ -1052,6 +1096,22 @@ class DemoStore extends ChangeNotifier {
 
   void continueToLogin() {
     if (selectedRole == null) return;
+    role = null;
+    entryStage = EntryStage.login;
+    update();
+  }
+
+  void continueToUserHome() {
+    if (selectedRole != AppRole.user) return;
+    role = AppRole.user;
+    userSignedIn = false;
+    entryStage = EntryStage.home;
+    update();
+  }
+
+  void openUserLogin() {
+    selectedRole = AppRole.user;
+    role = null;
     entryStage = EntryStage.login;
     update();
   }
@@ -1070,12 +1130,35 @@ class DemoStore extends ChangeNotifier {
     role = value;
     selectedRole = value;
     entryStage = EntryStage.home;
+    if (value == AppRole.user) {
+      userSignedIn = true;
+      if (userRequestId == null) {
+        if (questionnaireComplete) {
+          submitQuestionnaire();
+        } else {
+          attachDemoUserRequest();
+        }
+      }
+    }
     update();
+  }
+
+  void attachDemoUserRequest() {
+    userRequestId = '1042';
+    userRequestIds.add('1042');
+    if (questionnaire.name.isNotEmpty) {
+      final r = request('1042');
+      r.name = questionnaire.name;
+      r.goal = questionnaire.goal;
+    }
   }
 
   void logout() {
     role = null;
     selectedRole = null;
+    userSignedIn = false;
+    userRequestId = null;
+    userRequestIds.clear();
     entryStage = EntryStage.roles;
     update();
   }
@@ -1126,6 +1209,74 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
+  void addMeal(String id, Meal meal, {int day = 0}) {
+    request(id).draftForDay(day).add(meal);
+    update();
+  }
+
+  void removeMeal(String id, int index, {int day = 0}) {
+    final meals = request(id).draftForDay(day);
+    if (index < 0 || index >= meals.length) return;
+    meals.removeAt(index);
+    update();
+  }
+
+  void removeFood(FoodRecord record) {
+    foods.remove(record);
+    update();
+  }
+
+  List<ProgramReview> approvedReviewsForDashboard() => programReviews
+      .where(
+        (r) => r.approved && r.authorName.trim() != questionnaire.name.trim(),
+      )
+      .toList();
+
+  List<ProgramReview> pendingProgramReviews() =>
+      programReviews.where((r) => !r.approved).toList();
+
+  ProgramReview? userPendingReview() {
+    final name = questionnaire.name.trim();
+    for (final r in programReviews) {
+      if (r.authorName.trim() == name && !r.approved) return r;
+    }
+    return null;
+  }
+
+  void submitProgramReview(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      throw StateError('متن نظر را وارد کن.');
+    }
+    final name = questionnaire.name.trim();
+    programReviews.removeWhere((r) => r.authorName.trim() == name && !r.approved);
+    programReviews.insert(
+      0,
+      ProgramReview(
+        id: 'rev-${_reviewSeq++}',
+        authorName: name,
+        text: trimmed,
+      ),
+    );
+    update();
+  }
+
+  void approveProgramReview(String id) {
+    final review = programReviews.firstWhere((r) => r.id == id);
+    review.approved = true;
+    update();
+  }
+
+  void rejectProgramReview(String id) {
+    programReviews.removeWhere((r) => r.id == id);
+    update();
+  }
+
+  void approveActiveUserRequest() {
+    final id = userRequestId;
+    if (id != null) approve(id);
+  }
+
   void approve(String id) {
     final r = request(id);
     if (List.generate(7, r.draftForDay)
@@ -1164,6 +1315,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   void requestRevision(String reason, String detail) {
+    if (!hasUserRequest) return;
     userRequest.revisionRequested = true;
     userRequest.revisionReason = reason;
     userRequest.revisionDetails = detail;
@@ -1171,8 +1323,9 @@ class DemoStore extends ChangeNotifier {
   }
 
   void setDemoStatus(PlanStatus status) {
+    if (!hasUserRequest) return;
     if (status == PlanStatus.ready) {
-      approve(userRequestId);
+      approve(userRequestId!);
       return;
     }
     userRequest.status = status;

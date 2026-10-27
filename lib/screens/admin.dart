@@ -527,6 +527,11 @@ class AdminMoreScreen extends StatelessWidget {
                 onTap: () => pushPage(context, const FoodsScreen()),
               ),
               MenuRow(
+                'تأیید نظرات کاربران',
+                Icons.rate_review_outlined,
+                onTap: () => pushPage(context, const ProgramReviewsModerationScreen()),
+              ),
+              MenuRow(
                 'مدیریت پرسش‌نامه',
                 Icons.quiz_outlined,
                 onTap: () => pushPage(context, const QuestionAdminScreen()),
@@ -711,6 +716,17 @@ Future<void> editFood(BuildContext context, {FoodRecord? record}) async {
                   },
                   icon: Icons.check,
                 ),
+                if (record != null) ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      store.removeFood(record);
+                      Navigator.pop(sheet);
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('حذف غذا از بانک'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -722,6 +738,70 @@ Future<void> editFood(BuildContext context, {FoodRecord? record}) async {
   group.dispose();
   unit.dispose();
   allergens.dispose();
+}
+
+class ProgramReviewsModerationScreen extends StatelessWidget {
+  const ProgramReviewsModerationScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final pending = store.pendingProgramReviews();
+    return Scaffold(
+      appBar: AppBar(title: const Text('تأیید نظرات')),
+      body: PageBody(
+        children: [
+          const Notice(
+            'نظرات پس از تأیید در داشبورد سایر کاربران نمایش داده می‌شوند.',
+            icon: Icons.visibility_outlined,
+          ),
+          if (pending.isEmpty)
+            const EmptyPanel(
+              'نظر در انتظار تأیید نیست',
+              'وقتی کاربری نظر جدید ثبت کند، اینجا دیده می‌شود.',
+              icon: Icons.rate_review_outlined,
+            ),
+          for (final review in pending)
+            Surface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Heading(review.authorName, subtitle: 'در انتظار تأیید مدیر'),
+                  const SizedBox(height: 10),
+                  Text(
+                    review.text,
+                    style: const TextStyle(height: 1.8, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            store.rejectProgramReview(review.id);
+                            showToast(context, 'نظر حذف شد.');
+                          },
+                          child: const Text('رد'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            store.approveProgramReview(review.id);
+                            showToast(context, 'نظر برای نمایش عمومی تأیید شد.');
+                          },
+                          child: const Text('تأیید نمایش'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class PaymentsScreen extends StatefulWidget {
