@@ -3,7 +3,6 @@ import '../data/demo_store.dart';
 import '../data/day.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
-import 'admin.dart' show FoodsScreen, editFood;
 import 'shared.dart';
 
 void openReview(BuildContext context, DietRequest request) {
@@ -313,7 +312,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
-                  onPressed: () => approve(store),
+                  onPressed: r.canApproveInformation
+                      ? () => approve(store)
+                      : null,
                   child: Text(
                     r.isPublished ? 'تأیید نسخهٔ جدید' : 'تأیید و ارسال برنامه',
                   ),
@@ -366,6 +367,36 @@ class _ReviewScreenState extends State<ReviewScreen> {
               ],
             ),
           ),
+          if (r.question.isNotEmpty)
+            Surface(
+              color: sage,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Heading('اطلاعات بیشتر'),
+                  Text('سؤال شما: ${r.question}'),
+                  const SizedBox(height: 10),
+                  if (r.infoAnswer.isEmpty)
+                    const Notice(
+                      'منتظر پاسخ کاربر؛ تا دریافت و بررسی پاسخ، تأیید برنامه غیرفعال است.',
+                      warning: true,
+                    )
+                  else ...[
+                    Text('پاسخ کاربر: ${r.infoAnswer}'),
+                    const SizedBox(height: 8),
+                    if (!r.infoAnswerReviewed)
+                      OutlinedButton.icon(
+                        key: const ValueKey('review-information-answer'),
+                        onPressed: () => store.markInfoAnswerReviewed(r.id),
+                        icon: const Icon(Icons.done_all),
+                        label: const Text('پاسخ را خواندم و بررسی کردم'),
+                      )
+                    else
+                      const Tag('پاسخ بررسی شد؛ امکان تأیید برنامه فعال است'),
+                  ],
+                ],
+              ),
+            ),
           if (r.revisionRequested)
             Notice(
               '${r.revisionReason}\n${r.revisionDetails}',
@@ -444,14 +475,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 ),
               ),
           OutlinedButton.icon(
-            onPressed: () => addMealFromBank(context, store, r),
+            onPressed: () => addCustomMeal(context, store, r),
             icon: const Icon(Icons.add_circle_outline),
-            label: const Text('افزودن وعده از بانک غذا'),
-          ),
-          TextButton.icon(
-            onPressed: () => pushPage(context, const FoodsScreen()),
-            icon: const Icon(Icons.eco_outlined, size: 18),
-            label: const Text('مدیریت بانک غذا'),
+            label: const Text('افزودن وعده به برنامه'),
           ),
           const Notice(
             'در این نسخه، کنترل تغذیه‌ای واقعی اجرا نمی‌شود. جای نمایش نتیجهٔ کنترل‌ها در نسخهٔ نهایی اینجاست.',
@@ -477,107 +503,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   Future<void> editMeal(BuildContext context, DietRequest r, int index) async {
-    final store = DemoScope.of(context), m = r.draftForDay(reviewDay)[index];
-    final title = TextEditingController(text: m.title),
-        amount = TextEditingController(text: m.amount),
-        time = TextEditingController(text: m.time),
-        details = TextEditingController(text: m.details),
-        calories = TextEditingController(text: m.calories.toString());
-    final form = GlobalKey<FormState>();
-    final result = await showModalBottomSheet<Meal>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            8,
-            24,
-            24 + MediaQuery.viewInsetsOf(sheet).bottom,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: form,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Heading('ویرایش ${m.name}'),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: title,
-                    decoration: const InputDecoration(labelText: 'نام غذا'),
-                    validator: (v) =>
-                        (v ?? '').trim().isEmpty ? 'نام غذا لازم است.' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: amount,
-                    minLines: 3,
-                    maxLines: 7,
-                    decoration: const InputDecoration(
-                      labelText: 'مقدار دقیق هر ماده / واحد',
-                    ),
-                    validator: (v) =>
-                        (v ?? '').trim().isEmpty ? 'مقدار لازم است.' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: calories,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'انرژی وعده / کیلوکالری',
-                    ),
-                    validator: (v) {
-                      final n = int.tryParse(latinDigits(v ?? ''));
-                      return n == null || n <= 0 ? 'عدد مثبت وارد کن.' : null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: time,
-                    decoration: const InputDecoration(labelText: 'زمان وعده'),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: details,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'مواد اولیه و توضیح',
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  PrimaryButton(
-                    'ذخیرهٔ ویرایش',
-                    onPressed: () {
-                      if (!form.currentState!.validate()) return;
-                      Navigator.pop(
-                        sheet,
-                        m.copyWith(
-                          title: title.text.trim(),
-                          amount: amount.text.trim(),
-                          time: time.text.trim(),
-                          details: details.text.trim(),
-                          calories: int.parse(latinDigits(calories.text)),
-                        ),
-                      );
-                    },
-                    icon: Icons.check,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    final store = DemoScope.of(context);
+    final edited = await _editMealSheet(
+      context,
+      r.draftForDay(reviewDay)[index],
+      heading: 'ویرایش وعده',
+      editing: true,
     );
-    if (result != null) store.editMeal(r.id, index, result, day: reviewDay);
-    title.dispose();
-    amount.dispose();
-    time.dispose();
-    details.dispose();
-    calories.dispose();
+    if (edited != null) store.editMeal(r.id, index, edited, day: reviewDay);
   }
 
   Future<void> removeMeal(
@@ -606,99 +539,32 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (ok == true) store.removeMeal(r.id, index, day: reviewDay);
   }
 
-  Future<void> addMealFromBank(
+  Future<void> addCustomMeal(
     BuildContext context,
     DemoStore store,
     DietRequest r,
   ) async {
-    if (store.foods.isEmpty) {
-      showToast(context, 'بانک غذا خالی است؛ ابتدا غذا اضافه کن.');
-      return;
-    }
-    final food = await showModalBottomSheet<FoodRecord>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 8, 24, 0),
-              child: Heading(
-                'انتخاب از بانک غذا',
-                subtitle: 'غذا را انتخاب کن و مقدار را در مرحلهٔ بعد تنظیم کن.',
-              ),
-            ),
-            SizedBox(
-              height: 360,
-              child: ListView(
-                children: [
-                  for (final f in store.foods)
-                    ListTile(
-                      title: Text(f.name),
-                      subtitle: Text('${f.group} · واحد: ${f.unit}'),
-                      trailing: const Icon(Icons.chevron_left, color: pine),
-                      onTap: () => Navigator.pop(sheet, f),
-                    ),
-                  ListTile(
-                    leading: const Icon(Icons.add, color: pine),
-                    title: const Text('افزودن غذا به بانک'),
-                    onTap: () async {
-                      Navigator.pop(sheet);
-                      await editFood(context);
-                      if (context.mounted) addMealFromBank(context, store, r);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (food == null || !context.mounted) return;
-    final slot = await showDialog<String>(
-      context: context,
-      builder: (d) => SimpleDialog(
-        title: const Text('نوع وعده'),
-        children: [
-          for (final label in const [
-            'صبحانه',
-            'ناهار',
-            'میان‌وعده',
-            'شام',
-            'وعدهٔ دیگر',
-          ])
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(d, label),
-              child: Text(label),
-            ),
-        ],
-      ),
-    );
-    if (slot == null || !context.mounted) return;
-    final m = Meal(
-      name: slot,
-      title: food.name,
-      time: '۱۲:۰۰',
-      amount: '۱ ${food.unit}',
-      details: '${food.group} · ${food.allergens}',
-      kind: slot == 'میان‌وعده' ? 2 : 0,
-      calories: 350,
-    );
-    final edited = await _editMealSheet(
+    final meal = await _editMealSheet(
       context,
-      m,
-      heading: 'تعیین مقدار و انرژی',
+      const Meal(
+        name: 'شام',
+        title: '',
+        time: '',
+        amount: '',
+        details: '',
+        kind: 0,
+        calories: 0,
+      ),
+      heading: 'افزودن وعده به برنامه',
     );
-    if (edited != null) store.addMeal(r.id, edited, day: reviewDay);
+    if (meal != null) store.addMeal(r.id, meal, day: reviewDay);
   }
 
   Future<Meal?> _editMealSheet(
     BuildContext context,
     Meal m, {
     required String heading,
+    bool editing = false,
   }) async {
     final title = TextEditingController(text: m.title),
         amount = TextEditingController(text: m.amount),
@@ -707,8 +573,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         calories = TextEditingController(text: m.calories.toString()),
         slot = TextEditingController(text: m.name);
     final form = GlobalKey<FormState>();
-    final result = await showModalBottomSheet<Meal>(
-      context: context,
+    final sheetRoute = ModalBottomSheetRoute<Meal>(
       isScrollControlled: true,
       showDragHandle: true,
       builder: (sheet) => SafeArea(
@@ -728,11 +593,26 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 children: [
                   Heading(heading),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: slot,
-                    decoration: const InputDecoration(labelText: 'نام وعده'),
-                    validator: (v) =>
-                        (v ?? '').trim().isEmpty ? 'نام وعده لازم است.' : null,
+                  DropdownButtonFormField<String>(
+                    initialValue: m.name,
+                    decoration: const InputDecoration(labelText: 'نوع وعده'),
+                    items:
+                        {
+                              m.name,
+                              'صبحانه',
+                              'ناهار',
+                              'میان‌وعده',
+                              'شام',
+                              'وعدهٔ دیگر',
+                            }
+                            .map(
+                              (name) => DropdownMenuItem(
+                                value: name,
+                                child: Text(name),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (value) => slot.text = value ?? m.name,
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -747,7 +627,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     minLines: 3,
                     maxLines: 7,
                     decoration: const InputDecoration(
-                      labelText: 'مقدار دقیق هر ماده / واحد',
+                      labelText: 'آیتم‌ها و مقدار دقیق هر کدام',
+                      hintText:
+                          'برنج پخته: ۱۵۰ گرم\nمرغ: ۱۲۰ گرم\nسالاد: ۱ لیوان',
                     ),
                     validator: (v) =>
                         (v ?? '').trim().isEmpty ? 'مقدار لازم است.' : null,
@@ -767,7 +649,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: time,
-                    decoration: const InputDecoration(labelText: 'زمان وعده'),
+                    decoration: const InputDecoration(
+                      labelText: 'ساعت وعده',
+                      hintText: 'مثلاً ۱۹:۳۰',
+                    ),
+                    validator: (v) => (v ?? '').trim().isEmpty
+                        ? 'ساعت وعده را وارد کن.'
+                        : null,
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -779,7 +667,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   ),
                   const SizedBox(height: 18),
                   PrimaryButton(
-                    'افزودن به برنامه',
+                    editing ? 'ذخیرهٔ ویرایش' : 'افزودن به برنامه',
                     onPressed: () {
                       if (!form.currentState!.validate()) return;
                       Navigator.pop(
@@ -803,6 +691,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ),
       ),
     );
+    final result = await Navigator.of(context).push<Meal>(sheetRoute);
+    await sheetRoute.completed;
     title.dispose();
     amount.dispose();
     time.dispose();
@@ -814,7 +704,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<void> needMore(BuildContext context, DietRequest r) async {
     final store = DemoScope.of(context), text = TextEditingController();
-    final result = await showDialog<String>(
+    final dialogRoute = DialogRoute<String>(
       context: context,
       builder: (d) => AlertDialog(
         title: const Text('اطلاعات بیشتر'),
@@ -838,6 +728,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ],
       ),
     );
+    final result = await Navigator.of(context).push<String>(dialogRoute);
+    await dialogRoute.completed;
     if (result != null) {
       store.needInfo(r.id, result);
       if (context.mounted) {

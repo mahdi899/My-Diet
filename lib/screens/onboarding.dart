@@ -36,7 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         editing: store.questionnaireComplete || store.questionnaireNeedsReview,
         initialData: draft!,
         onExit: () => setState(() => started = false),
-        onSaved: store.continueToLogin,
+        onSaved: store.completeUserOnboarding,
       );
     }
     final items = user
@@ -95,7 +95,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return PopScope<void>(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) store.logout();
+        if (!didPop) {
+          if (user) {
+            store.cancelUserEntry();
+          } else {
+            store.showRoleSelection();
+          }
+        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -108,7 +114,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: store.logout, child: const Text('تغییر نقش')),
+            if (user)
+              IconButton(
+                tooltip: 'بازگشت به داشبورد',
+                onPressed: store.cancelUserEntry,
+                icon: const Icon(Icons.home_outlined),
+              )
+            else
+              TextButton(
+                onPressed: store.showRoleSelection,
+                child: const Text('تغییر نقش'),
+              ),
           ],
         ),
         bottomNavigationBar: SafeArea(

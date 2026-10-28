@@ -9,10 +9,12 @@ const walletPricingRoute = '/wallet/plan-services';
 
 Future<void> openPlanServices(BuildContext context) async {
   final store = DemoScope.of(context);
-  if (!store.userSignedIn) {
-    store.openUserLogin();
+  if (!store.userSignedIn || !store.questionnaireComplete) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    store.startPlanAcquisition();
     return;
   }
+  store.pendingPlanAcquisition = false;
   if (store.walletPricingOpen) return;
   store.walletPricingOpen = true;
   try {

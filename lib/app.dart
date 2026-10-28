@@ -9,6 +9,8 @@ import 'screens/expert.dart';
 import 'screens/admin.dart';
 import 'screens/shared.dart';
 import 'theme.dart';
+import 'widgets/weekly_progress.dart';
+import 'screens/wallet_flow.dart';
 
 class SabzineApp extends StatefulWidget {
   const SabzineApp({
@@ -41,6 +43,8 @@ class _SabzineAppState extends State<SabzineApp> {
       if (widget.restoreOnStart) store.restoreQuestionnaire(),
       if (widget.restoreOnStart) store.restoreNutritionLog(),
       if (widget.restoreOnStart) store.restoreWorkspaceSettings(),
+      if (widget.restoreOnStart) store.restoreWalletState(),
+      if (widget.restoreOnStart) store.restoreUserSession(),
     ]);
     if (mounted) setState(() => starting = false);
   }
@@ -94,6 +98,25 @@ class PanelShell extends StatefulWidget {
 
 class _PanelShellState extends State<PanelShell> {
   int selected = 0;
+  bool resumingPlan = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final store = DemoScope.of(context);
+    if (!resumingPlan &&
+        widget.role == AppRole.user &&
+        store.pendingPlanAcquisition &&
+        store.userSignedIn &&
+        store.questionnaireComplete) {
+      resumingPlan = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await openPlanServices(context);
+        resumingPlan = false;
+      });
+    }
+  }
+
   void select(int i) => setState(() => selected = i);
   @override
   Widget build(BuildContext context) {
@@ -145,7 +168,10 @@ class _PanelShellState extends State<PanelShell> {
             _ => const AdminMoreScreen(),
           };
     return Scaffold(
-      body: SafeArea(bottom: false, child: page),
+      body: SafeArea(
+        bottom: false,
+        child: user ? WeeklyRewardGate(child: page) : page,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selected,
         onDestinationSelected: select,

@@ -632,7 +632,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                         ? 'در حال ذخیره…'
                         : step == 5
                         ? (widget.onboarding
-                              ? 'ثبت اطلاعات و ادامه به ورود'
+                              ? 'ثبت اطلاعات و ادامه'
                               : widget.editing
                               ? 'ذخیرهٔ تغییرات'
                               : 'ثبت اطلاعات')

@@ -165,31 +165,34 @@ class EnergyCard extends StatelessWidget {
                               color: const Color(0xFFC4E88F),
                             ),
                           ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.local_fire_department_outlined,
-                                color: Color(0xFFC4E88F),
-                                size: 18,
-                              ),
-                              Text(
-                                fa(consumed),
-                                key: const ValueKey('consumed-calories'),
-                                style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.local_fire_department_outlined,
+                                  color: Color(0xFFC4E88F),
+                                  size: 18,
                                 ),
-                              ),
-                              const Text(
-                                'دریافت‌شده',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.white70,
+                                Text(
+                                  fa(consumed),
+                                  key: const ValueKey('consumed-calories'),
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const Text(
+                                  'دریافت‌شده',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

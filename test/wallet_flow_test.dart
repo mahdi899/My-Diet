@@ -17,6 +17,7 @@ Future<void> tapWallet(WidgetTester t, Finder f) async {
 
 Future<void> startWallet(WidgetTester t, DemoStore s) async {
   mobile(t);
+  s.questionnaireComplete = true;
   s.login(AppRole.user);
   await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
   await t.pumpAndSettle();

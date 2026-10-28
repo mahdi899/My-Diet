@@ -92,12 +92,22 @@ class _LoginScreenState extends State<LoginScreen> {
     if (codeStep) {
       setState(() => codeStep = false);
     } else {
-      DemoScope.of(context).returnToOnboarding();
+      final store = DemoScope.of(context);
+      if (widget.role == AppRole.user) {
+        store.cancelUserEntry();
+      } else {
+        store.returnToOnboarding();
+      }
     }
   }
 
   void finish() {
-    DemoScope.of(context).login(widget.role);
+    DemoScope.of(context).login(
+      widget.role,
+      phone: latinDigits(phone.text).trim().isEmpty
+          ? '09120000000'
+          : latinDigits(phone.text).trim(),
+    );
     Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
@@ -111,7 +121,9 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         title: Text('ورود ${widget.role.label}'),
         leading: IconButton(
-          tooltip: 'بازگشت به آنبوردینگ',
+          tooltip: widget.role == AppRole.user
+              ? 'بازگشت به داشبورد'
+              : 'بازگشت به آنبوردینگ',
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: back,
         ),

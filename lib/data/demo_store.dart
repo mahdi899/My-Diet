@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'questionnaire_storage.dart';
 import 'nutrition_log_storage.dart';
 import 'day.dart';
+import 'wallet_state_storage.dart';
+import 'session_storage.dart';
 import 'form_config.dart';
 import 'workspace_settings_storage.dart';
 
@@ -502,6 +504,14 @@ class DietRequest {
   bool priority;
   bool revisionRequested = false;
   String revisionReason = '', revisionDetails = '', question = '';
+  String infoAnswer = '';
+  bool infoAnswerReviewed = false;
+  bool get canApproveInformation => question.isEmpty
+      ? status != PlanStatus.needsInfo
+      : infoAnswer.isNotEmpty && infoAnswerReviewed;
+  DateTime? programStartsOn;
+  DateTime? programWeek;
+
   String draftNote =
       'اگر تهیهٔ غذایی برات سخت بود، از متخصص دربارهٔ جایگزین بپرس.';
   String publishedNote = '';
@@ -533,11 +543,6 @@ class ChatMessage {
   final AppRole sender;
   final bool support;
   final String threadId;
-}
-
-class FoodRecord {
-  FoodRecord(this.name, this.group, this.unit, this.allergens);
-  String name, group, unit, allergens;
 }
 
 class ProgramReview {
@@ -627,9 +632,13 @@ class DemoStore extends ChangeNotifier {
   DemoStore({
     QuestionnaireStorage? storage,
     NutritionLogStorage? nutritionStorage,
+    WalletStateStorage? walletStorage,
+    SessionStorage? sessionStorage,
     WorkspaceSettingsStorage? settingsStorage,
     DateTime Function()? clock,
-  }) : _storage = storage,
+  }) : _sessionStorage = sessionStorage,
+       _walletStorage = walletStorage,
+       _storage = storage,
        _settingsStorage = settingsStorage,
        _nutritionStorage = nutritionStorage,
        _clock = clock ?? DateTime.now {
@@ -641,6 +650,9 @@ class DemoStore extends ChangeNotifier {
     );
     approved.publishedNote = approved.draftNote;
     approved.version = 1;
+    approved.programWeek = startOfWeek(today);
+    approved.programStartsOn = startOfWeek(today);
+    request('1040').question = 'ساعت معمول شام و داروهای مصرفی خود را بنویس.';
     requests.last.revisionRequested = true;
     requests.last.revisionReason = 'زمان تهیهٔ غذاها زیاده';
   }
@@ -785,16 +797,22 @@ class DemoStore extends ChangeNotifier {
   final Map<String, int> _mealCalories = {};
   bool savingMeal = false;
   String mealLogKey(DateTime date, int index) =>
-      '${dateKey(date)}|$index|${mealsOn(date)[index].title}|${mealsOn(date)[index].calories}';
+      '${dateKey(date)}|${userRequestId ?? 'none'}|$index|${mealsOn(date)[index].title}|${mealsOn(date)[index].calories}';
   List<Meal> mealsOn(DateTime date) {
     if (userRequestId == null) return const [];
+    final week = userRequest.programWeek;
+    if (week != null && dateKey(startOfWeek(date)) != dateKey(week)) {
+      return const [];
+    }
     return userRequest.mealsForDay(weekDayIndex(date));
   }
 
   int calorieTarget(DateTime date) =>
       mealsOn(date).fold(0, (n, m) => n + m.calories);
   int consumedCalories(DateTime date) => _mealCalories.entries
-      .where((e) => e.key.startsWith('${dateKey(date)}|'))
+      .where(
+        (e) => e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
+      )
       .fold(0, (n, e) => n + e.value);
   bool mealEaten(DateTime date, int index) =>
       _mealCalories.containsKey(mealLogKey(date, index));
@@ -850,6 +868,7 @@ class DemoStore extends ChangeNotifier {
       completedMeals
         ..clear()
         ..addAll(next.keys);
+      claimWeeklyReward();
     } finally {
       savingMeal = false;
       update();
@@ -918,7 +937,147 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
-  // UI-only wallet. A full restart resets the mock balance; no payment API.
+  // Mock wallet stored on this device only; no backend or real payment.
+  final WalletStateStorage? _walletStorage;
+  Future<void> _walletWrites = Future<void>.value();
+  final Set<String> rewardedWeeks = {};
+  final List<String> pendingWeeklyRewards = [];
+
+  Future<void> restoreWalletState() async {
+    try {
+      final raw = await _walletStorage?.read();
+      if (raw == null) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (data['version'] != 1 ||
+          data['balance'] is! int ||
+          (data['balance'] as int) < 0) {
+        return;
+      }
+      tokenBalance = data['balance'] as int;
+      rewardedWeeks.addAll(
+        (data['rewardedWeeks'] as List? ?? []).whereType<String>().where(
+          (week) => DateTime.tryParse(week) != null,
+        ),
+      );
+      pendingWeeklyRewards.addAll(
+        (data['pendingRewards'] as List? ?? []).whereType<String>().where(
+          rewardedWeeks.contains,
+        ),
+      );
+      _walletSequence = data['sequence'] as int? ?? 0;
+      for (final raw in (data['transactions'] as List? ?? [])) {
+        final t = raw as Map<String, dynamic>;
+        walletTransactions.add(
+          MockWalletTransaction(
+            operationId: t['id'] as String,
+            title: t['title'] as String,
+            tokens: t['tokens'] as int,
+            balanceAfter: t['balanceAfter'] as int,
+            credit: t['credit'] == true,
+          ),
+        );
+        _appliedWalletOperations.add(t['id'] as String);
+      }
+      update();
+    } catch (_) {
+      debugPrint('Mock wallet restore unavailable.');
+    }
+  }
+
+  Future<void> saveWalletState() {
+    final snapshot = jsonEncode({
+      'version': 1,
+      'balance': tokenBalance,
+      'sequence': _walletSequence,
+      'rewardedWeeks': rewardedWeeks.toList(),
+      'pendingRewards': pendingWeeklyRewards,
+      'transactions': walletTransactions
+          .map(
+            (t) => {
+              'id': t.operationId,
+              'title': t.title,
+              'tokens': t.tokens,
+              'balanceAfter': t.balanceAfter,
+              'credit': t.credit,
+            },
+          )
+          .toList(),
+    });
+    _walletWrites = _walletWrites
+        .then((_) async {
+          await _walletStorage?.write(snapshot);
+        })
+        .catchError((Object e) {
+          debugPrint('Mock wallet save unavailable.');
+        });
+    return _walletWrites;
+  }
+
+  List<DateTime> get scheduledWeekDates {
+    if (!hasUserRequest || !userRequest.isPublished) return [];
+    final r = userRequest, start = r.programWeek ?? startOfWeek(today);
+    final first = r.programStartsOn ?? start;
+    return List.generate(
+      7,
+      (i) => DateTime(start.year, start.month, start.day + i),
+    ).where((date) => !date.isBefore(first)).toList();
+  }
+
+  bool dayCompleted(DateTime date) {
+    final meals = mealsOn(date);
+    return meals.isNotEmpty && eatenCount(date) == meals.length;
+  }
+
+  int get completedProgramDays => scheduledWeekDates.where(dayCompleted).length;
+  bool get weeklyProgramCompleted {
+    final dates = scheduledWeekDates;
+    return dates.isNotEmpty &&
+        !dates.last.isAfter(DateTime(today.year, today.month, today.day)) &&
+        dates.every(dayCompleted);
+  }
+
+  int get weeklyStreak {
+    final weeks = rewardedWeeks.toList()..sort();
+    if (weeks.isEmpty) return 0;
+    var previous = DateTime.parse(weeks.last), count = 1;
+    if (startOfWeek(today).difference(previous).inDays > 7) return 0;
+    for (final key in weeks.reversed.skip(1)) {
+      final week = DateTime.parse(key);
+      if (previous.difference(week).inDays != 7) break;
+      count++;
+      previous = week;
+    }
+    return count;
+  }
+
+  bool claimWeeklyReward() {
+    if (!weeklyProgramCompleted) return false;
+    final week = dateKey(userRequest.programWeek ?? startOfWeek(today));
+    if (rewardedWeeks.contains(week)) return false;
+    rewardedWeeks.add(week);
+    pendingWeeklyRewards.add(week);
+    tokenBalance += 100;
+    walletTransactions.insert(
+      0,
+      MockWalletTransaction(
+        operationId: 'weekly-reward-$week',
+        title: 'جایزهٔ تکمیل برنامهٔ هفتگی',
+        tokens: 100,
+        balanceAfter: tokenBalance,
+        credit: true,
+      ),
+    );
+    saveWalletState();
+    update();
+    return true;
+  }
+
+  void acknowledgeWeeklyReward(String week) {
+    pendingWeeklyRewards.remove(week);
+    saveWalletState();
+    update();
+  }
+
   int tokenBalance = kInitialTokenBalance;
   String? selectedPlanServiceId, selectedTokenPackageId;
   bool walletPurchaseBusy = false, walletPricingOpen = false;
@@ -960,6 +1119,7 @@ class DemoStore extends ChangeNotifier {
         userRequest.revisionDetails =
             'درخواست نمایشی با پرداخت ${formatTokenNumber(offer.tokenCost)} توکن ثبت شد.';
       }
+      saveWalletState();
       notices.insert(0, '${offer.successLine} (نمایشی)');
       return true;
     } finally {
@@ -983,6 +1143,7 @@ class DemoStore extends ChangeNotifier {
         credit: true,
       ),
     );
+    saveWalletState();
     update();
     return true;
   }
@@ -1001,18 +1162,122 @@ class DemoStore extends ChangeNotifier {
   void setDebugTokenBalance(int value) {
     if (!kDebugMode || value < 0) return;
     tokenBalance = value;
+    saveWalletState();
     update();
   }
 
   void resetWalletDebug() => setDebugTokenBalance(kInitialTokenBalance);
 
-  AppRole? role;
-  AppRole? selectedRole;
-  EntryStage entryStage = EntryStage.roles;
+  AppRole? role = AppRole.user;
+  AppRole? selectedRole = AppRole.user;
+  EntryStage entryStage = EntryStage.home;
+  final SessionStorage? _sessionStorage;
+  Future<void> _sessionWrites = Future<void>.value();
+  DateTime? sessionIssuedAt, sessionExpiresAt;
+  String sessionPhone = '';
+  bool _userAuthenticated = false;
+  bool get userSignedIn =>
+      _userAuthenticated &&
+      sessionExpiresAt != null &&
+      today.isBefore(sessionExpiresAt!);
+  bool pendingPlanAcquisition = false;
+
+  Future<void> saveUserSession() {
+    final issued = sessionIssuedAt,
+        expires = sessionExpiresAt,
+        phone = sessionPhone;
+    final snapshot = issued == null || expires == null
+        ? null
+        : jsonEncode({
+            'version': 1,
+            'issuedAt': issued.toUtc().toIso8601String(),
+            'expiresAt': expires.toUtc().toIso8601String(),
+            'phone': phone,
+          });
+    _sessionWrites = _sessionWrites
+        .then((_) async {
+          if (snapshot == null) {
+            await _sessionStorage?.clear();
+          } else {
+            await _sessionStorage?.write(snapshot);
+          }
+        })
+        .catchError((Object e) {
+          debugPrint('Demo session save unavailable.');
+        });
+    return _sessionWrites;
+  }
+
+  Future<void> restoreUserSession() async {
+    try {
+      final raw = await _sessionStorage?.read();
+      if (raw == null) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final issued = DateTime.tryParse(data['issuedAt'] as String? ?? '');
+      final expires = DateTime.tryParse(data['expiresAt'] as String? ?? '');
+      if (data['version'] != 1 ||
+          issued == null ||
+          expires == null ||
+          issued.isAfter(today) ||
+          !today.isBefore(expires) ||
+          expires.difference(issued) != const Duration(days: 30)) {
+        await _sessionStorage?.clear();
+        return;
+      }
+      sessionIssuedAt = issued;
+      sessionExpiresAt = expires;
+      sessionPhone = data['phone'] as String? ?? '';
+      _userAuthenticated = true;
+      role = selectedRole = AppRole.user;
+      entryStage = EntryStage.home;
+      update();
+    } catch (_) {
+      debugPrint('Demo session restore unavailable.');
+    }
+  }
+
+  void startPlanAcquisition() {
+    pendingPlanAcquisition = true;
+    selectedRole = AppRole.user;
+    if (!userSignedIn) {
+      openUserLogin();
+      return;
+    }
+    if (!questionnaireComplete) {
+      role = AppRole.user;
+      entryStage = EntryStage.onboarding;
+      update();
+    }
+  }
+
+  void completeUserOnboarding() {
+    if (!userSignedIn) {
+      openUserLogin();
+      return;
+    }
+    role = selectedRole = AppRole.user;
+    entryStage = EntryStage.home;
+    update();
+  }
+
+  void cancelUserEntry() {
+    pendingPlanAcquisition = false;
+    role = selectedRole = AppRole.user;
+    entryStage = EntryStage.home;
+    update();
+  }
+
+  void showRoleSelection() {
+    pendingPlanAcquisition = false;
+    role = null;
+    selectedRole = null;
+    entryStage = EntryStage.roles;
+    update();
+  }
+
   String? userRequestId;
   final userRequestIds = <String>{};
-  bool userSignedIn = false,
-      notificationsEnabled = true,
+  bool notificationsEnabled = true,
       mealReminders = false,
       questionnaireComplete = false;
   double latestWeight = 72;
@@ -1105,12 +1370,6 @@ class DemoStore extends ChangeNotifier {
       wait: '۲ روز',
     ),
   ];
-  final foods = <FoodRecord>[
-    FoodRecord('نان سبوس‌دار', 'نان و غلات', 'سهم', 'گلوتن'),
-    FoodRecord('سالاد فصل', 'سبزیجات', 'کاسه', 'وابسته به ترکیب'),
-    FoodRecord('تخم‌مرغ آب‌پز', 'پروتئین', 'عدد', 'تخم‌مرغ'),
-    FoodRecord('پنیر', 'لبنیات', 'گرم', 'لبنیات'),
-  ];
   final programReviews = <ProgramReview>[
     ProgramReview(
       id: 'rev-1',
@@ -1182,7 +1441,12 @@ class DemoStore extends ChangeNotifier {
   void selectRole(AppRole value) {
     selectedRole = value;
     role = null;
-    entryStage = EntryStage.onboarding;
+    if (value == AppRole.user) {
+      role = value;
+      entryStage = EntryStage.home;
+    } else {
+      entryStage = EntryStage.onboarding;
+    }
     update();
   }
 
@@ -1196,7 +1460,6 @@ class DemoStore extends ChangeNotifier {
   void continueToUserHome() {
     if (selectedRole != AppRole.user) return;
     role = AppRole.user;
-    userSignedIn = false;
     entryStage = EntryStage.home;
     update();
   }
@@ -1218,12 +1481,19 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
-  void login(AppRole value) {
+  void login(AppRole value, {String phone = '09120000000'}) {
     role = value;
     selectedRole = value;
     entryStage = EntryStage.home;
     if (value == AppRole.user) {
-      userSignedIn = true;
+      _userAuthenticated = true;
+      sessionPhone = phone;
+      sessionIssuedAt = today;
+      sessionExpiresAt = today.add(const Duration(days: 30));
+      saveUserSession();
+      if (pendingPlanAcquisition && !questionnaireComplete) {
+        entryStage = EntryStage.onboarding;
+      }
     }
     update();
   }
@@ -1249,10 +1519,15 @@ class DemoStore extends ChangeNotifier {
   void logout() {
     role = null;
     selectedRole = null;
-    userSignedIn = false;
+    _userAuthenticated = false;
+    sessionIssuedAt = sessionExpiresAt = null;
+    sessionPhone = '';
+    pendingPlanAcquisition = false;
+    saveUserSession();
     userRequestId = null;
     userRequestIds.clear();
-    entryStage = EntryStage.roles;
+    role = selectedRole = AppRole.user;
+    entryStage = EntryStage.home;
     update();
   }
 
@@ -1280,7 +1555,9 @@ class DemoStore extends ChangeNotifier {
 
   void beginReview(String id) {
     final r = request(id);
-    if (r.status != PlanStatus.ready) r.status = PlanStatus.reviewing;
+    if (r.status != PlanStatus.ready && r.status != PlanStatus.needsInfo) {
+      r.status = PlanStatus.reviewing;
+    }
     update();
   }
 
@@ -1311,11 +1588,6 @@ class DemoStore extends ChangeNotifier {
     final meals = request(id).draftForDay(day);
     if (index < 0 || index >= meals.length) return;
     meals.removeAt(index);
-    update();
-  }
-
-  void removeFood(FoodRecord record) {
-    foods.remove(record);
     update();
   }
 
@@ -1370,6 +1642,12 @@ class DemoStore extends ChangeNotifier {
 
   void approve(String id) {
     final r = request(id);
+    if (!r.canApproveInformation) {
+      throw StateError('ابتدا پاسخ کاربر را دریافت و بررسی کن.');
+    }
+    if (List.generate(7, r.draftForDay).any((day) => day.isEmpty)) {
+      throw StateError('برای هر روز حداقل یک وعده ثبت کن.');
+    }
     if (List.generate(7, r.draftForDay)
         .expand((d) => d)
         .any(
@@ -1386,6 +1664,8 @@ class DemoStore extends ChangeNotifier {
       (i) => List<Meal>.unmodifiable(r.draftOtherDays[i]),
     );
     r.publishedNote = r.draftNote;
+    r.programStartsOn ??= DateTime(today.year, today.month, today.day);
+    r.programWeek ??= startOfWeek(today);
     r.version++;
     r.status = PlanStatus.ready;
     r.revisionRequested = false;
@@ -1397,11 +1677,21 @@ class DemoStore extends ChangeNotifier {
 
   void needInfo(String id, String question) {
     final r = request(id);
-    r.question = question;
+    if (question.trim().isEmpty) return;
+    r.question = question.trim();
+    r.infoAnswer = '';
+    r.infoAnswerReviewed = false;
     r.status = PlanStatus.needsInfo;
     if (id == userRequestId) {
       messages.add(ChatMessage(question, AppRole.expert));
     }
+    update();
+  }
+
+  void markInfoAnswerReviewed(String id) {
+    final r = request(id);
+    if (r.infoAnswer.isEmpty) return;
+    r.infoAnswerReviewed = true;
     update();
   }
 
@@ -1456,7 +1746,10 @@ class DemoStore extends ChangeNotifier {
     );
     if (sender == AppRole.user &&
         id == 'user-main' &&
+        hasUserRequest &&
         userRequest.status == PlanStatus.needsInfo) {
+      userRequest.infoAnswer = text.trim();
+      userRequest.infoAnswerReviewed = false;
       userRequest.status = PlanStatus.reviewing;
     }
     update();

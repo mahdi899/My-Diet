@@ -163,7 +163,7 @@ void main() {
     store.dispose();
   });
 
-  testWidgets('Startup displays only the logo before role selection', (
+  testWidgets('Startup displays only the logo then opens the guest dashboard', (
     tester,
   ) async {
     mobile(tester);
@@ -175,53 +175,48 @@ void main() {
     expect(find.byType(EntryScreen), findsNothing);
     await tester.pump(const Duration(milliseconds: 1400));
     await tester.pumpAndSettle();
-    expect(find.byType(EntryScreen), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(store.userSignedIn, false);
+    expect(find.byType(LoginScreen), findsNothing);
     expect(find.byType(SplashScreen), findsNothing);
     await tester.pumpWidget(const SizedBox());
     store.dispose();
   });
 
-  testWidgets('All roles open onboarding before login and home', (
-    tester,
-  ) async {
-    mobile(tester);
-    final store = DemoStore();
-    await tester.pumpWidget(
-      SabzineApp(store: store, splashDuration: Duration.zero),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('ورود به عنوان کاربر'));
-    await tester.pumpAndSettle();
-    expect(find.text('قبل از شروع، کمی از خودت بگو'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
-    expect(find.byType(LoginScreen), findsNothing);
-    expect(
-      Directionality.of(tester.element(find.text('سبزینه'))),
-      TextDirection.rtl,
-    );
-    for (final role in [AppRole.expert, AppRole.admin]) {
-      store.logout();
-      await tester.pumpAndSettle();
-      final choice = find.text('ورود به عنوان ${role.label}');
-      await tester.ensureVisible(choice);
-      await tester.tap(choice);
-      await tester.pumpAndSettle();
-      expect(store.entryStage, EntryStage.onboarding);
-      expect(find.byType(LoginScreen), findsNothing);
-      await tester.tap(find.text('ادامه به ورود'));
-      await tester.pumpAndSettle();
-      expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
-      await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
+  testWidgets(
+    'Guest can browse and expert/admin remain accessible through panel selection',
+    (tester) async {
+      mobile(tester);
+      final store = DemoStore();
+      await tester.pumpWidget(
+        SabzineApp(store: store, splashDuration: Duration.zero),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(NavigationBar), findsOneWidget);
-    }
-    await tester.pumpWidget(const SizedBox());
-    store.dispose();
-  });
+      expect(find.byType(LoginScreen), findsNothing);
+      expect(store.userSignedIn, false);
+      for (final role in [AppRole.expert, AppRole.admin]) {
+        store.showRoleSelection();
+        await tester.pumpAndSettle();
+        final choice = find.text('ورود به عنوان ${role.label}');
+        await tester.ensureVisible(choice);
+        await tester.tap(choice);
+        await tester.pumpAndSettle();
+        expect(store.entryStage, EntryStage.onboarding);
+        await tester.tap(find.text('ادامه به ورود'));
+        await tester.pumpAndSettle();
+        expect(find.byType(LoginScreen), findsOneWidget);
+        await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
+        await tester.pumpAndSettle();
+        expect(find.byType(NavigationBar), findsOneWidget);
+      }
+      await tester.pumpWidget(const SizedBox());
+      store.dispose();
+    },
+  );
 
   testWidgets(
-    'Saved answers still show onboarding and can be reviewed before login',
+    'Saved answers skip questionnaire after acquisition login and go to pricing',
     (tester) async {
       mobile(tester);
       final store = DemoStore(storage: MemoryStorage());
@@ -231,38 +226,29 @@ void main() {
         SabzineApp(store: store, splashDuration: Duration.zero),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(EntryScreen), findsOneWidget);
-      await tester.tap(find.text('ورود به عنوان کاربر'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('مرور پرسش‌نامه و ادامه'));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<TextFormField>(find.byKey(const ValueKey('سن / سال')))
-            .initialValue,
-        '۲۸',
-      );
-      for (var i = 0; i < 5; i++) {
-        await next(tester);
-      }
-      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
+      final request = find.byKey(const ValueKey('get-food-plan'));
+      await tester.ensureVisible(request);
+      await tester.tap(request);
       await tester.pumpAndSettle();
       expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
+      await tester.pumpAndSettle();
+      expect(find.text('تعرفه برنامه‌ها'), findsOneWidget);
+      expect(store.userSignedIn, true);
       expect(store.requests.length, count);
-      expect(store.role, isNull);
-      expect(store.userSignedIn, isFalse);
       await tester.pumpWidget(const SizedBox());
       store.dispose();
     },
   );
 
   testWidgets(
-    'Questionnaire requires consent, opens login, then login opens home',
+    'After acquisition login questionnaire requires consent then opens pricing',
     (tester) async {
       mobile(tester);
       final storage = MemoryStorage();
-      final store = DemoStore(storage: storage)..selectRole(AppRole.user);
+      final store = DemoStore(storage: storage)
+        ..startPlanAcquisition()
+        ..login(AppRole.user);
       await tester.pumpWidget(
         SabzineApp(store: store, splashDuration: Duration.zero),
       );
@@ -300,26 +286,22 @@ void main() {
       await next(tester);
       await tester.tap(find.text('غذای ایرانی'));
       await next(tester);
-      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
       await tester.pumpAndSettle();
       expect(store.questionnaireComplete, isFalse);
       await tester.ensureVisible(find.byType(CheckboxListTile));
       await tester.tap(find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('ثبت اطلاعات و ادامه به ورود'));
+      await tester.tap(find.text('ثبت اطلاعات و ادامه'));
       await tester.pumpAndSettle();
       expect(store.questionnaireComplete, isTrue);
       expect(store.hasUserRequest, isFalse);
-      expect(store.entryStage, EntryStage.login);
-      expect(store.role, isNull);
-      expect(store.userSignedIn, isFalse);
-      expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
-      await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
-      await tester.pumpAndSettle();
+      expect(store.entryStage, EntryStage.home);
+      expect(store.role, AppRole.user);
       expect(store.userSignedIn, isTrue);
+      expect(find.byType(LoginScreen), findsNothing);
+      expect(find.text('تعرفه برنامه‌ها'), findsOneWidget);
       expect(store.hasUserRequest, isFalse);
-      expect(find.byType(NavigationBar), findsOneWidget);
       expect(storage.value, isNotNull);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());

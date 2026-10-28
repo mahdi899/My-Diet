@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:async';
 import '../data/day.dart';
 import '../widgets/nutrition.dart';
+import '../widgets/weekly_progress.dart';
 import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
 import '../theme.dart';
@@ -11,7 +12,6 @@ import 'shared.dart';
 import 'doctor.dart';
 import 'wallet_flow.dart';
 import '../data/wallet_catalog.dart';
-import 'admin.dart' show FoodsScreen;
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key, required this.onPlan});
@@ -55,7 +55,11 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
       slivers: [
         SliverAppBar(
           floating: true,
-          title: Text('سلام ${s.questionnaire.name.split(' ').first} 🌿'),
+          title: Text(
+            s.userSignedIn
+                ? 'سلام ${s.questionnaire.name.split(' ').first} 🌿'
+                : 'به سبزینه خوش اومدی 🌿',
+          ),
           actions: [
             const Padding(
               padding: EdgeInsetsDirectional.only(end: 8),
@@ -71,16 +75,6 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
               ),
             ),
           ],
-          bottom: const PreferredSize(
-            preferredSize: Size.fromHeight(25),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Text(
-                'امروز هم برای خودت قدم بردار',
-                style: TextStyle(color: muted, fontSize: 12),
-              ),
-            ),
-          ),
         ),
         SliverToBoxAdapter(
           child: PageBody(
@@ -88,6 +82,19 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
             children: [
               EnergyCard(date: date),
               DailyAdviceCard(date: date),
+              if (r != null && r.question.isNotEmpty)
+                RequestInformationCard(request: r),
+              if (hasPlan) const WeeklyStreakCard(),
+              if (hasPlan && r!.status != PlanStatus.ready)
+                Surface(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Heading('وضعیت بررسی برنامه'),
+                      PlanTimeline(status: r.status),
+                    ],
+                  ),
+                ),
               if (hasPlan) ...[
                 Heading(
                   'برنامهٔ امروز',
@@ -132,20 +139,6 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                       Heading('وضعیت برنامه', subtitle: 'درخواست ${fa(r.id)}'),
                       const SizedBox(height: 14),
                       PlanTimeline(status: r.status),
-                      if (r.status == PlanStatus.needsInfo) ...[
-                        const SizedBox(height: 12),
-                        Notice(
-                          r.question.isEmpty
-                              ? 'متخصص به اطلاعات بیشتری نیاز دارد.'
-                              : r.question,
-                          warning: true,
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              pushPage(context, const MessagesScreen()),
-                          child: const Text('دیدن پیام متخصص'),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -413,6 +406,30 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
       );
     }
     final r = s.userRequest;
+    if (r.isPublished &&
+        r.programWeek != null &&
+        dateKey(r.programWeek!) != dateKey(startOfWeek(s.today))) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('برنامهٔ غذایی من')),
+        body: PageBody(
+          children: [
+            const WeeklyStreakCard(),
+            EmptyPanel(
+              'هفتهٔ این برنامه به پایان رسید',
+              'برای این هفته برنامهٔ جدید دریافت کن.',
+              icon: Icons.calendar_month_outlined,
+              action: PrimaryButton(
+                'دریافت برنامه جدید',
+                onPressed: () {
+                  s.selectedPlanServiceId = 'new-plan';
+                  openPlanServices(context);
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final day = (selectedDay ?? weekDayIndex(s.today)).clamp(
           weekDayIndex(s.today),
           6,
@@ -441,10 +458,15 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
               'بعد از تأیید متخصص، وعده‌های هر روز در تب همان روز قرار می‌گیرند.',
               icon: Icons.calendar_month_outlined,
               action: OutlinedButton(
-                onPressed: () {
-                  s.approve(r.id);
-                  showToast(context, 'برنامهٔ هفتگی نمونه نمایش داده شد.');
-                },
+                onPressed: r.canApproveInformation
+                    ? () {
+                        s.approve(r.id);
+                        showToast(
+                          context,
+                          'برنامهٔ هفتگی نمونه نمایش داده شد.',
+                        );
+                      }
+                    : null,
                 child: const Text('نمایش نمونهٔ تأییدشده'),
               ),
             )
@@ -979,18 +1001,28 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               children: [
                 PersonAvatar(
-                  expert ? store.experts.first.name : store.questionnaire.name,
+                  expert
+                      ? store.experts.first.name
+                      : store.userSignedIn
+                      ? store.questionnaire.name
+                      : 'کاربر مهمان',
                   size: 76,
                 ),
                 const SizedBox(height: 15),
                 Text(
-                  expert ? store.experts.first.name : store.questionnaire.name,
+                  expert
+                      ? store.experts.first.name
+                      : store.userSignedIn
+                      ? store.questionnaire.name
+                      : 'کاربر مهمان',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Tag(
                   expert
                       ? 'کد نظام پزشکی: ${store.experts.first.medicalCode.isEmpty ? 'ثبت نشده' : store.experts.first.medicalCode}'
+                      : !store.userSignedIn
+                      ? 'بدون ورود'
                       : store.questionnaireComplete
                       ? 'اطلاعات تکمیل شده'
                       : 'حساب نمایشی',
@@ -1041,12 +1073,6 @@ class ProfileScreen extends StatelessWidget {
                     Icons.rate_review_outlined,
                     onTap: () =>
                         pushPage(context, const ProgramReviewSubmitScreen()),
-                  ),
-                if (expert)
-                  MenuRow(
-                    'بانک غذا',
-                    Icons.eco_outlined,
-                    onTap: () => pushPage(context, const FoodsScreen()),
                   ),
                 MenuRow(
                   'سفارش‌ها و پرداخت‌ها',
@@ -1148,9 +1174,15 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
+          if (!expert && store.userSignedIn)
+            OutlinedButton.icon(
+              onPressed: store.logout,
+              icon: const Icon(Icons.logout),
+              label: const Text('خروج از حساب'),
+            ),
           OutlinedButton.icon(
             onPressed: () {
-              store.logout();
+              store.showRoleSelection();
               Navigator.of(context).popUntil((r) => r.isFirst);
             },
             icon: const Icon(Icons.switch_account_outlined),

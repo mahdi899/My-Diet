@@ -522,11 +522,6 @@ class AdminMoreScreen extends StatelessWidget {
           child: Column(
             children: [
               MenuRow(
-                'بانک غذا',
-                Icons.eco_outlined,
-                onTap: () => pushPage(context, const FoodsScreen()),
-              ),
-              MenuRow(
                 'تأیید نظرات کاربران',
                 Icons.rate_review_outlined,
                 onTap: () =>
@@ -554,191 +549,13 @@ class AdminMoreScreen extends StatelessWidget {
           'مدیریت این نسخه کاملاً نمایشی و داخل حافظه است؛ اطلاعات واقعی کاربران وجود ندارد.',
         ),
         OutlinedButton.icon(
-          onPressed: () => DemoScope.of(context).logout(),
+          onPressed: () => DemoScope.of(context).showRoleSelection(),
           icon: const Icon(Icons.switch_account_outlined),
           label: const Text('تعویض پنل نمایشی'),
         ),
       ],
     ),
   );
-}
-
-class FoodsScreen extends StatefulWidget {
-  const FoodsScreen({super.key});
-  @override
-  State<FoodsScreen> createState() => _FoodsScreenState();
-}
-
-class _FoodsScreenState extends State<FoodsScreen> {
-  String query = '';
-  @override
-  Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    final rows = store.foods
-        .where((f) => f.name.contains(query) || f.group.contains(query))
-        .toList();
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('بانک غذا'),
-        actions: [
-          IconButton(
-            tooltip: 'افزودن غذا',
-            onPressed: () => editFood(context),
-            icon: const Icon(Icons.add),
-          ),
-        ],
-      ),
-      body: PageBody(
-        children: [
-          SearchField(
-            onChanged: (v) => setState(() => query = v),
-            hint: 'جست‌وجوی غذا یا گروه',
-          ),
-          ...rows.map(
-            (f) => Surface(
-              onTap: () => editFood(context, record: f),
-              child: Row(
-                children: [
-                  const FoodArt(size: 62),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          f.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        Text(
-                          '${f.group} · ${f.unit}',
-                          style: const TextStyle(fontSize: 11, color: muted),
-                        ),
-                        const SizedBox(height: 7),
-                        Tag(f.allergens, warning: true),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.edit_outlined, color: pine, size: 20),
-                ],
-              ),
-            ),
-          ),
-          if (rows.isEmpty)
-            const EmptyPanel(
-              'غذایی پیدا نشد',
-              'غذای جدید اضافه کن یا جست‌وجو رو تغییر بده.',
-              icon: Icons.search,
-            ),
-          const Notice(
-            'بانک غذای این نمونه برای محاسبهٔ واقعی انرژی یا مواد مغذی آماده نشده است.',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-Future<void> editFood(BuildContext context, {FoodRecord? record}) async {
-  final store = DemoScope.of(context),
-      name = TextEditingController(text: record?.name ?? ''),
-      group = TextEditingController(text: record?.group ?? ''),
-      unit = TextEditingController(text: record?.unit ?? 'سهم'),
-      allergens = TextEditingController(text: record?.allergens ?? '');
-  final form = GlobalKey<FormState>();
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (sheet) => SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          8,
-          24,
-          24 + MediaQuery.viewInsetsOf(sheet).bottom,
-        ),
-        child: SingleChildScrollView(
-          child: Form(
-            key: form,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Heading(record == null ? 'افزودن غذا' : 'ویرایش غذا'),
-                const SizedBox(height: 18),
-                TextFormField(
-                  controller: name,
-                  decoration: const InputDecoration(labelText: 'نام غذا'),
-                  validator: (v) =>
-                      (v ?? '').trim().isEmpty ? 'نام غذا لازم است.' : null,
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: group,
-                  decoration: const InputDecoration(labelText: 'گروه غذایی'),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: unit,
-                  decoration: const InputDecoration(labelText: 'واحد'),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: allergens,
-                  decoration: const InputDecoration(
-                    labelText: 'مواد حساسیت‌زا',
-                  ),
-                ),
-                const SizedBox(height: 18),
-                PrimaryButton(
-                  'ذخیرهٔ غذا',
-                  onPressed: () {
-                    if (!form.currentState!.validate()) return;
-                    if (record == null) {
-                      store.foods.add(
-                        FoodRecord(
-                          name.text.trim(),
-                          group.text.trim(),
-                          unit.text.trim(),
-                          allergens.text.trim(),
-                        ),
-                      );
-                    } else {
-                      record.name = name.text.trim();
-                      record.group = group.text.trim();
-                      record.unit = unit.text.trim();
-                      record.allergens = allergens.text.trim();
-                    }
-                    store.update();
-                    Navigator.pop(sheet);
-                  },
-                  icon: Icons.check,
-                ),
-                if (record != null) ...[
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      store.removeFood(record);
-                      Navigator.pop(sheet);
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('حذف غذا از بانک'),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-  name.dispose();
-  group.dispose();
-  unit.dispose();
-  allergens.dispose();
 }
 
 class ProgramReviewsModerationScreen extends StatelessWidget {
