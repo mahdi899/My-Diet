@@ -54,3 +54,9 @@ app.*.map.json
 !.env.sample
 *.p12
 *.pfx
+
+# Graphify local cache (regenerated on extract/update)
+graphify-out/cache/
+
+# Local emulator captures
+emulator-screenshot.png
