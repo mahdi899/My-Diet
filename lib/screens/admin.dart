@@ -4,6 +4,9 @@ import '../theme.dart';
 import '../widgets/ui.dart';
 import 'shared.dart';
 import 'question_admin.dart';
+import 'doctor.dart';
+import 'pricing_admin.dart';
+import '../data/wallet_catalog.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
@@ -14,9 +17,15 @@ class AdminHome extends StatelessWidget {
       appBar: AppBar(title: const Text('مدیریت سبزینه')),
       body: PageBody(
         children: [
-          const Heading(
-            'نمای کلی مجموعه',
-            subtitle: 'آمار و اطلاعات این نسخه نمونه هستند.',
+          const ClinicianPerformanceCard(),
+          Surface(
+            child: MenuRow(
+              'قیمت‌ها و جایزهٔ هفتگی',
+              Icons.account_balance_wallet_outlined,
+              subtitle:
+                  'برنامه ${formatToman(store.newPlanPrice)} · جایزه ${formatToman(store.weeklyRewardToman)}',
+              onTap: () => pushPage(context, const PricingAdminScreen()),
+            ),
           ),
           Surface(
             color: sage,
@@ -52,11 +61,7 @@ class AdminHome extends StatelessWidget {
                 fa(store.requests.map((r) => r.name).toSet().length),
                 Icons.people_outline,
               ),
-              Metric(
-                'متخصصان',
-                fa(store.experts.length),
-                Icons.health_and_safety_outlined,
-              ),
+              Metric('پزشک برنامه', '۱', Icons.health_and_safety_outlined),
               Metric(
                 'درخواست باز',
                 fa(
@@ -209,14 +214,11 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
 }
 
 Future<void> requestDetails(BuildContext context, DietRequest r) async {
-  final store = DemoScope.of(context);
-  String selected = r.specialist;
   await showModalBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
     showDragHandle: true,
-    builder: (sheet) => SafeArea(
-      child: SingleChildScrollView(
+    builder: (_) => SafeArea(
+      child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -227,40 +229,11 @@ Future<void> requestDetails(BuildContext context, DietRequest r) async {
             InfoRows({
               'هدف': r.goal,
               'وضعیت': r.status.label,
-              'متخصص': r.specialist,
-              'زمان انتظار': r.wait,
+              'پزشک': DemoScope.of(context).experts.first.name,
             }),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: selected,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'تخصیص متخصص'),
-              items: store.experts
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e.name,
-                      child: Text(e.name, style: const TextStyle(fontSize: 12)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) selected = v;
-              },
-            ),
-            const SizedBox(height: 18),
             const Notice(
-              'تأیید تخصصی برنامه از پنل متخصص انجام می‌شود. اینجا فقط تخصیص پرونده قابل تغییر است.',
-            ),
-            const SizedBox(height: 20),
-            PrimaryButton(
-              'ثبت تخصیص',
-              onPressed: () {
-                r.specialist = selected;
-                store.update();
-                Navigator.pop(sheet);
-                showToast(context, 'متخصص پرونده در نمونه تغییر کرد.');
-              },
-              icon: Icons.check,
+              'تمام درخواست‌ها برای پزشک سبزینه ارسال می‌شوند؛ تأیید برنامه در پنل پزشک انجام می‌شود.',
             ),
           ],
         ),
@@ -277,7 +250,7 @@ class PeopleScreen extends StatefulWidget {
 }
 
 class _PeopleScreenState extends State<PeopleScreen> {
-  String tab = 'کاربران', query = '';
+  String query = '';
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
@@ -285,110 +258,34 @@ class _PeopleScreenState extends State<PeopleScreen> {
     for (final r in store.requests) {
       users.putIfAbsent(r.name, () => r);
     }
-    final records = users.values.where((r) => r.name.contains(query)).toList();
-    final experts = store.experts.where((e) => e.name.contains(query)).toList();
+    final rows = users.values.where((r) => r.name.contains(query)).toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('افراد مجموعه'),
+        title: const Text('کاربران'),
         automaticallyImplyLeading: widget.standalone,
-        actions: [
-          if (tab == 'متخصصان')
-            IconButton(
-              tooltip: 'افزودن متخصص',
-              onPressed: () => editExpert(context),
-              icon: const Icon(Icons.person_add_outlined),
-            ),
-        ],
       ),
       body: PageBody(
         children: [
-          Filters(
-            values: const ['کاربران', 'متخصصان'],
-            selected: tab,
-            onSelected: (v) => setState(() {
-              tab = v;
-              query = '';
-            }),
-          ),
           SearchField(
-            key: ValueKey(tab),
             onChanged: (v) => setState(() => query = v),
-            hint: 'جست‌وجوی نام',
+            hint: 'جست‌وجوی کاربر',
           ),
-          if (tab == 'کاربران')
-            ...records.map(
-              (r) => Surface(
-                onTap: () => requestDetails(context, r),
-                child: Row(
-                  children: [
-                    PersonAvatar(r.name),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            r.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'شناسهٔ ${fa(r.id)}',
-                            style: const TextStyle(fontSize: 11, color: muted),
-                          ),
-                          const SizedBox(height: 8),
-                          const Tag('فعال'),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_left, color: muted),
-                  ],
-                ),
-              ),
-            )
-          else
-            ...experts.map(
-              (e) => Surface(
-                onTap: () => editExpert(context, record: e),
-                child: Row(
-                  children: [
-                    PersonAvatar(e.name, color: const Color(0xFFF2E6D8)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            e.name,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            e.specialty,
-                            style: const TextStyle(fontSize: 11, color: muted),
-                          ),
-                          const SizedBox(height: 8),
-                          Tag(
-                            e.active ? 'پذیرش فعال' : 'پذیرش متوقف',
-                            warning: !e.active,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_left, color: muted),
-                  ],
-                ),
+          for (final r in rows)
+            Surface(
+              onTap: () => requestDetails(context, r),
+              child: Row(
+                children: [
+                  PersonAvatar(r.name),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(r.name)),
+                  const Icon(Icons.chevron_left, color: muted),
+                ],
               ),
             ),
-          if (tab == 'کاربران' && records.isEmpty ||
-              tab == 'متخصصان' && experts.isEmpty)
+          if (rows.isEmpty)
             const EmptyPanel(
-              'موردی پیدا نشد',
-              'نام دیگری رو جست‌وجو کن.',
+              'کاربری پیدا نشد',
+              'نام دیگری را جست‌وجو کن.',
               icon: Icons.search,
             ),
         ],
@@ -397,117 +294,68 @@ class _PeopleScreenState extends State<PeopleScreen> {
   }
 }
 
-Future<void> editExpert(BuildContext context, {ExpertRecord? record}) async {
-  final store = DemoScope.of(context),
-      name = TextEditingController(text: record?.name ?? ''),
-      specialty = TextEditingController(
-        text: record?.specialty ?? 'تغذیه و رژیم‌درمانی',
-      ),
-      capacity = TextEditingController(text: fa(record?.capacity ?? 10));
-  final form = GlobalKey<FormState>();
-  bool active = record?.active ?? true;
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (sheet) => StatefulBuilder(
-      builder: (sheet, setS) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            8,
-            24,
-            24 + MediaQuery.viewInsetsOf(sheet).bottom,
+class ClinicianPerformanceCard extends StatelessWidget {
+  const ClinicianPerformanceCard({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final s = DemoScope.of(context),
+        total = s.clinicianFeedback.length,
+        positives = s.positiveFeedbackCount;
+    return Surface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Heading(
+            'عملکرد پزشک سبزینه',
+            subtitle:
+                'بر اساس همهٔ بازخوردهای ثبت‌شده؛ مستقل از تأیید نمایش عمومی',
           ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: form,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Heading(record == null ? 'افزودن متخصص' : 'تنظیمات متخصص'),
-                  const SizedBox(height: 18),
-                  TextFormField(
-                    controller: name,
-                    decoration: const InputDecoration(labelText: 'نام متخصص'),
-                    validator: (v) =>
-                        (v ?? '').trim().isEmpty ? 'نام لازم است.' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: specialty,
-                    decoration: const InputDecoration(labelText: 'تخصص'),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: capacity,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'ظرفیت پرونده',
-                    ),
-                    validator: (v) {
-                      final n = int.tryParse(latinDigits(v ?? ''));
-                      return n != null && n > 0 ? null : 'عدد مثبت وارد کن.';
-                    },
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('پذیرش درخواست جدید'),
-                    value: active,
-                    onChanged: (v) => setS(() => active = v),
-                  ),
-                  PrimaryButton(
-                    'ذخیره',
-                    onPressed: () {
-                      if (!form.currentState!.validate()) return;
-                      if (record == null) {
-                        if (store.experts.any(
-                          (e) => e.name == name.text.trim(),
-                        )) {
-                          showToast(context, 'این نام متخصص قبلاً ثبت شده.');
-                          return;
-                        }
-                        store.experts.add(
-                          ExpertRecord(
-                            name.text.trim(),
-                            specialty.text.trim(),
-                            active,
-                            int.parse(latinDigits(capacity.text)),
-                          ),
-                        );
-                      } else {
-                        final old = record.name;
-                        record.name = name.text.trim();
-                        record.specialty = specialty.text.trim();
-                        record.active = active;
-                        record.capacity = int.parse(latinDigits(capacity.text));
-                        for (final r in store.requests) {
-                          if (r.specialist == old) r.specialist = record.name;
-                        }
-                      }
-                      store.update();
-                      Navigator.pop(sheet);
-                    },
-                    icon: Icons.check,
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'حساب یا دعوت واقعی ایجاد نمی‌شود.',
-                    style: TextStyle(color: muted, fontSize: 11),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              PersonAvatar(s.experts.first.name),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  s.experts.first.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
+              TextButton(
+                onPressed: () => pushPage(context, const ExpertProfileEditor()),
+                child: const Text('مشخصات'),
+              ),
+            ],
           ),
-        ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              Tag(
+                'امتیاز ${s.clinicianRating.toStringAsFixed(1).replaceAllMapped(RegExp(r"\d"), (m) => fa(m[0]!))} از ۵',
+              ),
+              Tag(
+                '${fa(total == 0 ? 0 : (positives * 100 / total).round())}٪ رضایت مثبت',
+              ),
+              Tag('${fa(total)} بازخورد'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: total == 0 ? 0 : positives / total,
+            minHeight: 7,
+            borderRadius: BorderRadius.circular(7),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${fa(positives)} نظر با امتیاز ۴ یا ۵ · یک پزشک در مجموعه',
+            style: const TextStyle(fontSize: 11, color: muted),
+          ),
+        ],
       ),
-    ),
-  );
-  name.dispose();
-  specialty.dispose();
-  capacity.dispose();
+    );
+  }
 }
 
 class AdminMoreScreen extends StatelessWidget {
@@ -526,6 +374,16 @@ class AdminMoreScreen extends StatelessWidget {
                 Icons.rate_review_outlined,
                 onTap: () =>
                     pushPage(context, const ProgramReviewsModerationScreen()),
+              ),
+              MenuRow(
+                'قیمت‌ها و جایزهٔ هفتگی',
+                Icons.payments_outlined,
+                onTap: () => pushPage(context, const PricingAdminScreen()),
+              ),
+              MenuRow(
+                'مشخصات پزشک',
+                Icons.medical_information_outlined,
+                onTap: () => pushPage(context, const ExpertProfileEditor()),
               ),
               MenuRow(
                 'مدیریت پرسش‌نامه',
@@ -583,7 +441,11 @@ class ProgramReviewsModerationScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Heading(review.authorName, subtitle: 'در انتظار تأیید مدیر'),
+                  Heading(
+                    review.authorName,
+                    subtitle:
+                        'امتیاز ${fa(review.rating)} از ۵ · ${review.weekKey.isEmpty ? 'نظر نمونه' : 'بازخورد هفتگی'}',
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     review.text,
@@ -596,7 +458,10 @@ class ProgramReviewsModerationScreen extends StatelessWidget {
                         child: OutlinedButton(
                           onPressed: () {
                             store.rejectProgramReview(review.id);
-                            showToast(context, 'نظر حذف شد.');
+                            showToast(
+                              context,
+                              'نمایش عمومی نظر رد شد؛ بازخورد در آمار عملکرد باقی ماند.',
+                            );
                           },
                           child: const Text('رد'),
                         ),
@@ -625,83 +490,10 @@ class ProgramReviewsModerationScreen extends StatelessWidget {
   }
 }
 
-class PaymentsScreen extends StatefulWidget {
+class PaymentsScreen extends StatelessWidget {
   const PaymentsScreen({super.key});
   @override
-  State<PaymentsScreen> createState() => _PaymentsScreenState();
-}
-
-class _PaymentsScreenState extends State<PaymentsScreen> {
-  String filter = 'همه';
-  @override
-  Widget build(BuildContext context) {
-    const rows = [
-      ('۲۰۸۴', 'سارا احمدی', '۴۹۰٬۰۰۰', 'موفق'),
-      ('۲۰۸۳', 'امیر حسینی', '۴۹۰٬۰۰۰', 'موفق'),
-      ('۲۰۸۲', 'مریم کریمی', '۳۹۰٬۰۰۰', 'در انتظار'),
-      ('۲۰۸۱', 'علی شریفی', '۴۹۰٬۰۰۰', 'ناموفق'),
-    ];
-    return Scaffold(
-      appBar: AppBar(title: const Text('سفارش‌ها و پرداخت‌ها')),
-      body: PageBody(
-        children: [
-          const Notice(
-            'تراکنش، درگاه و قیمت واقعی وجود ندارد؛ این فهرست برای طراحی رابط کاربری است.',
-          ),
-          Filters(
-            values: const ['همه', 'موفق', 'در انتظار', 'ناموفق'],
-            selected: filter,
-            onSelected: (v) => setState(() => filter = v),
-          ),
-          ...rows
-              .where((r) => filter == 'همه' || r.$4 == filter)
-              .map(
-                (r) => Surface(
-                  onTap: () => showDialog<void>(
-                    context: context,
-                    builder: (d) => AlertDialog(
-                      title: Text('رسید سفارش ${r.$1}'),
-                      content: InfoRows({
-                        'کاربر': r.$2,
-                        'مبلغ نمونه': '${r.$3} تومان',
-                        'وضعیت': r.$4,
-                      }),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(d),
-                          child: const Text('بستن'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              r.$2,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Tag(r.$4, warning: r.$4 != 'موفق'),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      InfoRows({
-                        'شمارهٔ سفارش': r.$1,
-                        'مبلغ نمونه': '${r.$3} تومان',
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const OrdersScreen();
 }
 
 class SupportScreen extends StatelessWidget {
@@ -810,8 +602,8 @@ class AdminSettingsScreen extends StatelessWidget {
           ),
           const Heading('نقش‌های مجموعه'),
           ...[
-            ('مدیر مجموعه', 'مدیریت سرویس و تخصیص پرونده‌ها'),
-            ('متخصص', 'بررسی و تأیید برنامه‌های تخصیص‌یافته'),
+            ('مدیر مجموعه', 'مدیریت سرویس و بازخورد کاربران'),
+            ('متخصص', 'بررسی و تأیید همهٔ درخواست‌ها'),
             ('پشتیبان', 'رسیدگی به حساب و سفارش'),
             ('مسئول فنی', 'بررسی خطاها و وضعیت پردازش'),
           ].map((r) => Surface(child: Heading(r.$1, subtitle: r.$2))),

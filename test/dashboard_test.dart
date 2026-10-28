@@ -34,8 +34,9 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('consumed-calories')), findsOneWidget);
-      expect(find.text('هدف روزانه'), findsOneWidget);
-      expect(find.text('با تیک «خوردم»'), findsOneWidget);
+      expect(find.text('هدف روزانه'), findsNothing);
+      expect(find.text('کالری امروز تو'), findsOneWidget);
+      expect(find.text('با تیک «خوردم»'), findsNothing);
       expect(
         t.getTopLeft(advice).dy - t.getBottomLeft(energy).dy,
         closeTo(18, 1),
@@ -91,7 +92,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.byType(NavigationDestination).at(1));
       await t.pumpAndSettle();
-      expect(find.text('همین هفته'), findsOneWidget);
+      expect(find.text('همین هفته'), findsNothing);
       final list = t.widget<ListView>(find.byType(ListView));
       expect(
         (list.childrenDelegate as SliverChildBuilderDelegate)

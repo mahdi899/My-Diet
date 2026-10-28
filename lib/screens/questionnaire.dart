@@ -253,6 +253,16 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           field('نام و نام خانوادگی', q.name, (v) => q.name = v),
+          TextFormField(
+            initialValue: store.sessionPhone,
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'شماره تلفن',
+              hintText: 'پس از ورود نمایش داده می‌شود',
+            ),
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 14),
           field('سن / سال', q.age, (v) => q.age = v, numeric: true),
           select(
             'sex',
@@ -607,7 +617,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.editing ? 'ویرایش پرسش‌نامه' : 'کمی از خودت بگو'),
+          title: Text(widget.editing ? 'اطلاعات فردی' : 'کمی از خودت بگو'),
           leading: IconButton(
             tooltip: 'بازگشت',
             onPressed: saving ? null : back,

@@ -79,12 +79,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             (
               Icons.people_outline,
               'مدیریت مجموعه',
-              'کاربران و متخصصان رو مدیریت کن.',
+              'کاربران و اطلاعات پزشک رو مدیریت کن.',
             ),
             (
               Icons.assignment_outlined,
               'پیگیری درخواست‌ها',
-              'وضعیت برنامه‌ها و تخصیص متخصص رو ببین.',
+              'وضعیت برنامه‌ها و عملکرد پزشک رو ببین.',
             ),
             (
               Icons.support_agent,

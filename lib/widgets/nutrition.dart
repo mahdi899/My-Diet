@@ -89,11 +89,6 @@ class EnergyCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.spa_outlined,
-                      color: Color(0xFFCCE6AD),
-                      size: 23,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -104,7 +99,7 @@ class EnergyCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'انرژی امروز تو',
+                            'کالری امروز تو',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -112,13 +107,6 @@ class EnergyCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text(
-                            'هدف روزانه',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: .72),
-                              fontSize: 11,
-                            ),
-                          ),
                           Text(
                             target > 0
                                 ? '${fa(target)} کیلوکالری'
@@ -226,10 +214,6 @@ class EnergyCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Text(
-                        'با تیک «خوردم»',
-                        style: TextStyle(color: Colors.white60, fontSize: 10),
-                      ),
                     ],
                   ),
                 ),
@@ -279,10 +263,6 @@ class WeightJourneyCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      q.goal,
-                      style: const TextStyle(fontSize: 11, color: muted),
-                    ),
                   ],
                 ),
               ),
@@ -328,10 +308,6 @@ class WeightJourneyCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'شروع: ${decimalFa(start)} کیلوگرم · فاصله تا هدف: ${decimalFa((s.latestWeight - target).abs())} کیلوگرم',
-              style: const TextStyle(fontSize: 11, color: muted, height: 1.8),
-            ),
           ],
           if (q.pregnant) ...[
             const SizedBox(height: 16),
@@ -635,19 +611,32 @@ class DailyAdviceCard extends StatelessWidget {
   Widget build(BuildContext context) => Surface(
     key: const ValueKey('daily-advice'),
     color: const Color(0xFFEAF3E4),
-    padding: 13,
+    padding: 16,
     child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 3),
-          child: Icon(Icons.format_quote, color: pine, size: 22),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .75),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(Icons.wb_sunny_outlined, color: pine, size: 23),
         ),
-        const SizedBox(width: 9),
+        const SizedBox(width: 12),
         Expanded(
           child: Text(
             dailyEncouragement(date),
-            style: const TextStyle(color: pine, fontSize: 12, height: 1.8),
+            style: const TextStyle(color: pine, fontSize: 12, height: 1.9),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Container(
+          width: 3,
+          height: 42,
+          decoration: BoxDecoration(
+            color: pine.withValues(alpha: .2),
+            borderRadius: BorderRadius.circular(3),
           ),
         ),
       ],

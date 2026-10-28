@@ -29,13 +29,13 @@ Future<void> openPlanServices(BuildContext context) async {
   }
 }
 
-class TokenWalletChip extends StatelessWidget {
-  const TokenWalletChip({super.key});
+class WalletBalanceChip extends StatelessWidget {
+  const WalletBalanceChip({super.key});
   @override
   Widget build(BuildContext context) {
-    final balance = DemoScope.of(context).tokenBalance;
+    final balance = DemoScope.of(context).walletBalance;
     return Semantics(
-      label: 'کیف پول: ${formatTokenNumber(balance)} توکن',
+      label: 'کیف پول: ${formatMoneyNumber(balance)} تومان',
       button: true,
       child: Material(
         color: sage,
@@ -51,14 +51,14 @@ class TokenWalletChip extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    Icons.monetization_on_outlined,
+                    Icons.account_balance_wallet_outlined,
                     color: amber,
                     size: 20,
                   ),
                   const SizedBox(width: 5),
                   Flexible(
                     child: Text(
-                      '${formatTokenNumber(balance)} توکن',
+                      '${formatMoneyNumber(balance)} تومان',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -117,7 +117,7 @@ class GetPlanHeroButton extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'انتخاب سرویس و پرداخت با توکن کیف پول',
+                  'انتخاب سرویس و پرداخت از کیف پول',
                   style: TextStyle(fontSize: 10, color: Colors.white70),
                 ),
               ],
@@ -143,7 +143,7 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!initialized) {
-      controller.text = formatTokenNumber(DemoScope.of(context).tokenBalance);
+      controller.text = formatMoneyNumber(DemoScope.of(context).walletBalance);
       initialized = true;
     }
   }
@@ -183,7 +183,7 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
                     controller: controller,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'موجودی دلخواه / توکن',
+                      labelText: 'موجودی دلخواه / تومان',
                     ),
                     validator: (v) {
                       final n = int.tryParse(
@@ -201,7 +201,7 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
                         child: OutlinedButton(
                           onPressed: () {
                             if (form.currentState!.validate()) {
-                              s.setDebugTokenBalance(
+                              s.setDebugWalletBalance(
                                 int.parse(
                                   latinDigits(
                                     controller.text,
@@ -220,8 +220,8 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
                           onPressed: () {
                             s.resetWalletDebug();
                             form.currentState!.reset();
-                            controller.text = formatTokenNumber(
-                              kInitialTokenBalance,
+                            controller.text = formatMoneyNumber(
+                              kInitialWalletBalance,
                             );
                           },
                           child: const Text('ریست پیش‌فرض'),
@@ -250,9 +250,9 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
   Future<void> purchase() async {
     if (processing) return;
     final s = DemoScope.of(context),
-        offer = planServiceById(DemoScope.of(context).selectedPlanServiceId);
+        offer = s.serviceById(s.selectedPlanServiceId);
     if (offer == null) return;
-    if (!s.canAffordTokens(offer.tokenCost)) {
+    if (!s.canAfford(offer.priceToman)) {
       charge();
       return;
     }
@@ -263,7 +263,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
         operationId: s.nextWalletOperationId(),
       );
       if (!ok || !mounted) return;
-      final balance = s.tokenBalance;
+      final balance = s.walletBalance;
       dialogAnswered = false;
       final action = await showDialog<String>(
         context: context,
@@ -274,7 +274,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
             icon: const Icon(Icons.check_circle_rounded, color: pine, size: 44),
             title: const Text('خرید با موفقیت انجام شد ✅'),
             content: Text(
-              '${offer.successLine}\nموجودی شما ${formatTokenNumber(balance)} توکن باقی ماند.',
+              '${offer.successLine}\nموجودی شما ${formatMoneyNumber(balance)} تومان باقی ماند.',
               style: const TextStyle(height: 2),
             ),
             actions: [
@@ -315,8 +315,8 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          settings: const RouteSettings(name: '/wallet/token-packages'),
-          builder: (_) => const TokenPackagesScreen(),
+          settings: const RouteSettings(name: '/wallet/charge'),
+          builder: (_) => const WalletChargeScreen(),
         ),
       );
     } finally {
@@ -327,23 +327,23 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
   @override
   Widget build(BuildContext context) {
     final s = DemoScope.of(context),
-        selected = planServiceById(DemoScope.of(context).selectedPlanServiceId),
-        balance = s.tokenBalance;
-    final enough = selected != null && s.canAffordTokens(selected.tokenCost);
+        selected = s.serviceById(s.selectedPlanServiceId),
+        balance = s.walletBalance;
+    final enough = selected != null && s.canAfford(selected.priceToman);
     return Scaffold(
       appBar: AppBar(title: const Text('تعرفه برنامه‌ها')),
       body: PageBody(
         children: [
           const Heading(
             'قدم بعدی مسیرت را انتخاب کن',
-            subtitle: 'هزینهٔ هر سرویس با توکن کیف پول پرداخت می‌شود.',
+            subtitle: 'هزینهٔ برنامه از موجودی کیف پول کسر می‌شود.',
           ),
-          for (final offer in planServiceOffers)
+          for (final offer in s.serviceOffers)
             _OfferCard(
               key: ValueKey('service-${offer.id}'),
               title: offer.title,
               subtitle: offer.subtitle,
-              price: '${formatTokenNumber(offer.tokenCost)} توکن',
+              price: '${formatMoneyNumber(offer.priceToman)} تومان',
               icon: offer.icon,
               selected: selected?.id == offer.id,
               onTap: processing || charging
@@ -380,8 +380,8 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
               ),
             ] else if (enough) ...[
               Text(
-                'توکن قابل پرداخت: ${formatTokenNumber(selected.tokenCost)} توکن',
-                key: const ValueKey('payable-tokens'),
+                'مبلغ قابل پرداخت: ${formatMoneyNumber(selected.priceToman)} تومان',
+                key: const ValueKey('payable-amount'),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -397,8 +397,8 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
               ),
             ] else ...[
               Text(
-                'توکن قابل پرداخت: ${formatTokenNumber(selected.tokenCost)} توکن',
-                key: const ValueKey('payable-tokens'),
+                'مبلغ قابل پرداخت: ${formatMoneyNumber(selected.priceToman)} تومان',
+                key: const ValueKey('payable-amount'),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -457,7 +457,7 @@ class _BalanceLine extends StatelessWidget {
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
       Text(
-        'موجودی توکن کیف پول شما: ${formatTokenNumber(balance)} توکن',
+        'موجودی کیف پول شما: ${formatMoneyNumber(balance)} تومان',
         key: const ValueKey('wallet-balance-line'),
         style: const TextStyle(fontSize: 12, color: muted),
       ),
@@ -481,15 +481,23 @@ class _BalanceLine extends StatelessWidget {
   );
 }
 
-class TokenPackagesScreen extends StatefulWidget {
-  const TokenPackagesScreen({super.key});
+class WalletChargeScreen extends StatefulWidget {
+  const WalletChargeScreen({super.key});
   @override
-  State<TokenPackagesScreen> createState() => _TokenPackagesScreenState();
+  State<WalletChargeScreen> createState() => _WalletChargeScreenState();
 }
 
-class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
+class _WalletChargeScreenState extends State<WalletChargeScreen> {
   bool navigating = false, failed = false;
-  Future<void> buy(TokenPackageOffer offer) async {
+  final customAmount = TextEditingController();
+  WalletChargeOffer? customOffer;
+  @override
+  void dispose() {
+    customAmount.dispose();
+    super.dispose();
+  }
+
+  Future<void> buy(WalletChargeOffer offer) async {
     if (navigating) return;
     setState(() => navigating = true);
     try {
@@ -513,11 +521,11 @@ class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
   @override
   Widget build(BuildContext context) {
     final s = DemoScope.of(context),
-        selected = tokenPackageById(
-          DemoScope.of(context).selectedTokenPackageId,
-        );
+        selected = s.selectedChargeId == 'custom'
+            ? customOffer
+            : walletChargeById(s.selectedChargeId);
     return Scaffold(
-      appBar: AppBar(title: const Text('تعرفه توکن')),
+      appBar: AppBar(title: const Text('شارژ کیف پول')),
       body: PageBody(
         children: [
           Surface(
@@ -535,7 +543,7 @@ class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
                         style: TextStyle(fontSize: 12, color: muted),
                       ),
                       Text(
-                        '${formatTokenNumber(s.tokenBalance)} توکن',
+                        '${formatMoneyNumber(s.walletBalance)} تومان',
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -548,7 +556,31 @@ class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
               ],
             ),
           ),
-          const Heading('پکیج مناسب خودت را انتخاب کن'),
+          const Heading('مبلغ شارژ را انتخاب کن'),
+          TextField(
+            key: const ValueKey('custom-charge'),
+            controller: customAmount,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'مبلغ دلخواه / تومان',
+              hintText: 'مثلاً ۵۰۰۰۰۰',
+            ),
+            onChanged: (value) {
+              final n = int.tryParse(
+                latinDigits(value).replaceAll(',', '').replaceAll('٬', ''),
+              );
+              setState(() {
+                customOffer = n != null && n > 0 && n <= 100000000
+                    ? WalletChargeOffer(
+                        id: 'custom',
+                        amountToman: n,
+                        priceToman: n,
+                      )
+                    : null;
+                s.selectedChargeId = 'custom';
+              });
+            },
+          ),
           if (failed)
             Container(
               key: const ValueKey('mock-payment-error'),
@@ -566,18 +598,18 @@ class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
                 ),
               ),
             ),
-          for (final offer in tokenPackageOffers)
+          for (final offer in walletChargeOffers)
             _OfferCard(
               key: ValueKey('package-${offer.id}'),
-              title: '${formatTokenNumber(offer.tokens)} توکن',
+              title: '${formatMoneyNumber(offer.amountToman)} تومان',
               subtitle: 'اعتبار قابل استفاده برای سرویس‌های برنامه غذایی',
-              price: formatToman(offer.priceToman),
-              icon: Icons.token_outlined,
+              price: 'انتخاب مبلغ',
+              icon: Icons.account_balance_wallet_outlined,
               selected: selected?.id == offer.id,
               onTap: navigating
                   ? null
                   : () {
-                      s.selectedTokenPackageId = offer.id;
+                      s.selectedChargeId = offer.id;
                       s.update();
                       setState(() => failed = false);
                     },
@@ -590,7 +622,7 @@ class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
       ),
       bottomNavigationBar: _WalletBottom(
         child: PrimaryButton(
-          'خرید توکن',
+          'شارژ کیف پول',
           onPressed: selected == null || navigating
               ? null
               : () => buy(selected),
@@ -603,7 +635,7 @@ class _TokenPackagesScreenState extends State<TokenPackagesScreen> {
 
 class MockPaymentScreen extends StatefulWidget {
   const MockPaymentScreen({super.key, required this.package});
-  final TokenPackageOffer package;
+  final WalletChargeOffer package;
   @override
   State<MockPaymentScreen> createState() => _MockPaymentScreenState();
 }
@@ -620,7 +652,10 @@ class _MockPaymentScreenState extends State<MockPaymentScreen> {
       return;
     }
     attempt ??= s.nextWalletOperationId();
-    final credited = s.completeMockTokenPayment(widget.package.id, attempt!);
+    final credited = s.addWalletCredit(
+      widget.package.priceToman,
+      operationId: attempt!,
+    );
     if (!credited) {
       if (mounted) {
         setState(() => busy = false);
@@ -628,7 +663,7 @@ class _MockPaymentScreenState extends State<MockPaymentScreen> {
       }
       return;
     }
-    final balance = s.tokenBalance;
+    final balance = s.walletBalance;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -638,7 +673,7 @@ class _MockPaymentScreenState extends State<MockPaymentScreen> {
           icon: const Icon(Icons.check_circle_rounded, color: pine, size: 44),
           title: const Text('خرید با موفقیت انجام شد ✅'),
           content: Text(
-            'موجودی توکن شما ${formatTokenNumber(balance)} توکن است.',
+            'موجودی کیف پول شما ${formatMoneyNumber(balance)} تومان است.',
             style: const TextStyle(height: 2),
           ),
           actions: [
@@ -676,19 +711,20 @@ class _MockPaymentScreenState extends State<MockPaymentScreen> {
                   children: [
                     Icon(Icons.account_balance_outlined, color: pine),
                     SizedBox(width: 10),
-                    Text(
-                      'پرداخت نمونهٔ سبزینه',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17,
+                    Expanded(
+                      child: Text(
+                        'پرداخت نمونهٔ سبزینه',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 InfoRows({
-                  'پکیج انتخابی':
-                      '${formatTokenNumber(widget.package.tokens)} توکن',
+                  'پکیج انتخابی': 'شارژ کیف پول',
                   'مبلغ پرداختی': formatToman(widget.package.priceToman),
                   'پذیرنده': 'سبزینه · نسخهٔ آزمایشی',
                 }),

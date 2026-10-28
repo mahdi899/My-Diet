@@ -22,12 +22,6 @@ class ExpertHome extends StatelessWidget {
       appBar: AppBar(title: Text('روز بخیر، ${s.experts.first.name}')),
       body: PageBody(
         children: [
-          const Surface(
-            child: Heading(
-              'با دانش تو، یک قدم نزدیک‌تر به سلامت',
-              subtitle: 'هر گفت‌وگو فرصتی برای همراهی بهتر با کاربر است.',
-            ),
-          ),
           MetricGrid(
             items: [
               for (final metric in [

@@ -6,7 +6,7 @@ abstract interface class SessionStorage {
   Future<void> clear();
 }
 
-/// Local demo session; replace with server-issued tokens for real authentication.
+/// Local demo session; replace with server-issued amountToman for real authentication.
 class PreferencesSessionStorage implements SessionStorage {
   final SharedPreferencesAsync preferences = SharedPreferencesAsync();
   static const key = 'sabzine.demo-session.v1';

@@ -273,7 +273,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.byType(NavigationDestination).at(3));
       await t.pumpAndSettle();
-      await tapVisible(t, find.text('ویرایش پرسش‌نامه'));
+      await tapVisible(t, find.text('اطلاعات فردی'));
       expect(find.text('نام کامل شما'), findsOneWidget);
       await next(t);
       expect(find.text('کمی با هم آشنا بشیم'), findsOneWidget);
@@ -290,27 +290,36 @@ void main() {
       s.dispose();
     },
   );
-  test('Program reviews require admin approval before public dashboard', () {
-    final s = DemoStore()..loginDemoUser();
-    s.questionnaire.name = 'سارا احمدی';
-    expect(s.approvedReviewsForDashboard().length, 2);
-    s.submitProgramReview('برنامهٔ من عالی بود.');
-    expect(s.pendingProgramReviews().length, 2);
-    expect(s.userPendingReview()?.text, 'برنامهٔ من عالی بود.');
-    expect(s.approvedReviewsForDashboard().length, 2);
-    s.login(AppRole.admin);
-    final pending = s.pendingProgramReviews().firstWhere(
-      (r) => r.authorName == 'سارا احمدی',
-    );
-    s.approveProgramReview(pending.id);
-    s.loginDemoUser();
-    s.questionnaire.name = 'رضا موسوی';
-    expect(
-      s.approvedReviewsForDashboard().any((r) => r.authorName == 'سارا احمدی'),
-      true,
-    );
-    s.dispose();
-  });
+  test(
+    'Program reviews require completion, support delivery and admin approval',
+    () async {
+      final s = DemoStore(clock: () => DateTime(2026, 10, 30))..loginDemoUser();
+      s.approveActiveUserRequest();
+      for (var i = 0; i < s.mealsOn(s.today).length; i++) {
+        await s.setMealEaten(s.today, i, true);
+      }
+      s.questionnaire.name = 'سارا احمدی';
+      expect(s.approvedReviewsForDashboard().length, 2);
+      s.submitProgramReview('برنامهٔ من عالی بود.');
+      expect(s.pendingProgramReviews().length, 2);
+      expect(s.userPendingReview()?.text, 'برنامهٔ من عالی بود.');
+      expect(s.approvedReviewsForDashboard().length, 2);
+      s.login(AppRole.admin);
+      final pending = s.pendingProgramReviews().firstWhere(
+        (r) => r.authorName == 'سارا احمدی',
+      );
+      s.approveProgramReview(pending.id);
+      s.loginDemoUser();
+      s.questionnaire.name = 'رضا موسوی';
+      expect(
+        s.approvedReviewsForDashboard().any(
+          (r) => r.authorName == 'سارا احمدی',
+        ),
+        true,
+      );
+      s.dispose();
+    },
+  );
   test('Expert can add and remove draft meals', () {
     final s = DemoStore()..login(AppRole.expert);
     final id = '1042';

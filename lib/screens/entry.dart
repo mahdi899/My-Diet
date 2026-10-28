@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Text(
               codeStep
                   ? 'کد نمونه: ۱۲۳۴۵۶'
-                  : 'برای بررسی ظاهر فرم، یک شمارهٔ نمونه وارد کن.',
+                  : 'برای بررسی ظاهر فرم، شماره تلفن را وارد کن.',
               style: const TextStyle(color: muted),
             ),
             Form(
@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 textDirection: TextDirection.ltr,
                 textAlign: TextAlign.center,
                 decoration: InputDecoration(
-                  labelText: codeStep ? 'کد تأیید' : 'شمارهٔ موبایل',
+                  labelText: codeStep ? 'کد تأیید' : 'شماره تلفن',
                   hintText: codeStep ? '123456' : '09120000000',
                 ),
                 validator: (value) {

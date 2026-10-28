@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../data/demo_store.dart';
 import '../data/day.dart';
+import '../data/wallet_catalog.dart';
+import '../screens/user.dart' show ProgramReviewSubmitScreen;
 import '../theme.dart';
 import '../screens/shared.dart';
 import '../screens/wallet_flow.dart';
@@ -56,8 +59,15 @@ class WeeklyStreakCard extends StatelessWidget {
   const WeeklyStreakCard({super.key});
   @override
   Widget build(BuildContext context) {
-    final s = DemoScope.of(context), dates = s.scheduledWeekDates;
-    if (dates.isEmpty) return const SizedBox.shrink();
+    final s = DemoScope.of(context);
+    if (!s.hasUserRequest || !s.userRequest.isPublished) {
+      return const SizedBox.shrink();
+    }
+    final week = s.userRequest.programWeek ?? startOfWeek(s.today);
+    final dates = List.generate(
+      7,
+      (i) => DateTime(week.year, week.month, week.day + i),
+    );
     final claimed = s.rewardedWeeks.contains(
       dateKey(s.userRequest.programWeek ?? startOfWeek(s.today)),
     );
@@ -66,39 +76,21 @@ class WeeklyStreakCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            children: [
-              const Icon(Icons.local_fire_department_rounded, color: amber),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'استریک این هفته',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Tag('${fa(s.weeklyStreak)} هفتهٔ متوالی'),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${fa(s.completedProgramDays)} از ${fa(dates.length)} روز برنامه تکمیل شده',
-          ),
-          const SizedBox(height: 10),
-          Row(
             children: dates
                 .map(
                   (date) => Expanded(
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: s.dayCompleted(date) ? pine : sage,
-                          child: Icon(
-                            s.dayCompleted(date)
-                                ? Icons.check
-                                : Icons.circle_outlined,
-                            size: 18,
-                            color: s.dayCompleted(date) ? Colors.white : muted,
-                          ),
+                        DayMealProgress(
+                          key: ValueKey('day-progress-${dateKey(date)}'),
+                          label: persianWeekDays[weekDayIndex(date)],
+                          completed: s.eatenCount(date),
+                          total:
+                              s.scheduledWeekDates.any(
+                                (d) => dateKey(d) == dateKey(date),
+                              )
+                              ? s.mealsOn(date).length
+                              : 0,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -113,21 +105,26 @@ class WeeklyStreakCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
-            value: s.completedProgramDays / dates.length,
+            value: s.scheduledWeekDates.isEmpty
+                ? 0
+                : s.completedProgramDays / s.scheduledWeekDates.length,
             minHeight: 6,
             borderRadius: BorderRadius.circular(6),
           ),
           const SizedBox(height: 10),
           Text(
             claimed
-                ? '۱۰۰ توکن جایزهٔ این هفته به کیف پولت اضافه شد.'
-                : 'همهٔ وعده‌های روزهای برنامه را تیک بزن؛ ۱۰۰ توکن جایزه بگیر.',
+                ? '${formatToman(s.rewardForWeek(dateKey(week)))} جایزه به کیف پولت اضافه شد.'
+                : 'با تکمیل برنامه، ${formatToman(s.weeklyRewardToman)} اعتبار هدیه بگیر.',
             style: const TextStyle(color: pine, fontSize: 12),
           ),
-          Text(
-            'از ${persianDate(dates.first)} تا ${persianDate(dates.last)}',
-            style: const TextStyle(color: muted, fontSize: 10),
-          ),
+          if (claimed && s.canReviewCurrentProgram)
+            TextButton.icon(
+              onPressed: () =>
+                  pushPage(context, const ProgramReviewSubmitScreen()),
+              icon: const Icon(Icons.rate_review_outlined),
+              label: const Text('بازخورد برنامهٔ این هفته'),
+            ),
           if (claimed)
             TextButton(
               onPressed: () {
@@ -142,6 +139,99 @@ class WeeklyStreakCard extends StatelessWidget {
   }
 }
 
+/// The liquid's area follows the share of meals completed, not elapsed time.
+class DayMealProgress extends StatelessWidget {
+  const DayMealProgress({
+    super.key,
+    required this.label,
+    required this.completed,
+    required this.total,
+  });
+  final String label;
+  final int completed, total;
+  double get progress => total == 0 ? 0 : (completed / total).clamp(0.0, 1.0);
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: label,
+    value: total == 0
+        ? 'بدون برنامه'
+        : '${fa(completed)} از ${fa(total)} وعده؛ ${fa((progress * 100).round())} درصد',
+    child: Tooltip(
+      message: total == 0
+          ? '$label · بدون برنامه'
+          : '$label · ${fa(completed)} از ${fa(total)} وعده',
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: progress),
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 350),
+        builder: (_, value, child) => SizedBox.square(
+          dimension: 32,
+          child: CustomPaint(
+            painter: _DayFillPainter(value),
+            child: Center(
+              child: progress == 1
+                  ? const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    )
+                  : total == 0
+                  ? const Icon(Icons.remove, color: muted, size: 15)
+                  : null,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _DayFillPainter extends CustomPainter {
+  _DayFillPainter(this.progress);
+  final double progress;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2),
+        radius = size.shortestSide / 2 - 1;
+    final bounds = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawCircle(center, radius, Paint()..color = sage);
+    if (progress > 0) {
+      // Invert the circular segment area so 3/4 really fills 75% of the circle.
+      var low = -1.0, high = 1.0;
+      for (var i = 0; i < 24; i++) {
+        final y = (low + high) / 2;
+        final area =
+            (math.acos(y) - y * math.sqrt(math.max(0, 1 - y * y))) / math.pi;
+        if (area > progress) {
+          low = y;
+        } else {
+          high = y;
+        }
+      }
+      final level = center.dy + (low + high) / 2 * radius;
+      canvas.save();
+      canvas.clipPath(Path()..addOval(bounds));
+      canvas.drawRect(
+        Rect.fromLTRB(bounds.left, level, bounds.right, bounds.bottom),
+        Paint()..color = pine,
+      );
+      canvas.restore();
+    }
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = pine
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _DayFillPainter old) => old.progress != progress;
+}
+
 class WeeklyRewardGate extends StatefulWidget {
   const WeeklyRewardGate({super.key, required this.child});
   final Widget child;
@@ -151,6 +241,12 @@ class WeeklyRewardGate extends StatefulWidget {
 
 class _WeeklyRewardGateState extends State<WeeklyRewardGate> {
   bool scheduled = false, showing = false;
+  Future<void> pushFeedback() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const ProgramReviewSubmitScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
@@ -180,10 +276,18 @@ class _WeeklyRewardGateState extends State<WeeklyRewardGate> {
                 size: 56,
               ),
               title: const Text('تبریک! هفته‌ات را کامل کردی 🎉'),
-              content: const Text(
-                'شما برنامهٔ این هفته را تکمیل کردید و ۱۰۰ توکن جایزه گرفتید. جایزه به کیف پولت اضافه شد.',
+              content: Text(
+                'برنامهٔ این هفته را تکمیل کردی و ${formatToman(store.rewardForWeek(week))} اعتبار جایزه گرفتی.',
               ),
               actions: [
+                TextButton(
+                  onPressed: () {
+                    if (answered) return;
+                    answered = true;
+                    Navigator.pop(d, null);
+                  },
+                  child: const Text('ثبت بازخورد این هفته'),
+                ),
                 TextButton(
                   onPressed: () {
                     if (answered) return;
@@ -206,6 +310,9 @@ class _WeeklyRewardGateState extends State<WeeklyRewardGate> {
         );
         store.acknowledgeWeeklyReward(week);
         showing = false;
+        if (getNew == null && mounted) {
+          await pushFeedback();
+        }
         if (getNew == true && mounted) {
           store.selectedPlanServiceId = 'new-plan';
           await openPlanServices(this.context);

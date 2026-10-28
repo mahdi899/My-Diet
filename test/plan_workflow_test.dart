@@ -88,31 +88,31 @@ void main() {
       final s = DemoStore(clock: () => date, walletStorage: memory)
         ..loginDemoUser();
       s.approveActiveUserRequest();
-      final initial = s.tokenBalance;
+      final initial = s.walletBalance;
       for (var day = 0; day < 6; day++) {
         date = DateTime(2026, 10, 24 + day);
         await completeDay(s, date);
       }
-      expect(s.tokenBalance, initial);
+      expect(s.walletBalance, initial);
       date = DateTime(2026, 10, 30);
       for (var i = 0; i < s.mealsOn(date).length - 1; i++) {
         await s.setMealEaten(date, i, true);
       }
       expect(s.claimWeeklyReward(), false);
       await s.setMealEaten(date, s.mealsOn(date).length - 1, true);
-      expect(s.tokenBalance, initial + 100);
+      expect(s.walletBalance, initial + 200000);
       expect(s.weeklyStreak, 1);
       expect(s.claimWeeklyReward(), false);
       await s.setMealEaten(date, 0, false);
       await s.setMealEaten(date, 0, true);
       s.approveActiveUserRequest();
-      expect(s.tokenBalance, initial + 100);
+      expect(s.walletBalance, initial + 200000);
       expect(s.pendingWeeklyRewards, [dateKey(startOfWeek(date))]);
       await s.saveWalletState();
       final restored = DemoStore(walletStorage: memory, clock: () => date)
         ..loginDemoUser();
       await restored.restoreWalletState();
-      expect(restored.tokenBalance, initial + 100);
+      expect(restored.walletBalance, initial + 200000);
       expect(restored.rewardedWeeks, s.rewardedWeeks);
       restored.acknowledgeWeeklyReward(s.pendingWeeklyRewards.first);
       await restored.saveWalletState();
@@ -150,7 +150,7 @@ void main() {
       expect(s.consumedCalories(date), 0);
       await completeDay(s, date);
       expect(s.rewardedWeeks.length, 1);
-      expect(s.tokenBalance, 200);
+      expect(s.walletBalance, 200000);
       s.dispose();
     },
   );
@@ -267,7 +267,7 @@ void main() {
       await t.pumpAndSettle();
       expect(find.byType(PlanServicesScreen), findsOneWidget);
       expect(s.selectedPlanServiceId, 'new-plan');
-      expect(s.tokenBalance, 200);
+      expect(s.walletBalance, 200000);
       expect(s.pendingWeeklyRewards, isEmpty);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());

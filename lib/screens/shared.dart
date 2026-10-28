@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
+import '../data/wallet_catalog.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
 
@@ -398,48 +399,55 @@ class ArchivedPlanScreen extends StatelessWidget {
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('سفارش‌ها و پرداخت‌ها')),
-    body: PageBody(
-      children: [
-        const Notice(
-          'قیمت‌ها و رسیدها نمایشی‌اند. درگاه پرداخت متصل نشده است.',
-        ),
-        Surface(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Heading(
-                'برنامهٔ هفتگی',
-                subtitle: 'سفارش ۲۰۸۴ · ۳ آبان ۱۴۰۵',
-              ),
-              const SizedBox(height: 12),
-              const InfoRows({
-                'مبلغ نمونه': '۴۹۰٬۰۰۰ تومان',
-                'وضعیت': 'پرداخت موفق نمونه',
-              }),
-              OutlinedButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (d) => AlertDialog(
-                    title: const Text('رسید نمونهٔ سفارش ۲۰۸۴'),
-                    content: const Text(
-                      'این یک رسید نمایشی است و هیچ تراکنش مالی انجام نشده.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(d),
-                        child: const Text('بستن'),
-                      ),
-                    ],
-                  ),
-                ),
-                child: const Text('مشاهدهٔ رسید'),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    final s = DemoScope.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('گردش کیف پول')),
+      body: PageBody(
+        children: [
+          Surface(
+            color: sage,
+            child: Heading(
+              'موجودی کیف پول',
+              subtitle: formatToman(s.walletBalance),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+          const Notice(
+            'مبلغ‌ها و پرداخت‌ها نمایشی‌اند؛ پول واقعی جابه‌جا نمی‌شود.',
+          ),
+          if (s.walletTransactions.isEmpty)
+            const EmptyPanel(
+              'تراکنشی نداری',
+              'شارژ، خرید و جایزهٔ هفتگی اینجا ثبت می‌شوند.',
+              icon: Icons.receipt_long_outlined,
+            ),
+          for (final t in s.walletTransactions)
+            Surface(
+              child: Row(
+                children: [
+                  Icon(
+                    t.credit ? Icons.south_west : Icons.north_east,
+                    color: pine,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.title),
+                        Text(
+                          'مانده: ${formatToman(t.balanceAfter)}',
+                          style: const TextStyle(color: muted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text('${t.credit ? '+' : '−'} ${formatToman(t.amountToman)}'),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

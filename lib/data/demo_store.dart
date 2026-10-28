@@ -551,11 +551,17 @@ class ProgramReview {
     required this.authorName,
     required this.text,
     this.approved = false,
+    this.rating = 5,
+    this.requestId = '',
+    this.weekKey = '',
   });
   final String id;
   final String authorName;
   String text;
   bool approved;
+  bool rejected = false;
+  final int rating;
+  final String requestId, weekKey;
 }
 
 class ExpertRecord {
@@ -657,12 +663,69 @@ class DemoStore extends ChangeNotifier {
     requests.last.revisionReason = 'زمان تهیهٔ غذاها زیاده';
   }
   final WorkspaceSettingsStorage? _settingsStorage;
+  int newPlanPrice = 500000,
+      aiRevisionPrice = 150000,
+      expertRevisionPrice = 250000;
+  int weeklyRewardToman = 200000;
+  List<PlanServiceOffer> get serviceOffers => planServiceOffers
+      .map(
+        (offer) => PlanServiceOffer(
+          id: offer.id,
+          title: offer.title,
+          subtitle: offer.subtitle,
+          icon: offer.icon,
+          successLine: offer.successLine,
+          priceToman: switch (offer.id) {
+            'new-plan' => newPlanPrice,
+            'ai-change' => aiRevisionPrice,
+            _ => expertRevisionPrice,
+          },
+        ),
+      )
+      .toList();
+  PlanServiceOffer? serviceById(String? id) {
+    for (final offer in serviceOffers) {
+      if (offer.id == id) return offer;
+    }
+    return null;
+  }
+
+  Future<void> savePricing({
+    required int plan,
+    required int ai,
+    required int expert,
+    required int reward,
+  }) async {
+    if (plan <= 0 || ai <= 0 || expert <= 0 || reward < 0) {
+      throw StateError('مبلغ‌ها را بررسی کن.');
+    }
+    final snapshot = settingsSnapshot();
+    snapshot['pricing'] = {
+      'plan': plan,
+      'ai': ai,
+      'expert': expert,
+      'reward': reward,
+    };
+    await _settingsStorage?.write(jsonEncode(snapshot));
+    newPlanPrice = plan;
+    aiRevisionPrice = ai;
+    expertRevisionPrice = expert;
+    weeklyRewardToman = reward;
+    update();
+  }
+
   FormConfiguration formConfiguration = FormConfiguration();
   Map<String, Object?> settingsSnapshot({
     FormConfiguration? form,
     ExpertRecord? expert,
   }) => {
     'version': 1,
+    'pricing': {
+      'plan': newPlanPrice,
+      'ai': aiRevisionPrice,
+      'expert': expertRevisionPrice,
+      'reward': weeklyRewardToman,
+    },
     'form': (form ?? formConfiguration).toJson(),
     'expert': (expert ?? experts.first).toJson(),
   };
@@ -672,6 +735,17 @@ class DemoStore extends ChangeNotifier {
       if (raw == null) return;
       final data = jsonDecode(raw);
       if (data is! Map<String, dynamic> || data['version'] != 1) return;
+      if (data['pricing'] is Map) {
+        final p = data['pricing'] as Map;
+        if (p['plan'] is int && p['plan'] > 0) newPlanPrice = p['plan'];
+        if (p['ai'] is int && p['ai'] > 0) aiRevisionPrice = p['ai'];
+        if (p['expert'] is int && p['expert'] > 0) {
+          expertRevisionPrice = p['expert'];
+        }
+        if (p['reward'] is int && p['reward'] >= 0) {
+          weeklyRewardToman = p['reward'];
+        }
+      }
       if (data['form'] is Map) {
         final form = FormConfiguration.fromJson(
           Map<String, dynamic>.from(data['form'] as Map),
@@ -941,6 +1015,9 @@ class DemoStore extends ChangeNotifier {
   final WalletStateStorage? _walletStorage;
   Future<void> _walletWrites = Future<void>.value();
   final Set<String> rewardedWeeks = {};
+  final Set<String> completedProgramIds = {};
+  final Map<String, int> rewardAmounts = {};
+  int rewardForWeek(String week) => rewardAmounts[week] ?? weeklyRewardToman;
   final List<String> pendingWeeklyRewards = [];
 
   Future<void> restoreWalletState() async {
@@ -953,12 +1030,19 @@ class DemoStore extends ChangeNotifier {
           (data['balance'] as int) < 0) {
         return;
       }
-      tokenBalance = data['balance'] as int;
+      walletBalance = data['balance'] as int;
       rewardedWeeks.addAll(
         (data['rewardedWeeks'] as List? ?? []).whereType<String>().where(
           (week) => DateTime.tryParse(week) != null,
         ),
       );
+      if (data['rewardAmounts'] is Map) {
+        for (final entry in (data['rewardAmounts'] as Map).entries) {
+          if (entry.key is String && entry.value is int) {
+            rewardAmounts[entry.key] = entry.value;
+          }
+        }
+      }
       pendingWeeklyRewards.addAll(
         (data['pendingRewards'] as List? ?? []).whereType<String>().where(
           rewardedWeeks.contains,
@@ -971,7 +1055,7 @@ class DemoStore extends ChangeNotifier {
           MockWalletTransaction(
             operationId: t['id'] as String,
             title: t['title'] as String,
-            tokens: t['tokens'] as int,
+            amountToman: t['amountToman'] as int,
             balanceAfter: t['balanceAfter'] as int,
             credit: t['credit'] == true,
           ),
@@ -987,16 +1071,17 @@ class DemoStore extends ChangeNotifier {
   Future<void> saveWalletState() {
     final snapshot = jsonEncode({
       'version': 1,
-      'balance': tokenBalance,
+      'balance': walletBalance,
       'sequence': _walletSequence,
       'rewardedWeeks': rewardedWeeks.toList(),
+      'rewardAmounts': rewardAmounts,
       'pendingRewards': pendingWeeklyRewards,
       'transactions': walletTransactions
           .map(
             (t) => {
               'id': t.operationId,
               'title': t.title,
-              'tokens': t.tokens,
+              'amountToman': t.amountToman,
               'balanceAfter': t.balanceAfter,
               'credit': t.credit,
             },
@@ -1053,17 +1138,19 @@ class DemoStore extends ChangeNotifier {
   bool claimWeeklyReward() {
     if (!weeklyProgramCompleted) return false;
     final week = dateKey(userRequest.programWeek ?? startOfWeek(today));
+    completedProgramIds.add(userRequest.id);
     if (rewardedWeeks.contains(week)) return false;
     rewardedWeeks.add(week);
+    rewardAmounts[week] = weeklyRewardToman;
     pendingWeeklyRewards.add(week);
-    tokenBalance += 100;
+    walletBalance += weeklyRewardToman;
     walletTransactions.insert(
       0,
       MockWalletTransaction(
         operationId: 'weekly-reward-$week',
         title: 'جایزهٔ تکمیل برنامهٔ هفتگی',
-        tokens: 100,
-        balanceAfter: tokenBalance,
+        amountToman: weeklyRewardToman,
+        balanceAfter: walletBalance,
         credit: true,
       ),
     );
@@ -1078,34 +1165,34 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
-  int tokenBalance = kInitialTokenBalance;
-  String? selectedPlanServiceId, selectedTokenPackageId;
+  int walletBalance = kInitialWalletBalance;
+  String? selectedPlanServiceId, selectedChargeId;
   bool walletPurchaseBusy = false, walletPricingOpen = false;
   int _walletSequence = 0;
   final Set<String> _appliedWalletOperations = {};
   final List<MockWalletTransaction> walletTransactions = [];
   String nextWalletOperationId() => 'mock-wallet-${++_walletSequence}';
-  bool canAffordTokens(int amount) => amount > 0 && tokenBalance >= amount;
+  bool canAfford(int amount) => amount > 0 && walletBalance >= amount;
   bool tryPurchasePlanService(String serviceId, {String? operationId}) {
-    final offer = planServiceById(serviceId),
+    final offer = serviceById(serviceId),
         key = operationId ?? nextWalletOperationId();
     if (walletPurchaseBusy ||
         offer == null ||
-        !canAffordTokens(offer.tokenCost) ||
+        !canAfford(offer.priceToman) ||
         _appliedWalletOperations.contains(key)) {
       return false;
     }
     walletPurchaseBusy = true;
     try {
-      tokenBalance -= offer.tokenCost;
+      walletBalance -= offer.priceToman;
       _appliedWalletOperations.add(key);
       walletTransactions.insert(
         0,
         MockWalletTransaction(
           operationId: key,
           title: offer.title,
-          tokens: offer.tokenCost,
-          balanceAfter: tokenBalance,
+          amountToman: offer.priceToman,
+          balanceAfter: walletBalance,
           credit: false,
         ),
       );
@@ -1117,7 +1204,7 @@ class DemoStore extends ChangeNotifier {
             ? 'تغییر برنامه با هوش مصنوعی'
             : 'تغییر برنامه با متخصص';
         userRequest.revisionDetails =
-            'درخواست نمایشی با پرداخت ${formatTokenNumber(offer.tokenCost)} توکن ثبت شد.';
+            'درخواست نمایشی با پرداخت ${formatMoneyNumber(offer.priceToman)} تومان ثبت شد.';
       }
       saveWalletState();
       notices.insert(0, '${offer.successLine} (نمایشی)');
@@ -1128,18 +1215,20 @@ class DemoStore extends ChangeNotifier {
     }
   }
 
-  bool addPurchasedTokens(int tokens, {String? operationId}) {
+  bool addWalletCredit(int amountToman, {String? operationId}) {
     final key = operationId ?? nextWalletOperationId();
-    if (tokens <= 0 || _appliedWalletOperations.contains(key)) return false;
+    if (amountToman <= 0 || _appliedWalletOperations.contains(key)) {
+      return false;
+    }
     _appliedWalletOperations.add(key);
-    tokenBalance += tokens;
+    walletBalance += amountToman;
     walletTransactions.insert(
       0,
       MockWalletTransaction(
         operationId: key,
         title: 'شارژ نمایشی کیف پول',
-        tokens: tokens,
-        balanceAfter: tokenBalance,
+        amountToman: amountToman,
+        balanceAfter: walletBalance,
         credit: true,
       ),
     );
@@ -1148,25 +1237,25 @@ class DemoStore extends ChangeNotifier {
     return true;
   }
 
-  bool completeMockTokenPayment(String packageId, String attemptId) {
-    final offer = tokenPackageById(packageId);
+  bool completeMockPayment(String packageId, String attemptId) {
+    final offer = walletChargeById(packageId);
     if (offer == null) return false;
-    final result = addPurchasedTokens(offer.tokens, operationId: attemptId);
+    final result = addWalletCredit(offer.amountToman, operationId: attemptId);
     if (result) {
-      selectedTokenPackageId = null;
+      selectedChargeId = null;
       update();
     }
     return result;
   }
 
-  void setDebugTokenBalance(int value) {
+  void setDebugWalletBalance(int value) {
     if (!kDebugMode || value < 0) return;
-    tokenBalance = value;
+    walletBalance = value;
     saveWalletState();
     update();
   }
 
-  void resetWalletDebug() => setDebugTokenBalance(kInitialTokenBalance);
+  void resetWalletDebug() => setDebugWalletBalance(kInitialWalletBalance);
 
   AppRole? role = AppRole.user;
   AppRole? selectedRole = AppRole.user;
@@ -1281,6 +1370,18 @@ class DemoStore extends ChangeNotifier {
       mealReminders = false,
       questionnaireComplete = false;
   double latestWeight = 72;
+  final List<DateTime> weightDates = [];
+  List<DateTime> get weightEntryDates =>
+      weightDates.length == weightEntries.length
+      ? weightDates
+      : List.generate(
+          weightEntries.length,
+          (i) => DateTime(
+            today.year,
+            today.month,
+            today.day - (weightEntries.length - 1 - i) * 7,
+          ),
+        );
   final weightEntries = <double>[73.1, 72.8, 72.6, 72.2, 72];
   final completedMeals = <String>{}, completedHabits = <String>{};
   String feedback = '';
@@ -1408,8 +1509,6 @@ class DemoStore extends ChangeNotifier {
       hours: 'شنبه تا چهارشنبه، ۱۶ تا ۲۰',
       bio: 'همراه شما برای ساختن عادت‌های غذایی پایدار.',
     ),
-    ExpertRecord('دکتر مهدی کاظمی', 'تغذیه بالینی', true, 8),
-    ExpertRecord('دکتر سحر مرادی', 'تغذیه و رژیم‌درمانی', false, 6),
   ];
   final supportTickets = <Map<String, String>>[
     {
@@ -1544,6 +1643,7 @@ class DemoStore extends ChangeNotifier {
         name: questionnaire.name,
         goal: questionnaire.goal,
         status: PlanStatus.queued,
+        specialist: experts.first.name,
         wait: 'همین حالا',
       ),
     );
@@ -1591,14 +1691,11 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
-  List<ProgramReview> approvedReviewsForDashboard() => programReviews
-      .where(
-        (r) => r.approved && r.authorName.trim() != questionnaire.name.trim(),
-      )
-      .toList();
+  List<ProgramReview> approvedReviewsForDashboard() =>
+      programReviews.where((r) => r.approved).toList();
 
   List<ProgramReview> pendingProgramReviews() =>
-      programReviews.where((r) => !r.approved).toList();
+      programReviews.where((r) => !r.approved && !r.rejected).toList();
 
   ProgramReview? userPendingReview() {
     final name = questionnaire.name.trim();
@@ -1608,18 +1705,62 @@ class DemoStore extends ChangeNotifier {
     return null;
   }
 
-  void submitProgramReview(String text) {
+  DietRequest? get feedbackProgram {
+    for (final r in requests) {
+      if (userRequestIds.contains(r.id) && completedProgramIds.contains(r.id)) {
+        return r;
+      }
+    }
+    return null;
+  }
+
+  bool get canReviewCurrentProgram => userSignedIn && feedbackProgram != null;
+  List<ProgramReview> get clinicianFeedback => programReviews;
+  double get clinicianRating => clinicianFeedback.isEmpty
+      ? 0
+      : clinicianFeedback.fold<int>(0, (n, r) => n + r.rating) /
+            clinicianFeedback.length;
+  int get positiveFeedbackCount =>
+      clinicianFeedback.where((r) => r.rating >= 4).length;
+
+  void submitProgramReview(String text, {int rating = 5}) {
+    if (!canReviewCurrentProgram) {
+      throw StateError(
+        'پس از تکمیل برنامهٔ هفته و دریافت جایزه می‌توانی بازخورد ثبت کنی.',
+      );
+    }
+    if (rating < 1 || rating > 5) throw StateError('امتیاز را انتخاب کن.');
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       throw StateError('متن نظر را وارد کن.');
     }
+    final completed = feedbackProgram!;
+    final week = dateKey(completed.programWeek ?? startOfWeek(today));
+    if (programReviews.any(
+      (r) => r.weekKey == week && r.authorName == questionnaire.name.trim(),
+    )) {
+      throw StateError('بازخورد این هفته قبلاً ارسال شده است.');
+    }
     final name = questionnaire.name.trim();
-    programReviews.removeWhere(
-      (r) => r.authorName.trim() == name && !r.approved,
-    );
+
     programReviews.insert(
       0,
-      ProgramReview(id: 'rev-${_reviewSeq++}', authorName: name, text: trimmed),
+      ProgramReview(
+        id: 'rev-${_reviewSeq++}',
+        authorName: name,
+        text: trimmed,
+        rating: rating,
+        requestId: completed.id,
+        weekKey: week,
+      ),
+    );
+    messages.add(
+      ChatMessage(
+        'بازخورد برنامهٔ هفته · امتیاز ${fa(rating)} از ۵\n$trimmed',
+        AppRole.user,
+        support: true,
+        threadId: 'support-main',
+      ),
     );
     update();
   }
@@ -1627,11 +1768,14 @@ class DemoStore extends ChangeNotifier {
   void approveProgramReview(String id) {
     final review = programReviews.firstWhere((r) => r.id == id);
     review.approved = true;
+    review.rejected = false;
     update();
   }
 
   void rejectProgramReview(String id) {
-    programReviews.removeWhere((r) => r.id == id);
+    final review = programReviews.firstWhere((r) => r.id == id);
+    review.rejected = true;
+    review.approved = false;
     update();
   }
 
@@ -1724,8 +1868,18 @@ class DemoStore extends ChangeNotifier {
   }
 
   void addWeight(double value) {
+    final dates = weightEntryDates.toList();
+    final date = DateTime(today.year, today.month, today.day);
+    if (dates.isNotEmpty && dateKey(dates.last) == dateKey(date)) {
+      weightEntries[weightEntries.length - 1] = value;
+    } else {
+      dates.add(date);
+      weightEntries.add(value);
+    }
+    weightDates
+      ..clear()
+      ..addAll(dates);
     latestWeight = value;
-    weightEntries.add(value);
     update();
   }
 

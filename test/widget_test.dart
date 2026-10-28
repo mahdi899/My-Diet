@@ -328,7 +328,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byType(NavigationDestination).at(3));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('ویرایش پرسش‌نامه'));
+      await tester.tap(find.text('اطلاعات فردی'));
       await tester.pumpAndSettle();
       final age = find.byKey(const ValueKey('سن / سال'));
       expect(tester.widget<TextFormField>(age).initialValue, '۲۸');
@@ -345,7 +345,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(store.questionnaire.age, '۳۳');
       expect(store.requests.length, count);
-      await tester.tap(find.text('ویرایش پرسش‌نامه'));
+      await tester.tap(find.text('اطلاعات فردی'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextFormField>(age).initialValue, '۳۳');
       await tester.enterText(age, '۴۰');
@@ -395,7 +395,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('وزن فعلی'), findsOneWidget);
       expect(find.text('۸۱'), findsOneWidget);
-      expect(find.text('ویرایش پرسش‌نامه'), findsNothing);
+      expect(find.text('اطلاعات فردی'), findsNothing);
       expect(find.text('وضعیت برنامه'), findsOneWidget);
       expect(find.text('برنامهٔ امروز'), findsNothing);
       expect(find.text(store.userRequest.draft.first.title), findsNothing);

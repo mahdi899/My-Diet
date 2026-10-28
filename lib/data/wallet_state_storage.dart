@@ -7,7 +7,7 @@ abstract interface class WalletStateStorage {
 
 class PreferencesWalletStateStorage implements WalletStateStorage {
   final SharedPreferencesAsync preferences = SharedPreferencesAsync();
-  static const key = 'sabzine.mock-wallet.v1';
+  static const key = 'sabzine.money-wallet.v1';
   @override
   Future<String?> read() => preferences.getString(key);
   @override

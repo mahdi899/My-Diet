@@ -3,6 +3,7 @@ import 'dart:async';
 import '../data/day.dart';
 import '../widgets/nutrition.dart';
 import '../widgets/weekly_progress.dart';
+import '../widgets/review_carousel.dart';
 import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
 import '../theme.dart';
@@ -63,7 +64,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
           actions: [
             const Padding(
               padding: EdgeInsetsDirectional.only(end: 8),
-              child: Center(child: TokenWalletChip()),
+              child: Center(child: WalletBalanceChip()),
             ),
             IconButton(
               tooltip: 'پیام‌ها',
@@ -98,7 +99,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
               if (hasPlan) ...[
                 Heading(
                   'برنامهٔ امروز',
-                  subtitle: 'غذا را لمس کن تا مقدار دقیقش را ببینی',
+
                   action: TextButton(
                     onPressed: widget.onPlan,
                     child: const Text('برنامهٔ کامل'),
@@ -118,7 +119,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                       Heading(
                         'شما برنامه‌ای ندارید',
                         subtitle: s.userSignedIn
-                            ? 'با انتخاب سرویس و پرداخت توکن، درخواست برنامه را ثبت کن.'
+                            ? 'با انتخاب سرویس و پرداخت تومان، درخواست برنامه را ثبت کن.'
                             : 'با ورود و ثبت درخواست، برنامهٔ غذایی شخصی‌سازی‌شده دریافت می‌کنی.',
                       ),
                       const SizedBox(height: 16),
@@ -144,7 +145,8 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                 ),
               const WeightJourneyCard(),
               Surface(
-                onTap: () => pushPage(context, const DoctorDetailsScreen()),
+                onTap: () =>
+                    pushPage(context, const ChatScreen(threadId: 'user-main')),
                 padding: 16,
                 child: Row(
                   children: [
@@ -167,13 +169,16 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                     ),
                     IconButton(
                       tooltip: 'پیام به متخصص',
-                      onPressed: () =>
-                          pushPage(context, const MessagesScreen()),
+                      onPressed: () => pushPage(
+                        context,
+                        const ChatScreen(threadId: 'user-main'),
+                      ),
                       icon: const Icon(Icons.chat_bubble_outline, color: pine),
                     ),
                   ],
                 ),
               ),
+              ReviewCarousel(reviews: s.approvedReviewsForDashboard()),
               const Text(
                 'نسخهٔ نمایشی · غذاها، مقدارها و انرژی نمونه هستند.',
                 textAlign: TextAlign.center,
@@ -491,7 +496,6 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ),
-                      Tag('نسخهٔ ${fa(r.version)}'),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -524,7 +528,6 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-                const Tag('همین هفته'),
               ],
             ),
             SizedBox(
@@ -684,8 +687,7 @@ Future<void> showRevision(BuildContext context) async {
   final store = DemoScope.of(context), details = TextEditingController();
   String? reason;
   final form = GlobalKey<FormState>();
-  await showModalBottomSheet<void>(
-    context: context,
+  final sheetRoute = ModalBottomSheetRoute<void>(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (sheet) => StatefulBuilder(
@@ -766,6 +768,8 @@ Future<void> showRevision(BuildContext context) async {
       ),
     ),
   );
+  await Navigator.of(context).push<void>(sheetRoute);
+  await sheetRoute.completed;
   details.dispose();
 }
 
@@ -804,96 +808,134 @@ class TrackingScreen extends StatelessWidget {
   const TrackingScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
+    final s = DemoScope.of(context), dates = s.weightEntryDates;
+    final delta = s.weightEntries.isEmpty
+        ? 0.0
+        : s.latestWeight - s.weightEntries.first;
+    final week = s.hasUserRequest
+        ? (s.userRequest.programWeek ?? startOfWeek(s.today))
+        : startOfWeek(s.today);
     return Scaffold(
       appBar: AppBar(title: const Text('پیگیری من')),
       body: PageBody(
         children: [
-          const Heading(
-            'قدم‌به‌قدم، کنار خودت',
-            subtitle: 'حال بهترت هم به‌اندازهٔ عددها مهمه.',
-          ),
-          MetricGrid(
-            items: [
-              Metric(
-                'آخرین وزن',
-                '${fa(store.latestWeight)} کیلو',
-                Icons.monitor_weight_outlined,
-              ),
-              Metric(
-                'وعده‌های ثبت‌شده',
-                fa(store.completedMeals.length),
-                Icons.restaurant_outlined,
-              ),
-            ],
+          Surface(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Heading('درصد تکمیل برنامهٔ روزانه'),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: List.generate(7, (i) {
+                    final date = DateTime(week.year, week.month, week.day + i),
+                        total = s.mealsOn(date).length;
+                    final prescribed = s.scheduledWeekDates.any(
+                      (d) => dateKey(d) == dateKey(date),
+                    );
+                    final percent = !prescribed || total == 0
+                        ? 0
+                        : s.eatenCount(date) * 100 / total;
+                    return Expanded(
+                      child: Tooltip(
+                        message:
+                            '${persianDate(date)} · ${fa(s.eatenCount(date))} از ${fa(total)} وعده',
+                        child: Column(
+                          children: [
+                            Text(
+                              prescribed ? '${fa(percent.round())}٪' : '—',
+                              style: const TextStyle(
+                                color: pine,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 120,
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: FractionallySizedBox(
+                                  heightFactor: percent == 0
+                                      ? 0.025
+                                      : percent / 100,
+                                  child: Container(
+                                    width: 22,
+                                    decoration: BoxDecoration(
+                                      color: prescribed ? pine : sage,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              persianWeekDays[i],
+                              style: const TextStyle(fontSize: 9),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'بر اساس وعده‌هایی که «خوردم» زده‌ای؛ خط تیره یعنی آن روز برنامه‌ای نداشتی.',
+                  style: TextStyle(fontSize: 10, color: muted),
+                ),
+              ],
+            ),
           ),
           Surface(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Heading(
-                  'روند ثبت وزن',
-                  subtitle: 'داده‌های اولیه نمونه هستند.',
+                Heading(
+                  'روند تغییر وزن',
+                  subtitle: 'آخرین وزن: ${decimalFa(s.latestWeight)} کیلوگرم',
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${delta > 0 ? '+' : ''}${decimalFa(delta)} کیلوگرم نسبت به اولین اندازه‌گیری',
+                  style: const TextStyle(color: pine),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(
-                  height: 150,
+                  height: 210,
                   child: CustomPaint(
-                    painter: _WeightPainter(store.weightEntries),
+                    painter: _WeightPainter(s.weightEntries, dates),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 OutlinedButton.icon(
                   onPressed: () => showWeight(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('ثبت وزن جدید'),
+                  icon: const Icon(Icons.monitor_weight_outlined),
+                  label: const Text('تغییر وزن'),
                 ),
-              ],
-            ),
-          ),
-          Surface(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Heading('حال امروزت چطوره؟'),
-                ...[
-                  'آب نوشیدم',
-                  'وعده‌ها رو منظم خوردم',
-                  'نظرم رو به متخصص گفتم',
-                ].map(
-                  (s) => CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(s, style: const TextStyle(fontSize: 13)),
-                    value: store.completedHabits.contains(s),
-                    onChanged: (_) => store.toggleHabit(s),
+                const SizedBox(height: 12),
+                for (var i = s.weightEntries.length - 1; i >= 0; i--)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            persianDate(dates[i]),
+                            style: const TextStyle(fontSize: 11, color: muted),
+                          ),
+                        ),
+                        Text(
+                          '${decimalFa(s.weightEntries[i])} کیلوگرم',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Surface(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Heading('برنامه چطور پیش رفت؟'),
-                const SizedBox(height: 14),
-                ...['خوب و قابل اجرا بود', 'به کمی تغییر نیاز دارم'].map(
-                  (s) => ChoiceCard(
-                    s,
-                    selected: store.feedback == s,
-                    onTap: () {
-                      store.feedback = s;
-                      store.update();
-                    },
-                    icon: Icons.favorite_outline,
-                  ),
-                ),
-                PrimaryButton(
-                  'ثبت بازخورد',
-                  onPressed: store.feedback.isEmpty
-                      ? null
-                      : () => showToast(context, 'بازخورد در نمونه ثبت شد.'),
-                  icon: Icons.check,
+                const Text(
+                  'مقادیر اولیه نمونه‌اند؛ هر تغییر وزن با تاریخ امروز ثبت می‌شود.',
+                  style: TextStyle(fontSize: 10, color: muted),
                 ),
               ],
             ),
@@ -908,10 +950,10 @@ Future<void> showWeight(BuildContext context) async {
   final controller = TextEditingController(),
       form = GlobalKey<FormState>(),
       store = DemoScope.of(context);
-  await showDialog<void>(
+  final dialogRoute = DialogRoute<void>(
     context: context,
     builder: (dialog) => AlertDialog(
-      title: const Text('ثبت وزن'),
+      title: const Text('تغییر وزن'),
       content: Form(
         key: form,
         child: TextFormField(
@@ -942,46 +984,104 @@ Future<void> showWeight(BuildContext context) async {
       ],
     ),
   );
+  await Navigator.of(context).push<void>(dialogRoute);
+  await dialogRoute.completed;
   controller.dispose();
 }
 
 class _WeightPainter extends CustomPainter {
-  _WeightPainter(this.values);
+  _WeightPainter(this.values, this.dates);
   final List<double> values;
+  final List<DateTime> dates;
+  void label(Canvas canvas, String text, Offset offset, {Color color = muted}) {
+    final t = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(color: color, fontSize: 10, fontFamily: 'Vazirmatn'),
+      ),
+      textDirection: TextDirection.rtl,
+    )..layout();
+    t.paint(canvas, offset);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = const Color(0xFFE0E8D4)
+    if (values.isEmpty) return;
+    final low = (values.reduce(math.min) * 2).floor() / 2 - .5,
+        high = (values.reduce(math.max) * 2).ceil() / 2 + .5;
+    const left = 42.0, right = 20.0, top = 20.0, bottom = 32.0;
+    final width = size.width - left - right,
+        height = size.height - top - bottom;
+    final grid = Paint()
+      ..color = sage
       ..strokeWidth = 1;
-    for (var i = 0; i < 4; i++) {
-      final y = 15 + i * (size.height - 30) / 3;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
+    for (var i = 0; i <= 4; i++) {
+      final y = top + height * i / 4;
+      canvas.drawLine(Offset(left, y), Offset(size.width - right, y), grid);
+      label(canvas, decimalFa(high - (high - low) * i / 4), Offset(0, y - 8));
     }
-    if (values.length < 2) return;
-    final min = values.reduce(math.min) - .3,
-        max = values.reduce(math.max) + .3;
+    final span = dates.last.difference(dates.first).inMinutes;
     final points = List.generate(
       values.length,
       (i) => Offset(
-        8 + (size.width - 16) * i / (values.length - 1),
-        10 + (size.height - 20) * (1 - (values[i] - min) / (max - min)),
+        left +
+            (span == 0
+                    ? 0.5
+                    : dates[i].difference(dates.first).inMinutes / span) *
+                width,
+        top + (high - values[i]) / (high - low) * height,
       ),
     );
     final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (final o in points.skip(1)) {
-      path.lineTo(o.dx, o.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    if (points.length > 1) {
+      final fill = Path.from(path)
+        ..lineTo(points.last.dx, top + height)
+        ..lineTo(points.first.dx, top + height)
+        ..close();
+      canvas.drawPath(
+        fill,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [pine.withValues(alpha: .18), pine.withValues(alpha: 0)],
+          ).createShader(Rect.fromLTWH(left, top, width, height)),
+      );
     }
     canvas.drawPath(
       path,
-      p
+      Paint()
         ..color = pine
-        ..strokeWidth = 3
+        ..strokeWidth = 2.5
         ..style = PaintingStyle.stroke,
     );
-    p.style = PaintingStyle.fill;
-    for (final o in points) {
-      canvas.drawCircle(o, 4, p);
+    for (final point in points) {
+      canvas.drawCircle(point, 4, Paint()..color = Colors.white);
+      canvas.drawCircle(point, 2.8, Paint()..color = pine);
     }
+    label(
+      canvas,
+      '${decimalFa(values.last)} کیلو',
+      Offset(
+        (points.last.dx - 45).clamp(left, size.width - 75),
+        points.last.dy - 22,
+      ),
+      color: pine,
+    );
+    final first = jalali(dates.first), last = jalali(dates.last);
+    label(
+      canvas,
+      '${fa(first.$2)}/${fa(first.$3)}',
+      Offset(left, top + height + 10),
+    );
+    label(
+      canvas,
+      '${fa(last.$2)}/${fa(last.$3)}',
+      Offset(size.width - 55, top + height + 10),
+    );
   }
 
   @override
@@ -1037,23 +1137,19 @@ class ProfileScreen extends StatelessWidget {
                 MenuRow(
                   'اطلاعات فردی',
                   Icons.person_outline,
-                  onTap: () => pushPage(context, const EditProfileScreen()),
+                  onTap: () => pushPage(
+                    context,
+                    expert
+                        ? const EditProfileScreen()
+                        : const QuestionnaireScreen(editing: true),
+                  ),
                 ),
                 if (!expert)
                   MenuRow(
                     'کیف پول و تعرفه‌ها',
                     Icons.account_balance_wallet_outlined,
-                    subtitle: '${formatTokenNumber(store.tokenBalance)} توکن',
+                    subtitle: '${formatMoneyNumber(store.walletBalance)} تومان',
                     onTap: () => openPlanServices(context),
-                  ),
-                if (!expert)
-                  MenuRow(
-                    'ویرایش پرسش‌نامه',
-                    Icons.assignment_outlined,
-                    onTap: () => pushPage(
-                      context,
-                      const QuestionnaireScreen(editing: true),
-                    ),
                   ),
                 if (!expert)
                   MenuRow(
@@ -1067,6 +1163,23 @@ class ProfileScreen extends StatelessWidget {
                     Icons.history,
                     onTap: () => pushPage(context, const HistoryScreen()),
                   ),
+                MenuRow(
+                  'سفارش‌ها و پرداخت‌ها',
+                  Icons.credit_card_outlined,
+                  onTap: () => pushPage(context, const OrdersScreen()),
+                ),
+              ],
+            ),
+          ),
+          Surface(
+            padding: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Heading('درباره برنامه'),
+                ),
                 if (!expert)
                   MenuRow(
                     'ثبت نظر دربارهٔ برنامه',
@@ -1074,11 +1187,6 @@ class ProfileScreen extends StatelessWidget {
                     onTap: () =>
                         pushPage(context, const ProgramReviewSubmitScreen()),
                   ),
-                MenuRow(
-                  'سفارش‌ها و پرداخت‌ها',
-                  Icons.credit_card_outlined,
-                  onTap: () => pushPage(context, const OrdersScreen()),
-                ),
                 if (!expert)
                   SwitchListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1204,6 +1312,7 @@ class ProgramReviewSubmitScreen extends StatefulWidget {
 class _ProgramReviewSubmitScreenState extends State<ProgramReviewSubmitScreen> {
   final controller = TextEditingController();
   bool initialized = false;
+  int rating = 5;
 
   @override
   void dispose() {
@@ -1214,6 +1323,62 @@ class _ProgramReviewSubmitScreenState extends State<ProgramReviewSubmitScreen> {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    if (!store.canReviewCurrentProgram) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('بازخورد برنامه')),
+        body: const PageBody(
+          children: [
+            EmptyPanel(
+              'بعد از تکمیل برنامهٔ هفته',
+              'پس از تکمیل وعده‌ها و دریافت جایزه می‌توانی تجربه‌ات را برای پشتیبانی بنویسی.',
+              icon: Icons.rate_review_outlined,
+            ),
+          ],
+        ),
+      );
+    }
+    final weekKey = dateKey(
+      store.feedbackProgram!.programWeek ?? startOfWeek(store.today),
+    );
+    final sent = store.programReviews
+        .where(
+          (r) =>
+              r.weekKey == weekKey &&
+              r.authorName == store.questionnaire.name.trim(),
+        )
+        .toList();
+    if (sent.isNotEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('بازخورد برنامه')),
+        body: PageBody(
+          children: [
+            const Heading('بازخوردت به پشتیبانی ارسال شد'),
+            Surface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Tag(
+                    sent.first.approved
+                        ? 'تأییدشده برای نمایش عمومی'
+                        : sent.first.rejected
+                        ? 'برای پشتیبانی ثبت شد'
+                        : 'در انتظار بررسی مدیر',
+                  ),
+                  const SizedBox(height: 12),
+                  Text('امتیاز ${fa(sent.first.rating)} از ۵'),
+                  Text(sent.first.text),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () =>
+                  pushPage(context, const ChatScreen(threadId: 'support-main')),
+              child: const Text('گفتگو با پشتیبانی'),
+            ),
+          ],
+        ),
+      );
+    }
     final pending = store.userPendingReview();
     if (!initialized) {
       controller.text = pending?.text ?? '';
@@ -1228,6 +1393,18 @@ class _ProgramReviewSubmitScreenState extends State<ProgramReviewSubmitScreen> {
             icon: Icons.admin_panel_settings_outlined,
           ),
           if (pending != null) Tag('در انتظار تأیید مدیر', warning: true),
+          const Heading('از برنامهٔ این هفته چقدر راضی بودی؟'),
+          Wrap(
+            spacing: 8,
+            children: List.generate(
+              5,
+              (i) => ChoiceChip(
+                label: Text('${fa(i + 1)} ★'),
+                selected: rating == i + 1,
+                onSelected: (_) => setState(() => rating = i + 1),
+              ),
+            ),
+          ),
           TextField(
             controller: controller,
             minLines: 5,
@@ -1238,11 +1415,11 @@ class _ProgramReviewSubmitScreenState extends State<ProgramReviewSubmitScreen> {
             ),
           ),
           PrimaryButton(
-            'ارسال برای تأیید مدیر',
+            'ارسال بازخورد برای پشتیبانی',
             icon: Icons.send_outlined,
             onPressed: () {
               try {
-                store.submitProgramReview(controller.text);
+                store.submitProgramReview(controller.text, rating: rating);
                 showToast(context, 'نظر ثبت شد و برای مدیر ارسال شد.');
                 Navigator.pop(context);
               } on StateError catch (e) {
@@ -1292,7 +1469,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           const TextField(
             readOnly: true,
             decoration: InputDecoration(
-              labelText: 'شمارهٔ نمونه',
+              labelText: 'شماره تلفن',
               hintText: '۰۹۱۲ ••• ••۴۲',
             ),
           ),
