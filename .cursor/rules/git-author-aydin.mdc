@@ -1,0 +1,13 @@
+---
+description: Git commit author on this machine (Aydin-Alipour)
+alwaysApply: true
+---
+
+# Git identity (this repo)
+
+Commits and pushes from this workspace must use **Aydin Alipour** / GitHub [@Aydin-Alipour](https://github.com/Aydin-Alipour).
+
+- Repository-local config is already set: `user.name=Aydin Alipour`, `user.email=239989813+Aydin-Alipour@users.noreply.github.com`.
+- When committing, use normal `git commit` (do **not** override author to another account).
+- Do **not** run `git config --global`.
+- Push to `origin` only when the user asks; use GitHub credentials for **Aydin-Alipour** on this PC (sign out of other GitHub accounts in Git Credential Manager if pushes attach the wrong user).
