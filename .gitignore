@@ -60,3 +60,9 @@ graphify-out/cache/
 
 # Local emulator captures
 emulator-screenshot.png
+
+# Backend
+backend/node_modules/
+backend/dist/
+backend/coverage/
+backend/.pgdata/

@@ -63,7 +63,7 @@ if ([string]::Equals((Resolve-Path -LiteralPath $Source).Path, (Resolve-Path -Li
     exit 0
 }
 
-& robocopy $Source $Target /E /XJ /NFL /NDL /NJH /NJS /NC /NS /XD ".git" "build" ".dart_tool" ".gradle" "ephemeral" ".idea" /XF "local.properties" ".flutter-plugins-dependencies" "*.iml" "generated_plugin_registrant.cc" "generated_plugin_registrant.h" "generated_plugins.cmake" | Out-Null
+& robocopy $Source $Target /E /XJ /NFL /NDL /NJH /NJS /NC /NS /XD ".git" "build" ".dart_tool" ".gradle" "ephemeral" ".idea" "node_modules" "dist" "coverage" /XF "local.properties" ".flutter-plugins-dependencies" "*.iml" "generated_plugin_registrant.cc" "generated_plugin_registrant.h" "generated_plugins.cmake" | Out-Null
 if ($LASTEXITCODE -gt 7) {
     Write-Error "robocopy failed with exit code $LASTEXITCODE"
 }
