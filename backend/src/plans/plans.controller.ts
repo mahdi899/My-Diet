@@ -5,6 +5,7 @@ import { actor, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { bodyRecord, rejectUnknown, requiredString, requiredUuid } from '../common/parse.js';
 import { PlanDraftService } from './plans.service.js';
+import { isQueueBucket } from './queue.js';
 
 function lockVersion(req: Request): number {
   const raw = req.header('if-match');
@@ -40,9 +41,11 @@ export class PlansController {
   }
 
   @Roles('specialist', 'admin')
-  @Get('specialist/requests')
-  queue(@Req() req: Request) {
-    return this.plans.queue(actor(req).id);
+  @Get(['specialist/requests', 'specialist/queue'])
+  queue(@Req() req: Request, @Query('bucket') bucket?: string) {
+    if (bucket == null || bucket === '') return this.plans.queue(actor(req).id, null);
+    if (!isQueueBucket(bucket)) throw new ApiError(400, 'validation', 'دستهٔ صف شناخته نشد');
+    return this.plans.queue(actor(req).id, bucket);
   }
 
   @Roles('specialist', 'admin')

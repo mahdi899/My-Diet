@@ -31,7 +31,7 @@ export async function createApp(): Promise<{
     const config = new DocumentBuilder()
       .setTitle('Sabzine')
       .setDescription('Sabzine HTTP API')
-      .setVersion('0.9.0')
+      .setVersion('0.10.0')
       .build();
     SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config));
   }

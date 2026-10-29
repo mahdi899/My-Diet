@@ -19,6 +19,7 @@ import { AI_SKIP_FLAGS, type StoredAnswers } from '../questionnaire/schema.js';
 import { decryptText, encryptText, openAnswers } from '../common/field-crypto.js';
 import { minimizeForModel } from '../ai/minimize.js';
 import { draftWarnings } from '../ai/warnings.js';
+import { bucketSql, type QueueBucket } from './queue.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MEAL_ALIASES: Record<string, string> = {
@@ -234,7 +235,8 @@ export class PlanDraftService {
     );
   }
 
-  async queue(specialistId: string) {
+  async queue(specialistId: string, bucket: QueueBucket | null = null) {
+    const filter = bucket ? `and ${bucketSql(bucket)}` : '';
     const rows = await this.pool.query<{
       id: string;
       status: string;
@@ -246,6 +248,7 @@ export class PlanDraftService {
        from plan_requests r
        join users u on u.id = r.user_id
        where r.assigned_specialist_id = $1
+       ${filter}
        order by r.created_at desc
        limit 100`,
       [specialistId],

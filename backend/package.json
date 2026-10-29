@@ -13,8 +13,8 @@
     "start:worker:dev": "nest start --watch --entryFile worker",
     "lint": "eslint src test",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
-    "test": "node --import tsx --test test/unit/foundation.spec.ts test/unit/phase1.spec.ts test/unit/phase2.spec.ts test/unit/phase3.spec.ts test/unit/phase4.spec.ts test/unit/phase5.spec.ts test/unit/phase6.spec.ts test/unit/phase7.spec.ts test/unit/phase8.spec.ts",
-    "test:integration": "npm run build && node --import tsx --test --test-concurrency=1 test/integration/phase0.spec.ts test/integration/phase1.spec.ts test/integration/phase2.spec.ts test/integration/phase3.spec.ts test/integration/phase4.spec.ts test/integration/phase5.spec.ts test/integration/phase6.spec.ts test/integration/phase7.spec.ts test/integration/phase8.spec.ts",
+    "test": "node --import tsx --test test/unit/foundation.spec.ts test/unit/phase1.spec.ts test/unit/phase2.spec.ts test/unit/phase3.spec.ts test/unit/phase4.spec.ts test/unit/phase5.spec.ts test/unit/phase6.spec.ts test/unit/phase7.spec.ts test/unit/phase8.spec.ts test/unit/phase9.spec.ts",
+    "test:integration": "npm run build && node --import tsx --test --test-concurrency=1 test/integration/phase0.spec.ts test/integration/phase1.spec.ts test/integration/phase2.spec.ts test/integration/phase3.spec.ts test/integration/phase4.spec.ts test/integration/phase5.spec.ts test/integration/phase6.spec.ts test/integration/phase7.spec.ts test/integration/phase8.spec.ts test/integration/phase9.spec.ts",
     "migrate": "node-pg-migrate -f node-pg-migrate.json up",
     "migrate:down": "node-pg-migrate -f node-pg-migrate.json down",
     "admin:create": "node --import tsx src/cli/create-admin.ts"
