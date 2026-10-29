@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { actor, Public, Roles } from '../common/auth.js';
@@ -28,6 +28,24 @@ export class MoneyController {
   @Get('me/wallet')
   wallet(@Req() req: Request) {
     return this.money.wallet(actor(req).id);
+  }
+
+  @Roles('user')
+  @Get('me/wallet/ledger')
+  ledger(@Req() req: Request) {
+    return this.money.ledgerForUser(actor(req).id);
+  }
+
+  @Roles('user')
+  @Get('me/orders/:id')
+  orderOne(@Req() req: Request, @Param('id') id: string) {
+    return this.money.orderForUser(actor(req).id, requiredUuid(id));
+  }
+
+  @Roles('user')
+  @Get('me/topups/:id')
+  topupOne(@Req() req: Request, @Param('id') id: string) {
+    return this.money.topupForUser(actor(req).id, requiredUuid(id));
   }
 
   @Public()
@@ -71,6 +89,21 @@ export class MoneyController {
   @Post('me/orders/:id/cancel')
   cancel(@Req() req: Request, @Param('id') id: string) {
     return this.money.cancel(actor(req).id, requiredUuid(id));
+  }
+
+  @Roles('user')
+  @Post('me/requests/:id/cancel')
+  cancelRequest(@Req() req: Request, @Param('id') id: string) {
+    return this.money.cancelRequest(actor(req).id, requiredUuid(id));
+  }
+
+  @Public()
+  @Get('payments/callback/:gateway')
+  callback(@Param('gateway') gateway: string, @Query('paymentId') paymentId?: string) {
+    if (gateway !== 'sandbox') {
+      throw new ApiError(503, 'payment_unavailable', 'درگاه پرداخت در دسترس نیست');
+    }
+    return this.money.completeSandbox(requiredUuid(paymentId));
   }
 
   @Public()

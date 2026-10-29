@@ -73,6 +73,50 @@ export class MessagingService {
     return { ok: true };
   }
 
+  async openSupport(userId: string) {
+    const existing = await this.pool.query<{ id: string }>(
+      `select id from conversations where user_id = $1 and kind = 'support' order by created_at limit 1`,
+      [userId],
+    );
+    if (existing.rows[0]) return { id: existing.rows[0].id };
+    const id = uuidv7();
+    await this.pool.query(`insert into conversations (id, kind, user_id) values ($1, 'support', $2)`, [id, userId]);
+    await this.pool.query(
+      `insert into conversation_participants (conversation_id, user_id) values ($1, $2)`,
+      [id, userId],
+    );
+    return { id };
+  }
+
+  async sync(userId: string, since: Date | null) {
+    const notes = await this.pool.query<{ n: number }>(
+      `select count(*)::int as n from notifications
+       where user_id = $1 and read_at is null and ($2::timestamptz is null or created_at > $2)`,
+      [userId, since],
+    );
+    const questions = await this.pool.query<{ n: number }>(
+      `select count(*)::int as n
+       from info_questions q
+       join plan_requests r on r.id = q.request_id
+       where r.user_id = $1 and q.status in ('open', 'answered')`,
+      [userId],
+    );
+    const rewards = await this.pool.query<{ n: number }>(
+      `select count(*)::int as n from weekly_rewards where user_id = $1 and acknowledged_at is null`,
+      [userId],
+    );
+    const request = await this.pool.query<{ id: string; status: string }>(
+      `select id, status from plan_requests where user_id = $1 order by created_at desc limit 1`,
+      [userId],
+    );
+    return {
+      unreadNotifications: Number(notes.rows[0]?.n ?? 0),
+      openQuestions: Number(questions.rows[0]?.n ?? 0),
+      pendingRewards: Number(rewards.rows[0]?.n ?? 0),
+      request: request.rows[0] ?? null,
+    };
+  }
+
   async notifications(userId: string) {
     const rows = await this.pool.query<{
       id: string;

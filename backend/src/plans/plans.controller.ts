@@ -28,9 +28,33 @@ export class PlansController {
   }
 
   @Roles('user')
+  @Get('me/requests')
+  requests(@Req() req: Request) {
+    return this.plans.listRequests(actor(req).id);
+  }
+
+  @Roles('user')
+  @Get('me/requests/:id')
+  requestOne(@Req() req: Request, @Param('id') id: string) {
+    return this.plans.requestTimeline(actor(req).id, requiredUuid(id));
+  }
+
+  @Roles('user')
   @Get('me/plan')
   plan(@Req() req: Request) {
     return this.plans.publishedPlan(actor(req).id);
+  }
+
+  @Roles('user')
+  @Get('me/plan/week')
+  week(@Req() req: Request, @Query('weekStart') weekStart?: string) {
+    return this.plans.planWeek(actor(req).id, weekStart ?? '');
+  }
+
+  @Roles('user')
+  @Get('me/plan/day/:date')
+  day(@Req() req: Request, @Param('date') date: string) {
+    return this.plans.planDay(actor(req).id, date);
   }
 
   @Roles('user')
@@ -71,11 +95,29 @@ export class PlansController {
     return this.plans.replaceDraft(user.id, user.role, requiredUuid(id), lockVersion(req), body);
   }
 
-  @Roles('specialist', 'admin')
+  @Roles('specialist')
   @Post('specialist/requests/:id/publish')
   publish(@Req() req: Request, @Param('id') id: string) {
     const user = actor(req);
     return this.plans.publish(user.id, user.role, requiredUuid(id), lockVersion(req));
+  }
+
+  @Roles('specialist')
+  @Post('specialist/requests/:id/corrections')
+  correct(@Req() req: Request, @Param('id') id: string) {
+    return this.plans.correct(actor(req).id, requiredUuid(id));
+  }
+
+  @Roles('specialist')
+  @Get('specialist/patients/:userId/plan-versions')
+  patientVersions(@Req() req: Request, @Param('userId') userId: string) {
+    return this.plans.patientPlanVersions(actor(req).id, requiredUuid(userId));
+  }
+
+  @Roles('admin')
+  @Get('admin/plan-versions/:id')
+  adminVersion(@Req() req: Request, @Param('id') id: string, @Query('reason') reason?: string) {
+    return this.plans.adminPlanVersion(actor(req).id, requiredUuid(id), reason ?? null);
   }
 
   @Roles('specialist', 'admin')

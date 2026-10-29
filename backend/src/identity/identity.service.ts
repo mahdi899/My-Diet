@@ -372,6 +372,19 @@ export class IdentityService {
     return outcome.session;
   }
 
+  async profile(userId: string, role: Role) {
+    const rows = await this.pool.query<{ display_name: string | null }>(
+      `select display_name from users where id = $1`,
+      [userId],
+    );
+    return { id: userId, role, displayName: rows.rows[0]?.display_name ?? null };
+  }
+
+  async rename(userId: string, role: Role, displayName: string) {
+    await this.pool.query(`update users set display_name = $2 where id = $1`, [userId, displayName]);
+    return this.profile(userId, role);
+  }
+
   async logout(userId: string, sessionId: string): Promise<void> {
     await this.pool.query(
       `update sessions set revoked_at = now(), revoke_reason = 'logout'

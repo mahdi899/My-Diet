@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { rememberedOtp } from '../adapters/sms.js';
@@ -150,7 +150,15 @@ export class MeProfileController {
   @Get()
   me(@Req() req: Request) {
     const user = actor(req);
-    return { id: user.id, role: user.role };
+    return this.identity.profile(user.id, user.role);
+  }
+
+  @Roles('user', 'specialist', 'admin')
+  @Patch()
+  rename(@Req() req: Request, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['displayName']);
+    return this.identity.rename(actor(req).id, actor(req).role, requiredString(record, 'displayName', 80));
   }
 
   @Roles('specialist', 'admin')

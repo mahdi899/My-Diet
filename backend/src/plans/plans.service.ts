@@ -10,7 +10,7 @@ import type { Role } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { audit, notify, withTransaction } from '../common/sql.js';
-import { addCivilDays, tehranDayStartUtc, tehranToday, weekStartSaturday } from '../common/time.js';
+import { addCivilDays, fridayOfWeek, tehranDayStartUtc, tehranToday, weekStartSaturday } from '../common/time.js';
 import { PROMPT_VERSION, manualDraftReason, usageCount } from '../ai/cost.js';
 import { aiAttempts, aiCostCapHits } from '../metrics/metrics.js';
 import { ENV, type Env } from '../config/env.js';
@@ -21,6 +21,7 @@ import { minimizeForModel } from '../ai/minimize.js';
 import { draftWarnings } from '../ai/warnings.js';
 import { acceptsAnotherAnswer, canWithdrawQuestion, type InfoQuestionStatus } from './questions.js';
 import { bucketSql, type QueueBucket } from './queue.js';
+import { parseCivilDate, versionForDate, type DatedVersion } from './views.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MEAL_ALIASES: Record<string, string> = {
@@ -338,7 +339,18 @@ export class PlanDraftService {
   }
 
   async publish(actorId: string, role: Role, requestId: string, lock: number) {
+    if (role !== 'specialist') {
+      throw new ApiError(403, 'forbidden', 'انتشار برنامه فقط با متخصص است');
+    }
     return withTransaction(this.pool, async (client) => {
+      const profile = await client.query<{ active: boolean; verification_status: string }>(
+        `select active, verification_status from specialist_profiles where user_id = $1`,
+        [actorId],
+      );
+      const specialist = profile.rows[0];
+      if (!specialist || !specialist.active || specialist.verification_status !== 'verified') {
+        throw new ApiError(403, 'not_verified', 'فقط متخصص تأییدشده و فعال می‌تواند برنامه را منتشر کند');
+      }
       const request = await this.lockRequest(client, actorId, role, requestId);
       if (request.status !== 'in_review') {
         throw new ApiError(409, 'info_required', 'تا بسته شدن سؤال‌ها نمی‌توان برنامه را تأیید کرد');
@@ -624,6 +636,258 @@ export class PlanDraftService {
           })),
         };
       }),
+    };
+  }
+
+  async planWeek(userId: string, weekStart: string) {
+    const date = parseCivilDate(weekStart);
+    if (!date || weekStartSaturday(date) !== date) {
+      throw new ApiError(400, 'validation', 'هفته باید از شنبه شروع شود');
+    }
+    const friday = fridayOfWeek(date);
+    const rows = await this.datedVersions(userId, date, friday);
+    const days = [];
+    const loaded = new Map<string, Awaited<ReturnType<typeof readDays>>>();
+    for (let index = 0; index < 7; index += 1) {
+      days.push(await this.presentCivilDay(userId, addCivilDays(date, index), rows, loaded));
+    }
+    return { weekStart: date, days };
+  }
+
+  async planDay(userId: string, rawDate: string) {
+    const date = parseCivilDate(rawDate);
+    if (!date) throw new ApiError(400, 'validation', 'تاریخ درست نیست');
+    const rows = await this.datedVersions(userId, date, date);
+    return this.presentCivilDay(userId, date, rows, new Map());
+  }
+
+  async listRequests(userId: string) {
+    const rows = await this.pool.query<{
+      id: string;
+      status: string;
+      kind: string;
+      price_toman: string;
+      created_at: Date;
+    }>(
+      `select id, status, kind, price_toman, created_at
+       from plan_requests where user_id = $1
+       order by created_at desc
+       limit 50`,
+      [userId],
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      kind: row.kind,
+      priceToman: Number(row.price_toman),
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async requestTimeline(userId: string, requestId: string) {
+    const found = await this.pool.query<{
+      id: string;
+      status: string;
+      kind: string;
+      price_toman: string;
+      created_at: Date;
+    }>(
+      `select id, status, kind, price_toman, created_at
+       from plan_requests where id = $1 and user_id = $2`,
+      [requestId, userId],
+    );
+    const request = found.rows[0];
+    if (!request) throw new ApiError(404, 'not_found', 'درخواست پیدا نشد');
+    const events = await this.pool.query<{ kind: string; created_at: Date }>(
+      `select kind, created_at from request_events where request_id = $1 order by created_at`,
+      [requestId],
+    );
+    const questions = await this.pool.query<{
+      id: string;
+      prompt: string;
+      required: boolean;
+      status: string;
+    }>(
+      `select id, prompt, required, status from info_questions
+       where request_id = $1 and status in ('open', 'answered')
+       order by created_at`,
+      [requestId],
+    );
+    return {
+      id: request.id,
+      status: request.status,
+      kind: request.kind,
+      priceToman: Number(request.price_toman),
+      createdAt: request.created_at.toISOString(),
+      events: events.rows.map((event) => ({ kind: event.kind, createdAt: event.created_at.toISOString() })),
+      questions: questions.rows.map((question) => ({
+        id: question.id,
+        prompt: decryptText(question.prompt, this.env.FIELD_KEY),
+        required: question.required,
+        status: question.status,
+      })),
+    };
+  }
+
+  async correct(actorId: string, requestId: string) {
+    return withTransaction(this.pool, async (client) => {
+      const request = await this.lockRequest(client, actorId, 'specialist', requestId);
+      if (request.status !== 'published' || !request.week_start) {
+        throw new ApiError(409, 'not_published', 'فقط برنامهٔ منتشرشدهٔ این هفته اصلاح می‌شود');
+      }
+      if (tehranToday() > fridayOfWeek(request.week_start)) {
+        throw new ApiError(409, 'week_closed', 'هفتهٔ این برنامه تمام شده است');
+      }
+      const draft = await client.query(
+        `select id from plan_versions where request_id = $1 and status = 'draft'`,
+        [requestId],
+      );
+      if ((draft.rowCount ?? 0) > 0) throw new ApiError(409, 'correction_open', 'یک اصلاح باز وجود دارد');
+      const published = await client.query<{ id: string; version_number: number }>(
+        `select id, version_number from plan_versions
+         where request_id = $1 and status = 'published'
+         order by version_number desc limit 1`,
+        [requestId],
+      );
+      const version = published.rows[0];
+      if (!version) throw new ApiError(409, 'not_published', 'برنامهٔ منتشرشده‌ای نیست');
+      const days = await readDays(client, version.id);
+      await insertDays(
+        client,
+        requestId,
+        version.version_number + 1,
+        actorId,
+        days.map((day) => day.meals),
+      );
+      await client.query(
+        `update plan_requests set status = 'in_review', updated_at = now() where id = $1`,
+        [requestId],
+      );
+      await client.query(
+        `insert into request_events (id, request_id, actor_id, kind) values ($1, $2, $3, 'correction')`,
+        [uuidv7(), requestId, actorId],
+      );
+      return { status: 'in_review' as const };
+    });
+  }
+
+  async patientPlanVersions(actorId: string, patientId: string) {
+    const assigned = await this.pool.query(
+      `select id from plan_requests where user_id = $1 and assigned_specialist_id = $2 limit 1`,
+      [patientId, actorId],
+    );
+    if ((assigned.rowCount ?? 0) === 0) throw new ApiError(404, 'not_found', 'بیمار پیدا نشد');
+    const rows = await this.pool.query<{
+      id: string;
+      request_id: string;
+      status: string;
+      version_number: number;
+      published_at: Date | null;
+      week_start: string | null;
+    }>(
+      `select v.id, v.request_id, v.status, v.version_number, v.published_at, r.week_start::text as week_start
+       from plan_versions v
+       join plan_requests r on r.id = v.request_id
+       where r.user_id = $1 and v.status in ('published', 'superseded')
+       order by v.published_at desc nulls last
+       limit 50`,
+      [patientId],
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      requestId: row.request_id,
+      status: row.status,
+      versionNumber: row.version_number,
+      publishedAt: row.published_at ? row.published_at.toISOString() : null,
+      weekStart: row.week_start,
+    }));
+  }
+
+  async adminPlanVersion(actorId: string, versionId: string, reason: string | null) {
+    if (!reason || reason.trim().length < 3) {
+      throw new ApiError(400, 'reason_required', 'دلیل مشاهده را بنویسید');
+    }
+    const found = await this.pool.query<{ id: string; request_id: string; status: string }>(
+      `select id, request_id, status from plan_versions where id = $1`,
+      [versionId],
+    );
+    const version = found.rows[0];
+    if (!version || version.status === 'draft') throw new ApiError(404, 'not_found', 'نسخهٔ برنامه پیدا نشد');
+    await this.pool.query(
+      `insert into health_access_logs (id, actor_id, request_id, reason) values ($1, $2, $3, $4)`,
+      [uuidv7(), actorId, version.request_id, reason.trim()],
+    );
+    const days = await readDays(this.pool, version.id);
+    return {
+      id: version.id,
+      requestId: version.request_id,
+      status: version.status,
+      days: days.map((day) => ({ dayIndex: day.dayIndex, meals: day.meals })),
+    };
+  }
+
+  private async datedVersions(userId: string, from: string, to: string): Promise<DatedVersion[]> {
+    const rows = await this.pool.query<{
+      version_id: string;
+      request_id: string;
+      status: 'published' | 'superseded';
+      published_at: Date;
+      civil_date: string;
+      day_index: number;
+    }>(
+      `select v.id as version_id, r.id as request_id, v.status, v.published_at,
+              d.civil_date::text as civil_date, d.day_index
+       from plan_days d
+       join plan_versions v on v.id = d.plan_version_id
+       join plan_requests r on r.id = v.request_id
+       where r.user_id = $1
+         and v.status in ('published', 'superseded')
+         and v.published_at is not null
+         and d.civil_date between $2::date and $3::date`,
+      [userId, from, to],
+    );
+    return rows.rows.map((row) => ({
+      versionId: row.version_id,
+      requestId: row.request_id,
+      status: row.status,
+      publishedAt: row.published_at.toISOString(),
+      publishedOn: tehranToday(row.published_at),
+      civilDate: row.civil_date.slice(0, 10),
+      dayIndex: row.day_index,
+    }));
+  }
+
+  private async presentCivilDay(
+    userId: string,
+    date: string,
+    rows: DatedVersion[],
+    loaded: Map<string, Awaited<ReturnType<typeof readDays>>>,
+  ) {
+    const chosen = versionForDate(rows, date);
+    if (!chosen) {
+      return { date, requestId: null, versionId: null, versionStatus: null, meals: [] };
+    }
+    let days = loaded.get(chosen.versionId);
+    if (!days) {
+      days = await readDays(this.pool, chosen.versionId);
+      loaded.set(chosen.versionId, days);
+    }
+    const day = days.find((item) => item.dayIndex === chosen.dayIndex);
+    const logs = await this.pool.query<{ meal_uid: string; eaten: boolean }>(
+      `select meal_uid, eaten from meal_logs
+       where user_id = $1 and request_id = $2 and scheduled_date = $3::date`,
+      [userId, chosen.requestId, date],
+    );
+    const eaten = new Map(logs.rows.map((row) => [row.meal_uid, row.eaten]));
+    return {
+      date,
+      requestId: chosen.requestId,
+      versionId: chosen.versionId,
+      versionStatus: chosen.status,
+      meals: (day?.meals ?? []).map((meal) => ({
+        ...meal,
+        eaten: eaten.get(meal.mealUid) === true,
+      })),
     };
   }
 

@@ -70,6 +70,95 @@ export class MoneyService {
     };
   }
 
+  async ledgerForUser(userId: string) {
+    const rows = await this.pool.query<{
+      id: string;
+      bucket: string;
+      amount_toman: string;
+      kind: string;
+      reference_id: string;
+      created_at: Date;
+    }>(
+      `select id, bucket, amount_toman, kind, reference_id, created_at
+       from wallet_ledger where user_id = $1
+       order by created_at desc
+       limit 100`,
+      [userId],
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      bucket: row.bucket,
+      amountToman: toman(row.amount_toman),
+      kind: row.kind,
+      referenceId: row.reference_id,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async orderForUser(userId: string, orderId: string) {
+    const rows = await this.pool.query<{
+      id: string;
+      service_code: string;
+      price_toman: string;
+      cash_toman: string;
+      promo_toman: string;
+      status: string;
+      created_at: Date;
+    }>(
+      `select id, service_code, price_toman, cash_toman, promo_toman, status, created_at
+       from orders where id = $1 and user_id = $2`,
+      [orderId, userId],
+    );
+    const order = rows.rows[0];
+    if (!order) throw new ApiError(404, 'not_found', 'سفارش پیدا نشد');
+    return {
+      id: order.id,
+      serviceCode: order.service_code,
+      priceToman: toman(order.price_toman),
+      cashToman: toman(order.cash_toman),
+      promoToman: toman(order.promo_toman),
+      status: order.status,
+      createdAt: order.created_at.toISOString(),
+    };
+  }
+
+  async topupForUser(userId: string, paymentId: string) {
+    const rows = await this.pool.query<{
+      id: string;
+      package_code: string;
+      amount_toman: string;
+      amount_rial: string;
+      status: string;
+      gateway: string;
+      created_at: Date;
+    }>(
+      `select id, package_code, amount_toman, amount_rial, status, gateway, created_at
+       from payments where id = $1 and user_id = $2`,
+      [paymentId, userId],
+    );
+    const payment = rows.rows[0];
+    if (!payment) throw new ApiError(404, 'not_found', 'پرداخت پیدا نشد');
+    return {
+      id: payment.id,
+      packageCode: payment.package_code,
+      amountToman: toman(payment.amount_toman),
+      amountRial: toman(payment.amount_rial),
+      status: payment.status,
+      gateway: payment.gateway,
+      createdAt: payment.created_at.toISOString(),
+    };
+  }
+
+  async cancelRequest(userId: string, requestId: string): Promise<WalletBalance> {
+    const found = await this.pool.query<{ order_id: string }>(
+      `select order_id from plan_requests where id = $1 and user_id = $2`,
+      [requestId, userId],
+    );
+    const request = found.rows[0];
+    if (!request) throw new ApiError(404, 'not_found', 'درخواست پیدا نشد');
+    return this.cancel(userId, request.order_id);
+  }
+
   async wallet(userId: string): Promise<WalletBalance> {
     const row = await this.pool.query<{ cash_toman: string; promo_toman: string }>(
       `select cash_toman, promo_toman from wallets where user_id = $1`,

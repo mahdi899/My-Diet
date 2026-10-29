@@ -12,7 +12,9 @@ import {
   requiredString,
   requiredUuid,
 } from '../common/parse.js';
+import { MoneyService } from '../money/money.service.js';
 import { MaintenanceService } from '../maintenance/maintenance.service.js';
+import { parseCivilDate } from '../plans/views.js';
 import { AdminService } from './admin.service.js';
 import { normalizeCouncilNo, VERIFICATION_STATUSES, type VerificationStatus } from './profile.js';
 
@@ -93,6 +95,48 @@ export class AdminController {
     const record = bodyRecord(body);
     rejectUnknown(record, ['amountToman']);
     return this.admin.setReward(actor(req).id, requiredInt(record.amountToman));
+  }
+
+  @Get('reviews')
+  reviews(@Query('status') status?: string) {
+    if (status !== 'pending' && status !== 'approved' && status !== 'rejected') {
+      throw new ApiError(400, 'validation', 'وضعیت نظر شناخته نشد');
+    }
+    return this.admin.reviews(status);
+  }
+
+  @Get('audit-logs')
+  auditLogs() {
+    return this.admin.auditLogs();
+  }
+
+  @Get('ai-generations')
+  generations() {
+    return this.admin.aiGenerations();
+  }
+
+  @Get('users/:id')
+  user(@Param('id') id: string) {
+    return this.admin.userDetail(requiredUuid(id));
+  }
+
+  @Get('requests')
+  requests() {
+    return this.admin.requests();
+  }
+
+  @Get('support-conversations')
+  support() {
+    return this.admin.supportConversations();
+  }
+
+  @Put('daily-messages')
+  dailyMessage(@Req() req: Request, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['date', 'body']);
+    const date = parseCivilDate(requiredString(record, 'date', 10));
+    if (!date) throw new ApiError(400, 'validation', 'تاریخ درست نیست');
+    return this.admin.saveDailyMessage(actor(req).id, date, requiredString(record, 'body', 500));
   }
 
   @Post('reviews/:id')
@@ -234,5 +278,27 @@ export class SpecialistProfileController {
       bio: optionalString(record, 'bio', 1000),
       councilNo,
     });
+  }
+}
+
+@ApiTags('public')
+@Public()
+@Controller('v1/public')
+export class PublicConfigController {
+  constructor(
+    private readonly admin: AdminService,
+    private readonly money: MoneyService,
+  ) {}
+
+  @Get('config')
+  async config() {
+    return { minAppVersion: '1.0.0', ...(await this.money.catalog()) };
+  }
+
+  @Get('daily-message')
+  dailyMessage(@Query('date') date?: string) {
+    const civil = parseCivilDate(date ?? '');
+    if (!civil) throw new ApiError(400, 'validation', 'تاریخ درست نیست');
+    return this.admin.dailyMessage(civil);
   }
 }

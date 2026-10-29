@@ -73,6 +73,15 @@ export class AdminService {
       [specialistId, input.active ?? null, input.capacity ?? null, input.displayName ?? null, input.credential ?? null, input.bio ?? null],
     );
     await audit(this.pool, actorId, 'specialist_updated', 'user', specialistId, input);
+    if (input.active === false) {
+      await this.pool.query(
+        `update plan_requests
+         set assigned_specialist_id = null, updated_at = now()
+         where assigned_specialist_id = $1
+           and status in ('queued', 'generating', 'in_review', 'awaiting_user', 'response_received')`,
+        [specialistId],
+      );
+    }
     return { ok: true };
   }
 
@@ -295,6 +304,151 @@ export class AdminService {
       status: row.status,
       createdAt: row.created_at.toISOString(),
     }));
+  }
+
+  async reviews(status: 'pending' | 'approved' | 'rejected') {
+    const rows = await this.pool.query<{
+      id: string;
+      user_id: string;
+      request_id: string;
+      week_start: string;
+      rating: number;
+      body: string;
+      status: string;
+    }>(
+      `select id, user_id, request_id, week_start::text as week_start, rating, body, status
+       from program_reviews where status = $1
+       order by created_at desc
+       limit 50`,
+      [status],
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      requestId: row.request_id,
+      weekStart: row.week_start,
+      rating: row.rating,
+      body: row.body,
+      status: row.status,
+    }));
+  }
+
+  async auditLogs() {
+    const rows = await this.pool.query<{
+      id: string;
+      actor_id: string | null;
+      action: string;
+      target_type: string;
+      target_id: string | null;
+      created_at: Date;
+    }>(
+      `select id, actor_id, action, target_type, target_id, created_at
+       from audit_logs order by created_at desc limit 100`,
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      actorId: row.actor_id,
+      action: row.action,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async aiGenerations() {
+    const rows = await this.pool.query<{
+      id: string;
+      request_id: string;
+      provider: string;
+      status: string;
+      skipped_reason: string | null;
+      created_at: Date;
+    }>(
+      `select id, request_id, provider, status, skipped_reason, created_at
+       from ai_generations order by created_at desc limit 100`,
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      requestId: row.request_id,
+      provider: row.provider,
+      status: row.status,
+      skippedReason: row.skipped_reason,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async userDetail(userId: string) {
+    const rows = await this.pool.query<{
+      id: string;
+      role: string;
+      display_name: string | null;
+      status: string;
+      created_at: Date;
+    }>(
+      `select id, role, display_name, status, created_at from users where id = $1`,
+      [userId],
+    );
+    const user = rows.rows[0];
+    if (!user) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
+    return {
+      id: user.id,
+      role: user.role,
+      displayName: user.display_name,
+      status: user.status,
+      createdAt: user.created_at.toISOString(),
+    };
+  }
+
+  async requests() {
+    const rows = await this.pool.query<{
+      id: string;
+      user_id: string;
+      status: string;
+      kind: string;
+      created_at: Date;
+    }>(
+      `select id, user_id, status, kind, created_at from plan_requests
+       order by created_at desc limit 100`,
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      status: row.status,
+      kind: row.kind,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async supportConversations() {
+    const rows = await this.pool.query<{ id: string; user_id: string; created_at: Date }>(
+      `select id, user_id, created_at from conversations
+       where kind = 'support'
+       order by created_at desc
+       limit 100`,
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async saveDailyMessage(actorId: string, date: string, body: string) {
+    await this.pool.query(
+      `insert into daily_messages (civil_date, body) values ($1::date, $2)
+       on conflict (civil_date) do update set body = excluded.body, updated_at = now()`,
+      [date, body],
+    );
+    await audit(this.pool, actorId, 'daily_message', 'daily_message', null, { date });
+    return { date, body };
+  }
+
+  async dailyMessage(date: string) {
+    const rows = await this.pool.query<{ body: string }>(
+      `select body from daily_messages where civil_date = $1::date`,
+      [date],
+    );
+    return { date, body: rows.rows[0]?.body ?? null };
   }
 
   async users() {
