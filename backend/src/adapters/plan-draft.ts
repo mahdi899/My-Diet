@@ -1,3 +1,5 @@
+import type { MinimizedModelInput } from '../ai/minimize.js';
+
 export const PLAN_DRAFT_PROVIDER = Symbol('PLAN_DRAFT_PROVIDER');
 
 export interface MealItemDraft {
@@ -28,10 +30,7 @@ export interface PlanDraft {
   usage?: DraftUsage;
 }
 
-export interface PlanDraftInput {
-  goal: string;
-  flags: string[];
-}
+export type PlanDraftInput = MinimizedModelInput;
 
 export interface PlanDraftProvider {
   readonly name: string;

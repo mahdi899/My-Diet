@@ -41,6 +41,8 @@ The worker expires a pending top-up after 30 minutes without crediting it. A pay
 
 `POST /v1/admin/wallet-adjustments` records a cash correction. A debit is the written record of a bank refund: it lowers cash, leaves promo untouched, and does not call a bank or accept a card. Repeating the same `referenceId` does not apply it twice. `GET /v1/admin/outbox/dead` lists queue events that stopped after 10 attempts, without their payload. `POST /v1/admin/outbox/:id/retry` puts one of those events back in the queue.
 
+A model draft is built from age, sex, height, weight, and the answer codes only. Free text is cut to 500 characters, phone numbers and 10-digit ids are removed, and the block is marked `untrusted_user_text`. The name, phone, and user id are not sent. If a meal repeats an allergy or a dislike, or a day's calories fall outside 800–3500, the specialist sees a warning on the request. The draft is still saved.
+
 `GET /v1/payments/gateways` lists the enabled gateways. A top-up can name one of them; otherwise it uses `PAYMENT_GATEWAY`. Sandbox completion only credits a payment that was started on `sandbox`. `idpay` and Zarinpal stay unavailable until their HTTP adapters exist. Admin SLA and payment totals are read from `DATABASE_REPLICA_URL` when it is set, and those report transactions cannot write. The specialist SLA is the first edit, question, or publication within 24 hours.
 
 ## Docker

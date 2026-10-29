@@ -16,7 +16,9 @@ import { aiAttempts, aiCostCapHits } from '../metrics/metrics.js';
 import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
 import { AI_SKIP_FLAGS, type StoredAnswers } from '../questionnaire/schema.js';
-import { decryptText, encryptText } from '../common/field-crypto.js';
+import { decryptText, encryptText, openAnswers } from '../common/field-crypto.js';
+import { minimizeForModel } from '../ai/minimize.js';
+import { draftWarnings } from '../ai/warnings.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MEAL_ALIASES: Record<string, string> = {
@@ -59,11 +61,14 @@ export class PlanDraftService {
         answers: StoredAnswers;
         specialist_id: string | null;
         schema_version: number;
+        user_id: string;
+        phone_e164: string;
       }>(
         `select r.status, s.risk_flags as flags, s.answers, r.assigned_specialist_id as specialist_id,
-                s.schema_version
+                s.schema_version, r.user_id, u.phone_e164
          from plan_requests r
          join questionnaire_submissions s on s.id = r.submission_id
+         join users u on u.id = r.user_id
          where r.id = $1
          for update of r`,
         [requestId],
@@ -99,13 +104,16 @@ export class PlanDraftService {
     let tokens = 0;
     let costMicros = 0;
     let latencyMs = 0;
+    const opened = openAnswers(claimed.answers, this.env.FIELD_KEY);
+    const minimized = minimizeForModel(opened, requestId, {
+      userId: claimed.user_id,
+      phone: claimed.phone_e164,
+      name: opened.name,
+    });
     if (!skipReason) {
       const started = Date.now();
       try {
-        const produced = await this.provider.draft({
-          goal: claimed.answers.goal,
-          flags: claimed.flags,
-        });
+        const produced = await this.provider.draft(minimized);
         latencyMs = Date.now() - started;
         rawOutput = encryptText(JSON.stringify(produced), this.env.FIELD_KEY);
         providerName = produced.provider ?? providerName;
@@ -124,6 +132,7 @@ export class PlanDraftService {
         reason = 'provider_error';
       }
     }
+    const warnings = aiStatus === 'drafted' ? draftWarnings(draft, opened.allergies ?? '', opened.dislikes ?? '') : [];
 
     await withTransaction(this.pool, async (client) => {
       const current = await client.query<{ status: string }>(
@@ -145,8 +154,8 @@ export class PlanDraftService {
       await client.query(
         `insert into ai_generations
            (id, request_id, provider, status, skipped_reason, raw_output, attempt_no, model,
-            prompt_version, schema_version, tokens, latency_ms, cost_micros)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+            prompt_version, schema_version, tokens, latency_ms, cost_micros, warnings)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb)`,
         [
           uuidv7(),
           requestId,
@@ -161,6 +170,7 @@ export class PlanDraftService {
           tokens,
           latencyMs,
           costMicros,
+          JSON.stringify(warnings),
         ],
       );
       if (reason === 'cost_cap' && blocked) {
@@ -597,6 +607,7 @@ export class PlanDraftService {
       [requestId],
     );
     let version: { status: string; lockVersion: number; days: DayInput[] } | null = null;
+    let warnings: unknown[] = [];
     if (includeDraft) {
       const draft = await this.pool.query<{ id: string; status: string; lock_version: number }>(
         `select id, status, lock_version from plan_versions
@@ -613,6 +624,11 @@ export class PlanDraftService {
           days: days.map((day) => ({ meals: day.meals })),
         };
       }
+      const warningRow = await this.pool.query<{ warnings: unknown }>(
+        `select warnings from ai_generations where request_id = $1 order by created_at desc limit 1`,
+        [requestId],
+      );
+      warnings = Array.isArray(warningRow.rows[0]?.warnings) ? warningRow.rows[0].warnings : [];
     }
     return {
       id: request.id,
@@ -633,6 +649,7 @@ export class PlanDraftService {
           .map((answer) => ({ body: decryptText(answer.body, this.env.FIELD_KEY), createdAt: answer.created_at.toISOString() })),
       })),
       version,
+      ...(includeDraft ? { warnings } : {}),
     };
   }
 }
