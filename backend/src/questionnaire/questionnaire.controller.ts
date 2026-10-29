@@ -38,6 +38,12 @@ export class QuestionnaireController {
   submit(@Req() req: Request, @Body() body: unknown) {
     return this.questionnaires.submit(actor(req).id, body);
   }
+
+  @Roles('user')
+  @Get('current')
+  current(@Req() req: Request) {
+    return this.questionnaires.current(actor(req).id);
+  }
 }
 
 @ApiTags('me')

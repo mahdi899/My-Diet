@@ -7,7 +7,13 @@ import { sealAnswers, sealClinicalRecord, openClinicalRecord } from '../common/f
 import { uuidv7 } from '../common/id.js';
 import { audit, toman, withTransaction } from '../common/sql.js';
 import { tehranToday } from '../common/time.js';
-import { customAnswers, decideAcquisition, questionsOf } from './acquisition.js';
+import {
+  customAnswers,
+  decideAcquisition,
+  derivedPregnancyWeek,
+  matchesOwnSchema,
+  questionsOf,
+} from './acquisition.js';
 import { compatibilityErrors, type SchemaQuestion } from './compatibility.js';
 import { questionnaireView, validateSubmission } from './schema.js';
 
@@ -99,6 +105,46 @@ export class QuestionnaireService {
       [userId, answers.name],
     );
     return { id, schemaVersion: schema.version };
+  }
+
+  async current(userId: string) {
+    const latest = await this.pool.query<{
+      id: string;
+      schema_version: number;
+      answers: unknown;
+      risk_flags: string[];
+      bmi: string | null;
+      pregnancy_as_of: string | null;
+      submitted_at: Date;
+    }>(
+      `select id, schema_version, answers, risk_flags, bmi::text as bmi,
+              pregnancy_as_of::text as pregnancy_as_of, submitted_at
+       from questionnaire_submissions
+       where user_id = $1
+       order by submitted_at desc
+       limit 1`,
+      [userId],
+    );
+    const row = latest.rows[0];
+    if (!row) return { submission: null };
+    const schema = await this.pool.query<{ document: unknown }>(
+      `select document from questionnaire_schemas where version = $1`,
+      [row.schema_version],
+    );
+    const answers = openClinicalRecord(row.answers, this.env.FIELD_KEY) as Record<string, unknown>;
+    const pregnancyAsOf = row.pregnancy_as_of ? row.pregnancy_as_of.slice(0, 10) : null;
+    return {
+      submission: {
+        id: row.id,
+        schemaVersion: row.schema_version,
+        submittedAt: row.submitted_at.toISOString(),
+        answers,
+        riskFlags: row.risk_flags,
+        bmi: row.bmi == null ? null : Number(row.bmi),
+        pregnancyWeek: derivedPregnancyWeek(answers, pregnancyAsOf, tehranToday()),
+        valid: matchesOwnSchema(questionsOf(schema.rows[0]?.document), answers),
+      },
+    };
   }
 
   async acquisitionState(userId: string) {

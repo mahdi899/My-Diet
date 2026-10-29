@@ -76,14 +76,12 @@ export function decideAcquisition(input: AcquisitionInput): AcquisitionDecision 
   }
 
   const storedWeek = integerOrNull(input.answers.pregnancyWeek);
-  let pregnancyWeek: number | null = null;
+  const pregnancyWeek = derivedPregnancyWeek(input.answers, input.pregnancyAsOf, input.today);
   if (input.answers.lifeStage === 'pregnant') {
     if (storedWeek == null || input.pregnancyAsOf == null) {
       reasons.push('pregnancy_stale');
-    } else {
-      const days = civilDaysBetween(input.pregnancyAsOf, input.today);
-      pregnancyWeek = storedWeek + Math.floor(Math.max(0, days) / 7);
-      if (days > PREGNANCY_STALE_DAYS) reasons.push('pregnancy_stale');
+    } else if (civilDaysBetween(input.pregnancyAsOf, input.today) > PREGNANCY_STALE_DAYS) {
+      reasons.push('pregnancy_stale');
     }
   }
 
@@ -123,6 +121,27 @@ export function customAnswers(
     }
   }
   return extras;
+}
+
+/** Required questions are taken from the schema version stored on the submission. */
+export function matchesOwnSchema(
+  questions: PublishedQuestion[],
+  answers: Record<string, unknown>,
+): boolean {
+  return questions.every((question) => !question.required || answered(answers[question.id]));
+}
+
+/** Stored pregnancy week plus whole weeks since it was recorded. Not clamped. */
+export function derivedPregnancyWeek(
+  answers: Record<string, unknown>,
+  pregnancyAsOf: string | null,
+  today: string,
+): number | null {
+  if (answers.lifeStage !== 'pregnant') return null;
+  const storedWeek = integerOrNull(answers.pregnancyWeek);
+  if (storedWeek == null || pregnancyAsOf == null) return null;
+  const days = civilDaysBetween(pregnancyAsOf, today);
+  return storedWeek + Math.floor(Math.max(0, days) / 7);
 }
 
 function answered(value: unknown): boolean {
