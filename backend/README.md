@@ -43,6 +43,8 @@ The worker expires a pending top-up after 30 minutes without crediting it. A pay
 
 A model draft is built from age, sex, height, weight, and the answer codes only. Free text is cut to 500 characters, phone numbers and 10-digit ids are removed, and the block is marked `untrusted_user_text`. The name, phone, and user id are not sent. If a meal repeats an allergy or a dislike, or a day's calories fall outside 800–3500, the specialist sees a warning on the request. The draft is still saved.
 
+`GET /v1/me/info-questions` lists the signed-in user's open questions. `status` can be `answered`, `acknowledged`, or `withdrawn`. A second answer before the specialist closes the question is kept. `POST /v1/specialist/info-questions/:id/withdraw` takes back an open or answered question and records the reason. An acknowledged question stays closed. Withdrawing the last required question returns the request to review.
+
 `GET /v1/public/reviews` lists approved reviews for anyone. The reviewer's name is the first name and the first letter of the last name. Pending and rejected reviews are left out, and the phone number is not included. `GET /v1/me/specialist` returns the public profile of the specialist assigned to the signed-in user, including the average of approved reviews. A user with no assignment gets an empty result.
 
 `GET /v1/me/rewards/pending` lists weekly rewards the user has not dismissed. `POST /v1/me/rewards/:id/acknowledge` records that dismissal. The credited amount stays where it is, a second call does not move the timestamp, and another user receives the same not-found response as a missing reward.

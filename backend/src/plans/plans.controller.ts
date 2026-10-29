@@ -5,6 +5,7 @@ import { actor, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { bodyRecord, rejectUnknown, requiredString, requiredUuid } from '../common/parse.js';
 import { PlanDraftService } from './plans.service.js';
+import { parseQuestionListStatus } from './questions.js';
 import { isQueueBucket } from './queue.js';
 
 function lockVersion(req: Request): number {
@@ -30,6 +31,14 @@ export class PlansController {
   @Get('me/plan')
   plan(@Req() req: Request) {
     return this.plans.publishedPlan(actor(req).id);
+  }
+
+  @Roles('user')
+  @Get('me/info-questions')
+  questions(@Req() req: Request, @Query('status') status?: string) {
+    const selected = parseQuestionListStatus(status);
+    if (!selected) throw new ApiError(400, 'validation', 'وضعیت سؤال شناخته نشد');
+    return this.plans.questionsForUser(actor(req).id, selected);
   }
 
   @Roles('user')
@@ -84,5 +93,14 @@ export class PlansController {
   acknowledge(@Req() req: Request, @Param('id') id: string) {
     const user = actor(req);
     return this.plans.acknowledge(user.id, user.role, requiredUuid(id));
+  }
+
+  @Roles('specialist', 'admin')
+  @Post('specialist/info-questions/:id/withdraw')
+  withdraw(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['reason']);
+    const user = actor(req);
+    return this.plans.withdraw(user.id, user.role, requiredUuid(id), requiredString(record, 'reason', 500));
   }
 }

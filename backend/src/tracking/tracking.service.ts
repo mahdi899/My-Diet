@@ -31,7 +31,7 @@ export class TrackingService {
     ]);
     const questions = plan
       ? await this.pool.query(
-          `select id, prompt, required, status from info_questions where request_id = $1 and status <> 'acknowledged' order by created_at`,
+          `select id, prompt, required, status from info_questions where request_id = $1 and status in ('open', 'answered') order by created_at`,
           [plan.requestId],
         )
       : { rows: [] };

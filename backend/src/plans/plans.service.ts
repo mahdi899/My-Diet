@@ -19,6 +19,7 @@ import { AI_SKIP_FLAGS, type StoredAnswers } from '../questionnaire/schema.js';
 import { decryptText, encryptText, openAnswers } from '../common/field-crypto.js';
 import { minimizeForModel } from '../ai/minimize.js';
 import { draftWarnings } from '../ai/warnings.js';
+import { acceptsAnotherAnswer, canWithdrawQuestion, type InfoQuestionStatus } from './questions.js';
 import { bucketSql, type QueueBucket } from './queue.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
@@ -344,7 +345,7 @@ export class PlanDraftService {
       }
       const blocking = await client.query(
         `select id from info_questions
-         where request_id = $1 and required = true and status <> 'acknowledged'`,
+         where request_id = $1 and required = true and status in ('open', 'answered')`,
         [requestId],
       );
       if ((blocking.rowCount ?? 0) > 0) {
@@ -441,21 +442,25 @@ export class PlanDraftService {
       );
       const row = question.rows[0];
       if (!row || row.user_id !== userId) throw new ApiError(404, 'not_found', 'سؤال پیدا نشد');
-      if (row.status !== 'open') throw new ApiError(409, 'already_answered', 'به این سؤال قبلاً پاسخ داده شده است');
+      if (!acceptsAnotherAnswer(row.status)) {
+        throw new ApiError(409, 'already_answered', 'به این سؤال قبلاً پاسخ داده شده است');
+      }
       await client.query(
         `insert into info_answers (id, question_id, author_id, body) values ($1, $2, $3, $4)`,
         [uuidv7(), questionId, userId, encryptText(body, this.env.FIELD_KEY)],
       );
-      await client.query(`update info_questions set status = 'answered' where id = $1`, [questionId]);
-      const open = await client.query(
-        `select id from info_questions where request_id = $1 and required = true and status = 'open'`,
-        [row.request_id],
-      );
-      if ((open.rowCount ?? 0) === 0) {
-        await client.query(
-          `update plan_requests set status = 'response_received', updated_at = now() where id = $1`,
+      if (row.status === 'open') {
+        await client.query(`update info_questions set status = 'answered' where id = $1`, [questionId]);
+        const open = await client.query(
+          `select id from info_questions where request_id = $1 and required = true and status = 'open'`,
           [row.request_id],
         );
+        if ((open.rowCount ?? 0) === 0) {
+          await client.query(
+            `update plan_requests set status = 'response_received', updated_at = now() where id = $1`,
+            [row.request_id],
+          );
+        }
       }
       if (row.specialist_id) await notify(client, row.specialist_id, 'info_answered', { requestId: row.request_id, questionId });
       return { status: 'answered' as const };
@@ -487,7 +492,7 @@ export class PlanDraftService {
       await client.query(`update info_questions set status = 'acknowledged' where id = $1`, [questionId]);
       const blocking = await client.query(
         `select id from info_questions
-         where request_id = $1 and required = true and status <> 'acknowledged'`,
+         where request_id = $1 and required = true and status in ('open', 'answered')`,
         [row.request_id],
       );
       if ((blocking.rowCount ?? 0) === 0) {
@@ -497,6 +502,77 @@ export class PlanDraftService {
         );
       }
       return { status: 'acknowledged' as const };
+    });
+  }
+
+  async questionsForUser(userId: string, status: InfoQuestionStatus) {
+    const rows = await this.pool.query<{
+      id: string;
+      request_id: string;
+      prompt: string;
+      required: boolean;
+      status: string;
+      created_at: Date;
+    }>(
+      `select q.id, q.request_id, q.prompt, q.required, q.status, q.created_at
+       from info_questions q
+       join plan_requests r on r.id = q.request_id
+       where r.user_id = $1 and q.status = $2
+       order by q.created_at
+       limit 100`,
+      [userId, status],
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      requestId: row.request_id,
+      prompt: decryptText(row.prompt, this.env.FIELD_KEY),
+      required: row.required,
+      status: row.status,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async withdraw(actorId: string, role: Role, questionId: string, reason: string) {
+    return withTransaction(this.pool, async (client) => {
+      const question = await client.query<{
+        request_id: string;
+        status: string;
+        assigned_specialist_id: string | null;
+      }>(
+        `select q.request_id, q.status, r.assigned_specialist_id
+         from info_questions q
+         join plan_requests r on r.id = q.request_id
+         where q.id = $1
+         for update of q`,
+        [questionId],
+      );
+      const row = question.rows[0];
+      if (!row) throw new ApiError(404, 'not_found', 'سؤال پیدا نشد');
+      if (role === 'specialist' && row.assigned_specialist_id !== actorId) {
+        throw new ApiError(404, 'not_found', 'سؤال پیدا نشد');
+      }
+      if (!canWithdrawQuestion(row.status)) {
+        throw new ApiError(409, 'not_open', 'این سؤال دیگر قابل پس‌گرفتن نیست');
+      }
+      await client.query(`update info_questions set status = 'withdrawn' where id = $1`, [questionId]);
+      const blocking = await client.query(
+        `select id from info_questions
+         where request_id = $1 and required = true and status in ('open', 'answered')`,
+        [row.request_id],
+      );
+      if ((blocking.rowCount ?? 0) === 0) {
+        await client.query(
+          `update plan_requests set status = 'in_review', updated_at = now()
+           where id = $1 and status in ('awaiting_user', 'response_received')`,
+          [row.request_id],
+        );
+      }
+      await client.query(
+        `insert into request_events (id, request_id, actor_id, kind, detail)
+         values ($1, $2, $3, 'info_withdrawn', $4::jsonb)`,
+        [uuidv7(), row.request_id, actorId, JSON.stringify({ reason })],
+      );
+      return { status: 'withdrawn' as const };
     });
   }
 
