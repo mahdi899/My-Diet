@@ -17,6 +17,7 @@ export interface MealDraft {
 
 export interface PlanDraft {
   days: Array<{ meals: MealDraft[] }>;
+  provider?: string;
 }
 
 export interface PlanDraftInput {
@@ -70,7 +71,34 @@ export class FakePlanDraftProvider implements PlanDraftProvider {
   readonly callsExternalNetwork = false;
 
   async draft(_input: PlanDraftInput): Promise<PlanDraft> {
-    return { days: Array.from({ length: 7 }, () => ({ meals: DAY.map((meal) => ({ ...meal, items: meal.items.map((item) => ({ ...item })) })) })) };
+    return {
+      provider: this.name,
+      days: Array.from({ length: 7 }, () => ({ meals: DAY.map((meal) => ({ ...meal, items: meal.items.map((item) => ({ ...item })) })) })),
+    };
+  }
+}
+
+/** Tries the primary drafter, then the secondary one. The recorded provider is the one that returned a draft. */
+export class FailoverPlanDraftProvider implements PlanDraftProvider {
+  readonly name: string;
+  readonly callsExternalNetwork: boolean;
+
+  constructor(
+    private readonly primary: PlanDraftProvider,
+    private readonly secondary: PlanDraftProvider,
+  ) {
+    this.name = primary.name;
+    this.callsExternalNetwork = primary.callsExternalNetwork || secondary.callsExternalNetwork;
+  }
+
+  async draft(input: PlanDraftInput): Promise<PlanDraft> {
+    try {
+      return await this.primary.draft(input);
+    } catch (error) {
+      if (this.secondary === this.primary) throw error;
+      const draft = await this.secondary.draft(input);
+      return { ...draft, provider: this.secondary.name };
+    }
   }
 }
 

@@ -22,6 +22,8 @@ export const envSchema = z.object({
   SMS_PROVIDER: z.enum(['console', 'kavenegar']).default('console'),
   PAYMENT_GATEWAY: z.enum(['sandbox', 'zarinpal']).default('sandbox'),
   AI_PROVIDER: z.enum(['fake', 'openai']).default('fake'),
+  AI_FAILOVER_PROVIDER: z.enum(['none', 'fake', 'openai']).default('none'),
+  PUSH_PROVIDER: z.enum(['console', 'fcm']).default('console'),
   KAVENEGAR_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   ZARINPAL_MERCHANT_ID: z.preprocess(
     emptyToUndefined,
@@ -31,6 +33,8 @@ export const envSchema = z.object({
   CORS_ORIGINS: z.string().default(''),
   JWT_SECRET: z.string().min(16).default('dev-only-jwt-secret-not-for-production'),
   OTP_PEPPER: z.string().min(16).default('dev-only-otp-pepper-not-for-production'),
+  FIELD_KEY: z.string().min(16).default('dev-only-field-key-not-for-production'),
+  AI_FAILOVER_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -72,6 +76,18 @@ export function assertProductionProviders(env: Env): void {
   }
   if (env.OTP_PEPPER.startsWith('dev-only-')) {
     throw new EnvError('OTP_PEPPER must be set in production');
+  }
+  if (env.PUSH_PROVIDER === 'console') {
+    throw new EnvError('PUSH_PROVIDER=console is not allowed in production');
+  }
+  if (env.AI_FAILOVER_PROVIDER === 'fake') {
+    throw new EnvError('AI_FAILOVER_PROVIDER=fake is not allowed in production');
+  }
+  if (env.AI_FAILOVER_PROVIDER === 'openai' && !env.AI_FAILOVER_API_KEY && !env.AI_API_KEY) {
+    throw new EnvError('AI_FAILOVER_API_KEY is required');
+  }
+  if (env.FIELD_KEY.startsWith('dev-only-')) {
+    throw new EnvError('FIELD_KEY must be set in production');
   }
 }
 

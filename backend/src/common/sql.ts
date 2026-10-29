@@ -72,8 +72,17 @@ export async function notify(
   kind: string,
   payload: object,
 ): Promise<void> {
+  const id = uuidv7();
   await client.query(
     `insert into notifications (id, user_id, kind, payload) values ($1, $2, $3, $4::jsonb)`,
-    [uuidv7(), userId, kind, JSON.stringify(payload)],
+    [id, userId, kind, JSON.stringify(payload)],
+  );
+  await client.query(
+    `insert into outbox_events (id, topic, aggregate_id, payload)
+     select $1, 'push.send', $2, $3::jsonb
+     where exists (
+       select 1 from devices where user_id = $4 and revoked_at is null
+     )`,
+    [uuidv7(), id, JSON.stringify({ notificationId: id, userId, kind }), userId],
   );
 }

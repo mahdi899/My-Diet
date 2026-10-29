@@ -11,8 +11,10 @@ import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { notify, withTransaction } from '../common/sql.js';
 import { addCivilDays, tehranToday, weekStartSaturday } from '../common/time.js';
+import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
 import { AI_SKIP_FLAGS, type StoredAnswers } from '../questionnaire/schema.js';
+import { decryptText, encryptText } from '../common/field-crypto.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MEAL_ALIASES: Record<string, string> = {
@@ -44,6 +46,7 @@ export class PlanDraftService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(PLAN_DRAFT_PROVIDER) private readonly provider: PlanDraftProvider,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   async generate(requestId: string): Promise<void> {
@@ -83,12 +86,14 @@ export class PlanDraftService {
     let draft = emptyDraft();
     let aiStatus: 'drafted' | 'skipped' | 'failed' = skip ? 'skipped' : 'drafted';
     let reason: string | null = skip ? 'high_risk' : null;
+    let providerName = skip ? 'none' : this.provider.name;
     if (!skip) {
       try {
         const produced = await this.provider.draft({
           goal: claimed.answers.goal,
           flags: claimed.flags,
         });
+        providerName = produced.provider ?? providerName;
         if (isUsable(produced)) draft = producedToInput(produced);
         else {
           aiStatus = 'failed';
@@ -116,7 +121,7 @@ export class PlanDraftService {
       await client.query(
         `insert into ai_generations (id, request_id, provider, status, skipped_reason)
          values ($1, $2, $3, $4, $5)`,
-        [uuidv7(), requestId, skip ? 'none' : this.provider.name, aiStatus, reason],
+        [uuidv7(), requestId, providerName, aiStatus, reason],
       );
       await client.query(
         `insert into request_events (id, request_id, kind, detail) values ($1, $2, $3, $4::jsonb)`,
@@ -312,7 +317,7 @@ export class PlanDraftService {
       await client.query(
         `insert into info_questions (id, request_id, specialist_id, prompt, required, status)
          values ($1, $2, $3, $4, $5, 'open')`,
-        [id, requestId, actorId, prompt, required],
+        [id, requestId, actorId, encryptText(prompt, this.env.FIELD_KEY), required],
       );
       if (required) {
         await client.query(
@@ -351,7 +356,7 @@ export class PlanDraftService {
       if (row.status !== 'open') throw new ApiError(409, 'already_answered', 'به این سؤال قبلاً پاسخ داده شده است');
       await client.query(
         `insert into info_answers (id, question_id, author_id, body) values ($1, $2, $3, $4)`,
-        [uuidv7(), questionId, userId, body],
+        [uuidv7(), questionId, userId, encryptText(body, this.env.FIELD_KEY)],
       );
       await client.query(`update info_questions set status = 'answered' where id = $1`, [questionId]);
       const open = await client.query(
@@ -545,12 +550,12 @@ export class PlanDraftService {
       conversationId: conversation.rows[0]?.id ?? null,
       questions: questions.rows.map((question) => ({
         id: question.id,
-        prompt: question.prompt,
+        prompt: decryptText(question.prompt, this.env.FIELD_KEY),
         required: question.required,
         status: question.status,
         answers: answers.rows
           .filter((answer) => answer.question_id === question.id)
-          .map((answer) => ({ body: answer.body, createdAt: answer.created_at.toISOString() })),
+          .map((answer) => ({ body: decryptText(answer.body, this.env.FIELD_KEY), createdAt: answer.created_at.toISOString() })),
       })),
       version,
     };

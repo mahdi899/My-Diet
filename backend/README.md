@@ -1,6 +1,6 @@
 # Sabzine backend
 
-The API covers accounts, the questionnaire, the toman wallet, plan orders, specialist review, meal logging, and the weekly reward. The Flutter app still reads its local demo data until a screen is switched over.
+The API covers accounts, the questionnaire, the toman wallet, plan orders, specialist review, meal logging, and the weekly reward. Staff can turn on an authenticator code, the server can push a notice to a registered device, and chat or request changes can be read as a live stream. The Flutter app still reads its local demo data until a screen is switched over.
 
 ## Requirements
 
@@ -33,6 +33,8 @@ Local login uses the console SMS provider. The code is not written to the log. W
 
 Wallet top-ups in development use the sandbox gateway. `POST /v1/payments/sandbox/complete` credits the amount stored on the payment. The request cannot set the amount, and the API never accepts a card number.
 
+A specialist or admin turns on an authenticator with `POST /v1/me/totp/setup` and confirms it with a current code. The next login then needs that code. Until it is confirmed, the one-time password still opens the session. `GET /questionnaire-editor` is the compatibility checker for questionnaire drafts. Deleting an account with `POST /v1/me/account/delete` and the confirmation `حذف حساب` removes the phone and the clinical text, and leaves the ledger on that user id.
+
 ## Docker
 
 ```powershell
@@ -43,8 +45,9 @@ The API container runs migrations before it listens. Compose uses `NODE_ENV=deve
 
 ## Production rules already enforced
 
-- `SMS_PROVIDER=console`, `PAYMENT_GATEWAY=sandbox`, and `AI_PROVIDER=fake` cannot be used when `NODE_ENV=production`.
-- Named providers still need their credentials. The Kavenegar, Zarinpal, and model HTTP calls are not implemented in this phase, so a production configuration fails closed instead of pretending to send SMS or charge a card.
+- `SMS_PROVIDER=console`, `PAYMENT_GATEWAY=sandbox`, `AI_PROVIDER=fake`, `AI_FAILOVER_PROVIDER=fake`, and `PUSH_PROVIDER=console` cannot be used when `NODE_ENV=production`.
+- Named providers still need their credentials. The Kavenegar, Zarinpal, FCM, and model HTTP calls are not implemented in this phase, so a production configuration fails closed instead of pretending to send SMS, a push, or charge a card.
+- Free-text clinical answers are encrypted with `FIELD_KEY` before they are stored. The development key is refused in production.
 - Logs redact phones, OTP codes, tokens, questionnaire answers, and prompts.
 - The sandbox gateway reports `collectsCardData: false`. Card fields are not accepted anywhere.
 

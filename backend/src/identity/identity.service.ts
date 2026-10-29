@@ -6,8 +6,10 @@ import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
 import type { Role } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
+import { decryptText, encryptText } from '../common/field-crypto.js';
 import { signAccessToken } from '../common/jwt.js';
 import { uuidv7 } from '../common/id.js';
+import { base32Encode, randomTotpSecret, totpMatches } from '../common/totp.js';
 import { withTransaction } from '../common/sql.js';
 
 const ACCESS_SECONDS = 600;
@@ -18,6 +20,11 @@ export interface IssuedSession {
   accessExpiresAt: string;
   sessionExpiresAt: string;
   role: Role;
+}
+
+export interface TotpChallenge {
+  totpRequired: true;
+  totpToken: string;
 }
 
 function hashToken(token: string): string {
@@ -120,7 +127,7 @@ export class IdentityService {
     code: string,
     deviceLabel: string | null,
     platform: string | null,
-  ): Promise<IssuedSession> {
+  ): Promise<IssuedSession | TotpChallenge> {
     const outcome = await withTransaction(this.pool, async (client) => {
       const found = await client.query<{
         id: string;
@@ -190,13 +197,130 @@ export class IdentityService {
         );
         user = { id: userId, role: 'user', status: 'active' };
       }
+      if (user.status === 'deleted') {
+        return { error: new ApiError(403, 'account_deleted', 'این حساب حذف شده است') };
+      }
       if (user.status !== 'active') {
         return { error: new ApiError(403, 'suspended', 'این حساب غیرفعال است') };
       }
+      const totp = await client.query<{ secret_encrypted: string }>(
+        `select secret_encrypted from staff_totp where user_id = $1 and confirmed_at is not null`,
+        [user.id],
+      );
+      if (totp.rows[0] && user.role !== 'user') {
+        const totpToken = randomBytes(32).toString('base64url');
+        await client.query(
+          `insert into totp_challenges (id, user_id, token_hash, device_label, platform, expires_at)
+           values ($1, $2, $3, $4, $5, now() + interval '5 minutes')`,
+          [uuidv7(), user.id, hashToken(totpToken), deviceLabel, platform],
+        );
+        return { totpRequired: true as const, totpToken };
+      }
       return { session: await this.issue(client, user.id, user.role, deviceLabel, platform) };
+    });
+    if ('error' in outcome && outcome.error) throw outcome.error;
+    if (outcome.totpRequired === true && outcome.totpToken) {
+      return { totpRequired: true, totpToken: outcome.totpToken };
+    }
+    if (outcome.session) return outcome.session;
+    throw new ApiError(500, 'internal', 'ورود کامل نشد');
+  }
+
+  async completeTotp(totpToken: string, code: string): Promise<IssuedSession> {
+    const outcome = await withTransaction(this.pool, async (client) => {
+      const found = await client.query<{
+        id: string;
+        user_id: string;
+        attempts: number;
+        expired: boolean;
+        consumed_at: Date | null;
+        device_label: string | null;
+        platform: string | null;
+        role: Role;
+        status: string;
+        secret_encrypted: string;
+      }>(
+        `select c.id, c.user_id, c.attempts, c.expires_at <= now() as expired, c.consumed_at,
+                c.device_label, c.platform, u.role, u.status, t.secret_encrypted
+         from totp_challenges c
+         join users u on u.id = c.user_id
+         join staff_totp t on t.user_id = c.user_id and t.confirmed_at is not null
+         where c.token_hash = $1
+         for update of c`,
+        [hashToken(totpToken)],
+      );
+      const row = found.rows[0];
+      if (!row || row.consumed_at || row.expired) {
+        throw new ApiError(401, 'unauthorized', 'ورود دومرحله‌ای منقضی شده است');
+      }
+      if (row.status !== 'active' || (row.role !== 'admin' && row.role !== 'specialist')) {
+        throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');
+      }
+      const secret = Buffer.from(decryptText(row.secret_encrypted, this.env.FIELD_KEY), 'base64url');
+      if (!totpMatches(secret, code)) {
+        const next = row.attempts + 1;
+        await client.query(
+          `update totp_challenges
+           set attempts = attempts + 1,
+               consumed_at = case when attempts + 1 >= 5 then now() else consumed_at end
+           where id = $1`,
+          [row.id],
+        );
+        return {
+          error: new ApiError(401, 'unauthorized', next >= 5 ? 'کد دیگر معتبر نیست' : 'کد ورود دومرحله‌ای درست نیست'),
+        };
+      }
+      await client.query(`update totp_challenges set consumed_at = now() where id = $1`, [row.id]);
+      return { session: await this.issue(client, row.user_id, row.role, row.device_label, row.platform) };
     });
     if ('error' in outcome) throw outcome.error;
     return outcome.session;
+  }
+
+  async totpStatus(userId: string): Promise<{ enabled: boolean }> {
+    const row = await this.pool.query(
+      `select user_id from staff_totp where user_id = $1 and confirmed_at is not null`,
+      [userId],
+    );
+    return { enabled: (row.rowCount ?? 0) > 0 };
+  }
+
+  async setupTotp(userId: string, role: Role): Promise<{ secret: string; otpauthUrl: string }> {
+    if (role === 'user') throw new ApiError(403, 'forbidden', 'ورود دومرحله‌ای برای این نقش نیست');
+    const existing = await this.pool.query<{ confirmed_at: Date | null }>(
+      `select confirmed_at from staff_totp where user_id = $1`,
+      [userId],
+    );
+    if (existing.rows[0]?.confirmed_at) {
+      throw new ApiError(409, 'totp_enabled', 'ورود دومرحله‌ای قبلاً فعال شده است');
+    }
+    const secret = randomTotpSecret();
+    const encoded = base32Encode(secret);
+    await this.pool.query(
+      `insert into staff_totp (user_id, secret_encrypted)
+       values ($1, $2)
+       on conflict (user_id) do update set secret_encrypted = excluded.secret_encrypted, confirmed_at = null`,
+      [userId, encryptText(secret.toString('base64url'), this.env.FIELD_KEY)],
+    );
+    return {
+      secret: encoded,
+      otpauthUrl: `otpauth://totp/Sabzine:${role}?secret=${encoded}&issuer=Sabzine&digits=6&period=30`,
+    };
+  }
+
+  async confirmTotp(userId: string, role: Role, code: string): Promise<{ enabled: true }> {
+    if (role === 'user') throw new ApiError(403, 'forbidden', 'ورود دومرحله‌ای برای این نقش نیست');
+    const row = await this.pool.query<{ secret_encrypted: string; confirmed_at: Date | null }>(
+      `select secret_encrypted, confirmed_at from staff_totp where user_id = $1`,
+      [userId],
+    );
+    const stored = row.rows[0];
+    if (!stored) throw new ApiError(409, 'totp_missing', 'ابتدا ورود دومرحله‌ای را راه‌اندازی کن');
+    if (stored.confirmed_at) throw new ApiError(409, 'totp_enabled', 'ورود دومرحله‌ای قبلاً فعال شده است');
+    const secret = Buffer.from(decryptText(stored.secret_encrypted, this.env.FIELD_KEY), 'base64url');
+    if (!totpMatches(secret, code)) throw new ApiError(401, 'unauthorized', 'کد ورود دومرحله‌ای درست نیست');
+    await this.pool.query(`update staff_totp set confirmed_at = now() where user_id = $1`, [userId]);
+    return { enabled: true };
   }
 
   async refresh(rawToken: string): Promise<IssuedSession> {
@@ -233,6 +357,9 @@ export class IdentityService {
       }
       if (row.revoked_at || row.expired) {
         throw new ApiError(401, 'unauthorized', 'نشست پایان یافته است');
+      }
+      if (row.status === 'deleted') {
+        throw new ApiError(403, 'account_deleted', 'این حساب حذف شده است');
       }
       if (row.status !== 'active') {
         throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');

@@ -68,6 +68,9 @@ export class SessionGuard implements CanActivate {
     if (!row || row.revoked_at) {
       throw new ApiError(401, 'unauthorized', 'نشست پایان یافته است');
     }
+    if (row.status === 'deleted') {
+      throw new ApiError(403, 'account_deleted', 'این حساب حذف شده است');
+    }
     if (row.status !== 'active') {
       throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');
     }

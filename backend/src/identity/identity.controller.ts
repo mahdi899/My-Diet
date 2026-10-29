@@ -44,6 +44,18 @@ export class IdentityController {
       optionalString(record, 'deviceLabel', 80) ?? null,
       optionalString(record, 'platform', 40) ?? null,
     );
+    if ('totpRequired' in issued) return issued;
+    return this.present(req, res, issued);
+  }
+
+  @Public()
+  @Post('totp')
+  async totp(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['totpToken', 'code']);
+    const code = requiredString(record, 'code', 6);
+    if (!/^\d{6}$/.test(code)) throw new ApiError(401, 'unauthorized', 'کد ورود دومرحله‌ای درست نیست');
+    const issued = await this.identity.completeTotp(requiredString(record, 'totpToken', 200), code);
     return this.present(req, res, issued);
   }
 
@@ -98,11 +110,7 @@ export class IdentityController {
     return { code };
   }
 
-  private present(
-    req: Request,
-    res: Response,
-    issued: Awaited<ReturnType<IdentityService['verifyOtp']>>,
-  ) {
+  private present(req: Request, res: Response, issued: Awaited<ReturnType<IdentityService['completeTotp']>>) {
     const web = req.header('x-sabzine-client') === 'web';
     if (web) {
       const maxAge = Math.max(
@@ -136,10 +144,35 @@ export class IdentityController {
 @ApiTags('me')
 @Controller('v1/me')
 export class MeProfileController {
+  constructor(private readonly identity: IdentityService) {}
+
   @Roles('user', 'specialist', 'admin')
   @Get()
   me(@Req() req: Request) {
     const user = actor(req);
     return { id: user.id, role: user.role };
+  }
+
+  @Roles('specialist', 'admin')
+  @Get('totp')
+  totp(@Req() req: Request) {
+    return this.identity.totpStatus(actor(req).id);
+  }
+
+  @Roles('specialist', 'admin')
+  @Post('totp/setup')
+  setup(@Req() req: Request) {
+    const user = actor(req);
+    return this.identity.setupTotp(user.id, user.role);
+  }
+
+  @Roles('specialist', 'admin')
+  @Post('totp/confirm')
+  confirm(@Req() req: Request, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['code']);
+    const code = requiredString(record, 'code', 6);
+    if (!/^\d{6}$/.test(code)) throw new ApiError(401, 'unauthorized', 'کد ورود دومرحله‌ای درست نیست');
+    return this.identity.confirmTotp(actor(req).id, actor(req).role, code);
   }
 }

@@ -3,7 +3,8 @@ import type { Pool } from 'pg';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { notify, toman, withTransaction } from '../common/sql.js';
-import { addCivilDays, streakLength, tehranToday } from '../common/time.js';
+import { addCivilDays, civilNow, streakLength, tehranToday } from '../common/time.js';
+import { isLateBulkLog } from './anomaly.js';
 import { PG_POOL } from '../database/database.js';
 import { MoneyService } from '../money/money.service.js';
 import { PlanDraftService } from '../plans/plans.service.js';
@@ -75,8 +76,9 @@ export class TrackingService {
          do update set eaten = excluded.eaten, updated_at = now()`,
         [uuidv7(), userId, meal.request_id, meal.civil_date, mealUid, eaten],
       );
+      const anomaly = await this.flagLateBulk(client, userId, meal.request_id, meal.civil_date);
       const reward = eaten ? await this.rewardIfComplete(client, userId, meal.request_id, meal.week_start, meal.effective_from, friday) : null;
-      return { eaten, reward };
+      return { eaten, reward, anomaly };
     });
   }
 
@@ -186,5 +188,41 @@ export class TrackingService {
     );
     await notify(client, userId, 'weekly_reward', { requestId, weekStart, amountToman: amount });
     return { amountToman: amount };
+  }
+
+  private async flagLateBulk(
+    client: import('pg').PoolClient,
+    userId: string,
+    requestId: string,
+    scheduledDate: string,
+  ): Promise<string | null> {
+    const totals = await client.query<{ total: number }>(
+      `select count(*)::int as total
+       from plan_meals m
+       join plan_days d on d.id = m.plan_day_id
+       join plan_versions v on v.id = d.plan_version_id and v.status = 'published'
+       where v.request_id = $1 and d.civil_date = $2`,
+      [requestId, scheduledDate],
+    );
+    const logs = await client.query<{ eaten: number; first_at: Date | null; last_at: Date | null }>(
+      `select count(*) filter (where eaten)::int as eaten, min(updated_at) as first_at, max(updated_at) as last_at
+       from meal_logs
+       where user_id = $1 and request_id = $2 and scheduled_date = $3`,
+      [userId, requestId, scheduledDate],
+    );
+    const total = Number(totals.rows[0]?.total ?? 0);
+    const eaten = Number(logs.rows[0]?.eaten ?? 0);
+    const first = logs.rows[0]?.first_at;
+    const last = logs.rows[0]?.last_at;
+    if (!first || !last || !isLateBulkLog({ now: civilNow(), mealCount: total, allEaten: eaten === total, firstLoggedAt: first, lastLoggedAt: last })) {
+      return null;
+    }
+    await client.query(
+      `insert into meal_log_anomalies (id, user_id, scheduled_date, kind)
+       values ($1, $2, $3, 'late_bulk_log')
+       on conflict (user_id, scheduled_date, kind) do nothing`,
+      [uuidv7(), userId, scheduledDate],
+    );
+    return 'late_bulk_log';
   }
 }
