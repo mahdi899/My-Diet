@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
+import { ProblemFilter } from './common/problem.filter.js';
 import { loadEnv, type Env } from './config/env.js';
 
 export async function createApp(): Promise<{
@@ -15,6 +16,7 @@ export async function createApp(): Promise<{
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
+  app.useGlobalFilters(new ProblemFilter());
   app.enableShutdownHooks();
   if (env.CORS_ORIGINS) {
     app.enableCors({
@@ -29,7 +31,7 @@ export async function createApp(): Promise<{
     const config = new DocumentBuilder()
       .setTitle('Sabzine')
       .setDescription('Sabzine HTTP API')
-      .setVersion('0.1.0')
+      .setVersion('0.2.0')
       .build();
     SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config));
   }

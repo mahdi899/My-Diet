@@ -3,6 +3,7 @@ import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import { ENV, type Env } from '../config/env.js';
 import { Database, KYSELY, PG_POOL } from './database.js';
+import './pg-types.js';
 
 @Global()
 @Module({

@@ -99,7 +99,7 @@ export class OutboxRelay implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async ensureStarted(): Promise<void> {
+  async ensureStarted(): Promise<void> {
     if (this.started) return;
     await this.boss.start();
     await this.boss.createQueue('health.ping', { policy: 'singleton' });

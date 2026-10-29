@@ -8,6 +8,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
+import { ProductModule } from './product.module.js';
 
 @Module({})
 export class AppModule {
@@ -22,6 +23,7 @@ export class AppModule {
         HealthModule,
         MetricsModule,
         AdaptersModule,
+        ProductModule,
         ...(env.APP_ROLE === 'worker' ? [JobsModule] : []),
       ],
     };

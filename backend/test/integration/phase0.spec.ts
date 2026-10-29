@@ -40,6 +40,7 @@ describe('phase 0 runtime', () => {
       password: 'sabzine',
       port,
       persistent: false,
+      initdbFlags: ['--encoding=UTF8', '--locale=C'],
     });
     await database.initialise();
     await database.start();

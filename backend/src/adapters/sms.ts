@@ -19,12 +19,23 @@ export function otpDispatchMessage(phoneE164: string, code: string): string {
   return `otp dispatched to ${maskPhone(phoneE164)}`;
 }
 
+/** Development and test remember the latest code in memory. Production never does, and it is never logged. */
+const rememberedCodes = new Map<string, string>();
+
+export function rememberedOtp(phoneE164: string): string | undefined {
+  if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') return undefined;
+  return rememberedCodes.get(phoneE164);
+}
+
 /** Development sink. The code is never written to the log. */
 export class ConsoleSmsProvider implements SmsProvider {
   readonly name = 'console';
   private readonly logger = new Logger(ConsoleSmsProvider.name);
 
   async sendOtp(phoneE164: string, code: string): Promise<void> {
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+      rememberedCodes.set(phoneE164, code);
+    }
     this.logger.log(otpDispatchMessage(phoneE164, code));
   }
 }

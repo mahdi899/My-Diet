@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Sabzine API and worker. Phase 0 is the runtime foundation; product modules come next.",
+  "description": "Sabzine API and worker.",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
@@ -13,10 +13,11 @@
     "start:worker:dev": "nest start --watch --entryFile worker",
     "lint": "eslint src test",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
-    "test": "node --import tsx --test test/unit/foundation.spec.ts",
-    "test:integration": "npm run build && node --import tsx --test test/integration/phase0.spec.ts",
+    "test": "node --import tsx --test test/unit/foundation.spec.ts test/unit/phase1.spec.ts",
+    "test:integration": "npm run build && node --import tsx --test test/integration/phase0.spec.ts test/integration/phase1.spec.ts",
     "migrate": "node-pg-migrate -f node-pg-migrate.json up",
-    "migrate:down": "node-pg-migrate -f node-pg-migrate.json down"
+    "migrate:down": "node-pg-migrate -f node-pg-migrate.json down",
+    "admin:create": "node --import tsx src/cli/create-admin.ts"
   },
   "engines": {
     "node": ">=22"
@@ -42,6 +43,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@nestjs/cli": "^12.0.11",
+    "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",

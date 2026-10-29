@@ -10,5 +10,8 @@ export interface JobQueue {
     data: object,
     options?: { singletonKey?: string },
   ): Promise<string | null>;
-  work(name: string, handler: () => Promise<void>): Promise<string>;
+  work(
+    name: string,
+    handler: (jobs: ReadonlyArray<{ data: object }>) => Promise<void>,
+  ): Promise<string>;
 }

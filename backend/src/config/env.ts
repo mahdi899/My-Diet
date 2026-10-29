@@ -29,6 +29,8 @@ export const envSchema = z.object({
   ),
   AI_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   CORS_ORIGINS: z.string().default(''),
+  JWT_SECRET: z.string().min(16).default('dev-only-jwt-secret-not-for-production'),
+  OTP_PEPPER: z.string().min(16).default('dev-only-otp-pepper-not-for-production'),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -64,6 +66,12 @@ export function assertProductionProviders(env: Env): void {
   }
   if (env.AI_PROVIDER === 'openai' && !env.AI_API_KEY) {
     throw new EnvError('AI_API_KEY is required');
+  }
+  if (env.JWT_SECRET.startsWith('dev-only-')) {
+    throw new EnvError('JWT_SECRET must be set in production');
+  }
+  if (env.OTP_PEPPER.startsWith('dev-only-')) {
+    throw new EnvError('OTP_PEPPER must be set in production');
   }
 }
 

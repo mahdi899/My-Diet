@@ -1,6 +1,6 @@
 # Sabzine backend
 
-Phase 0 is the runtime only: HTTP API, worker, Postgres, migrations, and the outbox. Accounts, questionnaires, the wallet, and plan review are not in this build.
+The API covers accounts, the questionnaire, the toman wallet, plan orders, specialist review, meal logging, and the weekly reward. The Flutter app still reads its local demo data until a screen is switched over.
 
 ## Requirements
 
@@ -28,6 +28,10 @@ Set `APP_ROLE=worker` in the environment of that second process. `start:worker:d
 - Readiness: `GET http://localhost:3000/health/ready`
 - Metrics: `GET http://localhost:3000/metrics`
 - OpenAPI: `http://localhost:3000/docs` (not mounted when `NODE_ENV=production`)
+
+Local login uses the console SMS provider. The code is not written to the log. While `NODE_ENV=development`, `GET /v1/auth/otp/latest?phone=0912...` returns the latest code for that phone. That route does not exist in production. The first admin is created with `PHONE` and `DATABASE_URL` set, then `npm run admin:create`. A new phone that verifies a code becomes a user. There is no demo code and no direct login.
+
+Wallet top-ups in development use the sandbox gateway. `POST /v1/payments/sandbox/complete` credits the amount stored on the payment. The request cannot set the amount, and the API never accepts a card number.
 
 ## Docker
 
