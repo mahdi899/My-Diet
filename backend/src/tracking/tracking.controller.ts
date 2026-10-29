@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { actor, Roles } from '../common/auth.js';
+import { actor, Public, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { bodyRecord, rejectUnknown, requiredString, requiredUuid } from '../common/parse.js';
 import { TrackingService } from './tracking.service.js';
@@ -46,6 +46,12 @@ export class TrackingController {
   }
 
   @Roles('user')
+  @Get('specialist')
+  specialist(@Req() req: Request) {
+    return this.tracking.mySpecialist(actor(req).id);
+  }
+
+  @Roles('user')
   @Get('rewards/pending')
   pendingRewards(@Req() req: Request) {
     return this.tracking.pendingRewards(actor(req).id);
@@ -73,5 +79,17 @@ export class TrackingController {
       record.rating,
       typeof record.body === 'string' ? record.body.trim().slice(0, 1000) : '',
     );
+  }
+}
+
+@ApiTags('reviews')
+@Public()
+@Controller('v1/public')
+export class PublicReviewsController {
+  constructor(private readonly tracking: TrackingService) {}
+
+  @Get('reviews')
+  reviews() {
+    return this.tracking.publicReviews();
   }
 }

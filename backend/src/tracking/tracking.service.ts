@@ -5,6 +5,7 @@ import { uuidv7 } from '../common/id.js';
 import { notify, toman, withTransaction } from '../common/sql.js';
 import { addCivilDays, civilNow, streakLength, tehranToday } from '../common/time.js';
 import { isLateBulkLog } from './anomaly.js';
+import { publicReviewerName } from './review-name.js';
 import { acknowledgedReward, type RewardView } from './rewards.js';
 import { PG_POOL } from '../database/database.js';
 import { MoneyService } from '../money/money.service.js';
@@ -185,6 +186,75 @@ export class TrackingService {
       weekStart: row.week_start.slice(0, 10),
       amountToman: toman(row.amount_toman),
       acknowledgedAt: row.acknowledged_at ? row.acknowledged_at.toISOString() : null,
+    };
+  }
+
+  async publicReviews() {
+    const rows = await this.pool.query<{
+      id: string;
+      rating: number;
+      body: string;
+      week_start: string;
+      author_name: string | null;
+      specialist_id: string | null;
+      specialist_name: string | null;
+    }>(
+      `select pr.id, pr.rating, pr.body, pr.week_start::text as week_start,
+              u.display_name as author_name,
+              sp.user_id as specialist_id, sp.display_name as specialist_name
+       from program_reviews pr
+       join users u on u.id = pr.user_id
+       join plan_requests r on r.id = pr.request_id
+       left join specialist_profiles sp on sp.user_id = r.assigned_specialist_id
+       where pr.status = 'approved'
+       order by pr.created_at desc
+       limit 50`,
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      rating: row.rating,
+      body: row.body,
+      weekStart: row.week_start.slice(0, 10),
+      reviewerName: publicReviewerName(row.author_name),
+      specialistId: row.specialist_id,
+      specialistName: row.specialist_name,
+    }));
+  }
+
+  async mySpecialist(userId: string) {
+    const rows = await this.pool.query<{
+      user_id: string;
+      display_name: string;
+      credential: string;
+      bio: string;
+      average: string | null;
+      reviews: number;
+    }>(
+      `select sp.user_id, sp.display_name, sp.credential, sp.bio,
+              (select round(avg(pr.rating)::numeric, 2)
+               from program_reviews pr
+               join plan_requests req on req.id = pr.request_id
+               where req.assigned_specialist_id = sp.user_id and pr.status = 'approved') as average,
+              (select count(*)::int
+               from program_reviews pr
+               join plan_requests req on req.id = pr.request_id
+               where req.assigned_specialist_id = sp.user_id and pr.status = 'approved') as reviews
+       from plan_requests r
+       join specialist_profiles sp on sp.user_id = r.assigned_specialist_id
+       where r.user_id = $1 and r.status <> 'cancelled' and r.assigned_specialist_id is not null
+       order by r.created_at desc
+       limit 1`,
+      [userId],
+    );
+    const row = rows.rows[0];
+    if (!row) return null;
+    return {
+      id: row.user_id,
+      displayName: row.display_name,
+      credential: row.credential,
+      bio: row.bio,
+      averageRating: row.average == null ? null : Number(row.average),
+      reviewCount: row.reviews,
     };
   }
 
