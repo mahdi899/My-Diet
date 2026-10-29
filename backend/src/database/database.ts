@@ -23,4 +23,5 @@ export interface Database {
 }
 
 export const PG_POOL = Symbol('PG_POOL');
+export const PG_REPLICA = Symbol('PG_REPLICA');
 export const KYSELY = Symbol('KYSELY');

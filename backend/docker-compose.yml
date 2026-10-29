@@ -22,6 +22,7 @@ services:
       APP_ROLE: api
       PORT: 3000
       DATABASE_URL: postgres://sabzine:sabzine@postgres:5432/sabzine
+      DATABASE_REPLICA_URL: postgres://sabzine:sabzine@postgres:5432/sabzine
       RUN_MIGRATIONS: "true"
       SMS_PROVIDER: console
       PAYMENT_GATEWAY: sandbox
@@ -46,6 +47,7 @@ services:
       APP_ROLE: worker
       WORKER_PORT: 3001
       DATABASE_URL: postgres://sabzine:sabzine@postgres:5432/sabzine
+      DATABASE_REPLICA_URL: postgres://sabzine:sabzine@postgres:5432/sabzine
       SMS_PROVIDER: console
       PAYMENT_GATEWAY: sandbox
       AI_PROVIDER: fake

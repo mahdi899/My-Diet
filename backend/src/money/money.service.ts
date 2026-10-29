@@ -6,6 +6,7 @@ import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { insertOutbox, toman, withTransaction } from '../common/sql.js';
 import { PG_POOL } from '../database/database.js';
+import { GATEWAY_SET, type GatewaySet } from '../adapters/payment.js';
 import { PlanDraftService } from '../plans/plans.service.js';
 
 const OPEN_STATUSES = ['queued', 'generating', 'in_review', 'awaiting_user', 'response_received'];
@@ -38,6 +39,7 @@ export class MoneyService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(ENV) private readonly env: Env,
+    @Inject(GATEWAY_SET) private readonly gateways: GatewaySet,
     private readonly plans: PlanDraftService,
   ) {}
 
@@ -77,8 +79,15 @@ export class MoneyService {
     return { cashToman: toman(row.rows[0].cash_toman), promoToman: toman(row.rows[0].promo_toman) };
   }
 
-  async startTopup(userId: string, packageCode: string) {
-    if (this.env.PAYMENT_GATEWAY !== 'sandbox') {
+  gatewayList() {
+    return this.gateways.list();
+  }
+
+  async startTopup(userId: string, packageCode: string, gatewayName: string | null) {
+    const name = gatewayName ?? this.env.PAYMENT_GATEWAY;
+    const gateway = this.gateways.get(name);
+    if (!gateway) throw new ApiError(400, 'unknown_gateway', 'درگاه پرداخت شناخته نشد');
+    if (gateway.callsExternalNetwork) {
       throw new ApiError(503, 'payment_unavailable', 'درگاه پرداخت در دسترس نیست');
     }
     const pkg = await this.pool.query<{ amount_toman: string }>(
@@ -90,14 +99,14 @@ export class MoneyService {
     const paymentId = uuidv7();
     await this.pool.query(
       `insert into payments (id, user_id, package_code, amount_toman, amount_rial, status, gateway)
-       values ($1, $2, $3, $4, $5, 'pending', 'sandbox')`,
-      [paymentId, userId, packageCode, amountToman, amountToman * 10],
+       values ($1, $2, $3, $4, $5, 'pending', $6)`,
+      [paymentId, userId, packageCode, amountToman, amountToman * 10, gateway.name],
     );
-    return { paymentId, amountToman, amountRial: amountToman * 10, status: 'pending' as const };
+    return { paymentId, amountToman, amountRial: amountToman * 10, status: 'pending' as const, gateway: gateway.name };
   }
 
   async completeSandbox(paymentId: string): Promise<WalletBalance> {
-    if (this.env.PAYMENT_GATEWAY !== 'sandbox') {
+    if (!this.gateways.get('sandbox')) {
       throw new ApiError(404, 'not_found', 'یافت نشد');
     }
     return withTransaction(this.pool, async (client) => {
@@ -105,9 +114,10 @@ export class MoneyService {
         user_id: string;
         amount_toman: string;
         status: string;
-      }>(`select user_id, amount_toman, status from payments where id = $1 for update`, [paymentId]);
+        gateway: string;
+      }>(`select user_id, amount_toman, status, gateway from payments where id = $1 for update`, [paymentId]);
       const payment = found.rows[0];
-      if (!payment) throw new ApiError(404, 'not_found', 'پرداخت پیدا نشد');
+      if (!payment || payment.gateway !== 'sandbox') throw new ApiError(404, 'not_found', 'پرداخت پیدا نشد');
       if (payment.status === 'credited') return this.balance(client, payment.user_id);
       if (payment.status !== 'pending') throw new ApiError(409, 'payment_closed', 'این پرداخت بسته شده است');
       const amount = toman(payment.amount_toman);

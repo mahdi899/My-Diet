@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { enabledGatewayNames } from './gateways.js';
 
 const emptyToUndefined = (value: unknown) =>
   typeof value === 'string' && value.trim() === '' ? undefined : value;
@@ -11,6 +12,7 @@ export const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   WORKER_PORT: z.coerce.number().int().positive().default(3001),
   DATABASE_URL: z.string().min(1),
+  DATABASE_REPLICA_URL: z.string().default(''),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info'),
@@ -20,7 +22,8 @@ export const envSchema = z.object({
     .transform((value) => value === 'true'),
   SENTRY_DSN: z.preprocess(emptyToUndefined, z.string().url().optional()),
   SMS_PROVIDER: z.enum(['console', 'kavenegar']).default('console'),
-  PAYMENT_GATEWAY: z.enum(['sandbox', 'zarinpal']).default('sandbox'),
+  PAYMENT_GATEWAY: z.enum(['sandbox', 'zarinpal', 'idpay']).default('sandbox'),
+  PAYMENT_GATEWAYS: z.string().default(''),
   AI_PROVIDER: z.enum(['fake', 'openai']).default('fake'),
   AI_FAILOVER_PROVIDER: z.enum(['none', 'fake', 'openai']).default('none'),
   PUSH_PROVIDER: z.enum(['console', 'fcm']).default('console'),
@@ -29,6 +32,7 @@ export const envSchema = z.object({
     emptyToUndefined,
     z.string().min(1).optional(),
   ),
+  IDPAY_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   AI_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   CORS_ORIGINS: z.string().default(''),
   JWT_SECRET: z.string().min(16).default('dev-only-jwt-secret-not-for-production'),
@@ -58,6 +62,9 @@ export function assertProductionProviders(env: Env): void {
     throw new EnvError(
       'PAYMENT_GATEWAY=sandbox is not allowed in production',
     );
+  }
+  if (enabledGatewayNames(env).includes('sandbox')) {
+    throw new EnvError('PAYMENT_GATEWAYS must not include sandbox in production');
   }
   if (env.AI_PROVIDER === 'fake') {
     throw new EnvError('AI_PROVIDER=fake is not allowed in production');
@@ -89,6 +96,13 @@ export function assertProductionProviders(env: Env): void {
   if (env.FIELD_KEY.startsWith('dev-only-')) {
     throw new EnvError('FIELD_KEY must be set in production');
   }
+  const gateways = enabledGatewayNames(env);
+  if (gateways.includes('idpay') && !env.IDPAY_API_KEY) {
+    throw new EnvError('IDPAY_API_KEY is required');
+  }
+  if (gateways.includes('zarinpal') && !env.ZARINPAL_MERCHANT_ID) {
+    throw new EnvError('ZARINPAL_MERCHANT_ID is required');
+  }
 }
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
@@ -100,5 +114,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     throw new EnvError(`Invalid environment: ${details}`);
   }
   assertProductionProviders(parsed.data);
+  enabledGatewayNames(parsed.data);
   return parsed.data;
 }

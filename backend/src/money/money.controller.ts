@@ -5,6 +5,7 @@ import { actor, Public, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import {
   bodyRecord,
+  optionalString,
   rejectUnknown,
   requiredInt,
   requiredString,
@@ -29,12 +30,22 @@ export class MoneyController {
     return this.money.wallet(actor(req).id);
   }
 
+  @Public()
+  @Get('payments/gateways')
+  gateways() {
+    return this.money.gatewayList();
+  }
+
   @Roles('user')
   @Post('me/topups')
   topup(@Req() req: Request, @Body() body: unknown) {
     const record = bodyRecord(body);
-    rejectUnknown(record, ['packageCode']);
-    return this.money.startTopup(actor(req).id, requiredString(record, 'packageCode', 40));
+    rejectUnknown(record, ['packageCode', 'gateway']);
+    return this.money.startTopup(
+      actor(req).id,
+      requiredString(record, 'packageCode', 40),
+      optionalString(record, 'gateway', 40) ?? null,
+    );
   }
 
   @Roles('user')
