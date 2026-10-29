@@ -87,12 +87,14 @@ export class PlanDraftService {
     let aiStatus: 'drafted' | 'skipped' | 'failed' = skip ? 'skipped' : 'drafted';
     let reason: string | null = skip ? 'high_risk' : null;
     let providerName = skip ? 'none' : this.provider.name;
+    let rawOutput: string | null = null;
     if (!skip) {
       try {
         const produced = await this.provider.draft({
           goal: claimed.answers.goal,
           flags: claimed.flags,
         });
+        rawOutput = encryptText(JSON.stringify(produced), this.env.FIELD_KEY);
         providerName = produced.provider ?? providerName;
         if (isUsable(produced)) draft = producedToInput(produced);
         else {
@@ -119,9 +121,9 @@ export class PlanDraftService {
         [requestId],
       );
       await client.query(
-        `insert into ai_generations (id, request_id, provider, status, skipped_reason)
-         values ($1, $2, $3, $4, $5)`,
-        [uuidv7(), requestId, providerName, aiStatus, reason],
+        `insert into ai_generations (id, request_id, provider, status, skipped_reason, raw_output)
+         values ($1, $2, $3, $4, $5, $6)`,
+        [uuidv7(), requestId, providerName, aiStatus, reason, rawOutput],
       );
       await client.query(
         `insert into request_events (id, request_id, kind, detail) values ($1, $2, $3, $4::jsonb)`,

@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 import { createApp } from './bootstrap.js';
 import { loadEnv } from './config/env.js';
 import { OutboxRelay } from './jobs/outbox-relay.js';
+import { MaintenanceService } from './maintenance/maintenance.service.js';
 
 async function start(): Promise<void> {
   const env = loadEnv();
@@ -17,6 +18,7 @@ async function start(): Promise<void> {
   }
   const { app } = await createApp();
   app.get(OutboxRelay).start();
+  app.get(MaintenanceService).start();
   await app.listen(env.WORKER_PORT);
 }
 

@@ -35,6 +35,8 @@ Wallet top-ups in development use the sandbox gateway. `POST /v1/payments/sandbo
 
 A specialist or admin turns on an authenticator with `POST /v1/me/totp/setup` and confirms it with a current code. The next login then needs that code. Until it is confirmed, the one-time password still opens the session. `GET /questionnaire-editor` is the compatibility checker for questionnaire drafts. Deleting an account with `POST /v1/me/account/delete` and the confirmation `حذف حساب` removes the phone and the clinical text, and leaves the ledger on that user id.
 
+The worker expires a pending top-up after 30 minutes without crediting it. A payment that has been pending for 15 minutes stays pending, because this build does not call a gateway inquiry API. A draft stuck in `generating` goes back on the queue. OTP challenges older than 7 days are deleted. Raw model text older than 30 days is cleared; the specialist's plan is kept. `POST /v1/admin/maintenance` runs that pass and reports wallet rows whose balance does not match the ledger.
+
 `GET /v1/payments/gateways` lists the enabled gateways. A top-up can name one of them; otherwise it uses `PAYMENT_GATEWAY`. Sandbox completion only credits a payment that was started on `sandbox`. `idpay` and Zarinpal stay unavailable until their HTTP adapters exist. Admin SLA and payment totals are read from `DATABASE_REPLICA_URL` when it is set, and those report transactions cannot write. The specialist SLA is the first edit, question, or publication within 24 hours.
 
 ## Docker

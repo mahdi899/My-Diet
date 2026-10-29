@@ -12,6 +12,7 @@ import {
   requiredString,
   requiredUuid,
 } from '../common/parse.js';
+import { MaintenanceService } from '../maintenance/maintenance.service.js';
 import { AdminService } from './admin.service.js';
 
 @ApiTags('specialists')
@@ -30,7 +31,10 @@ export class SpecialistsController {
 @Controller('v1/admin')
 @Roles('admin')
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly maintenance: MaintenanceService,
+  ) {}
 
   @Post('specialists')
   create(@Req() req: Request, @Body() body: unknown) {
@@ -114,6 +118,11 @@ export class AdminController {
   @Get('users')
   users() {
     return this.admin.users();
+  }
+
+  @Post('maintenance')
+  maintenanceRun(@Req() req: Request) {
+    return this.maintenance.run(actor(req).id);
   }
 
   @Post('users/:id/status')

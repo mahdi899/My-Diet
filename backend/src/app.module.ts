@@ -7,6 +7,7 @@ import { pinoHttpOptions } from './config/logger.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
+import { MaintenanceModule } from './maintenance/maintenance.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { ProductModule } from './product.module.js';
 
@@ -24,6 +25,7 @@ export class AppModule {
         MetricsModule,
         AdaptersModule,
         ProductModule,
+        MaintenanceModule,
         ...(env.APP_ROLE === 'worker' ? [JobsModule] : []),
       ],
     };
