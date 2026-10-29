@@ -14,6 +14,7 @@ import {
 } from '../common/parse.js';
 import { MaintenanceService } from '../maintenance/maintenance.service.js';
 import { AdminService } from './admin.service.js';
+import { normalizeCouncilNo, VERIFICATION_STATUSES, type VerificationStatus } from './profile.js';
 
 @ApiTags('specialists')
 @Public()
@@ -188,5 +189,50 @@ export class AdminController {
       throw new ApiError(400, 'validation', 'وضعیت حساب درست نیست');
     }
     return this.admin.setStatus(actor(req).id, requiredUuid(id), status);
+  }
+
+  @Post('specialists/:id/verification')
+  verification(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['status']);
+    const status = requiredString(record, 'status', 20);
+    if (!(VERIFICATION_STATUSES as readonly string[]).includes(status)) {
+      throw new ApiError(400, 'validation', 'وضعیت تأیید درست نیست');
+    }
+    return this.admin.setVerification(actor(req).id, requiredUuid(id), status as VerificationStatus);
+  }
+}
+
+@ApiTags('specialist')
+@Controller('v1/specialist')
+export class SpecialistProfileController {
+  constructor(private readonly admin: AdminService) {}
+
+  @Roles('specialist')
+  @Get('profile')
+  profile(@Req() req: Request) {
+    return this.admin.ownProfile(actor(req).id);
+  }
+
+  @Roles('specialist')
+  @Put('profile')
+  save(@Req() req: Request, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['displayName', 'credential', 'bio', 'councilNo']);
+    let councilNo: string | undefined;
+    if (record.councilNo != null) {
+      if (typeof record.councilNo !== 'string') {
+        throw new ApiError(400, 'validation', 'شمارهٔ نظام درست نیست');
+      }
+      const normalized = normalizeCouncilNo(record.councilNo);
+      if (normalized == null) throw new ApiError(400, 'validation', 'شمارهٔ نظام درست نیست');
+      councilNo = normalized;
+    }
+    return this.admin.updateOwnProfile(actor(req).id, {
+      displayName: optionalString(record, 'displayName', 80),
+      credential: optionalString(record, 'credential', 120),
+      bio: optionalString(record, 'bio', 1000),
+      councilNo,
+    });
   }
 }

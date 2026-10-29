@@ -7,6 +7,10 @@ import { tehranDayStartUtc, tehranToday } from '../common/time.js';
 import { PG_POOL } from '../database/database.js';
 import { OUTBOX_MAX_ATTEMPTS } from '../jobs/outbox-policy.js';
 import { debitFits, signedAdjustment } from './adjustment.js';
+import {
+  verificationAfterCouncilChange,
+  type VerificationStatus,
+} from './profile.js';
 
 @Injectable()
 export class AdminService {
@@ -70,6 +74,110 @@ export class AdminService {
     );
     await audit(this.pool, actorId, 'specialist_updated', 'user', specialistId, input);
     return { ok: true };
+  }
+
+  async ownProfile(specialistId: string) {
+    const row = await this.profileRow(specialistId);
+    if (!row) throw new ApiError(404, 'not_found', 'پروندهٔ متخصص پیدا نشد');
+    return this.profileView(row);
+  }
+
+  async updateOwnProfile(
+    specialistId: string,
+    input: { displayName?: string; credential?: string; bio?: string; councilNo?: string },
+  ) {
+    if (
+      input.displayName == null &&
+      input.credential == null &&
+      input.bio == null &&
+      input.councilNo == null
+    ) {
+      throw new ApiError(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
+    }
+    const current = await this.profileRow(specialistId);
+    if (!current) throw new ApiError(404, 'not_found', 'پروندهٔ متخصص پیدا نشد');
+    const councilNo = input.councilNo ?? current.medical_council_no;
+    if (councilNo !== '' && councilNo !== current.medical_council_no) {
+      const taken = await this.pool.query(
+        `select user_id from specialist_profiles where medical_council_no = $1 and user_id <> $2`,
+        [councilNo, specialistId],
+      );
+      if ((taken.rowCount ?? 0) > 0) throw new ApiError(409, 'council_taken', 'این شمارهٔ نظام قبلاً ثبت شده است');
+    }
+    const verification = verificationAfterCouncilChange(
+      current.medical_council_no,
+      input.councilNo,
+      current.verification_status,
+    );
+    await this.pool.query(
+      `update specialist_profiles
+       set display_name = $2, credential = $3, bio = $4, medical_council_no = $5, verification_status = $6
+       where user_id = $1`,
+      [
+        specialistId,
+        input.displayName ?? current.display_name,
+        input.credential ?? current.credential,
+        input.bio ?? current.bio,
+        councilNo,
+        verification,
+      ],
+    );
+    await audit(this.pool, specialistId, 'specialist_profile_updated', 'user', specialistId, {
+      councilChanged: input.councilNo != null && input.councilNo !== current.medical_council_no,
+      verificationStatus: verification,
+    });
+    return this.profileView({
+      ...current,
+      display_name: input.displayName ?? current.display_name,
+      credential: input.credential ?? current.credential,
+      bio: input.bio ?? current.bio,
+      medical_council_no: councilNo,
+      verification_status: verification,
+    });
+  }
+
+  async setVerification(actorId: string, specialistId: string, status: VerificationStatus) {
+    const result = await this.pool.query(
+      `update specialist_profiles set verification_status = $2 where user_id = $1 returning user_id`,
+      [specialistId, status],
+    );
+    if (result.rowCount === 0) throw new ApiError(404, 'not_found', 'متخصص پیدا نشد');
+    await audit(this.pool, actorId, 'specialist_verification', 'user', specialistId, { status });
+    return { id: specialistId, verificationStatus: status };
+  }
+
+  private async profileRow(specialistId: string) {
+    const rows = await this.pool.query<{
+      display_name: string;
+      credential: string;
+      bio: string;
+      medical_council_no: string;
+      verification_status: VerificationStatus;
+      active: boolean;
+    }>(
+      `select display_name, credential, bio, medical_council_no, verification_status, active
+       from specialist_profiles where user_id = $1`,
+      [specialistId],
+    );
+    return rows.rows[0];
+  }
+
+  private profileView(row: {
+    display_name: string;
+    credential: string;
+    bio: string;
+    medical_council_no: string;
+    verification_status: VerificationStatus;
+    active: boolean;
+  }) {
+    return {
+      displayName: row.display_name,
+      credential: row.credential,
+      bio: row.bio,
+      councilNo: row.medical_council_no,
+      verificationStatus: row.verification_status,
+      active: row.active,
+    };
   }
 
   async assign(actorId: string, requestId: string, specialistId: string, reason: string) {
