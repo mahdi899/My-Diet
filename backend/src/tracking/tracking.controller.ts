@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { actor, Roles } from '../common/auth.js';
@@ -43,6 +43,19 @@ export class TrackingController {
   @Get('weights')
   weights(@Req() req: Request) {
     return this.tracking.weights(actor(req).id);
+  }
+
+  @Roles('user')
+  @Get('rewards/pending')
+  pendingRewards(@Req() req: Request) {
+    return this.tracking.pendingRewards(actor(req).id);
+  }
+
+  @Roles('user')
+  @Post('rewards/:id/acknowledge')
+  acknowledge(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    if (body != null) rejectUnknown(bodyRecord(body), []);
+    return this.tracking.acknowledgeReward(actor(req).id, requiredUuid(id));
   }
 
   @Roles('user')

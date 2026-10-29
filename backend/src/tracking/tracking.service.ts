@@ -5,6 +5,7 @@ import { uuidv7 } from '../common/id.js';
 import { notify, toman, withTransaction } from '../common/sql.js';
 import { addCivilDays, civilNow, streakLength, tehranToday } from '../common/time.js';
 import { isLateBulkLog } from './anomaly.js';
+import { acknowledgedReward, type RewardView } from './rewards.js';
 import { PG_POOL } from '../database/database.js';
 import { MoneyService } from '../money/money.service.js';
 import { PlanDraftService } from '../plans/plans.service.js';
@@ -126,6 +127,65 @@ export class TrackingService {
       throw new ApiError(409, 'already_reviewed', 'برای این هفته امتیاز ثبت شده است');
     }
     return { id, status: 'pending' as const };
+  }
+
+  async pendingRewards(userId: string): Promise<RewardView[]> {
+    const rows = await this.rewardRows(userId, null);
+    return rows.filter((row) => row.acknowledged_at == null).map((row) => this.rewardView(row));
+  }
+
+  async acknowledgeReward(userId: string, rewardId: string): Promise<RewardView> {
+    const current = await this.rewardRows(userId, rewardId);
+    const row = current[0];
+    if (!row) throw new ApiError(404, 'not_found', 'پاداش پیدا نشد');
+    if (row.acknowledged_at) return acknowledgedReward(this.rewardView(row), row.acknowledged_at.toISOString());
+    const written = await this.pool.query<{ acknowledged_at: Date }>(
+      `update weekly_rewards set acknowledged_at = now()
+       where id = $1 and user_id = $2 and acknowledged_at is null
+       returning acknowledged_at`,
+      [rewardId, userId],
+    );
+    const stamp = written.rows[0]?.acknowledged_at;
+    if (!stamp) {
+      const again = await this.rewardRows(userId, rewardId);
+      const latest = again[0];
+      if (!latest?.acknowledged_at) throw new ApiError(404, 'not_found', 'پاداش پیدا نشد');
+      return acknowledgedReward(this.rewardView(latest), latest.acknowledged_at.toISOString());
+    }
+    return acknowledgedReward(this.rewardView(row), stamp.toISOString());
+  }
+
+  private async rewardRows(userId: string, rewardId: string | null) {
+    const rows = await this.pool.query<{
+      id: string;
+      request_id: string;
+      week_start: string;
+      amount_toman: string;
+      acknowledged_at: Date | null;
+    }>(
+      `select id, request_id, week_start::text, amount_toman, acknowledged_at
+       from weekly_rewards
+       where user_id = $1 and ($2::uuid is null or id = $2)
+       order by week_start`,
+      [userId, rewardId],
+    );
+    return rows.rows;
+  }
+
+  private rewardView(row: {
+    id: string;
+    request_id: string;
+    week_start: string;
+    amount_toman: string;
+    acknowledged_at: Date | null;
+  }): RewardView {
+    return {
+      id: row.id,
+      requestId: row.request_id,
+      weekStart: row.week_start.slice(0, 10),
+      amountToman: toman(row.amount_toman),
+      acknowledgedAt: row.acknowledged_at ? row.acknowledged_at.toISOString() : null,
+    };
   }
 
   async streak(userId: string): Promise<number> {
