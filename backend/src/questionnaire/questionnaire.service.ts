@@ -5,8 +5,9 @@ import { PG_POOL } from '../database/database.js';
 import { ApiError } from '../common/errors.js';
 import { sealAnswers, sealClinicalRecord, openClinicalRecord } from '../common/field-crypto.js';
 import { uuidv7 } from '../common/id.js';
-import { audit, withTransaction } from '../common/sql.js';
+import { audit, toman, withTransaction } from '../common/sql.js';
 import { tehranToday } from '../common/time.js';
+import { customAnswers, decideAcquisition, questionsOf } from './acquisition.js';
 import { compatibilityErrors, type SchemaQuestion } from './compatibility.js';
 import { questionnaireView, validateSubmission } from './schema.js';
 
@@ -61,21 +62,97 @@ export class QuestionnaireService {
     const { answers, riskFlags, bmi } = validateSubmission(input);
     const id = uuidv7();
     const pregnancyAsOf = answers.lifeStage === 'pregnant' ? tehranToday() : null;
-    const published = await this.pool.query<{ version: number }>(
-      `select version from questionnaire_schemas where status = 'published'`,
+    const published = await this.pool.query<{ version: number; document: unknown }>(
+      `select version, document from questionnaire_schemas where status = 'published'`,
     );
-    const schemaVersion = published.rows[0]?.version ?? 1;
+    const schema = published.rows[0];
+    if (!schema) throw new ApiError(500, 'internal', 'نسخهٔ پرسشنامه در دسترس نیست');
+    const questions = questionsOf(schema.document);
+    const source = input && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+    let extras: Record<string, string | number | unknown[]>;
+    try {
+      extras = customAnswers(questions, source);
+    } catch {
+      throw new ApiError(400, 'validation', 'یکی از پاسخ‌ها بیش از حد طولانی است');
+    }
+    const answeredCustom = new Set(Object.keys(extras));
+    const missingCustom = questions.some(
+      (question) => question.required && question.id.startsWith('custom_') && !answeredCustom.has(question.id),
+    );
+    if (missingCustom) throw new ApiError(400, 'validation', 'پرسشنامه کامل نیست');
     await this.pool.query(
       `insert into questionnaire_submissions
          (id, user_id, schema_version, answers, risk_flags, bmi, pregnancy_as_of)
        values ($1, $2, $3, $4::jsonb, $5, $6, $7)`,
-      [id, userId, schemaVersion, JSON.stringify(sealAnswers(answers, this.env.FIELD_KEY)), riskFlags, bmi, pregnancyAsOf],
+      [
+        id,
+        userId,
+        schema.version,
+        JSON.stringify({ ...sealAnswers(answers, this.env.FIELD_KEY), ...extras }),
+        riskFlags,
+        bmi,
+        pregnancyAsOf,
+      ],
     );
     await this.pool.query(
       `update users set display_name = $2 where id = $1 and (display_name is null or display_name = '')`,
       [userId, answers.name],
     );
-    return { id, schemaVersion };
+    return { id, schemaVersion: schema.version };
+  }
+
+  async acquisitionState(userId: string) {
+    const published = await this.pool.query<{ version: number; document: unknown }>(
+      `select version, document from questionnaire_schemas where status = 'published'`,
+    );
+    const schema = published.rows[0];
+    if (!schema) throw new ApiError(500, 'internal', 'نسخهٔ پرسشنامه در دسترس نیست');
+    const latest = await this.pool.query<{
+      schema_version: number;
+      answers: unknown;
+      pregnancy_as_of: string | null;
+    }>(
+      `select schema_version, answers, pregnancy_as_of::text as pregnancy_as_of
+       from questionnaire_submissions
+       where user_id = $1
+       order by submitted_at desc
+       limit 1`,
+      [userId],
+    );
+    const submission = latest.rows[0];
+    const opened = submission
+      ? (openClinicalRecord(submission.answers, this.env.FIELD_KEY) as Record<string, unknown>)
+      : null;
+    const open = await this.pool.query<{ id: string; status: string }>(
+      `select id, status from plan_requests
+       where user_id = $1
+         and status in ('queued', 'generating', 'in_review', 'awaiting_user', 'response_received')
+       order by created_at desc
+       limit 1`,
+      [userId],
+    );
+    const wallet = await this.pool.query<{ cash_toman: string; promo_toman: string }>(
+      `select cash_toman, promo_toman from wallets where user_id = $1`,
+      [userId],
+    );
+    if (!wallet.rows[0]) throw new ApiError(404, 'not_found', 'کیف پول پیدا نشد');
+    const decision = decideAcquisition({
+      hasSubmission: Boolean(submission),
+      submittedSchemaVersion: submission?.schema_version ?? null,
+      publishedSchemaVersion: schema.version,
+      questions: questionsOf(schema.document),
+      answers: opened,
+      pregnancyAsOf: submission?.pregnancy_as_of ? submission.pregnancy_as_of.slice(0, 10) : null,
+      today: tehranToday(),
+      openRequest: open.rows[0] ?? null,
+    });
+    return {
+      ...decision,
+      wallet: {
+        cashToman: toman(wallet.rows[0].cash_toman),
+        promoToman: toman(wallet.rows[0].promo_toman),
+      },
+    };
   }
 
   async listSchemas() {

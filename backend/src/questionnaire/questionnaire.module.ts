@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { QuestionnaireController, QuestionnaireSchemaController } from './questionnaire.controller.js';
+import {
+  AcquisitionController,
+  QuestionnaireController,
+  QuestionnaireSchemaController,
+} from './questionnaire.controller.js';
 import { QuestionnaireAdminController, QuestionnaireEditorPageController } from './editor.controller.js';
 import { QuestionnaireService } from './questionnaire.service.js';
 
@@ -7,6 +11,7 @@ import { QuestionnaireService } from './questionnaire.service.js';
   controllers: [
     QuestionnaireSchemaController,
     QuestionnaireController,
+    AcquisitionController,
     QuestionnaireAdminController,
     QuestionnaireEditorPageController,
   ],

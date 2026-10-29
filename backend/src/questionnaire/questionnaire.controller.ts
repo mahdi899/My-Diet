@@ -39,3 +39,15 @@ export class QuestionnaireController {
     return this.questionnaires.submit(actor(req).id, body);
   }
 }
+
+@ApiTags('me')
+@Controller('v1/me')
+export class AcquisitionController {
+  constructor(private readonly questionnaires: QuestionnaireService) {}
+
+  @Roles('user')
+  @Get('acquisition-state')
+  state(@Req() req: Request) {
+    return this.questionnaires.acquisitionState(actor(req).id);
+  }
+}
