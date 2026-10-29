@@ -23,3 +23,16 @@ export const outboxDispatchFailures = new Counter({
   labelNames: ['topic'] as const,
   registers: [metricsRegistry],
 });
+
+export const aiAttempts = new Counter({
+  name: 'sabzine_ai_attempts_total',
+  help: 'Plan draft attempts recorded by the server',
+  labelNames: ['status'] as const,
+  registers: [metricsRegistry],
+});
+
+export const aiCostCapHits = new Counter({
+  name: 'sabzine_ai_cost_cap_hits_total',
+  help: 'Drafts written manually because the daily model cost cap was reached',
+  registers: [metricsRegistry],
+});

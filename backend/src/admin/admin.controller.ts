@@ -125,6 +125,33 @@ export class AdminController {
     return this.maintenance.run(actor(req).id);
   }
 
+  @Get('ai-controls')
+  aiControls() {
+    return this.admin.aiControls();
+  }
+
+  @Put('ai-controls')
+  setAiControls(@Req() req: Request, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['killSwitch', 'dailyCostCapMicros']);
+    if ('killSwitch' in record && typeof record.killSwitch !== 'boolean') {
+      throw new ApiError(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
+    }
+    let dailyCostCapMicros: number | null | undefined;
+    if ('dailyCostCapMicros' in record) {
+      dailyCostCapMicros = record.dailyCostCapMicros === null ? null : requiredInt(record.dailyCostCapMicros);
+    }
+    return this.admin.setAiControls(actor(req).id, {
+      killSwitch: 'killSwitch' in record ? (record.killSwitch as boolean) : undefined,
+      dailyCostCapMicros,
+    });
+  }
+
+  @Get('ai-cost')
+  aiCost() {
+    return this.admin.aiCost();
+  }
+
   @Post('users/:id/status')
   status(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
     const record = bodyRecord(body);

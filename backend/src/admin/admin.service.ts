@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { audit, toman, withTransaction } from '../common/sql.js';
+import { tehranDayStartUtc, tehranToday } from '../common/time.js';
 import { PG_POOL } from '../database/database.js';
 
 @Injectable()
@@ -240,5 +241,72 @@ export class AdminService {
       averageRating: row.average == null ? null : Number(row.average),
       reviewCount: row.reviews,
     }));
+  }
+
+  async aiControls() {
+    const row = await this.controlRow();
+    return {
+      killSwitch: row.kill_switch,
+      dailyCostCapMicros: row.daily_cost_cap_micros == null ? null : Number(row.daily_cost_cap_micros),
+    };
+  }
+
+  async setAiControls(
+    actorId: string,
+    input: { killSwitch?: boolean; dailyCostCapMicros?: number | null },
+  ) {
+    if (input.killSwitch == null && input.dailyCostCapMicros === undefined) {
+      throw new ApiError(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
+    }
+    if (
+      input.dailyCostCapMicros != null &&
+      (!Number.isSafeInteger(input.dailyCostCapMicros) || input.dailyCostCapMicros < 0)
+    ) {
+      throw new ApiError(400, 'validation', 'سقف هزینه درست نیست');
+    }
+    const current = await this.controlRow();
+    const killSwitch = input.killSwitch ?? current.kill_switch;
+    const cap = input.dailyCostCapMicros === undefined ? current.daily_cost_cap_micros : input.dailyCostCapMicros;
+    await this.pool.query(
+      `update ai_controls set kill_switch = $1, daily_cost_cap_micros = $2, updated_at = now() where id = true`,
+      [killSwitch, cap],
+    );
+    await audit(this.pool, actorId, 'ai_controls_updated', 'ai_controls', null, {
+      killSwitch,
+      dailyCostCapMicros: cap,
+    });
+    return { killSwitch, dailyCostCapMicros: cap == null ? null : Number(cap) };
+  }
+
+  async aiCost() {
+    const controls = await this.controlRow();
+    const totals = await this.pool.query<{ attempts: number; drafted: number; skipped: number; spent: string }>(
+      `select count(*)::int as attempts,
+              count(*) filter (where status = 'drafted')::int as drafted,
+              count(*) filter (where status = 'skipped')::int as skipped,
+              coalesce(sum(cost_micros), 0)::text as spent
+       from ai_generations
+       where created_at >= $1`,
+      [tehranDayStartUtc()],
+    );
+    const row = totals.rows[0];
+    return {
+      day: tehranToday(),
+      spentMicros: Number(row?.spent ?? 0),
+      capMicros: controls.daily_cost_cap_micros == null ? null : Number(controls.daily_cost_cap_micros),
+      killSwitch: controls.kill_switch,
+      attempts: row?.attempts ?? 0,
+      drafted: row?.drafted ?? 0,
+      skipped: row?.skipped ?? 0,
+    };
+  }
+
+  private async controlRow() {
+    const rows = await this.pool.query<{ kill_switch: boolean; daily_cost_cap_micros: string | null }>(
+      `select kill_switch, daily_cost_cap_micros::text as daily_cost_cap_micros from ai_controls where id = true`,
+    );
+    const row = rows.rows[0];
+    if (!row) throw new ApiError(500, 'ai_controls_missing', 'تنظیم مدل پیدا نشد');
+    return row;
   }
 }

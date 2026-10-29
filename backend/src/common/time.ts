@@ -12,6 +12,12 @@ export function tehranToday(instant = civilNow()): string {
   return new Date(instant.getTime() + TEHRAN_OFFSET_MS).toISOString().slice(0, 10);
 }
 
+/** UTC instant of 00:00 on the Tehran civil date that contains `instant`. */
+export function tehranDayStartUtc(instant = civilNow()): Date {
+  const [year, month, day] = tehranToday(instant).split('-').map(Number);
+  return new Date(Date.UTC(year!, (month ?? 1) - 1, day ?? 1) - TEHRAN_OFFSET_MS);
+}
+
 export function addCivilDays(civilDate: string, days: number): string {
   const [year, month, day] = civilDate.split('-').map(Number);
   const utc = new Date(Date.UTC(year!, (month ?? 1) - 1, day ?? 1, 12));

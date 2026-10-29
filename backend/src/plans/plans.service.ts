@@ -9,8 +9,10 @@ import {
 import type { Role } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
-import { notify, withTransaction } from '../common/sql.js';
-import { addCivilDays, tehranToday, weekStartSaturday } from '../common/time.js';
+import { audit, notify, withTransaction } from '../common/sql.js';
+import { addCivilDays, tehranDayStartUtc, tehranToday, weekStartSaturday } from '../common/time.js';
+import { PROMPT_VERSION, manualDraftReason, usageCount } from '../ai/cost.js';
+import { aiAttempts, aiCostCapHits } from '../metrics/metrics.js';
 import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
 import { AI_SKIP_FLAGS, type StoredAnswers } from '../questionnaire/schema.js';
@@ -56,8 +58,10 @@ export class PlanDraftService {
         flags: string[];
         answers: StoredAnswers;
         specialist_id: string | null;
+        schema_version: number;
       }>(
-        `select r.status, s.risk_flags as flags, s.answers, r.assigned_specialist_id as specialist_id
+        `select r.status, s.risk_flags as flags, s.answers, r.assigned_specialist_id as specialist_id,
+                s.schema_version
          from plan_requests r
          join questionnaire_submissions s on s.id = r.submission_id
          where r.id = $1
@@ -82,26 +86,40 @@ export class PlanDraftService {
     });
     if (!claimed) return;
 
-    const skip = claimed.flags.some((flag) => (AI_SKIP_FLAGS as readonly string[]).includes(flag));
+    const highRisk = claimed.flags.some((flag) => (AI_SKIP_FLAGS as readonly string[]).includes(flag));
+    const blocked = highRisk ? null : await this.manualBlock();
+    const skipReason = highRisk ? 'high_risk' : blocked?.reason ?? null;
     let draft = emptyDraft();
-    let aiStatus: 'drafted' | 'skipped' | 'failed' = skip ? 'skipped' : 'drafted';
-    let reason: string | null = skip ? 'high_risk' : null;
-    let providerName = skip ? 'none' : this.provider.name;
+    let aiStatus: 'drafted' | 'skipped' | 'failed' = skipReason ? 'skipped' : 'drafted';
+    let reason: string | null = skipReason;
+    let providerName = skipReason ? 'none' : this.provider.name;
     let rawOutput: string | null = null;
-    if (!skip) {
+    let model = '';
+    let promptVersion = PROMPT_VERSION;
+    let tokens = 0;
+    let costMicros = 0;
+    let latencyMs = 0;
+    if (!skipReason) {
+      const started = Date.now();
       try {
         const produced = await this.provider.draft({
           goal: claimed.answers.goal,
           flags: claimed.flags,
         });
+        latencyMs = Date.now() - started;
         rawOutput = encryptText(JSON.stringify(produced), this.env.FIELD_KEY);
         providerName = produced.provider ?? providerName;
+        model = produced.usage?.model ?? '';
+        promptVersion = produced.usage?.promptVersion || PROMPT_VERSION;
+        tokens = usageCount(produced.usage?.tokens);
+        costMicros = usageCount(produced.usage?.costMicros);
         if (isUsable(produced)) draft = producedToInput(produced);
         else {
           aiStatus = 'failed';
           reason = 'invalid_draft';
         }
       } catch {
+        latencyMs = Math.max(0, Date.now() - started);
         aiStatus = 'failed';
         reason = 'provider_error';
       }
@@ -120,11 +138,46 @@ export class PlanDraftService {
         `update plan_requests set status = 'in_review', updated_at = now() where id = $1`,
         [requestId],
       );
-      await client.query(
-        `insert into ai_generations (id, request_id, provider, status, skipped_reason, raw_output)
-         values ($1, $2, $3, $4, $5, $6)`,
-        [uuidv7(), requestId, providerName, aiStatus, reason, rawOutput],
+      const attempt = await client.query<{ n: number }>(
+        `select coalesce(max(attempt_no), 0) + 1 as n from ai_generations where request_id = $1`,
+        [requestId],
       );
+      await client.query(
+        `insert into ai_generations
+           (id, request_id, provider, status, skipped_reason, raw_output, attempt_no, model,
+            prompt_version, schema_version, tokens, latency_ms, cost_micros)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [
+          uuidv7(),
+          requestId,
+          providerName,
+          aiStatus,
+          reason,
+          rawOutput,
+          attempt.rows[0]?.n ?? 1,
+          model,
+          promptVersion,
+          claimed.schema_version,
+          tokens,
+          latencyMs,
+          costMicros,
+        ],
+      );
+      if (reason === 'cost_cap' && blocked) {
+        const dayStart = tehranDayStartUtc();
+        const prior = await client.query(
+          `select id from audit_logs where action = 'ai_cost_cap' and created_at >= $1 limit 1`,
+          [dayStart],
+        );
+        if ((prior.rowCount ?? 0) === 0) {
+          await audit(client, null, 'ai_cost_cap', 'ai_controls', null, {
+            spentMicros: blocked.spentMicros,
+            capMicros: blocked.capMicros,
+          });
+        }
+        aiCostCapHits.inc();
+      }
+      aiAttempts.inc({ status: aiStatus });
       await client.query(
         `insert into request_events (id, request_id, kind, detail) values ($1, $2, $3, $4::jsonb)`,
         [uuidv7(), requestId, aiStatus === 'drafted' ? 'ai_drafted' : 'ai_skipped', JSON.stringify({ status: aiStatus })],
@@ -133,6 +186,26 @@ export class PlanDraftService {
         await notify(client, claimed.specialist_id, 'draft_ready', { requestId });
       }
     });
+  }
+
+  private async manualBlock(): Promise<{ reason: 'kill_switch' | 'cost_cap'; spentMicros: number; capMicros: number } | null> {
+    const controls = await this.pool.query<{ kill_switch: boolean; daily_cost_cap_micros: string | null }>(
+      `select kill_switch, daily_cost_cap_micros from ai_controls where id = true`,
+    );
+    const row = controls.rows[0];
+    const capMicros = row?.daily_cost_cap_micros == null ? null : Number(row.daily_cost_cap_micros);
+    const spent = await this.pool.query<{ spent: string }>(
+      `select coalesce(sum(cost_micros), 0)::text as spent from ai_generations where created_at >= $1`,
+      [tehranDayStartUtc()],
+    );
+    const spentMicros = Number(spent.rows[0]?.spent ?? 0);
+    const reason = manualDraftReason({
+      killSwitch: row?.kill_switch ?? false,
+      spentMicros,
+      capMicros,
+    });
+    if (!reason) return null;
+    return { reason, spentMicros, capMicros: capMicros ?? 0 };
   }
 
   async copyPublishedDraft(client: PoolClient, parentRequestId: string, requestId: string): Promise<void> {

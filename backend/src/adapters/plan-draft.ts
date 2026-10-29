@@ -15,9 +15,17 @@ export interface MealDraft {
   items: MealItemDraft[];
 }
 
+export interface DraftUsage {
+  model: string;
+  promptVersion: string;
+  tokens: number;
+  costMicros: number;
+}
+
 export interface PlanDraft {
   days: Array<{ meals: MealDraft[] }>;
   provider?: string;
+  usage?: DraftUsage;
 }
 
 export interface PlanDraftInput {
@@ -71,10 +79,11 @@ export class FakePlanDraftProvider implements PlanDraftProvider {
   readonly callsExternalNetwork = false;
 
   async draft(_input: PlanDraftInput): Promise<PlanDraft> {
-    return {
-      provider: this.name,
-      days: Array.from({ length: 7 }, () => ({ meals: DAY.map((meal) => ({ ...meal, items: meal.items.map((item) => ({ ...item })) })) })),
-    };
+      return {
+        provider: this.name,
+        usage: { model: 'fake', promptVersion: 'v1', tokens: 12, costMicros: 1000 },
+        days: Array.from({ length: 7 }, () => ({ meals: DAY.map((meal) => ({ ...meal, items: meal.items.map((item) => ({ ...item })) })) })),
+      };
   }
 }
 
