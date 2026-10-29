@@ -39,6 +39,8 @@ The worker expires a pending top-up after 30 minutes without crediting it. A pay
 
 `GET /v1/admin/ai-cost` is today's model spend in Asia/Tehran. `PUT /v1/admin/ai-controls` sets a daily cap, in micros, or turns the model off. Either one makes the next draft a blank week for the specialist, and the raw model text is still stored only when the model actually ran. A cost-cap alert is written once per Tehran day.
 
+`POST /v1/admin/wallet-adjustments` records a cash correction. A debit is the written record of a bank refund: it lowers cash, leaves promo untouched, and does not call a bank or accept a card. Repeating the same `referenceId` does not apply it twice. `GET /v1/admin/outbox/dead` lists queue events that stopped after 10 attempts, without their payload. `POST /v1/admin/outbox/:id/retry` puts one of those events back in the queue.
+
 `GET /v1/payments/gateways` lists the enabled gateways. A top-up can name one of them; otherwise it uses `PAYMENT_GATEWAY`. Sandbox completion only credits a payment that was started on `sandbox`. `idpay` and Zarinpal stay unavailable until their HTTP adapters exist. Admin SLA and payment totals are read from `DATABASE_REPLICA_URL` when it is set, and those report transactions cannot write. The specialist SLA is the first edit, question, or publication within 24 hours.
 
 ## Docker

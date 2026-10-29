@@ -5,6 +5,8 @@ import { uuidv7 } from '../common/id.js';
 import { audit, toman, withTransaction } from '../common/sql.js';
 import { tehranDayStartUtc, tehranToday } from '../common/time.js';
 import { PG_POOL } from '../database/database.js';
+import { OUTBOX_MAX_ATTEMPTS } from '../jobs/outbox-policy.js';
+import { debitFits, signedAdjustment } from './adjustment.js';
 
 @Injectable()
 export class AdminService {
@@ -308,5 +310,113 @@ export class AdminService {
     const row = rows.rows[0];
     if (!row) throw new ApiError(500, 'ai_controls_missing', 'تنظیم مدل پیدا نشد');
     return row;
+  }
+
+  async adjustCash(
+    actorId: string,
+    input: {
+      userId: string;
+      amountToman: number;
+      direction: 'debit' | 'credit';
+      reason: string;
+      referenceId: string;
+    },
+  ) {
+    if (!Number.isSafeInteger(input.amountToman) || input.amountToman <= 0 || input.amountToman > 100_000_000) {
+      throw new ApiError(400, 'validation', 'مبلغ درست نیست');
+    }
+    const reason = input.reason.trim();
+    if (reason.length < 3 || reason.length > 500) {
+      throw new ApiError(400, 'validation', 'دلیل اصلاح را بنویسید');
+    }
+    const signed = signedAdjustment(input.direction, input.amountToman);
+    return withTransaction(this.pool, async (client) => {
+      const wallet = await client.query<{ cash_toman: string; promo_toman: string }>(
+        `select cash_toman, promo_toman from wallets where user_id = $1 for update`,
+        [input.userId],
+      );
+      const held = wallet.rows[0];
+      if (!held) throw new ApiError(404, 'not_found', 'کیف پول پیدا نشد');
+      const existing = await client.query<{ user_id: string; amount_toman: string }>(
+        `select user_id, amount_toman from wallet_ledger
+         where kind = 'adjustment' and reference_id = $1 and bucket = 'cash'`,
+        [input.referenceId],
+      );
+      const prior = existing.rows[0];
+      if (prior) {
+        if (prior.user_id !== input.userId || Number(prior.amount_toman) !== signed) {
+          throw new ApiError(409, 'adjustment_conflict', 'این شناسه قبلاً برای اصلاح دیگری استفاده شده است');
+        }
+        return this.adjustmentResult(held, input);
+      }
+      if (input.direction === 'debit' && !debitFits(Number(held.cash_toman), input.amountToman)) {
+        throw new ApiError(402, 'insufficient_funds', 'موجودی نقدی کافی نیست');
+      }
+      await client.query(
+        `update wallets set cash_toman = cash_toman + $2, version = version + 1 where user_id = $1`,
+        [input.userId, signed],
+      );
+      await client.query(
+        `insert into wallet_ledger (id, user_id, bucket, amount_toman, kind, reference_id)
+         values ($1, $2, 'cash', $3, 'adjustment', $4)`,
+        [uuidv7(), input.userId, signed, input.referenceId],
+      );
+      const next = await client.query<{ cash_toman: string; promo_toman: string }>(
+        `select cash_toman, promo_toman from wallets where user_id = $1`,
+        [input.userId],
+      );
+      await audit(client, actorId, 'wallet_adjusted', 'wallet', input.userId, {
+        direction: input.direction,
+        amountToman: input.amountToman,
+        referenceId: input.referenceId,
+        reason,
+      });
+      return this.adjustmentResult(next.rows[0] ?? held, input);
+    });
+  }
+
+  async deadLetters() {
+    const rows = await this.pool.query<{ id: string; topic: string; attempts: number; created_at: Date }>(
+      `select id, topic, attempts, created_at
+       from outbox_events
+       where dispatched_at is null and attempts >= $1
+       order by created_at
+       limit 100`,
+      [OUTBOX_MAX_ATTEMPTS],
+    );
+    return {
+      events: rows.rows.map((row) => ({
+        id: row.id,
+        topic: row.topic,
+        attempts: row.attempts,
+        createdAt: row.created_at.toISOString(),
+      })),
+    };
+  }
+
+  async retryDeadLetter(actorId: string, id: string) {
+    const updated = await this.pool.query(
+      `update outbox_events set attempts = 0
+       where id = $1 and dispatched_at is null and attempts >= $2
+       returning id`,
+      [id, OUTBOX_MAX_ATTEMPTS],
+    );
+    if ((updated.rowCount ?? 0) === 0) throw new ApiError(404, 'not_found', 'رویداد مرده پیدا نشد');
+    await audit(this.pool, actorId, 'outbox_retried', 'outbox_event', id, {});
+    return { id, attempts: 0 };
+  }
+
+  private adjustmentResult(
+    wallet: { cash_toman: string; promo_toman: string },
+    input: { userId: string; amountToman: number; direction: 'debit' | 'credit'; referenceId: string },
+  ) {
+    return {
+      userId: input.userId,
+      direction: input.direction,
+      amountToman: input.amountToman,
+      referenceId: input.referenceId,
+      cashToman: toman(wallet.cash_toman),
+      promoToman: toman(wallet.promo_toman),
+    };
   }
 }

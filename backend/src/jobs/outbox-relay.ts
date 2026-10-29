@@ -2,9 +2,9 @@ import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nest
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.js';
 import { JOB_QUEUE, type JobQueue } from './job-queue.js';
+import { OUTBOX_MAX_ATTEMPTS } from './outbox-policy.js';
 import { outboxDispatched, outboxDispatchFailures } from '../metrics/metrics.js';
 
-const MAX_ATTEMPTS = 10;
 const BATCH = 20;
 
 interface OutboxRow {
@@ -130,7 +130,7 @@ export class OutboxRelay implements OnModuleInit, OnModuleDestroy {
        from claimed
        where e.id = claimed.id
        returning e.id, e.topic, e.aggregate_id, e.payload, e.attempts`,
-      [MAX_ATTEMPTS, BATCH],
+      [OUTBOX_MAX_ATTEMPTS, BATCH],
     );
     return result.rows;
   }

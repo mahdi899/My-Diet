@@ -152,6 +152,33 @@ export class AdminController {
     return this.admin.aiCost();
   }
 
+  @Post('wallet-adjustments')
+  adjust(@Req() req: Request, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['userId', 'amountToman', 'direction', 'reason', 'referenceId']);
+    const direction = requiredString(record, 'direction', 10);
+    if (direction !== 'debit' && direction !== 'credit') {
+      throw new ApiError(400, 'validation', 'جهت اصلاح درست نیست');
+    }
+    return this.admin.adjustCash(actor(req).id, {
+      userId: requiredUuid(record.userId),
+      amountToman: requiredInt(record.amountToman),
+      direction,
+      reason: requiredString(record, 'reason', 500),
+      referenceId: requiredUuid(record.referenceId),
+    });
+  }
+
+  @Get('outbox/dead')
+  deadLetters() {
+    return this.admin.deadLetters();
+  }
+
+  @Post('outbox/:id/retry')
+  retryDeadLetter(@Req() req: Request, @Param('id') id: string) {
+    return this.admin.retryDeadLetter(actor(req).id, requiredUuid(id));
+  }
+
   @Post('users/:id/status')
   status(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
     const record = bodyRecord(body);
