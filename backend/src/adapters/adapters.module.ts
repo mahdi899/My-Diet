@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import type { Pool } from 'pg';
+import { PG_POOL } from '../database/database.js';
+import { ConfiguredAiProvider } from './configured-ai.js';
 import { ENV, EnvError, type Env } from '../config/env.js';
 import {
   ConsoleSmsProvider,
@@ -53,11 +56,11 @@ import {
     },
     {
       provide: PLAN_DRAFT_PROVIDER,
-      inject: [ENV],
-      useFactory: (env: Env) => {
+      inject: [ENV, PG_POOL],
+      useFactory: (env: Env, pool: Pool) => {
         const primary = draftProvider(env, env.AI_PROVIDER);
-        if (env.AI_FAILOVER_PROVIDER === 'none') return primary;
-        return new FailoverPlanDraftProvider(primary, draftProvider(env, env.AI_FAILOVER_PROVIDER));
+        const fallback = env.AI_FAILOVER_PROVIDER === 'none' ? primary : new FailoverPlanDraftProvider(primary, draftProvider(env, env.AI_FAILOVER_PROVIDER));
+        return new ConfiguredAiProvider(pool,env,fallback);
       },
     },
     {
@@ -80,8 +83,9 @@ function gatewayFor(env: Env, name: 'sandbox' | 'zarinpal' | 'idpay') {
   throw new EnvError(`${name} adapter is not available in this build`);
 }
 
-function draftProvider(env: Env, name: 'fake' | 'openai'): PlanDraftProvider {
+function draftProvider(env: Env, name: 'fake' | 'openai' | 'configured'): PlanDraftProvider {
   if (name === 'fake') return new FakePlanDraftProvider();
+  if (name === 'configured') return new UnavailablePlanDraftProvider();
   if (env.NODE_ENV !== 'production') return new UnavailablePlanDraftProvider();
   throw new EnvError('AI provider adapter is not available in this build');
 }

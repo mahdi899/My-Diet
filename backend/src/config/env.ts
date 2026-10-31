@@ -24,7 +24,7 @@ export const envSchema = z.object({
   SMS_PROVIDER: z.enum(['console', 'kavenegar']).default('console'),
   PAYMENT_GATEWAY: z.enum(['sandbox', 'zarinpal', 'idpay']).default('sandbox'),
   PAYMENT_GATEWAYS: z.string().default(''),
-  AI_PROVIDER: z.enum(['fake', 'openai']).default('fake'),
+  AI_PROVIDER: z.enum(['fake', 'openai', 'configured']).default('fake'),
   AI_FAILOVER_PROVIDER: z.enum(['none', 'fake', 'openai']).default('none'),
   PUSH_PROVIDER: z.enum(['console', 'fcm']).default('console'),
   KAVENEGAR_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
