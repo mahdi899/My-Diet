@@ -9,6 +9,61 @@ import '../screens/shared.dart';
 import '../screens/wallet_flow.dart';
 import 'ui.dart';
 
+class RevisionConversationCard extends StatelessWidget {
+  const RevisionConversationCard({super.key, required this.request});
+  final DietRequest request;
+  @override
+  Widget build(BuildContext context) {
+    final r = request;
+    return Surface(
+      key: const ValueKey('revision-conversation-status'),
+      color: sage,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Heading('وضعیت برنامه'),
+          const SizedBox(height: 8),
+          Text(
+            r.revisionAwaitingUser
+                ? 'در انتظار پاسخ کاربر'
+                : r.revisionReply.isNotEmpty
+                ? 'پاسخت برای متخصص ارسال شد'
+                : 'درخواست اصلاح در حال بررسی است',
+            style: const TextStyle(
+              color: pine,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (r.revisionMessage.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text(
+              'پیام متخصص',
+              style: TextStyle(color: muted, fontSize: 11),
+            ),
+            Text(r.revisionMessage),
+          ],
+          if (r.revisionReply.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'پاسخ تو: ${r.revisionReply}',
+              style: const TextStyle(color: muted, fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            key: const ValueKey('reply-to-revision'),
+            onPressed: () =>
+                pushPage(context, const ChatScreen(threadId: 'user-main')),
+            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+            label: Text(r.revisionAwaitingUser ? 'پاسخ' : 'مشاهدهٔ گفتگو'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class RequestInformationCard extends StatelessWidget {
   const RequestInformationCard({super.key, required this.request});
   final DietRequest request;

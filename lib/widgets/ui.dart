@@ -24,11 +24,13 @@ class PageBody extends StatelessWidget {
     this.padding = 20,
     this.controller,
     this.scrollable = true,
+    this.spacing = 18,
   });
   final List<Widget> children;
   final double padding;
   final ScrollController? controller;
   final bool scrollable;
+  final double spacing;
   @override
   Widget build(BuildContext context) {
     final content = Center(
@@ -37,7 +39,7 @@ class PageBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: children
-              .expand((w) => [w, const SizedBox(height: 18)])
+              .expand((w) => [w, SizedBox(height: spacing)])
               .toList(),
         ),
       ),
@@ -59,7 +61,9 @@ class Surface extends StatelessWidget {
     this.color = Colors.white,
     this.padding = 20,
     this.onTap,
+    this.radius = 22,
   });
+  final double radius;
   final Widget child;
   final Color color;
   final double padding;
@@ -68,7 +72,7 @@ class Surface extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: color,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(radius),
       side: const BorderSide(color: Color(0xFFE4EAD9)),
     ),
     clipBehavior: Clip.antiAlias,

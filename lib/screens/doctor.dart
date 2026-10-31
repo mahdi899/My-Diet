@@ -163,53 +163,93 @@ class _ExpertProfileEditorState extends State<ExpertProfileEditor> {
     body: Form(
       key: form,
       child: PageBody(
+        spacing: 12,
         children: [
           const Heading(
             'پروفایل حرفه‌ای تو',
             subtitle:
                 'اطلاعات مطب و تخصص برای کاربر نمایش داده می‌شود؛ شمارهٔ همراه شخصی نمایش عمومی ندارد.',
           ),
-          for (final entry in labels.entries)
-            TextFormField(
-              key: ValueKey('expert-${entry.key}'),
-              controller: fields[entry.key],
-              enabled: !saving,
-              minLines: entry.key == 'address' || entry.key == 'bio' ? 2 : 1,
-              maxLines: entry.key == 'address' || entry.key == 'bio' ? 4 : 1,
-              keyboardType: entry.key == 'clinicPhone' || entry.key == 'mobile'
-                  ? TextInputType.phone
-                  : entry.key == 'experience'
-                  ? TextInputType.number
-                  : TextInputType.text,
-              decoration: InputDecoration(labelText: entry.value),
-              validator: (v) {
-                final text = (v ?? '').trim();
-                if ([
-                      'name',
-                      'specialty',
-                      'medicalCode',
-                      'address',
-                      'clinicPhone',
-                      'city',
-                    ].contains(entry.key) &&
-                    text.isEmpty) {
-                  return 'این قسمت را تکمیل کن.';
-                }
-                if (text.isNotEmpty &&
-                    (entry.key == 'clinicPhone' || entry.key == 'mobile') &&
-                    !RegExp(r'^\+?\d{8,15}$').hasMatch(
-                      latinDigits(text).replaceAll(RegExp(r'[\s\-()]'), ''),
-                    )) {
-                  return 'شمارهٔ تلفن معتبر وارد کن.';
-                }
-                if (text.isNotEmpty && entry.key == 'experience') {
-                  final n = int.tryParse(latinDigits(text));
-                  if (n == null || n < 0 || n > 80) {
-                    return 'تعداد سال معتبر وارد کن.';
-                  }
-                }
-                return null;
-              },
+          for (final group in [
+            (
+              'اطلاعات حرفه‌ای',
+              [
+                'name',
+                'specialty',
+                'medicalCode',
+                'degree',
+                'experience',
+                'bio',
+              ],
+            ),
+            ('اطلاعات مطب', ['city', 'address', 'clinicPhone', 'hours']),
+            ('حساب شخصی', ['mobile']),
+          ])
+            Surface(
+              radius: 14,
+              padding: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Heading(group.$1),
+                  const SizedBox(height: 14),
+                  for (final entry in labels.entries.where(
+                    (e) => group.$2.contains(e.key),
+                  ))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: TextFormField(
+                        key: ValueKey('expert-${entry.key}'),
+                        controller: fields[entry.key],
+                        enabled: !saving,
+                        minLines: entry.key == 'address' || entry.key == 'bio'
+                            ? 2
+                            : 1,
+                        maxLines: entry.key == 'address' || entry.key == 'bio'
+                            ? 4
+                            : 1,
+                        keyboardType:
+                            entry.key == 'clinicPhone' || entry.key == 'mobile'
+                            ? TextInputType.phone
+                            : entry.key == 'experience'
+                            ? TextInputType.number
+                            : TextInputType.text,
+                        decoration: InputDecoration(labelText: entry.value),
+                        validator: (v) {
+                          final text = (v ?? '').trim();
+                          if ([
+                                'name',
+                                'specialty',
+                                'medicalCode',
+                                'address',
+                                'clinicPhone',
+                                'city',
+                              ].contains(entry.key) &&
+                              text.isEmpty) {
+                            return 'این قسمت را تکمیل کن.';
+                          }
+                          if (text.isNotEmpty &&
+                              (entry.key == 'clinicPhone' ||
+                                  entry.key == 'mobile') &&
+                              !RegExp(r'^\+?\d{8,15}$').hasMatch(
+                                latinDigits(
+                                  text,
+                                ).replaceAll(RegExp(r'[\s\-()]'), ''),
+                              )) {
+                            return 'شمارهٔ تلفن معتبر وارد کن.';
+                          }
+                          if (text.isNotEmpty && entry.key == 'experience') {
+                            final n = int.tryParse(latinDigits(text));
+                            if (n == null || n < 0 || n > 80) {
+                              return 'تعداد سال معتبر وارد کن.';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                ],
+              ),
             ),
         ],
       ),

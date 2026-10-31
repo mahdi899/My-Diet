@@ -9,6 +9,7 @@ import 'screens/expert.dart';
 import 'screens/shared.dart';
 import 'theme.dart';
 import 'widgets/weekly_progress.dart';
+import 'screens/clinic_workspace.dart';
 import 'screens/wallet_flow.dart';
 
 class SabzineApp extends StatefulWidget {
@@ -128,7 +129,7 @@ class _PanelShellState extends State<PanelShell> {
     final labels = user
         ? ['خانه', 'برنامه', 'پیگیری', 'پروفایل']
         : expert
-        ? ['خانه', 'درخواست‌ها', 'پیام‌ها', 'پروفایل']
+        ? ['میز کار', 'درخواست‌ها', 'پیام‌ها', 'پروفایل']
         : ['خانه', 'درخواست‌ها', 'کاربران', 'بیشتر'];
     final icons = user
         ? [
@@ -139,10 +140,10 @@ class _PanelShellState extends State<PanelShell> {
           ]
         : expert
         ? [
-            Icons.home_outlined,
-            Icons.assignment_outlined,
-            Icons.chat_bubble_outline,
-            Icons.person_outline,
+            Icons.space_dashboard_outlined,
+            Icons.folder_copy_outlined,
+            Icons.forum_outlined,
+            Icons.badge_outlined,
           ]
         : [
             Icons.home_outlined,
@@ -162,7 +163,7 @@ class _PanelShellState extends State<PanelShell> {
             0 => const ExpertHome(),
             1 => const RequestListScreen(embedded: true),
             2 => const MessagesScreen(embedded: true),
-            _ => const ProfileScreen(),
+            _ => const ClinicProfile(),
           }
         : switch (selected) {
             _ => const EntryScreen(),
@@ -172,13 +173,28 @@ class _PanelShellState extends State<PanelShell> {
         bottom: false,
         child: user ? WeeklyRewardGate(child: page) : page,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selected,
-        onDestinationSelected: select,
-        height: 76,
-        destinations: List.generate(
-          4,
-          (i) => NavigationDestination(icon: Icon(icons[i]), label: labels[i]),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: expert
+              ? const Border(top: BorderSide(color: pine, width: 2))
+              : null,
+        ),
+        child: NavigationBar(
+          indicatorColor: expert ? pine : null,
+          indicatorShape: expert
+              ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(9))
+              : null,
+          selectedIndex: selected,
+          onDestinationSelected: select,
+          height: 76,
+          destinations: List.generate(
+            4,
+            (i) => NavigationDestination(
+              icon: Icon(icons[i]),
+              selectedIcon: Icon(icons[i], color: expert ? Colors.white : null),
+              label: labels[i],
+            ),
+          ),
         ),
       ),
     );

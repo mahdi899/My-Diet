@@ -503,12 +503,16 @@ class DietRequest {
   PlanStatus status;
   bool priority;
   bool revisionRequested = false;
+  bool revisionAwaitingUser = false;
+  String revisionMessage = '', revisionReply = '';
   String revisionReason = '', revisionDetails = '', question = '';
   String infoAnswer = '';
   bool infoAnswerReviewed = false;
-  bool get canApproveInformation => question.isEmpty
-      ? status != PlanStatus.needsInfo
-      : infoAnswer.isNotEmpty && infoAnswerReviewed;
+  bool get canApproveInformation =>
+      !revisionAwaitingUser &&
+      (question.isEmpty
+          ? status != PlanStatus.needsInfo
+          : infoAnswer.isNotEmpty && infoAnswerReviewed);
   DateTime? programStartsOn;
   DateTime? programWeek;
 
@@ -819,6 +823,25 @@ class DemoStore extends ChangeNotifier {
   List<ChatMessage> threadMessages(String id) =>
       messages.where((m) => messageThread(m) == id).toList();
   ChatThread thread(String id) => chatThreads.firstWhere((t) => t.id == id);
+  // Local UI conversations. Reuse a patient's thread, or start an empty one.
+  ChatThread conversationForRequest(String requestId) {
+    final r = request(requestId);
+    if (userRequestIds.contains(requestId) || requestId == userRequestId) {
+      return thread('user-main');
+    }
+    final stableId = 'patient-request-$requestId';
+    final existing = chatThreads.where((t) => t.id == stableId).firstOrNull;
+    if (existing != null) return existing;
+    final matching = chatThreads
+        .where((t) => !t.support && patientName(t) == r.name)
+        .firstOrNull;
+    if (matching != null) return matching;
+    final created = ChatThread(stableId, r.name);
+    chatThreads.add(created);
+    update();
+    return created;
+  }
+
   String patientName(ChatThread t) =>
       t.id == 'user-main' || t.id == 'support-main'
       ? questionnaire.name
@@ -1200,6 +1223,9 @@ class DemoStore extends ChangeNotifier {
         submitQuestionnaire();
       } else if (hasUserRequest) {
         userRequest.revisionRequested = true;
+        userRequest.revisionAwaitingUser = false;
+        userRequest.revisionMessage = '';
+        userRequest.revisionReply = '';
         userRequest.revisionReason = offer.id == 'ai-change'
             ? 'تغییر برنامه با هوش مصنوعی'
             : 'تغییر برنامه با متخصص';
@@ -1815,6 +1841,9 @@ class DemoStore extends ChangeNotifier {
     r.version++;
     r.status = PlanStatus.ready;
     r.revisionRequested = false;
+    r.revisionAwaitingUser = false;
+    r.revisionMessage = '';
+    r.revisionReply = '';
     if (id == userRequestId) {
       notices.insert(0, 'نسخهٔ ${fa(r.version)} برنامه‌ات آماده است.');
     }
@@ -1844,6 +1873,9 @@ class DemoStore extends ChangeNotifier {
   void requestRevision(String reason, String detail) {
     if (!hasUserRequest) return;
     userRequest.revisionRequested = true;
+    userRequest.revisionAwaitingUser = false;
+    userRequest.revisionMessage = '';
+    userRequest.revisionReply = '';
     userRequest.revisionReason = reason;
     userRequest.revisionDetails = detail;
     update();
@@ -1900,7 +1932,28 @@ class DemoStore extends ChangeNotifier {
     messages.add(
       ChatMessage(text.trim(), sender, support: target.support, threadId: id),
     );
-    if (sender == AppRole.user &&
+    final revision = id == 'user-main'
+        ? (hasUserRequest && userRequest.revisionRequested ? userRequest : null)
+        : requests
+              .where(
+                (r) =>
+                    r.revisionRequested &&
+                    (id == 'patient-request-${r.id}' ||
+                        (!target.support && patientName(target) == r.name)),
+              )
+              .firstOrNull;
+    if (revision != null && !target.support) {
+      if (sender == AppRole.expert) {
+        revision.revisionMessage = text.trim();
+        revision.revisionReply = '';
+        revision.revisionAwaitingUser = true;
+        revision.status = PlanStatus.needsInfo;
+      } else if (sender == AppRole.user && revision.revisionAwaitingUser) {
+        revision.revisionReply = text.trim();
+        revision.revisionAwaitingUser = false;
+        revision.status = PlanStatus.reviewing;
+      }
+    } else if (sender == AppRole.user &&
         id == 'user-main' &&
         hasUserRequest &&
         userRequest.status == PlanStatus.needsInfo) {

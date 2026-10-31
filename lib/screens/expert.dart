@@ -4,6 +4,8 @@ import '../data/day.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
 import 'shared.dart';
+import 'clinic_workspace.dart';
+import 'meal_editor.dart';
 
 void openReview(BuildContext context, DietRequest request) {
   DemoScope.of(context).beginReview(request.id);
@@ -13,130 +15,7 @@ void openReview(BuildContext context, DietRequest request) {
 class ExpertHome extends StatelessWidget {
   const ExpertHome({super.key});
   @override
-  Widget build(BuildContext context) {
-    final s = DemoScope.of(context),
-        pending = s.requests.where((r) => r.status != PlanStatus.ready).length;
-    final revisions = s.requests.where((r) => r.revisionRequested).toList(),
-        threads = s.receivedThreads(AppRole.expert);
-    return Scaffold(
-      appBar: AppBar(title: Text('روز بخیر، ${s.experts.first.name}')),
-      body: PageBody(
-        children: [
-          MetricGrid(
-            items: [
-              for (final metric in [
-                ('در انتظار و بررسی', pending, Icons.assignment_outlined),
-                (
-                  'درخواست تغییر برنامه',
-                  revisions.length,
-                  Icons.edit_note_outlined,
-                ),
-              ])
-                Surface(
-                  color: pine,
-                  padding: 17,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(metric.$3, color: const Color(0xFFCCE6AD)),
-                      const SizedBox(height: 10),
-                      Text(
-                        fa(metric.$2),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 27,
-                        ),
-                      ),
-                      Text(
-                        metric.$1,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          Heading(
-            'پیام‌های دریافت‌شده',
-            subtitle: 'آخرین پیام کاربران',
-            action: TextButton(
-              onPressed: () => pushPage(context, const MessagesScreen()),
-              child: const Text('همهٔ گفتگوها'),
-            ),
-          ),
-          if (threads.isEmpty)
-            const EmptyPanel(
-              'پیام تازه‌ای نیست',
-              'پیام‌های کاربران اینجا قرار می‌گیرند.',
-              icon: Icons.chat_bubble_outline,
-            ),
-          for (final thread in threads.take(4))
-            ConversationTile(thread: thread, receivedOnly: true),
-          Heading(
-            'درخواست‌های تغییر برنامه',
-            subtitle: '${fa(revisions.length)} درخواست اصلاح',
-            action: TextButton(
-              onPressed: () => pushPage(
-                context,
-                const RequestListScreen(initialFilter: 'اصلاح‌ها'),
-              ),
-              child: const Text('همه'),
-            ),
-          ),
-          if (revisions.isEmpty)
-            const EmptyPanel(
-              'درخواست تغییری نیست',
-              'وقتی کاربری تغییر برنامه بخواهد، اینجا نمایش داده می‌شود.',
-              icon: Icons.edit_note_outlined,
-            ),
-          for (final r in revisions)
-            Surface(
-              onTap: () => openReview(context, r),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Heading(r.name, subtitle: 'درخواست ${fa(r.id)}'),
-                  const SizedBox(height: 10),
-                  Tag(
-                    r.revisionReason.isEmpty
-                        ? 'درخواست تغییر برنامه'
-                        : r.revisionReason,
-                    warning: true,
-                  ),
-                  if (r.revisionDetails.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      r.revisionDetails,
-                      style: const TextStyle(
-                        color: muted,
-                        fontSize: 12,
-                        height: 1.8,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  const Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'بررسی درخواست تغییر',
-                          style: TextStyle(color: pine, fontSize: 12),
-                        ),
-                      ),
-                      Icon(Icons.chevron_left, color: pine),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const ClinicHome();
 }
 
 class RequestListScreen extends StatefulWidget {
@@ -152,7 +31,9 @@ class RequestListScreen extends StatefulWidget {
 }
 
 class _RequestListScreenState extends State<RequestListScreen> {
-  late String filter = widget.initialFilter;
+  late String filter = widget.initialFilter == 'اصلاح‌ها'
+      ? 'درخواست اصلاح'
+      : widget.initialFilter;
   String query = '';
   @override
   Widget build(BuildContext context) {
@@ -167,48 +48,113 @@ class _RequestListScreenState extends State<RequestListScreen> {
             'در انتظار' =>
               r.status == PlanStatus.queued ||
                   r.status == PlanStatus.generating,
+            'نیازمند بررسی' =>
+              r.status != PlanStatus.ready && r.status != PlanStatus.needsInfo,
             'در بررسی' => r.status == PlanStatus.reviewing,
+            'پاسخ جدید' =>
+              r.infoAnswer.isNotEmpty &&
+                  !r.infoAnswerReviewed &&
+                  r.status != PlanStatus.ready,
             'بررسی‌شده' => r.status == PlanStatus.ready,
-            'اصلاح‌ها' => r.revisionRequested,
-            'منتظر پاسخ' => r.status == PlanStatus.needsInfo,
+            'درخواست اصلاح' || 'اصلاح‌ها' => r.revisionRequested,
+            'منتظر پاسخ' =>
+              r.status == PlanStatus.needsInfo && r.infoAnswer.isEmpty,
             _ => true,
           };
     }).toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('درخواست‌های من'),
+        title: const Text(
+          'پرونده‌ها و درخواست‌ها',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: pine,
+        foregroundColor: Colors.white,
         automaticallyImplyLeading: !widget.embedded,
       ),
-      body: PageBody(
+      body: Column(
         children: [
-          SearchField(
-            onChanged: (v) => setState(() => query = v),
-            hint: 'جست‌وجوی نام یا شمارهٔ درخواست',
-          ),
-          Filters(
-            values: const [
-              'همه',
-              'در انتظار',
-              'در بررسی',
-              'بررسی‌شده',
-              'اصلاح‌ها',
-              'منتظر پاسخ',
-            ],
-            selected: filter,
-            onSelected: (v) => setState(() => filter = v),
-          ),
-          Text(
-            '${fa(rows.length)} درخواست',
-            style: const TextStyle(color: muted, fontSize: 12),
-          ),
-          if (rows.isEmpty)
-            const EmptyPanel(
-              'موردی پیدا نشد',
-              'عبارت جست‌وجو یا فیلتر رو تغییر بده.',
-              icon: Icons.search,
+          Container(
+            decoration: const BoxDecoration(
+              color: pine,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
             ),
-          ...rows.map(
-            (r) => RequestTile(r, onTap: () => openReview(context, r)),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SearchField(
+                  onChanged: (v) => setState(() => query = v),
+                  hint: 'جست‌وجوی نام یا شمارهٔ درخواست',
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final value in const [
+                      'همه',
+                      'درخواست اصلاح',
+                      'نیازمند بررسی',
+                      'در انتظار',
+                      'در بررسی',
+                      'پاسخ جدید',
+                      'منتظر پاسخ',
+                      'بررسی‌شده',
+                    ])
+                      ChoiceChip(
+                        label: Text(value),
+                        selected: filter == value,
+                        onSelected: (_) => setState(() => filter = value),
+                        backgroundColor: Colors.white,
+                        selectedColor: Colors.white,
+                        surfaceTintColor: Colors.transparent,
+                        checkmarkColor: pine,
+                        showCheckmark: true,
+                        labelStyle: TextStyle(
+                          color: pine,
+                          fontSize: 11,
+                          fontWeight: filter == value
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                        side: BorderSide(
+                          color: filter == value
+                              ? const Color(0xFFB7C9A1)
+                              : Colors.white,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 9,
+                        ),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: PageBody(
+              spacing: 12,
+              children: [
+                Text(
+                  '${fa(rows.length)} پرونده',
+                  style: const TextStyle(fontSize: 11, color: muted),
+                ),
+                if (rows.isEmpty)
+                  const EmptyPanel(
+                    'موردی پیدا نشد',
+                    'فیلتر یا جست‌وجو را تغییر بده.',
+                    icon: Icons.search,
+                  ),
+                for (final r in rows) ClinicRequestRow(r),
+              ],
+            ),
           ),
         ],
       ),
@@ -292,206 +238,359 @@ class _ReviewScreenState extends State<ReviewScreen> {
       note.text = r.draftNote;
       initialized = true;
     }
-    return Scaffold(
-      appBar: AppBar(title: const Text('بررسی برنامه')),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              OutlinedButton(
-                onPressed: () => needMore(context, r),
-                child: const Text('اطلاعات بیشتر'),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: r.canApproveInformation
-                      ? () => approve(store)
-                      : null,
-                  child: Text(
-                    r.isPublished ? 'تأیید نسخهٔ جدید' : 'تأیید و ارسال برنامه',
-                  ),
-                ),
-              ),
-            ],
+    return DefaultTabController(
+      length: 3,
+      initialIndex: !r.revisionRequested && r.question.isNotEmpty ? 2 : 1,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'بررسی برنامه',
+            style: TextStyle(color: Colors.white),
           ),
+          backgroundColor: pine,
+          foregroundColor: Colors.white,
         ),
-      ),
-      body: PageBody(
-        children: [
-          Surface(
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                if (!r.canApproveInformation)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      r.revisionAwaitingUser || r.infoAnswer.isEmpty
+                          ? 'برای تأیید، منتظر پاسخ کاربر هستیم.'
+                          : 'ابتدا پاسخ کاربر را در تب سؤال و پاسخ بررسی کن.',
+                      style: const TextStyle(color: amber, fontSize: 11),
+                    ),
+                  ),
                 Row(
                   children: [
-                    PersonAvatar(r.name),
-                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: () {
+                        if (r.revisionRequested) {
+                          final thread = store.conversationForRequest(r.id);
+                          pushPage(context, ChatScreen(threadId: thread.id));
+                        } else {
+                          needMore(context, r);
+                        }
+                      },
+                      child: Text(
+                        r.revisionRequested
+                            ? 'گفتگو با کاربر'
+                            : 'اطلاعات بیشتر',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            r.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'درخواست ${fa(r.id)} · نسخهٔ ${fa(r.version + 1)}',
-                            style: const TextStyle(color: muted, fontSize: 11),
-                          ),
-                        ],
+                      child: FilledButton(
+                        onPressed: r.canApproveInformation
+                            ? () => approve(store)
+                            : null,
+                        child: Text(
+                          r.isPublished
+                              ? 'تأیید نسخهٔ جدید'
+                              : 'تأیید و ارسال برنامه',
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                InfoRows({
-                  'هدف': r.goal,
-                  'فعالیت': 'سبک · نمونه',
-                  'شرایط': 'اطلاعات نمونهٔ پرونده',
-                }),
-                TextButton(
-                  onPressed: () => showAnswers(context),
-                  child: const Text('مشاهدهٔ پرسش‌نامه'),
-                ),
               ],
             ),
           ),
-          if (r.question.isNotEmpty)
-            Surface(
-              color: sage,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Heading('اطلاعات بیشتر'),
-                  Text('سؤال شما: ${r.question}'),
-                  const SizedBox(height: 10),
-                  if (r.infoAnswer.isEmpty)
-                    const Notice(
-                      'منتظر پاسخ کاربر؛ تا دریافت و بررسی پاسخ، تأیید برنامه غیرفعال است.',
-                      warning: true,
-                    )
-                  else ...[
-                    Text('پاسخ کاربر: ${r.infoAnswer}'),
-                    const SizedBox(height: 8),
-                    if (!r.infoAnswerReviewed)
-                      OutlinedButton.icon(
-                        key: const ValueKey('review-information-answer'),
-                        onPressed: () => store.markInfoAnswerReviewed(r.id),
-                        icon: const Icon(Icons.done_all),
-                        label: const Text('پاسخ را خواندم و بررسی کردم'),
-                      )
-                    else
-                      const Tag('پاسخ بررسی شد؛ امکان تأیید برنامه فعال است'),
-                  ],
-                ],
-              ),
-            ),
-          if (r.revisionRequested)
-            Notice(
-              '${r.revisionReason}\n${r.revisionDetails}',
-              warning: true,
-              icon: Icons.edit_note,
-            ),
-          const Heading(
-            'پیش‌نویس هفتگی',
-            subtitle:
-                'هر روز را جداگانه بررسی کن؛ انرژی و مقدارها نمونه هستند.',
-          ),
-          SizedBox(
-            height: 50,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: 7,
-              separatorBuilder: (_, i) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => ChoiceChip(
-                label: Text(persianWeekDays[i]),
-                selected: reviewDay == i,
-                onSelected: (_) => setState(() => reviewDay = i),
-              ),
-            ),
-          ),
-          ...r
-              .draftForDay(reviewDay)
-              .asMap()
-              .entries
-              .map(
-                (e) => Surface(
-                  padding: 13,
-                  child: Row(
-                    children: [
-                      FoodArt(kind: e.value.kind, size: 66),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              e.value.name,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: muted,
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Surface(
+                radius: 14,
+                padding: 13,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        PersonAvatar(r.name, size: 36),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                r.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              e.value.title,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                              Text(
+                                'پرونده ${fa(r.id)} · ${r.goal}',
+                                style: const TextStyle(
+                                  color: muted,
+                                  fontSize: 11,
+                                ),
                               ),
-                            ),
-                            Text(
-                              '${e.value.time} · ${fa(e.value.calories)} کیلوکالری',
-                              style: const TextStyle(
-                                color: muted,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        ),
+                        ClinicStatus(r),
+                      ],
+                    ),
+                    if (r.id == store.userRequestId &&
+                        store.questionnaire.health.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          store.questionnaire.health.join(' · '),
+                          style: const TextStyle(fontSize: 10, color: amber),
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'حذف وعده',
-                        onPressed: () => removeMeal(context, store, r, e.key),
-                        icon: const Icon(Icons.delete_outline, color: muted),
-                      ),
-                      IconButton(
-                        tooltip: 'ویرایش ${e.value.name}',
-                        onPressed: () => editMeal(context, r, e.key),
-                        icon: const Icon(Icons.edit_outlined, color: pine),
+                  ],
+                ),
+              ),
+            ),
+            TabBar(
+              tabs: [
+                Tab(text: 'پرونده'),
+                Tab(text: 'برنامه غذایی'),
+                Tab(text: r.revisionRequested ? 'گفتگو' : 'سؤال و پاسخ'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  PageBody(
+                    spacing: 12,
+                    children: [
+                      const Heading('اطلاعات و پرسش‌نامه'),
+                      InfoRows(
+                        r.id == store.userRequestId
+                            ? {
+                                ...store.questionnaire.summary,
+                                ...store.formConfiguration.extraSummary(
+                                  store.questionnaire.extraAnswers,
+                                ),
+                              }
+                            : {
+                                'نام': r.name,
+                                'هدف': r.goal,
+                                'اطلاعات':
+                                    'پروندهٔ نمونه؛ اطلاعات بالینی کامل ثبت نشده است.',
+                              },
                       ),
                     ],
                   ),
-                ),
+                  PageBody(
+                    spacing: 12,
+                    children: [
+                      if (r.revisionRequested)
+                        Notice(
+                          '${r.revisionReason}\n${r.revisionDetails}',
+                          warning: true,
+                        ),
+                      const Heading('پیش‌نویس هفتگی'),
+                      SizedBox(
+                        height: 48,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: 7,
+                          separatorBuilder: (_, i) => const SizedBox(width: 6),
+                          itemBuilder: (_, i) => ChoiceChip(
+                            label: Text(persianWeekDays[i]),
+                            selected: reviewDay == i,
+                            onSelected: (_) => setState(() => reviewDay = i),
+                          ),
+                        ),
+                      ),
+                      for (final e in r.draftForDay(reviewDay).asMap().entries)
+                        Surface(
+                          radius: 14,
+                          padding: 14,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.restaurant_outlined,
+                                    color: pine,
+                                    size: 19,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${e.value.name} · ${e.value.time}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'ویرایش ${e.value.name}',
+                                    onPressed: () =>
+                                        editMeal(context, r, e.key),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 19,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'حذف وعده',
+                                    onPressed: () =>
+                                        removeMeal(context, store, r, e.key),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      size: 19,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                e.value.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              for (final item in e.value.amount.split('\n'))
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Text(
+                                    item,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: muted,
+                                    ),
+                                  ),
+                                ),
+                              const Divider(),
+                              Text(
+                                '${fa(e.value.calories)} کیلوکالری',
+                                style: const TextStyle(
+                                  color: pine,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      OutlinedButton.icon(
+                        onPressed: () => addCustomMeal(context, store, r),
+                        icon: const Icon(Icons.add),
+                        label: const Text('افزودن وعده به برنامه'),
+                      ),
+                      TextField(
+                        controller: note,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'یادداشت برای کاربر',
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          r.draftNote = note.text;
+                          store.update();
+                          showToast(context, 'پیش‌نویس ذخیره شد.');
+                        },
+                        icon: const Icon(Icons.save_outlined),
+                        label: const Text('ذخیرهٔ موقت'),
+                      ),
+                      const Text(
+                        'اطلاعات و مقدارها در این نسخه نمونه‌اند.',
+                        style: TextStyle(fontSize: 10, color: muted),
+                      ),
+                    ],
+                  ),
+                  PageBody(
+                    spacing: 12,
+                    children: [
+                      if (r.revisionRequested)
+                        Surface(
+                          color: sage,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Heading('گفتگو دربارهٔ اصلاح برنامه'),
+                              Text(
+                                r.revisionDetails.isNotEmpty
+                                    ? r.revisionDetails
+                                    : r.revisionReason,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'برای پرسیدن سؤال و هماهنگی تغییرات، در گفتگوی کاربر پیام بده.',
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  final thread = store.conversationForRequest(
+                                    r.id,
+                                  );
+                                  pushPage(
+                                    context,
+                                    ChatScreen(threadId: thread.id),
+                                  );
+                                },
+                                child: const Text('باز کردن گفتگو'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (!r.revisionRequested && r.question.isNotEmpty)
+                        Surface(
+                          radius: 14,
+                          color: sage,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Heading('اطلاعات بیشتر'),
+                              Text('سؤال شما: ${r.question}'),
+                              const SizedBox(height: 10),
+                              if (r.infoAnswer.isEmpty)
+                                const Notice(
+                                  'منتظر پاسخ کاربر؛ تا دریافت و بررسی پاسخ، تأیید برنامه غیرفعال است.',
+                                  warning: true,
+                                )
+                              else ...[
+                                Text('پاسخ کاربر: ${r.infoAnswer}'),
+                                const SizedBox(height: 8),
+                                if (!r.infoAnswerReviewed)
+                                  OutlinedButton.icon(
+                                    key: const ValueKey(
+                                      'review-information-answer',
+                                    ),
+                                    onPressed: () =>
+                                        store.markInfoAnswerReviewed(r.id),
+                                    icon: const Icon(Icons.done_all),
+                                    label: const Text(
+                                      'پاسخ را خواندم و بررسی کردم',
+                                    ),
+                                  )
+                                else
+                                  const Tag(
+                                    'پاسخ بررسی شد؛ امکان تأیید برنامه فعال است',
+                                  ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                      if (!r.revisionRequested && r.question.isEmpty)
+                        const EmptyPanel(
+                          'سؤال بازی وجود ندارد',
+                          'در صورت نیاز، از دکمهٔ اطلاعات بیشتر سؤال خود را ثبت کن.',
+                          icon: Icons.question_answer_outlined,
+                        ),
+                    ],
+                  ),
+                ],
               ),
-          OutlinedButton.icon(
-            onPressed: () => addCustomMeal(context, store, r),
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('افزودن وعده به برنامه'),
-          ),
-          const Notice(
-            'در این نسخه، کنترل تغذیه‌ای واقعی اجرا نمی‌شود. جای نمایش نتیجهٔ کنترل‌ها در نسخهٔ نهایی اینجاست.',
-            icon: Icons.fact_check_outlined,
-          ),
-          TextField(
-            controller: note,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'یادداشت برای کاربر'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () {
-              r.draftNote = note.text;
-              store.update();
-              showToast(context, 'پیش‌نویس در حافظهٔ اپ ذخیره شد.');
-            },
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('ذخیرهٔ موقت'),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -556,145 +655,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<Meal?> _editMealSheet(
     BuildContext context,
-    Meal m, {
+    Meal meal, {
     required String heading,
     bool editing = false,
-  }) async {
-    final title = TextEditingController(text: m.title),
-        amount = TextEditingController(text: m.amount),
-        time = TextEditingController(text: m.time),
-        details = TextEditingController(text: m.details),
-        calories = TextEditingController(text: m.calories.toString()),
-        slot = TextEditingController(text: m.name);
-    final form = GlobalKey<FormState>();
-    final sheetRoute = ModalBottomSheetRoute<Meal>(
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            8,
-            24,
-            24 + MediaQuery.viewInsetsOf(sheet).bottom,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: form,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Heading(heading),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: m.name,
-                    decoration: const InputDecoration(labelText: 'نوع وعده'),
-                    items:
-                        {
-                              m.name,
-                              'صبحانه',
-                              'ناهار',
-                              'میان‌وعده',
-                              'شام',
-                              'وعدهٔ دیگر',
-                            }
-                            .map(
-                              (name) => DropdownMenuItem(
-                                value: name,
-                                child: Text(name),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: (value) => slot.text = value ?? m.name,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: title,
-                    decoration: const InputDecoration(labelText: 'نام غذا'),
-                    validator: (v) =>
-                        (v ?? '').trim().isEmpty ? 'نام غذا لازم است.' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: amount,
-                    minLines: 3,
-                    maxLines: 7,
-                    decoration: const InputDecoration(
-                      labelText: 'آیتم‌ها و مقدار دقیق هر کدام',
-                      hintText:
-                          'برنج پخته: ۱۵۰ گرم\nمرغ: ۱۲۰ گرم\nسالاد: ۱ لیوان',
-                    ),
-                    validator: (v) =>
-                        (v ?? '').trim().isEmpty ? 'مقدار لازم است.' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: calories,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'انرژی وعده / کیلوکالری',
-                    ),
-                    validator: (v) {
-                      final n = int.tryParse(latinDigits(v ?? ''));
-                      return n == null || n <= 0 ? 'عدد مثبت وارد کن.' : null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: time,
-                    decoration: const InputDecoration(
-                      labelText: 'ساعت وعده',
-                      hintText: 'مثلاً ۱۹:۳۰',
-                    ),
-                    validator: (v) => (v ?? '').trim().isEmpty
-                        ? 'ساعت وعده را وارد کن.'
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: details,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'مواد اولیه و توضیح',
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  PrimaryButton(
-                    editing ? 'ذخیرهٔ ویرایش' : 'افزودن به برنامه',
-                    onPressed: () {
-                      if (!form.currentState!.validate()) return;
-                      Navigator.pop(
-                        sheet,
-                        m.copyWith(
-                          name: slot.text.trim(),
-                          title: title.text.trim(),
-                          amount: amount.text.trim(),
-                          time: time.text.trim(),
-                          details: details.text.trim(),
-                          calories: int.parse(latinDigits(calories.text)),
-                        ),
-                      );
-                    },
-                    icon: Icons.check,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    final result = await Navigator.of(context).push<Meal>(sheetRoute);
-    await sheetRoute.completed;
-    title.dispose();
-    amount.dispose();
-    time.dispose();
-    details.dispose();
-    calories.dispose();
-    slot.dispose();
-    return result;
-  }
+  }) => Navigator.of(context).push<Meal>(
+    MaterialPageRoute(
+      builder: (_) => MealEditorScreen(meal: meal, editing: editing),
+    ),
+  );
 
   Future<void> needMore(BuildContext context, DietRequest r) async {
     final store = DemoScope.of(context), text = TextEditingController();
@@ -732,47 +700,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
     text.dispose();
   }
-
-  void showAnswers(BuildContext context) {
-    final store = DemoScope.of(context);
-    final isUser = widget.requestId == store.userRequestId;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Heading('پاسخ‌های پرسش‌نامه'),
-              const SizedBox(height: 15),
-              InfoRows(
-                isUser
-                    ? {
-                        ...store.questionnaire.summary,
-                        ...store.formConfiguration.extraSummary(
-                          store.questionnaire.extraAnswers,
-                        ),
-                      }
-                    : {
-                        'پرونده': 'اطلاعات نمونه',
-                        'هدف': store.request(widget.requestId).goal,
-                      },
-              ),
-              const SizedBox(height: 15),
-              OutlinedButton(
-                onPressed: () => Navigator.pop(sheet),
-                child: const Text('بستن'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class ExpertPatientsScreen extends StatefulWidget {
@@ -790,14 +717,13 @@ class _ExpertPatientsScreenState extends State<ExpertPatientsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('کاربران من')),
       body: PageBody(
+        spacing: 12,
         children: [
           SearchField(
             onChanged: (v) => setState(() => query = v),
             hint: 'جست‌وجوی نام کاربر',
           ),
-          ...rows.map(
-            (r) => RequestTile(r, onTap: () => openReview(context, r)),
-          ),
+          ...rows.map((r) => ClinicRequestRow(r)),
           if (rows.isEmpty)
             const EmptyPanel(
               'کاربری پیدا نشد',

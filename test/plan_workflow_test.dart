@@ -232,8 +232,9 @@ void main() {
       }
 
       await enter('نام غذا', 'شام تازه');
-      await enter('آیتم‌ها و مقدار دقیق هر کدام', 'مرغ: ۱۰۰ گرم\nنان: ۵۰ گرم');
-      await enter('انرژی وعده / کیلوکالری', '۴۰۰');
+      await enter('نام آیتم', 'مرغ');
+      await enter('مقدار مصرف', '۱۰۰ گرم');
+      await enter('انرژی / کیلوکالری', '۴۰۰');
       await enter('ساعت وعده', '۲۰:۰۰');
       final save = find.widgetWithText(PrimaryButton, 'افزودن به برنامه');
       await t.ensureVisible(save);

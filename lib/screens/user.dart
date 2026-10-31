@@ -83,10 +83,14 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
             children: [
               EnergyCard(date: date),
               DailyAdviceCard(date: date),
-              if (r != null && r.question.isNotEmpty)
+              if (r != null && r.revisionRequested)
+                RevisionConversationCard(request: r),
+              if (r != null && !r.revisionRequested && r.question.isNotEmpty)
                 RequestInformationCard(request: r),
               if (hasPlan) const WeeklyStreakCard(),
-              if (hasPlan && r!.status != PlanStatus.ready)
+              if (hasPlan &&
+                  !r!.revisionRequested &&
+                  r.status != PlanStatus.ready)
                 Surface(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -105,10 +109,6 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                     child: const Text('برنامهٔ کامل'),
                   ),
                 ),
-                if (r!.revisionRequested)
-                  const Notice(
-                    'درخواست اصلاح در حال بررسی است؛ برنامهٔ تأییدشدهٔ فعلی همچنان در دسترس است.',
-                  ),
                 for (var i = 0; i < meals.length; i++)
                   ScheduledMealTile(date: date, index: i),
               ] else if (!s.userSignedIn || r == null)
@@ -132,7 +132,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                     ],
                   ),
                 )
-              else
+              else if (!r.revisionRequested)
                 Surface(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1163,11 +1163,12 @@ class ProfileScreen extends StatelessWidget {
                     Icons.history,
                     onTap: () => pushPage(context, const HistoryScreen()),
                   ),
-                MenuRow(
-                  'سفارش‌ها و پرداخت‌ها',
-                  Icons.credit_card_outlined,
-                  onTap: () => pushPage(context, const OrdersScreen()),
-                ),
+                if (!expert)
+                  MenuRow(
+                    'سفارش‌ها و پرداخت‌ها',
+                    Icons.credit_card_outlined,
+                    onTap: () => pushPage(context, const OrdersScreen()),
+                  ),
               ],
             ),
           ),

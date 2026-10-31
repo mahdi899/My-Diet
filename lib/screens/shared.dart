@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
 import '../data/wallet_catalog.dart';
 import '../theme.dart';
+import 'expert.dart';
+import 'clinic_workspace.dart';
 import '../widgets/ui.dart';
 
 class NoticesScreen extends StatelessWidget {
@@ -58,9 +60,74 @@ class _MessagesScreenState extends State<MessagesScreen> {
               s.threadMessages(t.id).any((m) => m.text.contains(query)),
         )
         .toList();
+    if (role == AppRole.expert) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'صندوق گفتگوها',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: pine,
+          foregroundColor: Colors.white,
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              color: pine,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '${fa(threads.length)} گفتگو با کاربران',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  SearchField(
+                    hint: 'جست‌وجوی نام یا پیام',
+                    onChanged: (v) => setState(() => query = v),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      if (threads.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('گفتگویی پیدا نشد'),
+                        ),
+                      for (var i = 0; i < threads.length; i++) ...[
+                        if (i > 0)
+                          const Divider(height: 1, indent: 15, endIndent: 15),
+                        ClinicConversationRow(thread: threads[i]),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.support ? 'گفتگوهای پشتیبانی' : 'پیام‌ها'),
+        title: Text(
+          widget.support
+              ? 'گفتگوهای پشتیبانی'
+              : role == AppRole.expert
+              ? 'صندوق پیام‌ها'
+              : 'پیام‌ها',
+        ),
         automaticallyImplyLeading: !widget.embedded,
       ),
       body: PageBody(
@@ -103,12 +170,14 @@ class ConversationTile extends StatelessWidget {
         title = s.threadTitle(thread, role);
     return Surface(
       key: ValueKey('conversation-${thread.id}'),
-      padding: 16,
+      radius: role == AppRole.expert ? 14 : 22,
+      padding: role == AppRole.expert ? 12 : 16,
       onTap: () => pushPage(context, ChatScreen(threadId: thread.id)),
       child: Row(
         children: [
           PersonAvatar(
             title,
+            size: role == AppRole.expert ? 36 : 48,
             color: thread.support ? const Color(0xFFF2E8D6) : sage,
           ),
           const SizedBox(width: 12),
@@ -126,7 +195,7 @@ class ConversationTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   last?.text ?? 'برای شروع گفتگو لمس کن',
-                  maxLines: 2,
+                  maxLines: role == AppRole.expert ? 1 : 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: muted,
@@ -206,6 +275,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
     final items = s.threadMessages(t.id);
+    final files = s.requests.where((r) => r.name == s.patientName(t));
     if (s.unreadCount(t, role) > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -217,6 +287,13 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(s.threadTitle(t, role)),
+        actions: [
+          if (role == AppRole.expert && !t.support && files.isNotEmpty)
+            TextButton(
+              onPressed: () => openReview(context, files.first),
+              child: const Text('مشاهده پرونده'),
+            ),
+        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(24),
           child: Padding(

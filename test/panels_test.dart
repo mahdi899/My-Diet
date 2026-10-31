@@ -5,7 +5,6 @@ import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/form_config.dart';
 import 'package:sabzine_flutter/data/workspace_settings_storage.dart';
-import 'package:sabzine_flutter/widgets/ui.dart';
 import 'widget_test.dart' show MemoryStorage, validAnswers, mobile, next;
 
 class SettingsMemory implements WorkspaceSettingsStorage {
@@ -166,13 +165,8 @@ void main() {
       expect(find.text('ادامهٔ بررسی'), findsNothing);
       expect(find.text('پیام‌های دریافت‌شده'), findsOneWidget);
       expect(find.text('درخواست‌های تغییر برنامه'), findsOneWidget);
-      expect(
-        t
-            .widgetList<Surface>(find.byType(Surface))
-            .where((s) => s.color == const Color(0xFF205638))
-            .length,
-        2,
-      );
+      expect(find.text('نیازمند بررسی'), findsOneWidget);
+      expect(find.text('پاسخ‌های جدید'), findsOneWidget);
       await t.tap(find.byType(NavigationDestination).at(2));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('chat-input')), findsNothing);
@@ -210,7 +204,7 @@ void main() {
       await t.tap(find.byType(NavigationDestination).at(3));
       await t.pumpAndSettle();
       expect(find.text('متخصص نمونه'), findsNothing);
-      await tapVisible(t, find.text('اطلاعات فردی'));
+      await tapVisible(t, find.text('ویرایش اطلاعات فردی و مطب'));
       for (final field in {
         'medicalCode': '۸۸۹۹',
         'address': 'خیابان تازه، ساختمان مطب',
