@@ -17,7 +17,8 @@
     "test:integration": "npm run build && node --import tsx --test --test-concurrency=1 test/integration/phase0.spec.ts test/integration/phase1.spec.ts test/integration/phase2.spec.ts test/integration/phase3.spec.ts test/integration/phase4.spec.ts test/integration/phase5.spec.ts test/integration/phase6.spec.ts test/integration/phase7.spec.ts test/integration/phase8.spec.ts test/integration/phase9.spec.ts test/integration/phase10.spec.ts test/integration/phase11.spec.ts test/integration/phase12.spec.ts test/integration/phase13.spec.ts test/integration/phase14.spec.ts test/integration/phase15.spec.ts",
     "migrate": "node-pg-migrate -f node-pg-migrate.json up",
     "migrate:down": "node-pg-migrate -f node-pg-migrate.json down",
-    "admin:create": "node --import tsx src/cli/create-admin.ts"
+    "admin:create": "node --import tsx src/cli/create-admin.ts",
+    "admin:password": "node --import tsx src/cli/admin-password.ts"
   },
   "engines": {
     "node": ">=22"

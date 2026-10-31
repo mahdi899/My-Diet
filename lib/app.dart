@@ -6,7 +6,6 @@ import 'screens/splash.dart';
 import 'screens/onboarding.dart';
 import 'screens/user.dart';
 import 'screens/expert.dart';
-import 'screens/admin.dart';
 import 'screens/shared.dart';
 import 'theme.dart';
 import 'widgets/weekly_progress.dart';
@@ -77,6 +76,9 @@ class AppRoot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    if (store.role == AppRole.admin || store.selectedRole == AppRole.admin) {
+      return const EntryScreen();
+    }
     return switch (store.entryStage) {
       EntryStage.roles => const EntryScreen(),
       EntryStage.onboarding => OnboardingScreen(role: store.selectedRole!),
@@ -120,6 +122,7 @@ class _PanelShellState extends State<PanelShell> {
   void select(int i) => setState(() => selected = i);
   @override
   Widget build(BuildContext context) {
+    if (widget.role == AppRole.admin) return const EntryScreen();
     final user = widget.role == AppRole.user,
         expert = widget.role == AppRole.expert;
     final labels = user
@@ -162,10 +165,7 @@ class _PanelShellState extends State<PanelShell> {
             _ => const ProfileScreen(),
           }
         : switch (selected) {
-            0 => const AdminHome(),
-            1 => const AdminRequestsScreen(),
-            2 => const PeopleScreen(),
-            _ => const AdminMoreScreen(),
+            _ => const EntryScreen(),
           };
     return Scaffold(
       body: SafeArea(

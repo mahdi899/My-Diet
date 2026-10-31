@@ -16,6 +16,27 @@ import {
 export class AdminService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  async dashboard(adminId: string) {
+    const today = tehranDayStartUtc();
+    const result = await this.pool.query(`select
+      (select count(*)::int from users where role='user' and status <> 'deleted') as users,
+      (select count(*)::int from users where role='user' and status <> 'deleted' and created_at >= $1::timestamptz - interval '7 days') as new_users,
+      (select coalesce(sum(cash_toman),0)::text from orders where status='paid' and created_at >= now()-interval '30 days') as revenue,
+      (select count(*)::int from orders where status='paid' and created_at >= now()-interval '30 days') as paid_orders,
+      (select count(*)::int from ai_generations where created_at >= $1::timestamptz and created_at < $1::timestamptz + interval '1 day') as ai_today,
+      (select count(*)::int from messages m join conversations c on c.id=m.conversation_id
+       left join conversation_participants cp on cp.conversation_id=c.id and cp.user_id=$2
+       where c.kind='support' and m.author_id<>$2 and m.created_at>coalesce(cp.last_read_at,'-infinity'::timestamptz)) as unread`, [today,adminId]);
+    const row=result.rows[0]!;
+    return { users: row.users, newUsers: row.new_users, revenueToman: toman(row.revenue), paidOrders: row.paid_orders, aiToday: row.ai_today, unreadMessages: row.unread };
+  }
+
+  async orders(limit = 100) {
+    const result = await this.pool.query(`select o.id,u.display_name,u.phone_e164,o.service_code,o.price_toman,o.status,o.created_at
+      from orders o join users u on u.id=o.user_id order by o.created_at desc,o.id desc limit $1`, [limit]);
+    return result.rows.map(row=>({id:row.id,user:row.display_name || row.phone_e164,serviceCode:row.service_code,amountToman:toman(row.price_toman),status:row.status,createdAt:row.created_at.toISOString()}));
+  }
+
   async createSpecialist(actorId: string, input: {
     phoneE164: string;
     displayName: string;

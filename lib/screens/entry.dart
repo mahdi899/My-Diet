@@ -34,7 +34,7 @@ class EntryScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(color: muted),
           ),
-          ...AppRole.values.map(
+          ...[AppRole.user, AppRole.expert].map(
             (r) => Surface(
               onTap: () => DemoScope.of(context).selectRole(r),
               padding: 17,

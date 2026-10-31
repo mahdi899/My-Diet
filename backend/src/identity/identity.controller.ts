@@ -16,6 +16,15 @@ function clientIp(req: Request): string {
 @ApiTags('auth')
 @Controller('v1/auth')
 export class IdentityController {
+  @Public()
+  @Post('admin/login')
+  async adminLogin(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['username', 'password']);
+    const issued = await this.identity.adminLogin(requiredString(record,'username',80),requiredString(record,'password',256));
+    if ('totpRequired' in issued) return issued;
+    return this.present(req,res,issued);
+  }
   constructor(
     private readonly identity: IdentityService,
     @Inject(ENV) private readonly env: Env,

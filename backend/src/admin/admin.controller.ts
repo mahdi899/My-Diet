@@ -34,6 +34,11 @@ export class SpecialistsController {
 @Controller('v1/admin')
 @Roles('admin')
 export class AdminController {
+  @Get('dashboard')
+  dashboard(@Req() req: Request) { return this.admin.dashboard(actor(req).id); }
+
+  @Get('orders')
+  orders() { return this.admin.orders(); }
   constructor(
     private readonly admin: AdminService,
     private readonly maintenance: MaintenanceService,

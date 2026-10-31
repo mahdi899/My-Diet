@@ -1538,6 +1538,7 @@ class DemoStore extends ChangeNotifier {
   DietRequest request(String id) => requests.firstWhere((r) => r.id == id);
   void update() => notifyListeners();
   void selectRole(AppRole value) {
+    if (value == AppRole.admin) return;
     selectedRole = value;
     role = null;
     if (value == AppRole.user) {
@@ -1581,6 +1582,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   void login(AppRole value, {String phone = '09120000000'}) {
+    if (value == AppRole.admin) return;
     role = value;
     selectedRole = value;
     entryStage = EntryStage.home;

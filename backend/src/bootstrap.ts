@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import express from 'express';
+import { resolve } from 'node:path';
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -17,6 +19,13 @@ export async function createApp(): Promise<{
   });
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new ProblemFilter());
+  app.use('/admin', express.static(resolve(process.cwd(), 'admin-web'), {
+    setHeaders(res) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    },
+  }));
   app.enableShutdownHooks();
   if (env.CORS_ORIGINS) {
     app.enableCors({
