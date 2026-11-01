@@ -126,7 +126,7 @@
             if(!candidate.portion?.trim()||!Number.isInteger(candidate.calories)||candidate.calories<=0||candidate.calories>5000||!Number.isFinite(candidate.preparationMinutes)||candidate.preparationMinutes<0||!candidate.instructions?.trim()||!candidate.quantityBasis?.trim()||!candidate.title?.trim()||!candidate.items?.length||candidate.items.some(i=>!i.name?.trim()||!Number.isFinite(i.quantity)||i.quantity<=0||!i.unit?.trim())) {failure='ابتدا همهٔ جزئیات این جایگزین را کامل کن.';return;}
             alternative.approved=true;alternative.reviewedBy=demo?'demo-specialist':'unconfirmed-local';alternative.reviewedAt=new Date().toISOString();
           })));
-          group.append(button('حذف جایگزین',()=>mutate(()=>{meal.alternatives=meal.alternatives.filter(a=>a!==alternative);}))); 
+          group.append(button('حذف جایگزین',()=>mutate(()=>{meal.alternatives=meal.alternatives.filter(a=>a!==alternative);})));
         }
         card.append(group);
       }
