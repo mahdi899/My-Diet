@@ -173,7 +173,7 @@ class WeeklyStreakCard extends StatelessWidget {
                 : 'با تکمیل برنامه، ${formatToman(s.weeklyRewardToman)} اعتبار هدیه بگیر.',
             style: const TextStyle(color: pine, fontSize: 12),
           ),
-          if (claimed && s.canReviewCurrentProgram)
+          if (s.canReviewCurrentProgram)
             TextButton.icon(
               onPressed: () =>
                   pushPage(context, const ProgramReviewSubmitScreen()),

@@ -1,3 +1,5 @@
+import 'weekly_feedback.dart';
+export 'weekly_feedback.dart';
 import 'shopping_list.dart';
 export 'shopping_list.dart';
 import 'dart:convert';
@@ -516,6 +518,8 @@ class DietRequest {
   String draftNote =
       'اگر تهیهٔ غذایی برات سخت بود، از متخصص دربارهٔ جایگزین بپرس.';
   String publishedNote = '';
+  FoodPreferences? preferenceSnapshot;
+  Map<String, dynamic> questionnaireSnapshot = {};
   List<Meal> draft;
   List<Meal> published = [];
   final List<List<Meal>> draftOtherDays = List.generate(
@@ -639,6 +643,7 @@ class DemoStore extends ChangeNotifier {
   DemoStore({
     QuestionnaireStorage? storage,
     NutritionLogStorage? nutritionStorage,
+    WeeklyFeedbackRepository? feedbackRepository,
     WalletStateStorage? walletStorage,
     SessionStorage? sessionStorage,
     this.customerAuth,
@@ -649,6 +654,8 @@ class DemoStore extends ChangeNotifier {
        _storage = storage,
        _settingsStorage = settingsStorage,
        _nutritionStorage = nutritionStorage,
+       feedbackRepository =
+           feedbackRepository ?? MemoryWeeklyFeedbackRepository(),
        _clock = clock ?? DateTime.now {
     final approved = requests[4];
     approved.published = List.unmodifiable(approved.draft);
@@ -1127,7 +1134,8 @@ class DemoStore extends ChangeNotifier {
     if (savingShopping || savingMeal || savingSubstitution) {
       throw StateError('ذخیره دیگری در جریان است.');
     }
-    if (!hasActiveShoppingPlan || ![null, 'have', 'purchased'].contains(status)) {
+    if (!hasActiveShoppingPlan ||
+        ![null, 'have', 'purchased'].contains(status)) {
       throw StateError('برنامه فعال یا وضعیت معتبر نیست.');
     }
     final current = shoppingList().rows.where(
@@ -2161,6 +2169,7 @@ class DemoStore extends ChangeNotifier {
     pendingPlanAcquisition = false;
     saveUserSession();
     userRequestId = null;
+    foodPreferences = null;
     userRequestIds.clear();
     role = selectedRole = AppRole.user;
     entryStage = EntryStage.home;
@@ -2183,6 +2192,12 @@ class DemoStore extends ChangeNotifier {
         specialist: experts.first.name,
         wait: 'همین حالا',
       ),
+    );
+    request(id).preferenceSnapshot = foodPreferences?.accepted == true
+        ? foodPreferences
+        : null;
+    request(id).questionnaireSnapshot = Map<String, dynamic>.from(
+      questionnaire.toJson(),
     );
     userRequestId = id;
     userRequestIds.add(id);
@@ -2242,17 +2257,205 @@ class DemoStore extends ChangeNotifier {
     return null;
   }
 
-  DietRequest? get feedbackProgram {
-    for (final r in requests) {
-      if (userRequestIds.contains(r.id) && completedProgramIds.contains(r.id)) {
-        return r;
+  final WeeklyFeedbackRepository feedbackRepository;
+  final List<WeeklyFeedback> _weeklyFeedback = [];
+  bool savingFeedback = false;
+  String get feedbackOwner =>
+      'demo:${sessionPhone.isEmpty ? 'local' : sessionPhone}';
+  List<WeeklyFeedback> get weeklyFeedback =>
+      List.unmodifiable(_weeklyFeedback.where((f) => f.owner == feedbackOwner));
+  FoodPreferences? foodPreferences;
+  String? feedbackLoadError;
+  Future<void> restoreWeeklyFeedback() async {
+    if (!userSignedIn) return;
+    final owner = feedbackOwner;
+    try {
+      final records = await feedbackRepository.list(owner);
+      final preferences = await feedbackRepository.preferences(owner);
+      if (!userSignedIn || owner != feedbackOwner) return;
+      _weeklyFeedback
+        ..removeWhere((r) => r.owner == owner)
+        ..addAll(records);
+      foodPreferences = preferences;
+      for (final record in records) {
+        _projectPublicFeedback(record);
       }
+      feedbackLoadError = null;
+      update();
+    } catch (_) {
+      feedbackLoadError = 'بازیابی بازخورد انجام نشد؛ دوباره تلاش کن.';
+      update();
     }
-    return null;
+  }
+
+  bool feedbackEligible(DietRequest request) {
+    final week = request.programWeek;
+    return userRequestIds.contains(request.id) &&
+        request.isPublished &&
+        week != null &&
+        (completedProgramIds.contains(request.id) ||
+            dateKey(today).compareTo(
+                  dateKey(DateTime(week.year, week.month, week.day + 6)),
+                ) >=
+                0);
+  }
+
+  DietRequest? get feedbackProgram {
+    final eligible = requests.where(feedbackEligible).toList();
+    if (eligible.isEmpty) return null;
+    return eligible.first;
   }
 
   bool get canReviewCurrentProgram => userSignedIn && feedbackProgram != null;
-  List<ProgramReview> get clinicianFeedback => programReviews;
+  WeeklyFeedback? feedbackFor(DietRequest request) {
+    final matching = weeklyFeedback.where(
+      (f) =>
+          f.requestId == request.id &&
+          f.planVersion == request.version &&
+          f.week == dateKey(request.programWeek!),
+    );
+    return matching.isEmpty ? null : matching.first;
+  }
+
+  List<FeedbackMeal> feedbackMeals(DietRequest request) {
+    final result = <FeedbackMeal>[], week = request.programWeek!;
+    for (var day = 0; day < 7; day++) {
+      final date = DateTime(week.year, week.month, week.day + day);
+      final originals = request.mealsForDay(day);
+      for (var index = 0; index < originals.length; index++) {
+        final selected =
+            _selectedOptions['${request.id}|${request.version}|${dateKey(date)}|$index'];
+        final alternatives = originals[index].alternatives.where(
+          (a) => a.id == selected && a.available,
+        );
+        final meal = alternatives.isEmpty
+            ? originals[index]
+            : alternatives.first.meal;
+        result.add(
+          FeedbackMeal(
+            '${request.id}|${request.version}|$day|$index',
+            '${persianWeekDays[day]} · ${originals[index].name} · ${meal.title}',
+          ),
+        );
+      }
+    }
+    return result;
+  }
+
+  Future<void> saveWeeklyFeedback(WeeklyFeedback feedback) async {
+    if (savingFeedback) throw StateError('ذخیره در جریان است.');
+    final request = feedbackProgram;
+    if (!userSignedIn ||
+        request == null ||
+        feedback.owner != feedbackOwner ||
+        feedback.requestId != request.id ||
+        feedback.planVersion != request.version ||
+        feedback.week != dateKey(request.programWeek!) ||
+        feedbackFor(request) != null) {
+      throw StateError('برنامه یا هفته معتبر نیست یا بازخورد قبلاً ثبت شده.');
+    }
+    final ids = feedbackMeals(request).map((m) => m.id).toSet();
+    if ([
+          ...feedback.favorite,
+          ...feedback.disliked,
+          ...feedback.difficult,
+        ].any((id) => !ids.contains(id)) ||
+        feedback.favorite
+            .toSet()
+            .intersection(feedback.disliked.toSet())
+            .isNotEmpty) {
+      throw ArgumentError('غذاهای انتخاب‌شده معتبر نیستند.');
+    }
+    if (!['easy', 'sometimes', 'hard'].contains(feedback.availability) ||
+        !['comfortable', 'mixed', 'expensive'].contains(feedback.budget) ||
+        !['small', 'suitable', 'large'].contains(feedback.portion) ||
+        !['good', 'average', 'poor', 'not_used'].contains(feedback.service) ||
+        (feedback.service == 'not_used'
+            ? feedback.rating != 0
+            : feedback.rating < 1 || feedback.rating > 5) ||
+        feedback.comment.length > 1500 ||
+        feedback.publicText.length > 500 ||
+        (feedback.publicConsent && feedback.publicText.trim().isEmpty) ||
+        (!feedback.publicConsent && feedback.publicText.isNotEmpty)) {
+      throw ArgumentError('پاسخ‌ها را کامل کن.');
+    }
+    final owner = feedbackOwner;
+    savingFeedback = true;
+    update();
+    try {
+      await feedbackRepository.save(feedback);
+      _weeklyFeedback.add(feedback);
+      if (userSignedIn && owner == feedbackOwner) {
+        _projectPublicFeedback(feedback);
+      }
+    } finally {
+      savingFeedback = false;
+      update();
+    }
+  }
+
+  void _projectPublicFeedback(WeeklyFeedback feedback) {
+    if (!feedback.publicConsent || feedback.owner != feedbackOwner) return;
+    final id = 'weekly:${feedback.key}';
+    if (programReviews.any((r) => r.id == id)) return;
+    programReviews.insert(
+      0,
+      ProgramReview(
+        id: id,
+        authorName: questionnaire.name.trim().isEmpty
+            ? 'کاربر سبزینه'
+            : questionnaire.name.trim(),
+        text: feedback.publicText,
+        rating: feedback.rating,
+        requestId: feedback.requestId,
+        weekKey: feedback.week,
+      ),
+    );
+  }
+
+  FoodPreferences get suggestedFoodPreferences {
+    final previous = weeklyFeedback.toList()
+      ..sort((a, b) => b.at.compareTo(a.at));
+    if (previous.isEmpty) return const FoodPreferences();
+    final latest = previous.first;
+    String names(List<String> ids) => latest.meals
+        .where((m) => ids.contains(m.id))
+        .map((m) => m.title)
+        .join('\n');
+    return FoodPreferences(
+      favorites: names(latest.favorite),
+      avoid: names(latest.disliked),
+      preparation: latest.difficult.isEmpty ? '' : 'غذاهای ساده‌تر و سریع‌تر',
+      budget: latest.budget == 'expensive' ? 'مواد اولیه اقتصادی‌تر' : '',
+    );
+  }
+
+  Future<void> confirmFoodPreferences(FoodPreferences preferences) async {
+    if (!userSignedIn || savingFeedback) {
+      throw StateError('ابتدا وارد شو یا پایان ذخیره را صبر کن.');
+    }
+    if ([
+      preferences.favorites,
+      preferences.avoid,
+      preferences.preparation,
+      preferences.budget,
+    ].any((v) => v.length > 1500)) {
+      throw ArgumentError('متن طولانی است.');
+    }
+    final owner = feedbackOwner;
+    savingFeedback = true;
+    update();
+    try {
+      await feedbackRepository.savePreferences(owner, preferences);
+      if (userSignedIn && owner == feedbackOwner) foodPreferences = preferences;
+    } finally {
+      savingFeedback = false;
+      update();
+    }
+  }
+
+  List<ProgramReview> get clinicianFeedback =>
+      programReviews.where((r) => r.rating > 0).toList();
   double get clinicianRating => clinicianFeedback.isEmpty
       ? 0
       : clinicianFeedback.fold<int>(0, (n, r) => n + r.rating) /
@@ -2260,7 +2463,11 @@ class DemoStore extends ChangeNotifier {
   int get positiveFeedbackCount =>
       clinicianFeedback.where((r) => r.rating >= 4).length;
 
-  void submitProgramReview(String text, {int rating = 5}) {
+  void submitProgramReview(
+    String text, {
+    int rating = 5,
+    bool publishConsent = false,
+  }) {
     if (!canReviewCurrentProgram) {
       throw StateError(
         'پس از تکمیل برنامهٔ هفته و دریافت جایزه می‌توانی بازخورد ثبت کنی.',
@@ -2280,17 +2487,19 @@ class DemoStore extends ChangeNotifier {
     }
     final name = questionnaire.name.trim();
 
-    programReviews.insert(
-      0,
-      ProgramReview(
-        id: 'rev-${_reviewSeq++}',
-        authorName: name,
-        text: trimmed,
-        rating: rating,
-        requestId: completed.id,
-        weekKey: week,
-      ),
-    );
+    if (publishConsent) {
+      programReviews.insert(
+        0,
+        ProgramReview(
+          id: 'rev-${_reviewSeq++}',
+          authorName: name,
+          text: trimmed,
+          rating: rating,
+          requestId: completed.id,
+          weekKey: week,
+        ),
+      );
+    }
     messages.add(
       ChatMessage(
         'بازخورد برنامهٔ هفته · امتیاز ${fa(rating)} از ۵\n$trimmed',

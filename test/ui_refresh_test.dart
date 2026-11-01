@@ -79,7 +79,11 @@ void main() {
       final before = s.programReviews.length;
       final completedId = s.userRequestId;
       s.submitQuestionnaire();
-      s.submitProgramReview('تهیه غذاها زمان زیادی می‌خواست', rating: 2);
+      s.submitProgramReview(
+        'تهیه غذاها زمان زیادی می‌خواست',
+        rating: 2,
+        publishConsent: true,
+      );
       expect(s.programReviews.first.requestId, completedId);
       expect(s.programReviews.length, before + 1);
       final review = s.programReviews.first;

@@ -1,3 +1,4 @@
+import 'weekly_feedback.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
@@ -252,6 +253,26 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     final s = DemoScope.of(context),
         offer = s.serviceById(s.selectedPlanServiceId);
     if (offer == null) return;
+    if (offer.id == 'new-plan') {
+      setState(() => processing = true);
+      try {
+        await s.restoreWeeklyFeedback();
+        if (!mounted) return;
+        if (s.feedbackLoadError != null) {
+          showToast(context, s.feedbackLoadError!);
+          return;
+        }
+        if ((s.hasUserRequest && s.userRequest.isPublished) ||
+            s.weeklyFeedback.isNotEmpty) {
+          final confirmed = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(builder: (_) => const NextPlanReviewScreen()),
+          );
+          if (confirmed != true || !mounted) return;
+        }
+      } finally {
+        if (mounted) setState(() => processing = false);
+      }
+    }
     if (!s.canAfford(offer.priceToman)) {
       charge();
       return;

@@ -1,3 +1,4 @@
+import 'weekly_feedback.dart';
 import 'shopping.dart';
 import '../widgets/meal_choices.dart';
 import 'dart:math' as math;
@@ -1317,135 +1318,10 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class ProgramReviewSubmitScreen extends StatefulWidget {
+class ProgramReviewSubmitScreen extends StatelessWidget {
   const ProgramReviewSubmitScreen({super.key});
   @override
-  State<ProgramReviewSubmitScreen> createState() =>
-      _ProgramReviewSubmitScreenState();
-}
-
-class _ProgramReviewSubmitScreenState extends State<ProgramReviewSubmitScreen> {
-  final controller = TextEditingController();
-  bool initialized = false;
-  int rating = 5;
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    if (!store.canReviewCurrentProgram) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('بازخورد برنامه')),
-        body: const PageBody(
-          children: [
-            EmptyPanel(
-              'بعد از تکمیل برنامهٔ هفته',
-              'پس از تکمیل وعده‌ها و دریافت جایزه می‌توانی تجربه‌ات را برای پشتیبانی بنویسی.',
-              icon: Icons.rate_review_outlined,
-            ),
-          ],
-        ),
-      );
-    }
-    final weekKey = dateKey(
-      store.feedbackProgram!.programWeek ?? startOfWeek(store.today),
-    );
-    final sent = store.programReviews
-        .where(
-          (r) =>
-              r.weekKey == weekKey &&
-              r.authorName == store.questionnaire.name.trim(),
-        )
-        .toList();
-    if (sent.isNotEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('بازخورد برنامه')),
-        body: PageBody(
-          children: [
-            const Heading('بازخوردت به پشتیبانی ارسال شد'),
-            Surface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Tag(
-                    sent.first.approved
-                        ? 'تأییدشده برای نمایش عمومی'
-                        : sent.first.rejected
-                        ? 'برای پشتیبانی ثبت شد'
-                        : 'در انتظار بررسی مدیر',
-                  ),
-                  const SizedBox(height: 12),
-                  Text('امتیاز ${fa(sent.first.rating)} از ۵'),
-                  Text(sent.first.text),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () =>
-                  pushPage(context, const ChatScreen(threadId: 'support-main')),
-              child: const Text('گفتگو با پشتیبانی'),
-            ),
-          ],
-        ),
-      );
-    }
-    final pending = store.userPendingReview();
-    if (!initialized) {
-      controller.text = pending?.text ?? '';
-      initialized = true;
-    }
-    return Scaffold(
-      appBar: AppBar(title: const Text('نظر دربارهٔ برنامه')),
-      body: PageBody(
-        children: [
-          const Notice(
-            'نظر شما پس از بررسی مدیر در داشبورد سایر کاربران نمایش داده می‌شود.',
-            icon: Icons.admin_panel_settings_outlined,
-          ),
-          if (pending != null) Tag('در انتظار تأیید مدیر', warning: true),
-          const Heading('از برنامهٔ این هفته چقدر راضی بودی؟'),
-          Wrap(
-            spacing: 8,
-            children: List.generate(
-              5,
-              (i) => ChoiceChip(
-                label: Text('${fa(i + 1)} ★'),
-                selected: rating == i + 1,
-                onSelected: (_) => setState(() => rating = i + 1),
-              ),
-            ),
-          ),
-          TextField(
-            controller: controller,
-            minLines: 5,
-            maxLines: 8,
-            decoration: const InputDecoration(
-              labelText: 'متن نظر',
-              hintText: 'تجربه‌ات از برنامه، متخصص یا اپ را بنویس…',
-            ),
-          ),
-          PrimaryButton(
-            'ارسال بازخورد برای پشتیبانی',
-            icon: Icons.send_outlined,
-            onPressed: () {
-              try {
-                store.submitProgramReview(controller.text, rating: rating);
-                showToast(context, 'نظر ثبت شد و برای مدیر ارسال شد.');
-                Navigator.pop(context);
-              } on StateError catch (e) {
-                showToast(context, e.message);
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const WeeklyFeedbackScreen();
 }
 
 class EditProfileScreen extends StatefulWidget {

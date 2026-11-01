@@ -83,6 +83,7 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
       if (widget.restoreOnStart) store.restoreWalletState(),
       if (widget.restoreOnStart) store.restoreUserSession(),
     ]);
+    if (widget.restoreOnStart) await store.restoreWeeklyFeedback();
     if (mounted) setState(() => starting = false);
   }
 

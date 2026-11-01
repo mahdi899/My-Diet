@@ -21,6 +21,7 @@ void main() {
     walletStorage: PreferencesWalletStateStorage(),
     sessionStorage: PreferencesSessionStorage(),
     nutritionStorage: PreferencesNutritionLogStorage(),
+    feedbackRepository: PreferencesWeeklyFeedbackRepository(),
     settingsStorage: PreferencesWorkspaceSettingsStorage(),
   );
   runApp(DevPreview(child: SabzineApp(store: store, restoreOnStart: true)));

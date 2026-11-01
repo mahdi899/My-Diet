@@ -125,7 +125,7 @@
       card.append(list, element('p', 'ویرایش کامل مشخصات حرفه‌ای در فاز ۶ تکمیل می‌شود.', 'workspace-note')); return card;
     }
     if (section === 'patients') return pending('پرونده کاربران', 'اطلاعات فردی، پرسش‌نامه و سابقه برنامه کاربران اختصاص‌یافته در این بخش قرار می‌گیرد.', '۶');
-    return pending('گزارش‌های هفتگی کاربران', 'خلاصه مصرف، بازخورد و ترجیحات هر هفته در این بخش قرار می‌گیرد.', '۵');
+    return SabzineWeeklyReports.render();
   }
   async function load() {
     if (!session.active) return;

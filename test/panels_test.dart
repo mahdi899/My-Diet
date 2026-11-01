@@ -294,7 +294,7 @@ void main() {
       }
       s.questionnaire.name = 'سارا احمدی';
       expect(s.approvedReviewsForDashboard().length, 2);
-      s.submitProgramReview('برنامهٔ من عالی بود.');
+      s.submitProgramReview('برنامهٔ من عالی بود.', publishConsent: true);
       expect(s.pendingProgramReviews().length, 2);
       expect(s.userPendingReview()?.text, 'برنامهٔ من عالی بود.');
       expect(s.approvedReviewsForDashboard().length, 2);
