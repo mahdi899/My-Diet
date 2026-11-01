@@ -179,6 +179,6 @@ or accounts are created.
 
 Provider credentials, a running backend and a configured SMS provider are still
 needed for live staff/customer authentication verification. No database or backend
-implementation was changed. Phases 2 through 5 are documented separately in frontend-phase-2.md through frontend-phase-5.md; later phases remain pending.
+implementation was changed. Phases 2 through 6 are documented separately in frontend-phase-2.md through frontend-phase-6.md; later phases remain pending.
 
 Verified Flutter result: 75 tests passed. Staff browser contract suite passed.

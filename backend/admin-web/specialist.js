@@ -1,7 +1,7 @@
-/* Phase 1: authenticated navigation and existing read APIs. Clinical editors follow in phase 6. */
+/* Authenticated specialist navigation, existing APIs and phase 6 clinical workspaces. */
 (() => {
   const $ = id => document.getElementById(id);
-  const { element, pending, table, date } = WorkspaceUI;
+  const { element, table, date } = WorkspaceUI;
   const sections = { dashboard: 'داشبورد', patients: 'پرونده کاربران', review: 'برنامه‌های منتظر بررسی',
     changes: 'درخواست‌های تغییر برنامه', conversations: 'گفتگوها', reports: 'گزارش‌های هفتگی', profile: 'پروفایل حرفه‌ای' };
   const status = { in_review:'در انتظار بررسی',response_received:'پاسخ دریافت شده',queued:'در صف',generating:'در حال تولید',awaiting_review:'منتظر بررسی',reviewing:'در حال بررسی',
@@ -10,7 +10,7 @@
   let current = 'dashboard', generation = 0, phone = '', challenge = null;
   const notice = text => { $('message').textContent = text || ''; };
   function signedOut(message = '') {
-    generation++; session.clear(); $('panel').hidden = true; $('login').hidden = false;
+    SabzineClinical.reset(); generation++; session.clear(); $('panel').hidden = true; $('login').hidden = false;
     $('phone-form').hidden = false; $('code-form').hidden = true; $('totp-form').hidden = true;
     $('content').replaceChildren(); $('login-state').textContent = message;
   }
@@ -57,19 +57,32 @@
     catch (error) { notice(error.message); }
     finally { $('logout').disabled = false; }
   };
-  function navigate(section) { current = section; location.hash = section; load(); }
+  function navigate(section) { if(!SabzineClinical.leave())return; current = section; location.hash = section; load(); }
   for (const [key, label] of Object.entries(sections)) {
     const button = element('button', label); button.type = 'button'; button.dataset.section = key;
     button.onclick = () => navigate(key); $('nav').append(button);
   }
   $('refresh').onclick = () => load();
   $('today').textContent = date(new Date());
+  function demoClinical() {
+    if(!SabzineClinical.leave())return;
+    const repository=SabzineClinicalRepository.sample(),expected=++generation;
+    repository.get().then(request=>{if(session.active&&expected===generation)$('content').replaceChildren(SabzineClinical.start({repository,request,session,onBack:load}));});
+  }
+  function demoButton() {const b=element('button','باز کردن پرونده و ویرایشگر نمونه','secondary');b.type='button';b.onclick=demoClinical;return b;}
   const queueTable = rows => table(rows, [
+    ['پرونده و ویرایش', row=>{const b=element('button','باز کردن پرونده و برنامه','secondary');b.onclick=async()=>{
+      const expected=++generation;b.disabled=true;
+      try {const repository=SabzineClinicalRepository.live(session),request=await repository.get(row.id);
+        if(expected!==generation||!session.active)return;
+        $('content').replaceChildren(SabzineClinical.start({repository,request,session,onBack:load}));$('content').focus();
+      }catch(error){if(expected===generation)notice(error.message);}finally{b.disabled=false;}
+    };return b;}],
     ['جزئیات غذا', row => {
       const button = element('button', 'بررسی جزئیات و جایگزین‌ها');
       button.type = 'button'; button.className = 'secondary';
       button.onclick = async () => {
-        const expected = generation; button.disabled = true; notice();
+        const expected = ++generation; button.disabled = true; notice();
         try {
           const request = await session.api('specialist/requests/' + encodeURIComponent(row.id));
           if (expected !== generation || !session.active) return;
@@ -105,7 +118,7 @@
     }
     if (section === 'review' || section === 'changes') {
       const view = element('div');
-      view.append(element('p', 'این فاز فهرست را از سرور نمایش می‌دهد؛ پرونده و ویرایش بالینی در فاز ۶ تکمیل می‌شوند.', 'workspace-note'),
+      view.append(element('p', 'پرونده و پیش‌نویس را از درخواست‌های اختصاص‌یافته باز کنید. نمونهٔ جداگانه برای بررسی رابط کامل موجود است.', 'workspace-note'),demoButton(),
         queueTable(await session.api('specialist/queue?bucket=' + (section === 'review' ? 'awaiting_review' : 'revisions'))));
       return view;
     }
@@ -122,9 +135,11 @@
         ['وضعیت تأیید', ({verified:'تأییدشده',pending:'در انتظار تأیید',rejected:'تأیید نشده',suspended:'تعلیق‌شده'})[profile.verificationStatus]], ['معرفی', profile.bio]]) {
         list.append(element('dt', label), element('dd', value || 'ثبت نشده'));
       }
-      card.append(list, element('p', 'ویرایش کامل مشخصات حرفه‌ای در فاز ۶ تکمیل می‌شود.', 'workspace-note')); return card;
+      card.append(list, element('p', 'ویرایش مشخصات حرفه‌ای به API مدیریت پروفایل وابسته است.', 'workspace-note')); return card;
     }
-    if (section === 'patients') return pending('پرونده کاربران', 'اطلاعات فردی، پرسش‌نامه و سابقه برنامه کاربران اختصاص‌یافته در این بخش قرار می‌گیرد.', '۶');
+    if(section==='patients') {
+      const view=element('div');view.append(element('p','پرونده‌های مرتبط با درخواست‌های اختصاص‌یافته؛ دادهٔ پزشکی ارائه‌نشده از روی نام یا درخواست حدس زده نمی‌شود.','workspace-note'),demoButton(),queueTable(await session.api('specialist/queue')));return view;
+    }
     return SabzineWeeklyReports.render();
   }
   async function load() {
@@ -145,15 +160,15 @@
   }
   window.addEventListener('hashchange', () => {
     const next = location.hash.slice(1);
-    if (sections[next] && next !== current) { current = next; load(); }
+    if (sections[next] && next !== current) { if(!SabzineClinical.leave()){location.hash=current;return;} current = next; load(); }
   });
   if (sections[location.hash.slice(1)]) current = location.hash.slice(1);
   document.addEventListener('visibilitychange', async () => {
     if (document.hidden || $('panel').hidden) return;
-    try { await session.restore(); await load(); }
+    try { await session.restore(); if(!SabzineClinical.open)await load(); }
     catch (error) {
       if (error.status === 401 || error.status === 403) signedOut(error.message);
-      else { $('content').replaceChildren(element('section', 'بررسی نشست انجام نشد. برای ادامه دوباره تلاش کنید.', 'card')); notice(error.message); }
+      else if(SabzineClinical.open){notice(error.message);} else { $('content').replaceChildren(element('section', 'بررسی نشست انجام نشد. برای ادامه دوباره تلاش کنید.', 'card')); notice(error.message); }
     }
   });
   setInterval(() => { if (!$('panel').hidden && !session.active) signedOut('نشست پایان یافته؛ دوباره وارد شوید.'); }, 30000);

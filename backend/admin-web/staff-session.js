@@ -5,13 +5,13 @@
   }
   function create({ role, onExpired = () => {} }) {
     let token = null, expiresAt = 0, refreshing = null;
-    const request = async (path, method = 'GET', body) => {
+    const request = async (path, method = 'GET', body, headers = {}) => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);
       try {
         const response = await fetch('/v1/' + path, {
           method, credentials: 'same-origin', signal: controller.signal,
-          headers: { 'Content-Type': 'application/json', 'x-sabzine-client': 'web',
+          headers: { ...headers, 'Content-Type': 'application/json', 'x-sabzine-client': 'web',
             ...(token ? { Authorization: 'Bearer ' + token } : {}) },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
@@ -38,11 +38,11 @@
       return session;
     };
     const restore = () => refreshing ||= request('auth/refresh', 'POST', {}).then(accept).finally(() => { refreshing = null; });
-    const api = async (path, method = 'GET', body) => {
+    const api = async (path, method = 'GET', body, headers = {}) => {
       if (!token || Date.now() >= expiresAt) {
         clear(); onExpired(); throw new StaffError('برای ادامه وارد حساب شوید.', 401);
       }
-      try { return await request(path, method, body); }
+      try { return await request(path, method, body, headers); }
       catch (error) {
         if (error.status !== 401) throw error;
         try { await restore(); }
@@ -50,7 +50,7 @@
           if (failure.status === 401 || failure.status === 403) { clear(); onExpired(); }
           throw failure;
         }
-        try { return await request(path, method, body); }
+        try { return await request(path, method, body, headers); }
         catch (failure) {
           if (failure.status === 401) { clear(); onExpired(); }
           throw failure;

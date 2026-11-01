@@ -13,6 +13,7 @@
   }
   function check(meal) {
     const result = issues(meal), options = Array.isArray(meal.alternatives) ? meal.alternatives : [];
+    if(options.length!==2 || options.some(a=>!['ai','specialist'].includes(a.source)))result.push('دقیقاً دو جایگزین با منبع مشخص لازم است');
     for (const [source, label] of [['ai', 'هوش مصنوعی'], ['specialist', 'متخصص']]) {
       const matching = options.filter(a => a.source === source);
       if (matching.length !== 1) result.push(`یک جایگزین ${label} لازم است`);
@@ -27,7 +28,7 @@
   function render(request) {
     const view = node('section'); view.className = 'card';
     view.append(node('h2', 'کامل‌بودن غذاها و جایگزین‌ها پیش از انتشار'));
-    view.append(node('p', 'این بخش وضعیت داده دریافتی را بررسی می‌کند. جزئیات یا تأیید ثبت‌نشده به‌صورت خودکار ساخته نمی‌شود. ویرایش کامل برنامه در فاز ۶ ارائه می‌شود.'));
+    view.append(node('p', 'این بخش وضعیت داده دریافتی را بررسی می‌کند. جزئیات یا تأیید ثبت‌نشده به‌صورت خودکار ساخته نمی‌شود. برای ویرایش، از دکمهٔ پرونده و برنامه استفاده کن.'));
     if (!request.version?.days?.length) { view.append(node('p', 'پیش‌نویس برنامه هنوز موجود نیست.')); return view; }
     const days = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
     let count = 0;
