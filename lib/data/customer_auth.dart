@@ -1,0 +1,183 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+import 'auth_http_client.dart';
+
+class AuthFailure implements Exception {
+  const AuthFailure(this.message, {this.expired = false});
+  final String message;
+  final bool expired;
+  @override
+  String toString() => message;
+}
+
+class CustomerSession {
+  CustomerSession.fromJson(Map<String, dynamic> data)
+    : accessToken = data['accessToken'] as String,
+      refreshToken = data['refreshToken'] as String?,
+      expiresAt = DateTime.parse(data['sessionExpiresAt'] as String),
+      role = data['role'] as String;
+  final String accessToken, role;
+  final String? refreshToken;
+  final DateTime expiresAt;
+}
+
+abstract interface class AuthTokenStorage {
+  Future<String?> read();
+  Future<void> write(String token);
+  Future<void> clear();
+}
+
+/// Server-issued sessions only. Demo sessions stay in DemoStore's separate store.
+class CustomerAuth {
+  CustomerAuth({
+    required this.baseUrl,
+    required this.storage,
+    http.Client? client,
+  }) : _client = client ?? createAuthClient();
+  final String baseUrl;
+  final AuthTokenStorage storage;
+  final http.Client _client;
+  CustomerSession? session;
+  Future<CustomerSession?>? _refreshing;
+
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> body, {
+    String? accessToken,
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('${baseUrl.replaceAll(RegExp(r'/+$'), '')}/v1/$path'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (kIsWeb) 'x-sabzine-client': 'web',
+              if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      final data = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+      if (response.statusCode >= 400) {
+        throw AuthFailure(
+          data['detail'] as String? ?? 'ورود انجام نشد؛ دوباره تلاش کن.',
+          expired: response.statusCode == 401,
+        );
+      }
+      return data;
+    } on AuthFailure {
+      rethrow;
+    } catch (_) {
+      throw const AuthFailure(
+        'ارتباط با سرور برقرار نشد. اتصال را بررسی کن و دوباره تلاش کن.',
+      );
+    }
+  }
+
+  Future<void> requestCode(String phone) async {
+    await _post('auth/otp/request', {'phone': phone});
+  }
+
+  Future<CustomerSession> verify(String phone, String code) async {
+    final data = await _post('auth/otp/verify', {
+      'phone': phone,
+      'code': code,
+      'deviceLabel': 'Sabzine customer app',
+      'platform': 'flutter',
+    });
+    if (data['totpRequired'] == true) {
+      throw const AuthFailure(
+        'این حساب ورود کارکنان دارد. از سامانه وب استفاده کنید.',
+      );
+    }
+    return _accept(data);
+  }
+
+  Future<CustomerSession> _accept(Map<String, dynamic> data) async {
+    final next = CustomerSession.fromJson(data);
+    if (next.role != 'user') {
+      // Do not retain a staff session accidentally opened in the customer client.
+      try {
+        await _post('auth/logout', {}, accessToken: next.accessToken);
+      } catch (_) {}
+      throw const AuthFailure('ورود متخصص و مدیر از سامانه وب انجام می‌شود.');
+    }
+    if (!DateTime.now().isBefore(next.expiresAt) ||
+        (!kIsWeb && next.refreshToken == null)) {
+      throw const AuthFailure(
+        'نشست معتبر نیست. دوباره وارد شو.',
+        expired: true,
+      );
+    }
+    await storage.write(
+      jsonEncode({
+        if (!kIsWeb) 'refreshToken': next.refreshToken,
+        'expiresAt': next.expiresAt.toUtc().toIso8601String(),
+      }),
+    );
+    session = next;
+    return next;
+  }
+
+  Future<CustomerSession?> restore() =>
+      _refreshing ??= _restore().whenComplete(() => _refreshing = null);
+
+  Future<CustomerSession?> _restore() async {
+    final raw = await storage.read();
+    if (raw == null) return null;
+    Map<String, dynamic> saved;
+    try {
+      saved = jsonDecode(raw) as Map<String, dynamic>;
+      if (!DateTime.now().isBefore(
+        DateTime.parse(saved['expiresAt'] as String),
+      )) {
+        await clear();
+        return null;
+      }
+    } catch (_) {
+      await clear();
+      return null;
+    }
+    try {
+      return await _accept(
+        await _post('auth/refresh', {
+          if (!kIsWeb) 'refreshToken': saved['refreshToken'],
+        }),
+      );
+    } on AuthFailure catch (error) {
+      if (error.expired) {
+        await clear();
+        return null;
+      }
+      rethrow; // A network outage must not silently delete a valid saved session.
+    }
+  }
+
+  Future<void> logout() async {
+    var active = session;
+    if (active != null) {
+      try {
+        await _post('auth/logout', {}, accessToken: active.accessToken);
+      } on AuthFailure catch (failure) {
+        if (!failure.expired) rethrow;
+        active = await restore();
+        if (active != null) {
+          await _post('auth/logout', {}, accessToken: active.accessToken);
+        }
+      }
+    }
+    await clear();
+  }
+
+  Future<void> clear() async {
+    session = null;
+    await storage.clear();
+  }
+
+  void dispose() => _client.close();
+}

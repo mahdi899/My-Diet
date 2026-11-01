@@ -183,37 +183,27 @@ void main() {
     store.dispose();
   });
 
-  testWidgets(
-    'Guest can browse and expert/admin remain accessible through panel selection',
-    (tester) async {
-      mobile(tester);
-      final store = DemoStore();
-      await tester.pumpWidget(
-        SabzineApp(store: store, splashDuration: Duration.zero),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
-      expect(store.userSignedIn, false);
-      for (final role in [AppRole.expert, AppRole.admin]) {
-        store.showRoleSelection();
-        await tester.pumpAndSettle();
-        final choice = find.text('ورود به عنوان ${role.label}');
-        await tester.ensureVisible(choice);
-        await tester.tap(choice);
-        await tester.pumpAndSettle();
-        expect(store.entryStage, EntryStage.onboarding);
-        await tester.tap(find.text('ادامه به ورود'));
-        await tester.pumpAndSettle();
-        expect(find.byType(LoginScreen), findsOneWidget);
-        await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
-        await tester.pumpAndSettle();
-        expect(find.byType(NavigationBar), findsOneWidget);
-      }
-      await tester.pumpWidget(const SizedBox());
-      store.dispose();
-    },
-  );
+  testWidgets('Guest can browse but staff panel selection is absent', (
+    tester,
+  ) async {
+    mobile(tester);
+    final store = DemoStore();
+    await tester.pumpWidget(
+      SabzineApp(store: store, splashDuration: Duration.zero),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
+    expect(store.userSignedIn, false);
+    await tester.tap(find.byType(NavigationDestination).at(3));
+    await tester.pumpAndSettle();
+    expect(find.text('تعویض پنل نمایشی'), findsNothing);
+    expect(find.text('ورود به عنوان متخصص'), findsNothing);
+    expect(find.text('ورود به عنوان مدیر'), findsNothing);
+    expect(find.text('ورود به حساب'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    store.dispose();
+  });
 
   testWidgets(
     'Saved answers skip questionnaire after acquisition login and go to pricing',
@@ -358,7 +348,7 @@ void main() {
     },
   );
 
-  testWidgets('Authenticated roles render all small-screen tabs', (
+  testWidgets('Authenticated customer renders all small-screen tabs', (
     tester,
   ) async {
     mobile(tester);
@@ -367,7 +357,7 @@ void main() {
       SabzineApp(store: store, splashDuration: Duration.zero),
     );
     await tester.pumpAndSettle();
-    for (final role in AppRole.values) {
+    for (final role in [AppRole.user]) {
       store.login(role);
       await tester.pumpAndSettle();
       for (var i = 0; i < 4; i++) {

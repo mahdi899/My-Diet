@@ -13,6 +13,11 @@ const pageMeta = {
   ai: { title: 'هوش مصنوعی', icon: 'sparkles', group: 'تنظیمات و ابزارها', description: 'سرویس‌های هوش مصنوعی را متصل و مدیریت کنید.' },
   settings: { title: 'تعرفه و پاداش', icon: 'sliders', group: 'تنظیمات و ابزارها', description: 'تعرفه خدمات و پاداش هفتگی را تنظیم کنید.' },
   'audit-logs': { title: 'تاریخچه فعالیت', icon: 'history', group: 'تنظیمات و ابزارها', description: 'ردپای تغییرات و فعالیت‌های مدیریتی.' },
+  questionnaire: {title:'پیکربندی پرسش‌نامه',icon:'clipboard',group:'توسعه سامانه',description:'پیکربندی پرسش‌نامه کاربران.'},
+  reasons: {title:'دلایل تغییر برنامه',icon:'sliders',group:'توسعه سامانه',description:'گزینه‌های دلیل درخواست تغییر.'},
+  'user-reports': {title:'گزارش کاربران',icon:'users',group:'گزارش‌ها',description:'ادامه استفاده و انتخاب غذاها.'},
+  'specialist-reports': {title:'گزارش متخصصان',icon:'medical',group:'گزارش‌ها',description:'عملکرد و زمان پاسخ‌گویی.'},
+  journeys: {title:'مسیر کاربران',icon:'history',group:'گزارش‌ها',description:'مسیرهای ورود اول و بازگشت کاربران.'},
 };
 const iconPaths = {
   leaf: ['M20 3C8 2 3 8 6 15c7 4 15-1 14-12Z', 'M4 21 15 9'],

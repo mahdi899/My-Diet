@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/demo_store.dart';
@@ -5,11 +6,8 @@ import 'screens/entry.dart';
 import 'screens/splash.dart';
 import 'screens/onboarding.dart';
 import 'screens/user.dart';
-import 'screens/expert.dart';
-import 'screens/shared.dart';
 import 'theme.dart';
 import 'widgets/weekly_progress.dart';
-import 'screens/clinic_workspace.dart';
 import 'screens/wallet_flow.dart';
 
 class SabzineApp extends StatefulWidget {
@@ -26,13 +24,52 @@ class SabzineApp extends StatefulWidget {
   State<SabzineApp> createState() => _SabzineAppState();
 }
 
-class _SabzineAppState extends State<SabzineApp> {
+class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
   late final DemoStore store = widget.store ?? DemoStore();
   late bool starting;
+  final navigatorKey = GlobalKey<NavigatorState>();
+  Timer? sessionTimer;
+  bool wasSignedIn = false;
+
+  void sessionChanged() {
+    final signedIn = store.userSignedIn;
+    if (wasSignedIn && !signedIn) {
+      wasSignedIn = false;
+      // Clear customer-specific projections as soon as a session is lost.
+      final entering = store.entryStage == EntryStage.login;
+      final pending = store.pendingPlanAcquisition;
+      store.logout();
+      if (entering) {
+        store.openUserLogin();
+        store.pendingPlanAcquisition = pending;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.popUntil((route) => route.isFirst);
+      });
+    }
+    wasSignedIn = signedIn;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (store.serverAuthEnabled) {
+        store.refreshServerSession();
+      }
+      store.update();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    wasSignedIn = store.userSignedIn;
+    store.addListener(sessionChanged);
+    sessionTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => store.update(),
+    );
     starting = widget.restoreOnStart || widget.splashDuration > Duration.zero;
     if (starting) initialize();
   }
@@ -51,7 +88,13 @@ class _SabzineAppState extends State<SabzineApp> {
 
   @override
   void dispose() {
-    if (widget.store == null) store.dispose();
+    sessionTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    store.removeListener(sessionChanged);
+    if (widget.store == null) {
+      store.customerAuth?.dispose();
+      store.dispose();
+    }
     super.dispose();
   }
 
@@ -61,6 +104,7 @@ class _SabzineAppState extends State<SabzineApp> {
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'سبزینه',
+      navigatorKey: navigatorKey,
       theme: appTheme(),
       locale: const Locale('fa'),
       supportedLocales: const [Locale('fa'), Locale('en')],
@@ -77,17 +121,13 @@ class AppRoot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    if (store.role == AppRole.admin || store.selectedRole == AppRole.admin) {
-      return const EntryScreen();
-    }
+    // Legacy fixtures may still set staff roles; the shipped client is user-only.
+    store.selectedRole = AppRole.user;
+    if (store.entryStage != EntryStage.login) store.role = AppRole.user;
     return switch (store.entryStage) {
-      EntryStage.roles => const EntryScreen(),
-      EntryStage.onboarding => OnboardingScreen(role: store.selectedRole!),
-      EntryStage.login => LoginScreen(role: store.selectedRole!),
-      EntryStage.home => PanelShell(
-        key: ValueKey(store.role),
-        role: store.role!,
-      ),
+      EntryStage.onboarding => const OnboardingScreen(role: AppRole.user),
+      EntryStage.login => const LoginScreen(role: AppRole.user),
+      _ => const PanelShell(role: AppRole.user),
     };
   }
 }
@@ -120,82 +160,66 @@ class _PanelShellState extends State<PanelShell> {
     }
   }
 
-  void select(int i) => setState(() => selected = i);
+  void select(int i) {
+    final store = DemoScope.of(context);
+    if ((i == 1 || i == 2) && !store.userSignedIn) {
+      store.openUserLogin();
+      return;
+    }
+    setState(() => selected = i);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.role == AppRole.admin) return const EntryScreen();
-    final user = widget.role == AppRole.user,
-        expert = widget.role == AppRole.expert;
-    final labels = user
-        ? ['خانه', 'برنامه', 'پیگیری', 'پروفایل']
-        : expert
-        ? ['میز کار', 'درخواست‌ها', 'پیام‌ها', 'پروفایل']
-        : ['خانه', 'درخواست‌ها', 'کاربران', 'بیشتر'];
-    final icons = user
-        ? [
-            Icons.home_outlined,
-            Icons.calendar_month_outlined,
-            Icons.bar_chart_rounded,
-            Icons.person_outline,
-          ]
-        : expert
-        ? [
-            Icons.space_dashboard_outlined,
-            Icons.folder_copy_outlined,
-            Icons.forum_outlined,
-            Icons.badge_outlined,
-          ]
-        : [
-            Icons.home_outlined,
-            Icons.assignment_outlined,
-            Icons.people_outline,
-            Icons.more_horiz,
-          ];
-    final page = user
-        ? switch (selected) {
-            0 => UserHome(onPlan: () => select(1)),
-            1 => const PlanScreen(embedded: true),
-            2 => const TrackingScreen(),
-            _ => const ProfileScreen(),
-          }
-        : expert
-        ? switch (selected) {
-            0 => const ExpertHome(),
-            1 => const RequestListScreen(embedded: true),
-            2 => const MessagesScreen(embedded: true),
-            _ => const ClinicProfile(),
-          }
-        : switch (selected) {
-            _ => const EntryScreen(),
-          };
+    final store = DemoScope.of(context);
+    final page = switch (selected) {
+      0 => UserHome(onPlan: () => select(1)),
+      1 => const PlanScreen(embedded: true),
+      2 => const TrackingScreen(),
+      _ => const ProfileScreen(),
+    };
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: user ? WeeklyRewardGate(child: page) : page,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: expert
-              ? const Border(top: BorderSide(color: pine, width: 2))
-              : null,
-        ),
-        child: NavigationBar(
-          indicatorColor: expert ? pine : null,
-          indicatorShape: expert
-              ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(9))
-              : null,
-          selectedIndex: selected,
-          onDestinationSelected: select,
-          height: 76,
-          destinations: List.generate(
-            4,
-            (i) => NavigationDestination(
-              icon: Icon(icons[i]),
-              selectedIcon: Icon(icons[i], color: expert ? Colors.white : null),
-              label: labels[i],
+        child: Column(
+          children: [
+            if (store.sessionError != null)
+              MaterialBanner(
+                content: Text(store.sessionError!),
+                actions: [
+                  TextButton(
+                    onPressed: store.refreshServerSession,
+                    child: const Text('تلاش دوباره'),
+                  ),
+                ],
+              ),
+            Expanded(
+              child: !store.userSignedIn && selected != 0 && selected != 3
+                  ? const CustomerSignInPrompt()
+                  : WeeklyRewardGate(child: page),
             ),
-          ),
+          ],
         ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selected,
+        onDestinationSelected: select,
+        height: 76,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'خانه'),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            label: 'برنامه',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_rounded),
+            label: 'پیگیری',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            label: 'پروفایل',
+          ),
+        ],
       ),
     );
   }

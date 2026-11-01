@@ -3,8 +3,17 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../data/demo_store.dart';
 
-void pushPage(BuildContext context, Widget page) =>
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+void pushPage(BuildContext context, Widget page) {
+  final store = DemoScope.of(context);
+  if (!store.userSignedIn &&
+      (store.role == AppRole.user || store.role == null)) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    store.openUserLogin();
+    return;
+  }
+  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+}
+
 void showToast(BuildContext context, String text) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()

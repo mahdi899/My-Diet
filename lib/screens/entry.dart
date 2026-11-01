@@ -3,69 +3,32 @@ import '../data/demo_store.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
 
+/// Compatibility widget; the customer application no longer has role selection.
 class EntryScreen extends StatelessWidget {
   const EntryScreen({super.key});
   @override
+  Widget build(BuildContext context) => const CustomerSignInPrompt();
+}
+
+class CustomerSignInPrompt extends StatelessWidget {
+  const CustomerSignInPrompt({super.key});
+  @override
   Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: PageBody(
-        children: [
-          const SizedBox(height: 25),
-          const Center(child: Icon(Icons.spa_outlined, size: 72, color: pine)),
-          const SizedBox(height: 4),
-          Text(
-            'سبزینه',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineLarge,
-          ),
-          const Text(
-            'برنامهٔ غذایی، به سبک تو',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: muted),
-          ),
-          const Center(child: FoodArt(size: 210)),
-          const Text(
-            'به سبزینه خوش اومدی',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const Text(
-            'برای دیدن بخش‌های اپ، یک نقش انتخاب کن.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: muted),
-          ),
-          ...[AppRole.user, AppRole.expert].map(
-            (r) => Surface(
-              onTap: () => DemoScope.of(context).selectRole(r),
-              padding: 17,
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: sage,
-                    child: Icon(switch (r) {
-                      AppRole.user => Icons.person_outline,
-                      AppRole.expert => Icons.health_and_safety_outlined,
-                      AppRole.admin => Icons.manage_accounts_outlined,
-                    }, color: pine),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      'ورود به عنوان ${r.label}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const Icon(Icons.chevron_left, color: muted),
-                ],
-              ),
-            ),
-          ),
-          const Notice(
-            'نسخهٔ نمایشی رابط کاربری؛ اطلاعات نمونه‌اند و به سرور ارسال نمی‌شوند.',
-            icon: Icons.science_outlined,
-          ),
-        ],
-      ),
+    appBar: AppBar(title: const Text('حساب من')),
+    body: PageBody(
+      children: [
+        const SizedBox(height: 40),
+        const Center(child: Icon(Icons.person_outline, size: 72, color: pine)),
+        const Heading(
+          'به حساب خودت وارد شو',
+          subtitle: 'برای دیدن برنامه، پیام‌ها و اطلاعات شخصی وارد حساب شو.',
+        ),
+        PrimaryButton(
+          'ورود به حساب',
+          onPressed: DemoScope.of(context).openUserLogin,
+        ),
+        const Notice('متخصص و مدیر از سامانه وب سبزینه استفاده می‌کنند.'),
+      ],
     ),
   );
 }
@@ -80,7 +43,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final phone = TextEditingController(), code = TextEditingController();
   final form = GlobalKey<FormState>();
-  bool codeStep = false;
+  bool codeStep = false, busy = false;
+  String? error;
   @override
   void dispose() {
     phone.dispose();
@@ -101,21 +65,55 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void finish() {
-    DemoScope.of(context).login(
-      widget.role,
-      phone: latinDigits(phone.text).trim().isEmpty
-          ? '09120000000'
-          : latinDigits(phone.text).trim(),
-    );
-    Navigator.of(context).popUntil((r) => r.isFirst);
+  Future<void> finish({bool demo = false}) async {
+    final store = DemoScope.of(context);
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      if (demo && !store.serverAuthEnabled) {
+        store.login(AppRole.user);
+      } else {
+        await store.verifyLoginCode(
+          latinDigits(phone.text).trim(),
+          latinDigits(code.text).trim(),
+        );
+      }
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    } catch (failure) {
+      if (mounted) setState(() => error = failure.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> sendCode() async {
+    if (!form.currentState!.validate() || busy) return;
+    if (codeStep) {
+      await finish();
+      return;
+    }
+    final store = DemoScope.of(context);
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await store.requestLoginCode(latinDigits(phone.text).trim());
+      if (mounted) setState(() => codeStep = true);
+    } catch (failure) {
+      if (mounted) setState(() => error = failure.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) => PopScope<void>(
     canPop: false,
     onPopInvokedWithResult: (didPop, result) {
-      if (!didPop) back();
+      if (!didPop && !busy) back();
     },
     child: Scaffold(
       appBar: AppBar(
@@ -125,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ? 'بازگشت به داشبورد'
               : 'بازگشت به آنبوردینگ',
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: back,
+          onPressed: busy ? null : back,
         ),
       ),
       body: SafeArea(
@@ -139,8 +137,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             Text(
               codeStep
-                  ? 'کد نمونه: ۱۲۳۴۵۶'
-                  : 'برای بررسی ظاهر فرم، شماره تلفن را وارد کن.',
+                  ? (DemoScope.of(context).serverAuthEnabled
+                        ? 'کد ارسال‌شده به شماره‌ات را وارد کن.'
+                        : 'کد نمونه: ۱۲۳۴۵۶')
+                  : 'شماره تلفن همراه خودت را وارد کن.',
               style: const TextStyle(color: muted),
             ),
             Form(
@@ -148,6 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: TextFormField(
                 key: ValueKey(codeStep),
                 controller: codeStep ? code : phone,
+                enabled: !busy,
                 keyboardType: TextInputType.phone,
                 textDirection: TextDirection.ltr,
                 textAlign: TextAlign.center,
@@ -158,7 +159,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 validator: (value) {
                   final v = latinDigits(value ?? '').trim();
                   if (codeStep) {
-                    return v == '123456' ? null : 'کد نمونه ۱۲۳۴۵۶ است.';
+                    return RegExp(r'^\d{6}$').hasMatch(v)
+                        ? null
+                        : 'کد شش‌رقمی را وارد کن.';
                   }
                   return RegExp(r'^09\d{9}$').hasMatch(v)
                       ? null
@@ -166,25 +169,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
             ),
+            if (error != null)
+              Semantics(
+                liveRegion: true,
+                child: Notice(error!, icon: Icons.error_outline),
+              ),
             PrimaryButton(
-              codeStep ? 'ورود' : 'دریافت کد نمونه',
-              onPressed: () {
-                if (!form.currentState!.validate()) return;
-                if (codeStep) {
-                  finish();
-                } else {
-                  setState(() => codeStep = true);
-                }
-              },
+              busy
+                  ? 'در حال بررسی…'
+                  : codeStep
+                  ? 'ورود'
+                  : DemoScope.of(context).serverAuthEnabled
+                  ? 'دریافت کد'
+                  : 'دریافت کد نمونه',
+              onPressed: busy ? null : sendCode,
             ),
-            OutlinedButton.icon(
-              onPressed: finish,
-              icon: const Icon(Icons.play_circle_outline),
-              label: const Text('ورود مستقیم با حساب نمایشی'),
-            ),
-            const Notice(
-              'ورود نمایشی است و پیامکی ارسال نمی‌شود. پاسخ‌های تکمیل‌شدهٔ پرسش‌نامه روی همین دستگاه ذخیره می‌شوند.',
-            ),
+            if (!DemoScope.of(context).serverAuthEnabled) ...[
+              OutlinedButton.icon(
+                onPressed: busy ? null : () => finish(demo: true),
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('ورود مستقیم با حساب نمایشی'),
+              ),
+              const Notice(
+                'حالت نمایشی: پیامکی ارسال نمی‌شود و نشست فقط روی همین دستگاه ذخیره می‌شود.',
+              ),
+            ] else
+              const Notice(
+                'ورود به سرور متصل است. برنامه غذایی، کیف پول و پیام‌ها در این فاز همچنان پیش‌نمایش هستند.',
+              ),
           ],
         ),
       ),

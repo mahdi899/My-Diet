@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sabzine_flutter/app.dart';
+import 'legacy_staff_harness.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/form_config.dart';
 import 'package:sabzine_flutter/data/workspace_settings_storage.dart';
@@ -157,7 +157,7 @@ void main() {
     (t) async {
       mobile(t);
       final s = DemoStore()..login(AppRole.expert);
-      await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
+      await t.pumpWidget(LegacyStaffHarness(store: s));
       await t.pumpAndSettle();
       expect(find.text('امروز هم همراهیم'), findsNothing);
       expect(find.text('دسترسی سریع'), findsNothing);
@@ -199,7 +199,7 @@ void main() {
       mobile(t);
       final s = DemoStore()..login(AppRole.expert);
       final userName = s.questionnaire.name;
-      await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
+      await t.pumpWidget(LegacyStaffHarness(store: s));
       await t.pumpAndSettle();
       await t.tap(find.byType(NavigationDestination).at(3));
       await t.pumpAndSettle();
@@ -234,10 +234,10 @@ void main() {
     (t) async {
       mobile(t);
       final s = DemoStore()
-        ..login(AppRole.admin)
+        ..role = AppRole.admin
         ..questionnaireComplete = true;
       s.questionnaire.consent = true;
-      await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
+      await t.pumpWidget(LegacyStaffHarness(store: s));
       await t.pumpAndSettle();
       expect(find.text('دسترسی سریع'), findsNothing);
       expect(find.text('آخرین درخواست‌ها'), findsNothing);
@@ -340,8 +340,8 @@ void main() {
       mobile(t);
       final s = DemoStore()..loginDemoUser();
       s.send('پیگیری ویژهٔ کاربر', support: true);
-      s.login(AppRole.admin);
-      await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
+      s.role = AppRole.admin;
+      await t.pumpWidget(LegacyStaffHarness(store: s));
       await t.pumpAndSettle();
       expect(find.text('پیگیری ویژهٔ کاربر'), findsOneWidget);
       await tapVisible(

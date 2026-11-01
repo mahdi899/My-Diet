@@ -1,6 +1,7 @@
 const $ = id => document.getElementById(id);
 const sections = Object.fromEntries(Object.entries(pageMeta).map(([key, page]) => [key, page.title]));
-let token = null, challenge = null, current = 'dashboard', generation = 0, refreshPromise = null, toastTimer;
+let challenge = null, current = 'dashboard', generation = 0, toastTimer;
+const staffSession = SabzineStaff.create({role:'admin',onExpired:()=>signedOut()});
 
 function notice(message = '', kind = 'success') {
   clearTimeout(toastTimer);
@@ -11,28 +12,21 @@ function notice(message = '', kind = 'success') {
   box.append(icon(kind === 'error' ? 'error' : 'check'), element('span', message), dismiss);
   toastTimer = setTimeout(() => { box.hidden = true; }, kind === 'error' ? 12000 : 6000);
 }
-async function api(path, method = 'GET', body, retry = true) {
-  const response = await fetch('/v1/' + path, { method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'x-sabzine-client': 'web', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
-  const data = await response.json().catch(() => ({}));
-  if (response.status === 401 && retry && token && !path.startsWith('auth/')) {
-    try {
-      if (!refreshPromise) refreshPromise = api('auth/refresh', 'POST', {}, false).finally(() => { refreshPromise = null; });
-      const session = await refreshPromise; token = session.accessToken; return api(path, method, body, false);
-    } catch { signedOut(); }
-  }
-  if (!response.ok) throw new Error(data.detail || data.message || 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.');
-  return data;
+async function api(path, method = 'GET', body) {
+  if (path === 'auth/refresh') return staffSession.restore();
+  if (path.startsWith('auth/') && path !== 'auth/logout') return staffSession.login(path, body);
+  if (path === 'auth/logout') return staffSession.logout();
+  return staffSession.api(path, method, body);
 }
 function signedOut() {
-  generation++; token = null; challenge = null;
+  generation++; staffSession.clear(); challenge = null;
   document.querySelectorAll('dialog').forEach(dialog => dialog.close());
   setMenu(false); $('panel').hidden = true; $('login').hidden = false;
   $('totp-form').hidden = true; $('login-form').hidden = false; $('content').replaceChildren();
   $('login-form').reset(); $('totp-form').reset();
 }
 function signedIn(session) {
-  if (session.role !== 'admin') throw new Error('این حساب دسترسی مدیریت ندارد');
-  token = session.accessToken; $('login').hidden = true; $('panel').hidden = false;
+  staffSession.accept(session); $('login').hidden = true; $('panel').hidden = false;
   current = sectionFromHash(); void load();
 }
 async function submit(form, action) {
@@ -58,7 +52,7 @@ $('logout').onclick = async () => { $('logout').disabled = true; try { await api
 
 function sectionFromHash() { const hash = location.hash.slice(1); return Object.hasOwn(pageMeta, hash) ? hash : 'dashboard'; }
 function navigate(section) { if (!pageMeta[section]) return; if (location.hash === '#' + section) { current = section; void load(); } else location.hash = section; }
-window.addEventListener('hashchange', () => { if (token && location.hash !== '#main') { current = sectionFromHash(); setMenu(false); void load(); } });
+window.addEventListener('hashchange', () => { if (staffSession.active && location.hash !== '#main') { current = sectionFromHash(); setMenu(false); void load(); } });
 let lastGroup, group;
 for (const [key, page] of Object.entries(pageMeta)) {
   if (page.group !== lastGroup) { group = element('div', null, 'nav-group'); group.append(element('div', page.group, 'nav-group-label')); $('nav').append(group); lastGroup = page.group; }
@@ -168,18 +162,40 @@ async function load() {
   $('content').replaceChildren(skeleton()); $('content').setAttribute('aria-busy', 'true');
   try {
     let view;
-    if (section === 'ai') view = await aiPage();
+    if (['questionnaire','reasons','user-reports','specialist-reports','journeys'].includes(section)) view = phaseOnePage(section);
+    else if (section === 'ai') view = await aiPage();
     else if (section === 'notifications') view = await notificationsPage();
     else if (section === 'settings') view = settings();
     else if (section === 'dashboard') { const [stats, orders] = await Promise.all([api('admin/dashboard'), api('admin/orders')]); view = dashboard(stats, orders); }
     else { const path = section === 'specialists' ? 'specialists' : section === 'reviews' ? 'admin/reviews?status=pending' : section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
-    if (request !== generation || !token) return;
+    if (request !== generation || !staffSession.active) return;
     $('content').replaceChildren(view);
     if (section === 'ai') $('page-actions').append(button('افزودن API جدید', addAiModal, { iconName: 'plus' }));
     if (section === 'notifications') $('page-actions').append(button('اتصالات', firebaseModal, { secondary: true, iconName: 'sliders' }), button('اعلان جدید', notificationModal, { iconName: 'plus' }));
   } catch (error) {
-    if (request !== generation || !token) return;
+    if (request !== generation || !staffSession.active) return;
     const panel = element('section', null, 'card error-panel'); panel.append(emptyState('ارتباط با سرور برقرار نشد', error.message, 'error', button('تلاش دوباره', () => load(), { secondary: true }))); $('content').replaceChildren(panel);
   } finally { if (request === generation) $('content').removeAttribute('aria-busy'); }
 }
-api('auth/refresh', 'POST', {}, false).then(signedIn).catch(() => signedOut());
+function phaseOnePage(section) {
+  const descriptions = {
+    questionnaire:['پیکربندی پرسش‌نامه','ویرایش و انتشار نسخه‌های پرسش‌نامه در فاز ۹ تکمیل می‌شود.','۹'],
+    reasons:['دلایل تغییر برنامه','افزودن، غیرفعال‌سازی و مرتب‌سازی گزینه‌های دلیل درخواست.','۹'],
+    'user-reports':['گزارش کاربران','ادامه استفاده در هفته‌های اول، دوم و چهارم و تحلیل انتخاب غذاها.','۹'],
+    'specialist-reports':['گزارش متخصصان','امتیاز کاربران، زمان پاسخ‌گویی و عملکرد متخصصان.','۹'],
+    journeys:['مسیر کاربران','گراف مسیرهای ورود اول و بازگشت کاربران.','۱۰'],
+  };
+  return WorkspaceUI.pending(...descriptions[section]);
+}
+document.addEventListener('visibilitychange',async()=>{
+  if(document.hidden || $('panel').hidden)return;
+  void loadAfterSessionCheck();
+});
+async function loadAfterSessionCheck(){
+  try{await staffSession.restore();await load();}catch(error){
+    if(error.status===401||error.status===403)signedOut();
+    else $('content').replaceChildren(emptyState('بررسی نشست انجام نشد',error.message,'error',button('تلاش دوباره',loadAfterSessionCheck,{secondary:true})));
+  }
+}
+setInterval(()=>{if(!$('panel').hidden&&!staffSession.active){signedOut();notice('نشست پایان یافته؛ دوباره وارد شوید.','error');}},30000);
+api('auth/refresh','POST',{}).then(signedIn).catch(error=>{signedOut();if(error.status!==401)notice(error.message,'error');});

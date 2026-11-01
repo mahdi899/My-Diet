@@ -12,6 +12,7 @@ import 'questionnaire.dart';
 import 'shared.dart';
 import 'doctor.dart';
 import 'wallet_flow.dart';
+import 'entry.dart';
 import '../data/wallet_catalog.dart';
 
 class UserHome extends StatefulWidget {
@@ -1093,6 +1094,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context), expert = store.role == AppRole.expert;
+    if (!expert && !store.userSignedIn) return const CustomerSignInPrompt();
     return Scaffold(
       appBar: AppBar(title: const Text('پروفایل من')),
       body: PageBody(
@@ -1285,18 +1287,16 @@ class ProfileScreen extends StatelessWidget {
             ),
           if (!expert && store.userSignedIn)
             OutlinedButton.icon(
-              onPressed: store.logout,
+              onPressed: () async {
+                try {
+                  await store.signOutCustomer();
+                } catch (error) {
+                  if (context.mounted) showToast(context, error.toString());
+                }
+              },
               icon: const Icon(Icons.logout),
               label: const Text('خروج از حساب'),
             ),
-          OutlinedButton.icon(
-            onPressed: () {
-              store.showRoleSelection();
-              Navigator.of(context).popUntil((r) => r.isFirst);
-            },
-            icon: const Icon(Icons.switch_account_outlined),
-            label: const Text('تعویض پنل نمایشی'),
-          ),
         ],
       ),
     );

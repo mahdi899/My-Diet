@@ -7,6 +7,7 @@ import 'nutrition_log_storage.dart';
 import 'day.dart';
 import 'wallet_state_storage.dart';
 import 'session_storage.dart';
+import 'customer_auth.dart';
 import 'form_config.dart';
 import 'workspace_settings_storage.dart';
 
@@ -644,6 +645,7 @@ class DemoStore extends ChangeNotifier {
     NutritionLogStorage? nutritionStorage,
     WalletStateStorage? walletStorage,
     SessionStorage? sessionStorage,
+    this.customerAuth,
     WorkspaceSettingsStorage? settingsStorage,
     DateTime Function()? clock,
   }) : _sessionStorage = sessionStorage,
@@ -1286,6 +1288,62 @@ class DemoStore extends ChangeNotifier {
   AppRole? role = AppRole.user;
   AppRole? selectedRole = AppRole.user;
   EntryStage entryStage = EntryStage.home;
+  final CustomerAuth? customerAuth;
+  bool get serverAuthEnabled => customerAuth != null;
+  String? sessionError;
+
+  Future<void> requestLoginCode(String phone) async {
+    if (customerAuth != null) await customerAuth!.requestCode(phone);
+  }
+
+  Future<void> verifyLoginCode(String phone, String code) async {
+    if (customerAuth == null) {
+      if (code != '123456') throw const AuthFailure('کد نمونه ۱۲۳۴۵۶ است.');
+      login(AppRole.user, phone: phone);
+      return;
+    }
+    final session = await customerAuth!.verify(phone, code);
+    _applyServerSession(session, phone: phone);
+    if (pendingPlanAcquisition && !questionnaireComplete) {
+      entryStage = EntryStage.onboarding;
+    }
+    update();
+  }
+
+  void _applyServerSession(CustomerSession session, {String? phone}) {
+    _userAuthenticated = true;
+    sessionIssuedAt = today;
+    sessionExpiresAt = session.expiresAt;
+    if (phone != null) sessionPhone = phone;
+    sessionError = null;
+    role = selectedRole = AppRole.user;
+    entryStage = EntryStage.home;
+  }
+
+  Future<void> refreshServerSession() async {
+    if (customerAuth == null) return;
+    try {
+      final session = await customerAuth!.restore();
+      if (session == null) {
+        _userAuthenticated = false;
+        sessionIssuedAt = sessionExpiresAt = null;
+      } else {
+        _applyServerSession(session);
+      }
+      sessionError = null;
+    } catch (error) {
+      sessionError = error.toString();
+      // Block private screens until the server session can be checked.
+      _userAuthenticated = false;
+    }
+    update();
+  }
+
+  Future<void> signOutCustomer() async {
+    if (customerAuth != null) await customerAuth!.logout();
+    logout();
+  }
+
   final SessionStorage? _sessionStorage;
   Future<void> _sessionWrites = Future<void>.value();
   DateTime? sessionIssuedAt, sessionExpiresAt;
@@ -1298,6 +1356,7 @@ class DemoStore extends ChangeNotifier {
   bool pendingPlanAcquisition = false;
 
   Future<void> saveUserSession() {
+    if (serverAuthEnabled) return Future<void>.value();
     final issued = sessionIssuedAt,
         expires = sessionExpiresAt,
         phone = sessionPhone;
@@ -1324,6 +1383,10 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> restoreUserSession() async {
+    if (serverAuthEnabled) {
+      await refreshServerSession();
+      return;
+    }
     try {
       final raw = await _sessionStorage?.read();
       if (raw == null) return;
