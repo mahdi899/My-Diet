@@ -1,7 +1,7 @@
 (() => {
   const element = (tag, text, className) => {
     const node = document.createElement(tag);
-    if (text != null) node.textContent = text;
+    if (text instanceof Node) node.append(text); else if (text != null) node.textContent = text;
     if (className) node.className = className;
     return node;
   };

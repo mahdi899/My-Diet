@@ -71,6 +71,22 @@ void main() {
       );
       s.addMeal(r.id, custom, day: 2);
       expect(r.mealsForDay(2).last, original);
+      expect(() => s.approve(r.id), throwsStateError);
+      s.editMeal(
+        r.id,
+        3,
+        custom.copyWith(
+          preparationMinutes: 10,
+          instructions: 'عدس پخته را گرم و با نان سرو کن.',
+          quantityBasis: 'عدس پخته، نان آماده',
+          ingredients: const [
+            MealIngredient('lentil', 'عدس پخته', 1, 'پیمانه'),
+            MealIngredient('bread', 'نان', 40, 'گرم'),
+          ],
+          alternatives: original.alternatives,
+        ),
+        day: 2,
+      );
       s.approve(r.id);
       expect(r.mealsForDay(2).last.title, custom.title);
       expect(r.mealsForDay(2).last.amount, custom.amount);

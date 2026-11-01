@@ -1,3 +1,4 @@
+import '../widgets/meal_choices.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import '../data/day.dart';
@@ -642,48 +643,6 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
   }
 }
 
-void showAlternatives(BuildContext context, Meal meal) {
-  showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'جایگزین‌های ${meal.name}',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            const Notice(
-              'در محصول نهایی، فقط جایگزین‌های تأییدشده برای همین وعده نمایش داده می‌شوند.',
-            ),
-            const SizedBox(height: 16),
-            Text(
-              meal.kind == 1
-                  ? 'نان، پنیر و سبزی'
-                  : 'ترکیب خانگی با مواد اولیهٔ مشابه',
-            ),
-            const Text(
-              'مقدار و ترکیب در این نمونه نمایشی است.',
-              style: TextStyle(color: muted, fontSize: 12),
-            ),
-            const SizedBox(height: 18),
-            OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('متوجه شدم'),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 Future<void> showRevision(BuildContext context) async {
   final store = DemoScope.of(context), details = TextEditingController();
   String? reason;
@@ -778,27 +737,72 @@ class PlanSummaryScreen extends StatelessWidget {
   const PlanSummaryScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final r = DemoScope.of(context).userRequest;
+    final store = DemoScope.of(context);
+    if (!store.hasUserRequest || !store.userRequest.isPublished) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('برنامه هفتگی')),
+        body: const Center(child: Text('برنامه تأییدشده‌ای موجود نیست.')),
+      );
+    }
+    final request = store.userRequest, start = store.userRequest.programWeek!;
     return Scaffold(
-      appBar: AppBar(title: const Text('خلاصهٔ برنامه')),
+      appBar: AppBar(title: const Text('برنامهٔ هفت روز')),
       body: PageBody(
         children: [
-          Heading(
-            'برنامهٔ ${r.name}',
-            subtitle: 'نسخهٔ ${fa(r.version)} · ${r.specialist}',
-          ),
-          ...r.published.map(
-            (m) => Surface(
-              child: InfoRows({
-                m.name: m.title,
-                'زمان': m.time,
-                'مقدار': m.amount,
-              }),
-            ),
-          ),
+          Heading('برنامهٔ ${request.name}', subtitle: request.specialist),
           const Notice(
-            'این صفحه پیش‌نمایش خلاصه است؛ خروجی PDF یا ارسال فایل هنوز پیاده‌سازی نشده.',
+            'نمایش نمونهٔ طراحی؛ انتخاب‌ها و اطلاعات مصرف محلی هستند.',
           ),
+          for (var day = 0; day < 7; day++)
+            Surface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    persianDate(start.add(Duration(days: day))),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (store.mealsOn(start.add(Duration(days: day))).isEmpty)
+                    const Text('برنامه‌ای موجود نیست'),
+                  for (
+                    var index = 0;
+                    index <
+                        store.mealsOn(start.add(Duration(days: day))).length;
+                    index++
+                  )
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        store
+                            .mealsOn(start.add(Duration(days: day)))[index]
+                            .title,
+                      ),
+                      subtitle: Text(
+                        store
+                            .mealsOn(start.add(Duration(days: day)))[index]
+                            .name,
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'جزئیات و جایگزینی غذا',
+                        icon: const Icon(Icons.swap_horiz, color: pine),
+                        onPressed: () => showMealOptions(
+                          context,
+                          start.add(Duration(days: day)),
+                          index,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const Heading('مواد لازم برای انتخاب‌های هفته'),
+          const Text(
+            'با تغییر غذا این فهرست به‌روز می‌شود. فقط مقدارهای ثبت‌شده جمع می‌شوند.',
+          ),
+          for (final row in store.shoppingIngredients())
+            Text(
+              '• ${row.ingredient.name}: ${fa(row.quantity % 1 == 0 ? row.quantity.toInt() : row.quantity)} ${row.ingredient.unit}',
+            ),
         ],
       ),
     );

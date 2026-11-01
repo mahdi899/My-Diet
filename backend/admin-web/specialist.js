@@ -65,6 +65,21 @@
   $('refresh').onclick = () => load();
   $('today').textContent = date(new Date());
   const queueTable = rows => table(rows, [
+    ['جزئیات غذا', row => {
+      const button = element('button', 'بررسی جزئیات و جایگزین‌ها');
+      button.type = 'button'; button.className = 'secondary';
+      button.onclick = async () => {
+        const expected = generation; button.disabled = true; notice();
+        try {
+          const request = await session.api('specialist/requests/' + encodeURIComponent(row.id));
+          if (expected !== generation || !session.active) return;
+          const inspector = SabzineMealQuality.render(request);
+          const back = element('button', 'بازگشت به فهرست'); back.onclick = () => load();
+          $('content').replaceChildren(back, inspector); $('content').focus();
+        } catch (error) { if (expected === generation) notice(error.message); }
+        finally { button.disabled = false; }
+      }; return button;
+    }],
     ['نام کاربر', row => row.userName || row.user || row.displayName || 'نام ثبت نشده'],
     ['وضعیت', row => status[row.status] || 'نیازمند بررسی'],
     ['نوع', row => row.kind === 'new_plan' ? 'برنامه جدید' : 'بازنگری برنامه'],

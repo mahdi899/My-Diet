@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'meal_plan.dart';
+import 'meal_fixtures.dart';
+export 'meal_plan.dart';
 import 'package:flutter/foundation.dart';
 import 'wallet_catalog.dart';
 import 'package:flutter/material.dart';
@@ -282,40 +285,8 @@ class QuestionnaireData {
   };
 }
 
-@immutable
-class Meal {
-  const Meal({
-    required this.name,
-    required this.title,
-    required this.time,
-    required this.amount,
-    required this.details,
-    this.kind = 0,
-    this.calories = 0,
-  });
-  final String name, title, time, amount, details;
-  final int kind, calories;
-  Meal copyWith({
-    String? name,
-    String? title,
-    String? time,
-    String? amount,
-    String? details,
-    int? kind,
-    int? calories,
-  }) => Meal(
-    name: name ?? this.name,
-    title: title ?? this.title,
-    time: time ?? this.time,
-    amount: amount ?? this.amount,
-    details: details ?? this.details,
-    kind: kind ?? this.kind,
-    calories: calories ?? this.calories,
-  );
-}
-
 // UI fixtures. The energy and portions below are examples, not patient prescriptions.
-List<Meal> sampleMeals([int day = 0]) {
+List<Meal> sampleMeals([int day = 0, bool withAlternatives = true]) {
   const breakfasts = [
     (
       'نان سبوس‌دار و تخم‌مرغ',
@@ -486,7 +457,30 @@ List<Meal> sampleMeals([int day = 0]) {
       kind: 0,
       calories: d.$3,
     ),
-  ];
+  ].asMap().entries.map((entry) {
+    final meal = enrichDemoMeal(entry.value);
+    if (!withAlternatives) return meal;
+    return meal.copyWith(
+      alternatives: [
+        MealAlternative(
+          id: 'ai',
+          source: AlternativeSource.ai,
+          meal: sampleMeals(day + 1, false)[entry.key],
+          approved: true,
+          reviewedBy: 'demo-specialist',
+          reviewedAt: DateTime(2026, 10, 24),
+        ),
+        MealAlternative(
+          id: 'specialist',
+          source: AlternativeSource.specialist,
+          meal: sampleMeals(day + 2, false)[entry.key],
+          approved: true,
+          reviewedBy: 'demo-specialist',
+          reviewedAt: DateTime(2026, 10, 24),
+        ),
+      ],
+    );
+  }).toList();
 }
 
 class DietRequest {
@@ -894,11 +888,23 @@ class DemoStore extends ChangeNotifier {
   final DateTime Function() _clock;
   DateTime get today => _clock();
   final Map<String, int> _mealCalories = {};
+  final Map<String, Map<String, dynamic>> _consumptionDetails = {};
+  Map<String, dynamic>? consumedMealOn(DateTime date, int index) {
+    final prefix = '${dateKey(date)}|${userRequestId ?? 'none'}|$index|';
+    final found = _consumptionDetails.entries.where(
+      (e) => e.key.startsWith(prefix),
+    );
+    return found.isEmpty ? null : Map.unmodifiable(found.first.value);
+  }
+
   bool savingMeal = false;
   String mealLogKey(DateTime date, int index) =>
       '${dateKey(date)}|${userRequestId ?? 'none'}|$index|${mealsOn(date)[index].title}|${mealsOn(date)[index].calories}';
-  final Map<String, Meal> selectedMeals = {};
-  final List<Map<String, String>> substitutionHistory = [];
+  final Map<String, String> _selectedOptions = {};
+  final List<MealSelection> _substitutionHistory = [];
+  List<MealSelection> get substitutionHistory =>
+      List.unmodifiable(_substitutionHistory);
+  bool savingSubstitution = false;
   final Map<String, String> substitutionReasons = {
     'expensive': 'گران است',
     'dislike': 'دوست ندارم',
@@ -907,34 +913,139 @@ class DemoStore extends ChangeNotifier {
     'other': 'سایر',
   };
   String selectionKey(DateTime date, int index) =>
-      '$userRequestId|${dateKey(date)}|$index';
-  List<Meal> alternativesOn(DateTime date, int index) => [
-    sampleMeals(weekDayIndex(date) + 1)[index],
-    sampleMeals(weekDayIndex(date) + 2)[index],
-  ];
-  void substituteMeal(DateTime date, int index, Meal meal, String reason) {
-    if (dateKey(date).compareTo(dateKey(today)) < 0) return;
-    selectedMeals[selectionKey(date, index)] = meal;
-    substitutionHistory.add({
-      'key': selectionKey(date, index),
-      'food': meal.title,
-      'reason': reason,
-    });
-    notifyListeners();
-  }
-
-  List<Meal> mealsOn(DateTime date) {
-    if (userRequestId == null) return const [];
+      '$userRequestId|${userRequest.version}|${dateKey(date)}|$index';
+  List<Meal> originalMealsOn(DateTime date) {
+    if (userRequestId == null || !userRequest.isPublished) return const [];
     final week = userRequest.programWeek;
-    if (week != null && dateKey(startOfWeek(date)) != dateKey(week)) {
+    if (week == null || dateKey(startOfWeek(date)) != dateKey(week)) {
       return const [];
     }
-    return userRequest
-        .mealsForDay(weekDayIndex(date))
-        .asMap()
-        .entries
-        .map((e) => selectedMeals[selectionKey(date, e.key)] ?? e.value)
-        .toList();
+    return userRequest.mealsForDay(weekDayIndex(date));
+  }
+
+  Meal originalMealOn(DateTime date, int index) => originalMealsOn(date)[index];
+  String selectedOptionOn(DateTime date, int index) =>
+      _selectedOptions[selectionKey(date, index)] ?? 'original';
+  List<MealAlternative> alternativesOn(DateTime date, int index) =>
+      originalMealOn(
+        date,
+        index,
+      ).alternatives.where((a) => a.available).toList();
+  bool canSubstituteOn(DateTime date) =>
+      originalMealsOn(date).isNotEmpty &&
+      dateKey(date).compareTo(dateKey(today)) >= 0;
+  List<Meal> mealsOn(DateTime date) =>
+      originalMealsOn(date).asMap().entries.map((entry) {
+        final option = selectedOptionOn(date, entry.key);
+        final alternatives = entry.value.alternatives.where(
+          (a) => a.id == option && a.available,
+        );
+        return alternatives.isEmpty
+            ? entry.value
+            : alternatives.first.meal.copyWith(
+                name: entry.value.name,
+                time: entry.value.time,
+              );
+      }).toList();
+  Future<bool> substituteMeal(
+    DateTime date,
+    int index,
+    String optionId,
+    String reasonId, {
+    String explanation = '',
+    bool confirmConsumed = false,
+  }) async {
+    if (savingSubstitution || savingMeal) return false;
+    if (!canSubstituteOn(date) ||
+        index < 0 ||
+        index >= originalMealsOn(date).length) {
+      throw StateError(
+        'تغییر فقط برای روزهای باقی‌مانده همین برنامه مجاز است.',
+      );
+    }
+    if (selectedOptionOn(date, index) == optionId) return false;
+    if (mealEaten(date, index) && !confirmConsumed) {
+      throw StateError('تغییر وعده مصرف‌شده نیاز به تأیید دارد.');
+    }
+    if (dateKey(date) == dateKey(today) &&
+        !substitutionReasons.containsKey(reasonId)) {
+      throw StateError('دلیل جایگزینی را انتخاب کن.');
+    }
+    if (explanation.length > 500) {
+      throw StateError('توضیحات حداکثر ۵۰۰ نویسه باشد.');
+    }
+    final original = originalMealOn(date, index);
+    final options = original.alternatives.where(
+      (a) => a.id == optionId && a.available,
+    );
+    if (optionId != 'original' && options.length != 1) {
+      throw StateError('این جایگزین تأیید نشده یا اطلاعاتش ناقص است.');
+    }
+    final selected = optionId == 'original' ? original : options.single.meal;
+    final key = selectionKey(date, index);
+    final record = MealSelection(
+      key: key,
+      optionId: optionId,
+      previousOptionId: selectedOptionOn(date, index),
+      reasonId: reasonId,
+      reasonLabel: substitutionReasons[reasonId] ?? '',
+      explanation: explanation.trim(),
+      at: today,
+      foodTitle: selected.title,
+    );
+    final next = {..._selectedOptions, key: optionId};
+    final history = [..._substitutionHistory, record];
+    savingSubstitution = true;
+    update();
+    try {
+      await _nutritionStorage?.write(
+        _nutritionSnapshot(options: next, history: history),
+      );
+      _selectedOptions
+        ..clear()
+        ..addAll(next);
+      _substitutionHistory
+        ..clear()
+        ..addAll(history);
+      return true;
+    } finally {
+      savingSubstitution = false;
+      update();
+    }
+  }
+
+  String _nutritionSnapshot({
+    Map<String, int>? meals,
+    Map<String, String>? options,
+    List<MealSelection>? history,
+    Map<String, Map<String, dynamic>>? consumption,
+  }) => jsonEncode({
+    'version': 2,
+    'consumption': consumption ?? _consumptionDetails,
+    'meals': meals ?? _mealCalories,
+    'options': options ?? _selectedOptions,
+    'history': (history ?? _substitutionHistory)
+        .map((r) => r.toJson())
+        .toList(),
+  });
+  // Computed from selected options; never combines incompatible units or invents quantities.
+  List<ShoppingIngredient> shoppingIngredients({Iterable<DateTime>? dates}) {
+    final week = userRequest.programWeek;
+    if (week == null) return const [];
+    final rows = <String, ShoppingIngredient>{};
+    for (final date
+        in dates ?? List.generate(7, (i) => week.add(Duration(days: i)))) {
+      for (final meal in mealsOn(date)) {
+        for (final ingredient in meal.ingredients.where((i) => i.complete)) {
+          final key = '${ingredient.id}|${ingredient.unit}|${ingredient.basis}';
+          rows[key] = ShoppingIngredient(
+            ingredient,
+            (rows[key]?.quantity ?? 0) + ingredient.quantity!,
+          );
+        }
+      }
+    }
+    return rows.values.toList();
   }
 
   int calorieTarget(DateTime date) =>
@@ -944,8 +1055,10 @@ class DemoStore extends ChangeNotifier {
         (e) => e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
       )
       .fold(0, (n, e) => n + e.value);
-  bool mealEaten(DateTime date, int index) =>
-      _mealCalories.containsKey(mealLogKey(date, index));
+  bool mealEaten(DateTime date, int index) => _mealCalories.keys.any(
+    (key) =>
+        key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|$index|'),
+  );
   int eatenCount(DateTime date) => List.generate(
     mealsOn(date).length,
     (i) => i,
@@ -956,7 +1069,7 @@ class DemoStore extends ChangeNotifier {
       if (raw == null) return;
       final data = jsonDecode(raw);
       if (data is! Map<String, dynamic> ||
-          data['version'] != 1 ||
+          ![1, 2].contains(data['version']) ||
           data['meals'] is! Map) {
         return;
       }
@@ -968,6 +1081,29 @@ class DemoStore extends ChangeNotifier {
         ..addEntries(
           entries.map((e) => MapEntry(e.key as String, e.value as int)),
         );
+      if (data['version'] == 2) {
+        _consumptionDetails
+          ..clear()
+          ..addAll(
+            (data['consumption'] as Map? ?? {}).map(
+              (k, v) =>
+                  MapEntry(k as String, Map<String, dynamic>.from(v as Map)),
+            ),
+          );
+        final options = Map<String, String>.from(data['options'] as Map? ?? {});
+        final history = (data['history'] as List? ?? [])
+            .map(
+              (r) =>
+                  MealSelection.fromJson(Map<String, dynamic>.from(r as Map)),
+            )
+            .toList();
+        _selectedOptions
+          ..clear()
+          ..addAll(options);
+        _substitutionHistory
+          ..clear()
+          ..addAll(history);
+      }
       completedMeals
         ..clear()
         ..addAll(_mealCalories.keys);
@@ -978,20 +1114,42 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> setMealEaten(DateTime date, int index, bool eaten) async {
-    if (savingMeal) return;
+    if (savingMeal || savingSubstitution) return;
     final meals = mealsOn(date);
     if (index < 0 || index >= meals.length) return;
     final key = mealLogKey(date, index),
         next = Map<String, int>.of(_mealCalories);
+    final details = Map<String, Map<String, dynamic>>.of(_consumptionDetails);
+    if (eaten && mealEaten(date, index)) return;
     if (eaten) {
       next[key] = meals[index].calories;
+      details[key] = {
+        'title': meals[index].title,
+        'amount': meals[index].amount,
+        'calories': meals[index].calories,
+        'optionId': selectedOptionOn(date, index),
+      };
     } else {
-      next.remove(key);
+      next.removeWhere(
+        (k, _) =>
+            k.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|$index|'),
+      );
+    }
+    if (!eaten) {
+      details.removeWhere(
+        (k, _) =>
+            k.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|$index|'),
+      );
     }
     savingMeal = true;
     update();
     try {
-      await _nutritionStorage?.write(jsonEncode({'version': 1, 'meals': next}));
+      await _nutritionStorage?.write(
+        _nutritionSnapshot(meals: next, consumption: details),
+      );
+      _consumptionDetails
+        ..clear()
+        ..addAll(details);
       _mealCalories
         ..clear()
         ..addAll(next);
@@ -1924,6 +2082,11 @@ class DemoStore extends ChangeNotifier {
         )) {
       throw StateError('نام و مقدار همهٔ وعده‌ها باید تکمیل باشد.');
     }
+    final issues = List.generate(
+      7,
+      r.draftForDay,
+    ).expand((d) => d).expand(mealApprovalIssues).toList();
+    if (issues.isNotEmpty) throw StateError('پیش از انتشار: ${issues.first}');
     r.published = List.unmodifiable(r.draft);
     r.publishedOtherDays = List.generate(
       6,
