@@ -167,9 +167,12 @@ void main() {
         find.text(s.mealsOn(date).first.amount.split('\n').first),
         findsOneWidget,
       );
-      final done = find.text('این وعده را خوردم');
+      final done = find.text('ثبت وعده').last;
       await t.ensureVisible(done);
       await t.tap(done);
+      await t.pumpAndSettle();
+      await t.ensureVisible(find.text('ذخیره ثبت وعده'));
+      await t.tap(find.text('ذخیره ثبت وعده'));
       await t.pumpAndSettle();
       expect(s.consumedCalories(date), s.mealsOn(date).first.calories);
       await t.tap(find.byTooltip('بستن جزئیات غذا'));

@@ -311,7 +311,7 @@ class _MealOptionsState extends State<_MealOptions> {
                         if (consumed != null) ...[
                           const SizedBox(height: 12),
                           Notice(
-                            'مصرف ثبت‌شده: ${consumed["title"]}\n${consumed["amount"]}\n${fa(consumed["calories"])} کیلوکالری؛ تغییر انتخاب این سابقه را تغییر نمی‌دهد.',
+                            'مصرف ثبت‌شده: ${consumed["title"]}\n${consumed["amount"]}\n${consumed["calories"] == null ? "کالری محاسبه نشده" : fa(consumed["calories"])} کیلوکالری؛ تغییر انتخاب این سابقه را تغییر نمی‌دهد.',
                           ),
                         ],
                         if (current != choice && s.canSubstituteOn(date)) ...[

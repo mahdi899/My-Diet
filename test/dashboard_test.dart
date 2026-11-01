@@ -6,7 +6,7 @@ import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/theme.dart';
 import 'package:sabzine_flutter/widgets/nutrition.dart';
-import 'package:sabzine_flutter/widgets/celebration.dart';
+import 'package:sabzine_flutter/widgets/meal_logging.dart';
 import 'package:sabzine_flutter/widgets/ui.dart';
 import 'widget_test.dart' show mobile;
 
@@ -108,44 +108,33 @@ void main() {
       await t.tap(tomorrow);
       await t.pumpAndSettle();
       expect(find.text(persianDate(DateTime(2026, 10, 30))), findsOneWidget);
-      final checkbox = find.descendant(
+      final action = find.descendant(
         of: find.byType(ScheduledMealTile).first,
-        matching: find.byType(Checkbox),
+        matching: find.widgetWithText(OutlinedButton, 'ثبت وعده'),
       );
-      expect(t.widget<Checkbox>(checkbox).onChanged, isNull);
+      expect(t.widget<OutlinedButton>(action).onPressed, isNull);
       await t.pumpWidget(const SizedBox());
       s.dispose();
     },
   );
   testWidgets(
-    'Successful meal check celebrates once then disables the whole meal',
+    'Meal recording saves the approved portion and leaves correction available',
     (t) async {
       mobile(t);
       final s = DemoStore(clock: () => DateTime(2026, 10, 26))..loginDemoUser();
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      final tile = find.byType(ScheduledMealTile).first;
-      final check = find.descendant(of: tile, matching: find.byType(Checkbox));
-      await t.ensureVisible(check);
+      final action = find.byKey(const ValueKey('meal-log-2026-10-26-0'));
+      await t.ensureVisible(action);
       await t.pumpAndSettle();
-      await t.tap(check);
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 200));
-      expect(find.byType(MealCelebration), findsOneWidget);
+      await t.tap(action);
+      await t.pumpAndSettle();
+      await t.ensureVisible(find.text('ذخیره ثبت وعده'));
+      await t.tap(find.text('ذخیره ثبت وعده'));
+      await t.pumpAndSettle();
       expect(s.consumedCalories(s.today), s.mealsOn(s.today).first.calories);
-      expect(t.widget<Checkbox>(check).onChanged, isNull);
-      expect(
-        t
-            .widget<Surface>(
-              find.descendant(of: tile, matching: find.byType(Surface)),
-            )
-            .onTap,
-        isNull,
-      );
-      await t.pump(const Duration(seconds: 3));
-      await t.pump();
-      expect(find.byType(MealCelebration), findsNothing);
+      expect(find.byType(MealLogAction), findsWidgets);
       expect(s.eatenCount(s.today), 1);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());

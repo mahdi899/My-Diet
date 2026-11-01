@@ -1048,6 +1048,108 @@ class DemoStore extends ChangeNotifier {
     return rows.values.toList();
   }
 
+  Map<String, dynamic>? mealRecordOn(DateTime date, int index) =>
+      consumedMealOn(date, index);
+  int recordedCount(DateTime date) => List.generate(
+    mealsOn(date).length,
+    (i) => i,
+  ).where((i) => mealRecordOn(date, i) != null || mealEaten(date, i)).length;
+  bool hasUnknownCalories(DateTime date) =>
+      List.generate(mealsOn(date).length, (i) => i).any((i) {
+        final record = mealRecordOn(date, i);
+        return record != null &&
+            record['mode'] != 'skipped' &&
+            record['calories'] == null;
+      });
+  bool followedPlan(DateTime date, int index) {
+    final record = mealRecordOn(date, index);
+    return record == null
+        ? mealEaten(date, index)
+        : (record['mode'] == null || record['mode'] == 'according');
+  }
+
+  Future<void> recordMeal(
+    DateTime date,
+    int index,
+    String mode, {
+    String foodName = '',
+    double? quantity,
+    String unit = '',
+  }) async {
+    if (savingMeal || savingSubstitution) {
+      throw StateError('ذخیره دیگری در جریان است.');
+    }
+    if (dateKey(date) != dateKey(today) ||
+        index < 0 ||
+        index >= mealsOn(date).length) {
+      throw StateError('ثبت و اصلاح فقط برای امروز مجاز است.');
+    }
+    if (!['according', 'adjusted', 'different', 'skipped'].contains(mode)) {
+      throw ArgumentError('وضعیت نامعتبر');
+    }
+    if (mode == 'adjusted' || mode == 'different') {
+      if (quantity == null ||
+          !quantity.isFinite ||
+          quantity <= 0 ||
+          quantity > 100000 ||
+          unit.trim().isEmpty ||
+          unit.length > 40) {
+        throw ArgumentError('مقدار مثبت و واحد روشن وارد کن.');
+      }
+    }
+    if (mode == 'different' &&
+        (foodName.trim().isEmpty || foodName.length > 120)) {
+      throw ArgumentError('نام غذا را وارد کن.');
+    }
+    final meal = mealsOn(date)[index], key = mealLogKey(date, index);
+    final prefix = '${dateKey(date)}|${userRequestId ?? 'none'}|$index|';
+    final next = Map<String, int>.of(_mealCalories)
+      ..removeWhere((k, _) => k.startsWith(prefix));
+    final details = Map<String, Map<String, dynamic>>.of(_consumptionDetails)
+      ..removeWhere((k, _) => k.startsWith(prefix));
+    // Only an exact approved portion has a known energy value. No arbitrary-food estimates.
+    final int? calories = mode == 'according' && meal.calories > 0
+        ? meal.calories
+        : mode == 'skipped'
+        ? 0
+        : null;
+    if (mode != 'skipped' && calories != null) next[key] = calories;
+    details[key] = {
+      'mode': mode,
+      'title': mode == 'different' ? foodName.trim() : meal.title,
+      'amount': mode == 'according'
+          ? meal.amount
+          : mode == 'skipped'
+          ? 'این وعده مصرف نشد'
+          : '$quantity ${unit.trim()}',
+      'quantity': quantity,
+      'unit': unit.trim(),
+      'calories': calories,
+      'optionId': selectedOptionOn(date, index),
+      'recordedAt': today.toIso8601String(),
+    };
+    savingMeal = true;
+    update();
+    try {
+      await _nutritionStorage?.write(
+        _nutritionSnapshot(meals: next, consumption: details),
+      );
+      _mealCalories
+        ..clear()
+        ..addAll(next);
+      _consumptionDetails
+        ..clear()
+        ..addAll(details);
+      completedMeals
+        ..clear()
+        ..addAll(next.keys);
+      claimWeeklyReward();
+    } finally {
+      savingMeal = false;
+      update();
+    }
+  }
+
   int calorieTarget(DateTime date) =>
       mealsOn(date).fold(0, (n, m) => n + m.calories);
   int consumedCalories(DateTime date) => _mealCalories.entries
@@ -1055,14 +1157,19 @@ class DemoStore extends ChangeNotifier {
         (e) => e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
       )
       .fold(0, (n, e) => n + e.value);
-  bool mealEaten(DateTime date, int index) => _mealCalories.keys.any(
-    (key) =>
-        key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|$index|'),
-  );
+  bool mealEaten(DateTime date, int index) {
+    final record = consumedMealOn(date, index);
+    if (record != null) return record['mode'] != 'skipped';
+    return _mealCalories.keys.any(
+      (key) =>
+          key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|$index|'),
+    );
+  }
+
   int eatenCount(DateTime date) => List.generate(
     mealsOn(date).length,
     (i) => i,
-  ).where((i) => mealEaten(date, i)).length;
+  ).where((i) => followedPlan(date, i)).length;
   Future<void> restoreNutritionLog() async {
     try {
       final raw = await _nutritionStorage?.read();

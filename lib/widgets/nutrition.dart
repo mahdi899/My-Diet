@@ -1,3 +1,4 @@
+import 'meal_logging.dart';
 import 'meal_choices.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -6,7 +7,6 @@ import '../data/day.dart';
 import '../theme.dart';
 import '../screens/questionnaire.dart';
 import 'ui.dart';
-import 'celebration.dart';
 
 String decimalFa(double value) => fa(
   value.toStringAsFixed(value == value.roundToDouble() ? 0 : 1),
@@ -122,7 +122,9 @@ class EnergyCard extends StatelessWidget {
                           const SizedBox(height: 6),
                           Text(
                             target > 0
-                                ? (consumed > target
+                                ? (s.hasUnknownCalories(date)
+                                      ? 'جمع کالری ناقص است؛ بعضی وعده‌ها محاسبه نشده‌اند'
+                                      : consumed > target
                                       ? '${fa(consumed - target)} بیشتر از برنامه'
                                       : '${fa(remaining)} کیلوکالری باقی‌مانده')
                                 : 'برنامه‌ات در حال آماده‌شدن است',
@@ -208,7 +210,7 @@ class EnergyCard extends StatelessWidget {
                       const SizedBox(width: 7),
                       Expanded(
                         child: Text(
-                          '${fa(s.eatenCount(date))} از ${fa(s.mealsOn(date).length)} وعده ثبت شده',
+                          '${fa(s.recordedCount(date))} از ${fa(s.mealsOn(date).length)} وعده ثبت شده',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -387,7 +389,7 @@ class ScheduledMealTile extends StatelessWidget {
     final s = DemoScope.of(context),
         m = s.mealsOn(date)[index],
         eaten = s.mealEaten(date, index);
-    final canLog = dateKey(date) == dateKey(s.today);
+
     return Semantics(
       enabled: true,
       child: Opacity(
@@ -422,51 +424,21 @@ class ScheduledMealTile extends StatelessWidget {
                       style: const TextStyle(color: pine, fontSize: 10),
                     ),
                     MealAlternativePreviews(date: date, index: index),
+                    MealLogAction(date: date, index: index),
+                    if (s.hasUnknownCalories(date))
+                      const Text(
+                        'جمع کالری امروز ناقص است؛ بعضی وعده‌ها محاسبه نشده‌اند.',
+                        style: TextStyle(fontSize: 10, color: muted),
+                      ),
                   ],
                 ),
               ),
               const SizedBox(width: 5),
-              Column(
-                children: [
-                  Checkbox(
-                    value: eaten,
-                    semanticLabel: 'خوردم: ${m.name}',
-                    onChanged: s.savingMeal || eaten || !canLog
-                        ? null
-                        : (v) => _setEaten(context, s, date, index, v ?? false),
-                  ),
-                  Text(
-                    eaten ? 'ثبت شد' : 'نخوردم',
-                    style: TextStyle(fontSize: 10, color: eaten ? pine : muted),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
       ),
     );
-  }
-}
-
-Future<void> _setEaten(
-  BuildContext context,
-  DemoStore store,
-  DateTime date,
-  int index,
-  bool value,
-) async {
-  try {
-    final alreadyEaten = store.mealEaten(date, index);
-    await store.setMealEaten(date, index, value);
-    if (value &&
-        !alreadyEaten &&
-        store.mealEaten(date, index) &&
-        context.mounted) {
-      showMealCelebration(context);
-    }
-  } catch (_) {
-    if (context.mounted) showToast(context, 'ثبت انجام نشد؛ دوباره تلاش کن.');
   }
 }
 
@@ -480,7 +452,7 @@ void showMealDetails(BuildContext context, DateTime date, int index) {
     builder: (sheet) => AnimatedBuilder(
       animation: s,
       builder: (sheet, _) {
-        final m = s.mealsOn(date)[index], eaten = s.mealEaten(date, index);
+        final m = s.mealsOn(date)[index];
         return SafeArea(
           child: SizedBox(
             height: MediaQuery.sizeOf(sheet).height * .85,
@@ -583,22 +555,7 @@ void showMealDetails(BuildContext context, DateTime date, int index) {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 18),
-                  child: PrimaryButton(
-                    s.savingMeal
-                        ? 'در حال ثبت…'
-                        : eaten
-                        ? 'این وعده ثبت شد'
-                        : dateKey(date) != dateKey(s.today)
-                        ? 'ثبت در روز این وعده'
-                        : 'این وعده را خوردم',
-                    onPressed:
-                        s.savingMeal ||
-                            eaten ||
-                            dateKey(date) != dateKey(s.today)
-                        ? null
-                        : () => _setEaten(sheet, s, date, index, !eaten),
-                    icon: Icons.check_circle_outline,
-                  ),
+                  child: MealLogAction(date: date, index: index),
                 ),
               ],
             ),
