@@ -1,38 +1,132 @@
-function openModal(title,build){
- const dialog=element('dialog');dialog.className='modal';const heading=element('h2',title),close=element('button','بستن');close.type='button';close.className='secondary';const head=element('header');head.append(heading,close);dialog.append(head);build(dialog);document.body.append(dialog);const previous=document.activeElement;close.onclick=()=>dialog.close();dialog.onclose=()=>{dialog.remove();previous?.focus();};dialog.showModal();return dialog;
+let fieldSequence = 0;
+function openModal(title, build, { iconName = 'sliders', danger = false } = {}) {
+  const dialog = element('dialog', null, 'modal' + (danger ? ' modal-danger' : ''));
+  const titleId = 'modal-title-' + (++fieldSequence), heading = element('h2', title); heading.id = titleId; dialog.setAttribute('aria-labelledby', titleId);
+  const head = element('header', null, 'modal-header'), titleWrap = element('div', null, 'modal-title'), body = element('div', null, 'modal-body');
+  const close = button('', () => dialog.close(), { iconName: 'close', className: 'icon-button' }); close.setAttribute('aria-label', 'بستن');
+  titleWrap.append(iconTile(iconName), heading); head.append(titleWrap, close); dialog.append(head, body); build(body, dialog);
+  const previous = document.activeElement; document.body.append(dialog);
+  dialog.addEventListener('close', () => { dialog.remove(); if (previous?.isConnected) previous.focus(); });
+  dialog.showModal(); const input = body.querySelector('input:not([type=hidden]),textarea,select'); if (input) input.focus();
+  return dialog;
 }
-function field(form,name,label,type='text',value=''){
- const l=element('label',label),i=element(type==='textarea'?'textarea':type==='select'?'select':'input');i.name=name;if(i.tagName==='INPUT')i.type=type;i.required=true;i.value=value;l.append(i);form.append(l);return i;
+function field(form, name, label, type = 'text', value = '') {
+  const wrap = element('label', label), input = element(type === 'textarea' ? 'textarea' : type === 'select' ? 'select' : 'input');
+  input.id = 'field-' + (++fieldSequence); wrap.htmlFor = input.id; input.name = name; if (input.tagName === 'INPUT') input.type = type;
+  input.setAttribute('aria-label', label); input.required = true; input.value = value; wrap.append(input); form.append(wrap); return input;
 }
-function formError(form,error){let box=form.querySelector('[role="alert"]');if(!box){box=element('p');box.setAttribute('role','alert');form.append(box);}box.textContent=error;}
-function onForm(form,action){form.onsubmit=async e=>{e.preventDefault();const b=form.querySelector('button[type="submit"]');b.disabled=true;formError(form,'');try{await action(Object.fromEntries(new FormData(form)));}catch(error){formError(form,error.message);}finally{b.disabled=false;}};}
-function actionButton(label,action,secondary=true){const b=element('button',label);b.type='button';if(secondary)b.className='secondary';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.message);}finally{b.disabled=false;}};return b;}
-function addAiModal(){openModal('افزودن API هوش مصنوعی',dialog=>{const form=element('form');
- field(form,'name','نام هوش مصنوعی').maxLength=80;
- const key=field(form,'apiKey','کلید API','password');key.autocomplete='new-password';key.maxLength=4096;
- field(form,'baseUrl','آدرس پایه API سازگار با OpenAI','url','https://api.openai.com/v1').dir='ltr';
- field(form,'model','نام مدل').dir='ltr';
- const price=field(form,'costPer1kTokens','هزینه تخمینی هر ۱۰۰۰ توکن (میکرودلار)','number','0');price.min='0';price.step='1';
- form.append(element('p','کلید رمزنگاری می‌شود و دوباره نمایش داده نمی‌شود. سرویس جدید ابتدا غیرفعال است؛ بعد از تنظیم آن را فعال کنید. هزینه صفر، محاسبه هزینه را صفر می‌کند.'));
- const save=element('button','ذخیره API');save.type='submit';form.append(save);onForm(form,async v=>{await api('admin/ai-connections','POST',{...v,costPer1kTokens:Number(v.costPer1kTokens)});dialog.close();await load();notice('API ذخیره شد');});dialog.append(form);
- });}
-async function aiPage(){const rows=await api('admin/ai-connections');const view=element('div'),head=element('header');head.append(element('p','افزودن و انتخاب سرویس تولید برنامه، بدون ویرایش کد یا راه‌اندازی مجدد'),actionButton('افزودن API جدید',addAiModal,false));view.append(head);
- if(!rows.length){const empty=element('div','هنوز API اضافه نشده است.');empty.className='card';view.append(empty);}
- for(const row of rows){const card=element('section');card.className='card';const header=element('header');header.append(element('h2',row.name),element('span',row.active?'فعال':'غیرفعال'));card.append(header,element('p','مدل: '+row.model),element('p','آدرس سرویس: '+row.baseUrl),element('p','کلید API: ••••••••'),actionButton(row.active?'غیرفعال کردن':'فعال کردن',async()=>{await api('admin/ai-connections/'+row.id+'/active','PUT',{active:!row.active});await load();}),actionButton('حذف API',()=>{openModal('حذف سرویس',dialog=>{dialog.append(element('p','این API از تنظیمات حذف شود؟'),actionButton('حذف سرویس',async()=>{await api('admin/ai-connections/'+row.id,'DELETE');dialog.close();await load();},false));});}));view.append(card);}return view;
+function help(input, text) { const description = element('p', text, 'form-help'); description.id = input.id + '-help'; input.setAttribute('aria-describedby', description.id); input.parentElement.append(description); }
+function formFooter(label, iconName = 'check', dialog) {
+  const footer = element('div', null, 'form-submit'); const save = button(label, null, { iconName }); save.type = 'submit'; footer.append(save);
+  if (dialog) footer.append(button('انصراف', () => dialog.close(), { secondary: true })); return footer;
 }
-function firebaseModal(){openModal('تنظیم اتصال Firebase',dialog=>{const form=element('form');form.append(element('p','محتوای فایل JSON حساب سرویس Firebase را وارد کنید. کلید خصوصی رمزنگاری می‌شود و در فهرست نمایش داده نمی‌شود.'));const input=field(form,'account','JSON حساب سرویس','textarea');input.rows=8;input.dir='ltr';const save=element('button','ذخیره اتصال');save.type='submit';form.append(save);onForm(form,async v=>{let account;try{account=JSON.parse(v.account);}catch{throw new Error('JSON معتبر وارد کنید');}await api('admin/push/firebase','PUT',account);dialog.close();await load();notice('تنظیمات Firebase ذخیره شد؛ ارسال آزمایشی برای بررسی دسترسی لازم است');});dialog.append(form);});}
-async function notificationModal(){const devices=await api('admin/push/devices');openModal('اعلان جدید',dialog=>{const form=element('form');field(form,'title','عنوان اعلان').maxLength=120;const body=field(form,'body','متن اعلان','textarea');body.maxLength=1000;body.rows=4;const audience=field(form,'audience','مخاطبان','select');for(const [v,l]of [['device','آزمایشی · یک دستگاه'],['all','همه کاربران']]){const o=element('option',l);o.value=v;audience.append(o);}const device=field(form,'deviceId','دستگاه آزمایشی','select');device.append(Object.assign(element('option','یک دستگاه انتخاب کنید'),{value:''}));for(const d of devices){const o=element('option',(d.displayName||'کاربر')+' · '+d.platform+' · '+d.id.slice(-6));o.value=d.id;device.append(o);}audience.onchange=()=>{device.parentElement.hidden=audience.value==='all';device.required=audience.value==='device';};
- const schedule=field(form,'scheduledAt','زمان‌بندی اختیاری (وقت تهران)','datetime-local');schedule.required=false;
- form.append(element('p','ابتدا پیش‌نویس ذخیره کنید. از جزئیات، ارسال آزمایشی یا ارسال به مخاطبان را تأیید کنید. در نبود Firebase فقط پیش‌نویس ذخیره می‌شود.'));
- const save=element('button','ذخیره پیش‌نویس');save.type='submit';form.append(save);onForm(form,async v=>{const payload={title:v.title,body:v.body,audience:v.audience};if(v.audience==='device')payload.deviceId=v.deviceId;if(v.scheduledAt)payload.scheduledAt=new Date(v.scheduledAt+':00+03:30').toISOString();await api('admin/push/campaigns','POST',payload);dialog.close();await load();notice('پیش‌نویس ذخیره شد');});dialog.append(form);});}
-const campaignStatuses={draft:'پیش‌نویس',scheduled:'زمان‌بندی‌شده',sending:'در حال ارسال',completed:'پایان ارسال',failed:'ناموفق'};
-function notificationDetails(row,status){openModal('جزئیات اعلان',dialog=>{dialog.append(element('h3',row.title),element('p',row.body),element('p','مخاطبان: '+(row.audience==='all'?'همه کاربران':'آزمایشی · یک دستگاه')),element('p','وضعیت: '+campaignStatuses[row.status]),element('p','پذیرفته‌شده توسط Firebase: '+number(row.accepted)+' · خطا / نامشخص: '+number(row.failed)));
- if(row.status==='draft'){dialog.append(element('p',status.configured?'با ارسال، پیام برای مخاطبان انتخاب‌شده در صف قرار می‌گیرد.':'برای ارسال ابتدا Firebase را متصل کنید.'));const send=actionButton(row.scheduledAt?'تأیید زمان‌بندی':row.audience==='all'?'تأیید و ارسال به همه کاربران':'ارسال آزمایشی',async()=>{await api('admin/push/campaigns/'+row.id+'/send','POST',{});dialog.close();await load();notice('اعلان در صف ارسال قرار گرفت');},false);send.disabled=!status.configured;dialog.append(send);}
- });}
-async function notificationsPage(){const [status,rows]=await Promise.all([api('admin/push/status'),api('admin/push/campaigns')]);const view=element('div');const top=element('header'),buttons=element('div');buttons.className='actions';buttons.append(actionButton('اتصالات',firebaseModal),actionButton('اعلان جدید +',notificationModal,false));top.append(element('p','اعلان بسازید، ابتدا آزمایش کنید و نتیجه هر ارسال را اینجا ببینید.'),buttons);view.append(top);
- const summary=element('section');summary.className='card';summary.append(element('h2','ارتباط مستقیم با کاربران'));const metrics=element('div');metrics.className='cards';for(const [label,value]of [['وضعیت سرویس',status.configured?'تنظیم‌شده · '+status.projectId:'در انتظار راه‌اندازی Firebase'],['گوشی‌های واجد شرایط',number(status.devices)],['اعلان‌های زمان‌بندی‌شده',number(status.scheduled)]]){const item=element('div');item.append(element('p',label),element('strong',value));metrics.append(item);}summary.append(metrics,element('p','پذیرفته‌شده یعنی پیام توسط Firebase پذیرفته شده؛ تضمین نمایش یا خواندن روی گوشی نیست.'));view.append(summary);
- const list=element('section');list.className='card';const search=element('input');search.placeholder='جستجو در اعلان‌ها';search.setAttribute('aria-label','جستجو در اعلان‌ها');search.type='search';const filter=element('select');filter.setAttribute('aria-label','فیلتر وضعیت');filter.append(Object.assign(element('option','همه وضعیت‌ها'),{value:''}));for(const [key,label]of Object.entries(campaignStatuses))filter.append(Object.assign(element('option',label),{value:key}));const tools=element('div');tools.className='actions';tools.append(search,filter);list.append(tools);const container=element('div');container.className='table-wrap';list.append(container);let page=0;const footer=element('div');footer.className='actions';const info=element('span'),prev=actionButton('قبلی',()=>{page--;render();}),next=actionButton('بعدی',()=>{page++;render();});footer.append(info,prev,next);list.append(footer);
- function render(){const filtered=rows.filter(r=>(!filter.value||r.status===filter.value)&&((r.title+' '+r.body).includes(search.value)));page=Math.max(0,Math.min(page,Math.ceil(filtered.length/10)-1));container.replaceChildren();const table=element('table'),thead=element('tr');['عنوان اعلان','وضعیت','مخاطبان','پذیرفته‌شده','کل گوشی‌ها','خطا / نامشخص','زمان ارسال (تهران)','تاریخ ایجاد (شمسی)','عملیات'].forEach(x=>thead.append(element('th',x)));table.append(thead);
- for(const row of filtered.slice(page*10,page*10+10)){const tr=element('tr');const date=value=>value?new Date(value).toLocaleString('fa-IR',{timeZone:'Asia/Tehran'}):'—';for(const value of [row.title,campaignStatuses[row.status],row.audience==='all'?'همه کاربران':'آزمایشی · یک دستگاه',number(row.accepted),number(row.total),number(row.failed),date(row.sentAt||row.scheduledAt),date(row.createdAt)])tr.append(element('td',value));const td=element('td');td.append(actionButton('جزئیات',()=>notificationDetails(row,status)));if(row.status!=='sending')td.append(actionButton('حذف',()=>{openModal('حذف از فهرست',dialog=>{dialog.append(element('p','اعلان از فهرست حذف و ارسال زمان‌بندی‌شده لغو شود؟ گزارش آن در دیتابیس حفظ می‌شود.'),actionButton('تأیید حذف',async()=>{await api('admin/push/campaigns/'+row.id,'DELETE');dialog.close();await load();}));});}));tr.append(td);table.append(tr);}container.append(table);if(!filtered.length)container.append(element('p','اعلانی پیدا نشد. برای شروع «اعلان جدید» را بزنید.'));info.textContent=number(filtered.length)+' نتیجه · صفحه '+number(page+1);prev.disabled=page===0;next.disabled=(page+1)*10>=filtered.length;}
- search.oninput=()=>{page=0;render();};filter.onchange=()=>{page=0;render();};render();view.append(list);return view;
+function formError(form, error) {
+  let box = form.querySelector('[role="alert"]'); if (!box) { box = element('p', null, 'form-error'); box.setAttribute('role', 'alert'); box.tabIndex = -1; form.append(box); }
+  box.textContent = error; if (error) box.focus();
+}
+function onForm(form, action) {
+  form.onsubmit = async e => {
+    e.preventDefault(); const save = form.querySelector('button[type="submit"]'); save.disabled = true; form.setAttribute('aria-busy', 'true'); formError(form, '');
+    try { await action(Object.fromEntries(new FormData(form))); } catch (error) { formError(form, error.message); }
+    finally { save.disabled = false; form.removeAttribute('aria-busy'); }
+  };
+}
+function confirmAction(title, description, label, action) {
+  openModal(title, (body, dialog) => {
+    body.append(element('p', description)); const footer = element('div', null, 'form-submit');
+    footer.append(button(label, async () => { await action(); dialog.close(); await load(); }, { iconName: 'trash', className: 'danger' }), button('انصراف', () => dialog.close(), { secondary: true })); body.append(footer);
+  }, { iconName: 'trash', danger: true });
+}
+function addAiModal() {
+  openModal('افزودن سرویس هوش مصنوعی', (body, dialog) => {
+    body.append(element('p', 'مشخصات سرویس را وارد کنید؛ پس از ذخیره می‌توانید آن را فعال کنید.'));
+    const form = element('form'), grid = element('div', null, 'form-grid'); form.append(grid);
+    const name = field(grid, 'name', 'نام هوش مصنوعی'); name.maxLength = 80; name.placeholder = 'مثلاً سرویس تولید برنامه';
+    const model = field(grid, 'model', 'نام مدل'); model.dir = 'ltr'; model.maxLength = 120; model.placeholder = 'model-name';
+    const key = field(form, 'apiKey', 'کلید API', 'password'); key.autocomplete = 'new-password'; key.maxLength = 4096; key.dir = 'ltr'; key.placeholder = 'کلید سرویس را اینجا قرار دهید'; help(key, 'کلید شما خصوصی می‌ماند و پس از ذخیره دوباره نمایش داده نمی‌شود.');
+    const url = field(form, 'baseUrl', 'آدرس پایه سرویس', 'url', 'https://api.openai.com/v1'); url.dir = 'ltr'; help(url, 'از سرویس‌های سازگار با OpenAI Chat Completions استفاده کنید.');
+    const cost = field(form, 'costPer1kTokens', 'هزینه تخمینی هر ۱۰۰۰ توکن (میکرودلار)', 'number', '0'); cost.min = '0'; cost.step = '1'; help(cost, 'برای محاسبه هزینه، تعرفه سرویس را وارد کنید. صفر یعنی هزینه ثبت نمی‌شود.');
+    form.append(formFooter('ذخیره سرویس', 'plus', dialog));
+    onForm(form, async value => { await api('admin/ai-connections', 'POST', { ...value, costPer1kTokens: Number(value.costPer1kTokens) }); dialog.close(); await load(); notice('سرویس جدید اضافه شد'); }); body.append(form);
+  }, { iconName: 'sparkles' });
+}
+async function aiPage() {
+  const rows = await api('admin/ai-connections'), view = element('div', null, 'ai-page'), active = rows.find(row => row.active);
+  const summary = element('section', null, 'card integration-summary'), title = element('div', null, 'integration-summary-title'), text = element('div');
+  text.append(element('h2', 'هوش مصنوعی، در خدمت سبزینه'), element('p', 'انتخاب سرویس تولید برنامه از یک نقطه.')); title.append(iconTile('sparkles'), text);
+  const metrics = element('div', null, 'summary-metrics');
+  for (const [label, value] of [['سرویس‌های متصل', number(rows.length)], ['سرویس فعال', active ? active.name : 'انتخاب نشده'], ['وضعیت کلیدها', 'خصوصی']]) { const metric = element('div', null, 'summary-metric'); metric.append(element('small', label), typeof value === 'string' && value.length > 4 ? badge(active || label === 'وضعیت کلیدها' ? 'active' : 'draft', value) : element('strong', value)); metrics.append(metric); }
+  summary.append(title, metrics); view.append(summary);
+  if (!rows.length) {
+    const empty = element('section', null, 'card integration-empty'); empty.append(emptyState('اولین سرویس را متصل کنید', 'نام، کلید API و مدل را وارد کنید تا مدیریت سرویس از همین‌جا شروع شود.', 'key', button('افزودن API جدید', addAiModal, { iconName: 'plus' })), infoNote('هر بار یک سرویس فعال است. تغییر سرویس برای درخواست‌های بعدی اعمال می‌شود.')); view.append(empty); return view;
+  }
+  const grid = element('div', null, 'connection-grid');
+  for (const row of rows) {
+    const card = element('section', null, 'card connection-card'), top = element('div', null, 'connection-top'), identity = element('div'); identity.append(element('h2', row.name), element('small', 'سرویس تولید برنامه')); top.append(iconTile('sparkles'), identity, badge(row.active ? 'active' : 'draft', row.active ? 'فعال' : 'غیرفعال'));
+    const details = element('div', null, 'connection-details');
+    for (const [label, value, ltr] of [['مدل', row.model, true], ['آدرس سرویس', row.baseUrl, true], ['کلید API', '•••• •••• ••••', true], ['هزینه / هزار توکن', number(row.costPer1kTokens) + ' میکرودلار', false]]) { const line = element('div', null, 'connection-detail'); line.append(element('small', label), element('span', value, ltr ? 'ltr' : '')); details.append(line); }
+    const actions = element('div', null, 'connection-actions'); actions.append(button(row.active ? 'غیرفعال کردن' : 'فعال کردن', async () => { await api('admin/ai-connections/' + row.id + '/active', 'PUT', { active: !row.active }); await load(); notice('وضعیت سرویس تغییر کرد'); }, { secondary: row.active, iconName: row.active ? 'close' : 'check' }), button('حذف', () => confirmAction('حذف سرویس', 'سرویس «' + row.name + '» از تنظیمات حذف شود؟', 'حذف سرویس', () => api('admin/ai-connections/' + row.id, 'DELETE')), { iconName: 'trash', secondary: true, className: 'ghost' }));
+    card.append(top, details, actions); grid.append(card);
+  }
+  view.append(grid); return view;
+}
+function firebaseModal() {
+  openModal('اتصال به Firebase', (body, dialog) => {
+    body.append(infoNote('برای ارسال پوش، اطلاعات حساب سرویس Firebase پروژه را ثبت کنید. کلید خصوصی پس از ذخیره نمایش داده نمی‌شود.'));
+    const form = element('form'), input = field(form, 'account', 'JSON حساب سرویس', 'textarea'); input.rows = 8; input.dir = 'ltr'; input.spellcheck = false; input.placeholder = '{ "project_id": "…", "client_email": "…", "private_key": "…" }';
+    help(input, 'محتوای فایل حساب سرویس را به‌طور کامل وارد کنید.'); form.append(formFooter('ذخیره اتصال', 'check', dialog));
+    onForm(form, async value => { let account; try { account = JSON.parse(value.account); } catch { throw new Error('محتوای JSON معتبر نیست. فایل حساب سرویس را بررسی کنید.'); } await api('admin/push/firebase', 'PUT', account); dialog.close(); await load(); notice('اتصال ذخیره شد. برای بررسی دسترسی، یک اعلان آزمایشی بفرستید.'); }); body.append(form);
+  }, { iconName: 'server' });
+}
+async function notificationModal() {
+  const devices = await api('admin/push/devices');
+  openModal('ساخت اعلان جدید', (body, dialog) => {
+    const form = element('form'), title = field(form, 'title', 'عنوان اعلان'); title.maxLength = 120; title.placeholder = 'عنوان کوتاه و روشن برای پیام شما';
+    const message = field(form, 'body', 'متن اعلان', 'textarea'); message.maxLength = 1000; message.rows = 3; message.placeholder = 'چه پیامی برای کاربران دارید؟';
+    const preview = element('div', null, 'notification-preview'), previewText = element('div'), previewTitle = element('strong', 'سبزینه'), previewBody = element('p', 'پیش‌نمایش پیام شما'); previewText.append(previewTitle, previewBody); preview.append(iconTile('leaf'), previewText, element('small', 'پیش‌نمایش')); form.append(preview);
+    title.oninput = () => { previewTitle.textContent = title.value || 'سبزینه'; }; message.oninput = () => { previewBody.textContent = message.value || 'پیش‌نمایش پیام شما'; };
+    const audience = field(form, 'audience', 'مخاطبان', 'select');
+    for (const [value, label] of [['device', 'آزمایشی · یک دستگاه'], ['all', 'همه کاربران']]) audience.append(Object.assign(element('option', label), { value }));
+    const device = field(form, 'deviceId', 'دستگاه آزمایشی', 'select'); device.append(Object.assign(element('option', 'یک دستگاه انتخاب کنید'), { value: '' }));
+    for (const d of devices) device.append(Object.assign(element('option', (d.displayName || 'کاربر') + ' · ' + d.platform + ' · ' + d.id.slice(-6)), { value: d.id }));
+    if (!devices.length) help(device, 'هنوز دستگاهی برای دریافت اعلان ثبت نشده است. برای ذخیره پیش‌نویس می‌توانید «همه کاربران» را انتخاب کنید.');
+    audience.onchange = () => { device.parentElement.hidden = audience.value === 'all'; device.required = audience.value === 'device'; };
+    const schedule = field(form, 'scheduledAt', 'زمان ارسال (اختیاری)', 'datetime-local'); schedule.required = false; help(schedule, 'به وقت تهران. برای ارسال بدون زمان‌بندی، این فیلد را خالی بگذارید.');
+    form.append(infoNote('ابتدا پیش‌نویس ذخیره می‌شود. ارسال نهایی را از بخش جزئیات تأیید می‌کنید.'), formFooter('ذخیره پیش‌نویس', 'check', dialog));
+    onForm(form, async value => { const payload = { title: value.title, body: value.body, audience: value.audience }; if (value.audience === 'device') payload.deviceId = value.deviceId; if (value.scheduledAt) payload.scheduledAt = new Date(value.scheduledAt + ':00+03:30').toISOString(); await api('admin/push/campaigns', 'POST', payload); dialog.close(); await load(); notice('پیش‌نویس اعلان ذخیره شد'); }); body.append(form);
+  }, { iconName: 'bell' });
+}
+const campaignStatuses = { draft: 'پیش‌نویس', scheduled: 'زمان‌بندی‌شده', sending: 'در حال ارسال', completed: 'پایان ارسال', failed: 'ناموفق' };
+function notificationDetails(row, status) {
+  openModal('جزئیات اعلان', (body, dialog) => {
+    body.append(element('h3', row.title), element('p', row.body, 'detail-message'));
+    const grid = element('div', null, 'detail-grid');
+    for (const [label, value] of [['وضعیت', badge(row.status)], ['مخاطبان', row.audience === 'all' ? 'همه کاربران' : 'آزمایشی · یک دستگاه'], ['پذیرفته‌شده', number(row.accepted) + ' دستگاه'], ['خطا / نامشخص', number(row.failed) + ' دستگاه'], ['زمان ایجاد', formatDate(row.createdAt)], ['زمان ارسال', formatDate(row.sentAt || row.scheduledAt)]]) { const item = element('div'); item.append(element('small', label), value instanceof Node ? value : element('strong', value)); grid.append(item); } body.append(grid);
+    if (row.status === 'draft') {
+      body.append(infoNote(status.configured ? 'با تأیید، اعلان برای مخاطبان انتخاب‌شده در صف ارسال قرار می‌گیرد.' : 'برای ارسال، ابتدا اتصال Firebase را در بخش اتصالات تنظیم کنید.', status.configured ? '' : 'warning'));
+      const footer = element('div', null, 'form-submit'), send = button(row.scheduledAt ? 'تأیید زمان‌بندی' : row.audience === 'all' ? 'تأیید و ارسال به همه کاربران' : 'ارسال آزمایشی', async () => { await api('admin/push/campaigns/' + row.id + '/send', 'POST', {}); dialog.close(); await load(); notice('اعلان در صف ارسال قرار گرفت'); }, { iconName: 'send' }); send.disabled = !status.configured; footer.append(send); body.append(footer);
+    }
+  }, { iconName: 'bell' });
+}
+async function notificationsPage() {
+  const [status, rows] = await Promise.all([api('admin/push/status'), api('admin/push/campaigns')]);
+  const view = element('div', null, 'push-page'), summary = element('section', null, 'card integration-summary'), identity = element('div', null, 'integration-summary-title'), text = element('div');
+  text.append(element('h2', 'ارتباط مستقیم با کاربران'), element('p', 'اعلان بسازید، آزمایش کنید و نتیجه را ببینید.')); identity.append(iconTile('send'), text);
+  const metrics = element('div', null, 'summary-metrics'), service = element('div', null, 'summary-metric');
+  service.append(element('small', 'وضعیت سرویس'), badge(status.configured ? 'active' : 'pending', status.configured ? 'Firebase تنظیم‌شده' : 'در انتظار اتصال'));
+  if (status.projectId) service.append(element('p', status.projectId, 'project-id ltr')); metrics.append(service);
+  for (const [label, value] of [['گوشی‌های واجد شرایط', status.devices], ['اعلان‌های زمان‌بندی‌شده', status.scheduled]]) { const metric = element('div', null, 'summary-metric'); metric.append(element('small', label), element('strong', number(value))); metrics.append(metric); }
+  summary.append(identity, metrics, infoNote(status.configured ? 'پذیرفته‌شده به معنای پذیرش پیام توسط Firebase است؛ نمایش روی گوشی به تنظیمات دستگاه بستگی دارد.' : 'پیش‌نویس‌ها را آماده کنید؛ پس از اتصال Firebase و ثبت دستگاه، ارسال واقعی فعال می‌شود.')); view.append(summary);
+  const columns = [
+    { label: 'عنوان اعلان', render: row => { const text = element('div', null, 'notification-title-cell'); text.append(element('strong', row.title), element('small', row.body.length > 65 ? row.body.slice(0, 65) + '…' : row.body)); return text; } },
+    { label: 'وضعیت', render: row => badge(row.status) },
+    { label: 'مخاطبان', render: row => row.audience === 'all' ? 'همه کاربران' : 'آزمایشی · یک دستگاه', className: 'cell-nowrap' },
+    { label: 'پذیرفته‌شده', render: row => number(row.accepted) },
+    { label: 'کل گوشی‌ها', render: row => number(row.total) },
+    { label: 'خطا / نامشخص', render: row => number(row.failed) },
+    { label: 'زمان ارسال · تهران', render: row => formatDate(row.sentAt || row.scheduledAt), className: 'cell-nowrap' },
+    { label: 'تاریخ ایجاد', render: row => formatDate(row.createdAt), className: 'cell-nowrap' },
+    { label: 'عملیات', render: row => { const actions = element('div', null, 'cell-actions'); actions.append(button('جزئیات', () => notificationDetails(row, status), { secondary: true, iconName: 'eye' })); if (row.status !== 'sending') actions.append(button('حذف', () => confirmAction('حذف اعلان', 'اعلان از فهرست حذف و ارسال زمان‌بندی‌شده لغو شود؟ گزارش آن حفظ می‌شود.', 'حذف اعلان', () => api('admin/push/campaigns/' + row.id, 'DELETE')), { secondary: true, iconName: 'trash', className: 'danger' })); return actions; } },
+  ];
+  view.append(listPanel(rows, { title: 'اعلان‌ها', description: number(rows.length) + ' اعلان در فهرست', columns, filters: Object.entries(campaignStatuses), emptyTitle: 'اولین پیام شما، شروع یک ارتباط', emptyDescription: 'با دکمهٔ «اعلان جدید» یک پیام بسازید و ابتدا آن را به‌صورت پیش‌نویس ذخیره کنید.', iconName: 'bell' })); return view;
 }
