@@ -1,3 +1,5 @@
+import 'shopping_list.dart';
+export 'shopping_list.dart';
 import 'dart:convert';
 import 'meal_plan.dart';
 import 'meal_fixtures.dart';
@@ -955,7 +957,7 @@ class DemoStore extends ChangeNotifier {
     String explanation = '',
     bool confirmConsumed = false,
   }) async {
-    if (savingSubstitution || savingMeal) return false;
+    if (savingSubstitution || savingMeal || savingShopping) return false;
     if (!canSubstituteOn(date) ||
         index < 0 ||
         index >= originalMealsOn(date).length) {
@@ -995,12 +997,47 @@ class DemoStore extends ChangeNotifier {
     );
     final next = {..._selectedOptions, key: optionId};
     final history = [..._substitutionHistory, record];
+    final before = {
+      for (final row in shoppingList().rows)
+        shoppingRowKey(row.ingredient): row,
+    };
+    final after = {
+      for (final row in shoppingList(options: next).rows)
+        shoppingRowKey(row.ingredient): row,
+    };
+    final changes = Map<String, Map<String, dynamic>>.of(_shoppingChanges);
+    for (final rowKey in {...before.keys, ...after.keys}) {
+      final oldQuantity = before[rowKey]?.quantity ?? 0,
+          newQuantity = after[rowKey]?.quantity ?? 0;
+      if ((oldQuantity - newQuantity).abs() < 1e-9) continue;
+      final changeKey = '$shoppingContext|$rowKey';
+      final previous = changes[changeKey]?['previous'] ?? oldQuantity;
+      final ingredient = (after[rowKey] ?? before[rowKey])!.ingredient;
+      if (((previous as num).toDouble() - newQuantity).abs() < 1e-9) {
+        changes.remove(changeKey);
+      } else {
+        changes[changeKey] = {
+          'name': ingredient.name,
+          'unit': ingredient.unit,
+          'basis': ingredient.basis,
+          'previous': previous,
+          'next': newQuantity,
+        };
+      }
+    }
     savingSubstitution = true;
     update();
     try {
       await _nutritionStorage?.write(
-        _nutritionSnapshot(options: next, history: history),
+        _nutritionSnapshot(
+          options: next,
+          history: history,
+          shoppingChanges: changes,
+        ),
       );
+      _shoppingChanges
+        ..clear()
+        ..addAll(changes);
       _selectedOptions
         ..clear()
         ..addAll(next);
@@ -1019,7 +1056,13 @@ class DemoStore extends ChangeNotifier {
     Map<String, String>? options,
     List<MealSelection>? history,
     Map<String, Map<String, dynamic>>? consumption,
+    Map<String, ShoppingMark>? shoppingMarks,
+    Map<String, Map<String, dynamic>>? shoppingChanges,
   }) => jsonEncode({
+    'shoppingMarks': (shoppingMarks ?? _shoppingMarks).map(
+      (key, value) => MapEntry(key, value.toJson()),
+    ),
+    'shoppingChanges': shoppingChanges ?? _shoppingChanges,
     'version': 2,
     'consumption': consumption ?? _consumptionDetails,
     'meals': meals ?? _mealCalories,
@@ -1028,24 +1071,113 @@ class DemoStore extends ChangeNotifier {
         .map((r) => r.toJson())
         .toList(),
   });
-  // Computed from selected options; never combines incompatible units or invents quantities.
-  List<ShoppingIngredient> shoppingIngredients({Iterable<DateTime>? dates}) {
-    final week = userRequest.programWeek;
-    if (week == null) return const [];
-    final rows = <String, ShoppingIngredient>{};
-    for (final date
-        in dates ?? List.generate(7, (i) => week.add(Duration(days: i)))) {
-      for (final meal in mealsOn(date)) {
-        for (final ingredient in meal.ingredients.where((i) => i.complete)) {
-          final key = '${ingredient.id}|${ingredient.unit}|${ingredient.basis}';
-          rows[key] = ShoppingIngredient(
-            ingredient,
-            (rows[key]?.quantity ?? 0) + ingredient.quantity!,
-          );
-        }
+  final Map<String, ShoppingMark> _shoppingMarks = {};
+  final Map<String, Map<String, dynamic>> _shoppingChanges = {};
+  bool savingShopping = false;
+  bool get hasActiveShoppingPlan =>
+      hasUserRequest &&
+      userRequest.isPublished &&
+      userRequest.programWeek != null &&
+      dateKey(userRequest.programWeek!) == dateKey(startOfWeek(today));
+  String get shoppingContext =>
+      '$userRequestId|${userRequest.version}|${dateKey(userRequest.programWeek!)}';
+  ShoppingListData shoppingList({
+    Iterable<DateTime>? dates,
+    Map<String, String>? options,
+  }) {
+    if (!hasActiveShoppingPlan) return const ShoppingListData([], []);
+    final week = userRequest.programWeek!;
+    final days =
+        (dates ??
+                List.generate(
+                  7,
+                  (i) => DateTime(week.year, week.month, week.day + i),
+                ))
+            .map(dateKey)
+            .toSet();
+    final meals = <Meal>[];
+    for (var day = 0; day < 7; day++) {
+      final date = DateTime(week.year, week.month, week.day + day);
+      if (!days.contains(dateKey(date))) continue;
+      final originals = originalMealsOn(date);
+      for (var i = 0; i < originals.length; i++) {
+        final selected = (options ?? _selectedOptions)[selectionKey(date, i)];
+        final matches = originals[i].alternatives.where(
+          (a) => a.id == selected && a.available,
+        );
+        meals.add(matches.isEmpty ? originals[i] : matches.first.meal);
       }
     }
-    return rows.values.toList();
+    return aggregateShoppingIngredients(meals);
+  }
+
+  List<ShoppingIngredient> shoppingIngredients({Iterable<DateTime>? dates}) =>
+      shoppingList(dates: dates).rows;
+  String _shoppingMarkKey(ShoppingIngredient row) =>
+      '$shoppingContext|${shoppingRowKey(row.ingredient)}';
+  ShoppingMark? shoppingMark(ShoppingIngredient row) =>
+      _shoppingMarks[_shoppingMarkKey(row)];
+  List<Map<String, dynamic>> get shoppingChanges => hasActiveShoppingPlan
+      ? _shoppingChanges.entries
+            .where((e) => e.key.startsWith('$shoppingContext|'))
+            .map((e) => Map<String, dynamic>.unmodifiable(e.value))
+            .toList()
+      : [];
+  Future<void> setShoppingMark(ShoppingIngredient row, String? status) async {
+    if (savingShopping || savingMeal || savingSubstitution) {
+      throw StateError('ذخیره دیگری در جریان است.');
+    }
+    if (!hasActiveShoppingPlan || ![null, 'have', 'purchased'].contains(status)) {
+      throw StateError('برنامه فعال یا وضعیت معتبر نیست.');
+    }
+    final current = shoppingList().rows.where(
+      (r) => shoppingRowKey(r.ingredient) == shoppingRowKey(row.ingredient),
+    );
+    if (current.isEmpty ||
+        row.quantity <= 0 ||
+        row.quantity > current.first.quantity + 1e-9) {
+      throw StateError('فهرست تغییر کرده؛ دوباره بررسی کن.');
+    }
+    final next = Map<String, ShoppingMark>.of(_shoppingMarks);
+    final key = _shoppingMarkKey(row);
+    if (status == null) {
+      next.remove(key);
+    } else {
+      next[key] = ShoppingMark(status, row.quantity);
+    }
+    savingShopping = true;
+    update();
+    try {
+      await _nutritionStorage?.write(_nutritionSnapshot(shoppingMarks: next));
+      _shoppingMarks
+        ..clear()
+        ..addAll(next);
+    } finally {
+      savingShopping = false;
+      update();
+    }
+  }
+
+  Future<void> acknowledgeShoppingChanges() async {
+    if (!hasActiveShoppingPlan ||
+        savingShopping ||
+        savingMeal ||
+        savingSubstitution) {
+      return;
+    }
+    final next = Map<String, Map<String, dynamic>>.of(_shoppingChanges)
+      ..removeWhere((key, _) => key.startsWith('$shoppingContext|'));
+    savingShopping = true;
+    update();
+    try {
+      await _nutritionStorage?.write(_nutritionSnapshot(shoppingChanges: next));
+      _shoppingChanges
+        ..clear()
+        ..addAll(next);
+    } finally {
+      savingShopping = false;
+      update();
+    }
   }
 
   Map<String, dynamic>? mealRecordOn(DateTime date, int index) =>
@@ -1076,7 +1208,7 @@ class DemoStore extends ChangeNotifier {
     double? quantity,
     String unit = '',
   }) async {
-    if (savingMeal || savingSubstitution) {
+    if (savingMeal || savingSubstitution || savingShopping) {
       throw StateError('ذخیره دیگری در جریان است.');
     }
     if (dateKey(date) != dateKey(today) ||
@@ -1189,6 +1321,24 @@ class DemoStore extends ChangeNotifier {
           entries.map((e) => MapEntry(e.key as String, e.value as int)),
         );
       if (data['version'] == 2) {
+        _shoppingMarks
+          ..clear()
+          ..addAll(
+            (data['shoppingMarks'] as Map? ?? {}).map(
+              (k, v) => MapEntry(
+                k as String,
+                ShoppingMark.fromJson(Map<String, dynamic>.from(v as Map)),
+              ),
+            ),
+          );
+        _shoppingChanges
+          ..clear()
+          ..addAll(
+            (data['shoppingChanges'] as Map? ?? {}).map(
+              (k, v) =>
+                  MapEntry(k as String, Map<String, dynamic>.from(v as Map)),
+            ),
+          );
         _consumptionDetails
           ..clear()
           ..addAll(
@@ -1221,7 +1371,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> setMealEaten(DateTime date, int index, bool eaten) async {
-    if (savingMeal || savingSubstitution) return;
+    if (savingMeal || savingSubstitution || savingShopping) return;
     final meals = mealsOn(date);
     if (index < 0 || index >= meals.length) return;
     final key = mealLogKey(date, index),

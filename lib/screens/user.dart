@@ -1,3 +1,4 @@
+import 'shopping.dart';
 import '../widgets/meal_choices.dart';
 import 'dart:math' as math;
 import 'dart:async';
@@ -90,6 +91,12 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
               if (r != null && !r.revisionRequested && r.question.isNotEmpty)
                 RequestInformationCard(request: r),
               if (hasPlan) const WeeklyStreakCard(),
+              if (s.hasActiveShoppingPlan)
+                OutlinedButton.icon(
+                  onPressed: () => pushPage(context, const ShoppingScreen()),
+                  icon: const Icon(Icons.shopping_basket_outlined),
+                  label: const Text('لیست خرید هفته'),
+                ),
               if (hasPlan &&
                   !r!.revisionRequested &&
                   r.status != PlanStatus.ready)
@@ -449,6 +456,12 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
         title: const Text('برنامهٔ غذایی من'),
         automaticallyImplyLeading: !widget.embedded,
         actions: [
+          if (s.hasActiveShoppingPlan)
+            IconButton(
+              tooltip: 'لیست خرید هفته',
+              onPressed: () => pushPage(context, const ShoppingScreen()),
+              icon: const Icon(Icons.shopping_basket_outlined),
+            ),
           if (r.isPublished)
             IconButton(
               tooltip: 'نمایش خلاصهٔ برنامه',
@@ -795,14 +808,11 @@ class PlanSummaryScreen extends StatelessWidget {
                 ],
               ),
             ),
-          const Heading('مواد لازم برای انتخاب‌های هفته'),
-          const Text(
-            'با تغییر غذا این فهرست به‌روز می‌شود. فقط مقدارهای ثبت‌شده جمع می‌شوند.',
+          PrimaryButton(
+            'لیست خرید هفته',
+            onPressed: () => pushPage(context, const ShoppingScreen()),
+            icon: Icons.shopping_basket_outlined,
           ),
-          for (final row in store.shoppingIngredients())
-            Text(
-              '• ${row.ingredient.name}: ${fa(row.quantity % 1 == 0 ? row.quantity.toInt() : row.quantity)} ${row.ingredient.unit}',
-            ),
         ],
       ),
     );

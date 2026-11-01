@@ -116,6 +116,7 @@ Meal enrichDemoMeal(Meal meal) {
       name,
       number == null ? null : double.tryParse(number[1]!),
       number?[2] ?? portion,
+      category: _demoCategory(name),
       basis: name.contains('پخته') || name.contains('آب‌پز')
           ? 'پخته'
           : name.contains('خشک') || name.contains('خام')
@@ -134,4 +135,35 @@ Meal enrichDemoMeal(Meal meal) {
         'وزن‌های دارای برچسب پخته پس از پخت و موارد خشک یا خام پیش از پخت اندازه‌گیری می‌شوند؛ زمان آماده‌سازی از مواد ازپیش‌پخته محاسبه شده است.',
     ingredients: requiredIngredients,
   );
+}
+
+// Presentation categories for explicit fixtures only; live data supplies its category.
+String _demoCategory(String name) {
+  if (['شیر', 'ماست', 'پنیر', 'کشک'].any(name.contains)) return 'لبنیات';
+  if (['مرغ', 'گوشت', 'ماهی', 'تخم‌مرغ'].any(name.contains)) return 'پروتئین';
+  if (['بادام', 'گردو', 'پسته', 'روغن'].any(name.contains)) {
+    return 'مغزها و روغن';
+  }
+  if (['عدس', 'لوبیا', 'نخود'].any(name.contains)) return 'حبوبات';
+  if (['نان', 'برنج', 'جو', 'پاستا', 'پلو'].any(name.contains)) {
+    return 'نان و غلات';
+  }
+  if ([
+    'سیب',
+    'موز',
+    'سبزی',
+    'خیار',
+    'گوجه',
+    'کاهو',
+    'میوه',
+    'پرتقال',
+    'خرما',
+    'توت',
+    'گلابی',
+    'سالاد',
+    'آب‌لیمو',
+  ].any(name.contains)) {
+    return 'میوه و سبزی';
+  }
+  return 'سایر';
 }
