@@ -394,7 +394,7 @@ class ScheduledMealTile extends StatelessWidget {
         child: Surface(
           color: eaten ? const Color(0xFFF1F6E9) : Colors.white,
           padding: 12,
-          onTap: eaten ? null : () => showMealDetails(context, date, index),
+          onTap: () => showMealDetails(context, date, index),
           child: Row(
             children: [
               FoodArt(kind: m.kind, size: 60),
@@ -559,6 +559,82 @@ void showMealDetails(BuildContext context, DateTime date, int index) {
                           ),
                         ),
                         const SizedBox(height: 14),
+                        const Text('زمان و روش آماده‌سازی: هنوز ثبت نشده است'),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'جایگزین‌های نمونه · تأیید نمونه متخصص',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        for (final entry
+                            in s.alternativesOn(date, index).asMap().entries)
+                          ListTile(
+                            title: Text(entry.value.title),
+                            subtitle: Text(
+                              '${entry.key == 0 ? "پیشنهاد AI" : "پیشنهاد متخصص"}\n${entry.value.amount}\n${fa(entry.value.calories)} کیلوکالری',
+                            ),
+                            trailing: const Icon(Icons.swap_horiz, color: pine),
+                            onTap: dateKey(date).compareTo(dateKey(s.today)) < 0
+                                ? null
+                                : () async {
+                                    final reason = await showDialog<String>(
+                                      context: sheet,
+                                      builder: (dialog) => SimpleDialog(
+                                        title: const Text(
+                                          'دلیل جایگزینی چیست؟',
+                                        ),
+                                        children: [
+                                          for (final reason
+                                              in s.substitutionReasons.entries)
+                                            SimpleDialogOption(
+                                              onPressed: () => Navigator.pop(
+                                                dialog,
+                                                reason.key,
+                                              ),
+                                              child: Text(reason.value),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                    if (reason == null || !sheet.mounted) {
+                                      return;
+                                    }
+                                    if (eaten) {
+                                      final confirmed = await showDialog<bool>(
+                                        context: sheet,
+                                        builder: (dialog) => AlertDialog(
+                                          title: const Text(
+                                            'این وعده قبلاً ثبت شده',
+                                          ),
+                                          content: const Text(
+                                            'سابقه مصرف قبلی حفظ می‌شود. انتخاب برنامه تغییر کند؟',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(dialog, false),
+                                              child: const Text('انصراف'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(dialog, true),
+                                              child: const Text('تأیید'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirmed != true) return;
+                                    }
+                                    s.substituteMeal(
+                                      date,
+                                      index,
+                                      entry.value.copyWith(
+                                        name: m.name,
+                                        time: m.time,
+                                      ),
+                                      reason,
+                                    );
+                                  },
+                          ),
                         Text(
                           m.details,
                           style: const TextStyle(

@@ -897,13 +897,44 @@ class DemoStore extends ChangeNotifier {
   bool savingMeal = false;
   String mealLogKey(DateTime date, int index) =>
       '${dateKey(date)}|${userRequestId ?? 'none'}|$index|${mealsOn(date)[index].title}|${mealsOn(date)[index].calories}';
+  final Map<String, Meal> selectedMeals = {};
+  final List<Map<String, String>> substitutionHistory = [];
+  final Map<String, String> substitutionReasons = {
+    'expensive': 'گران است',
+    'dislike': 'دوست ندارم',
+    'unavailable': 'مواد اولیه موجود نیست',
+    'time': 'آماده‌سازی طولانی است',
+    'other': 'سایر',
+  };
+  String selectionKey(DateTime date, int index) =>
+      '$userRequestId|${dateKey(date)}|$index';
+  List<Meal> alternativesOn(DateTime date, int index) => [
+    sampleMeals(weekDayIndex(date) + 1)[index],
+    sampleMeals(weekDayIndex(date) + 2)[index],
+  ];
+  void substituteMeal(DateTime date, int index, Meal meal, String reason) {
+    if (dateKey(date).compareTo(dateKey(today)) < 0) return;
+    selectedMeals[selectionKey(date, index)] = meal;
+    substitutionHistory.add({
+      'key': selectionKey(date, index),
+      'food': meal.title,
+      'reason': reason,
+    });
+    notifyListeners();
+  }
+
   List<Meal> mealsOn(DateTime date) {
     if (userRequestId == null) return const [];
     final week = userRequest.programWeek;
     if (week != null && dateKey(startOfWeek(date)) != dateKey(week)) {
       return const [];
     }
-    return userRequest.mealsForDay(weekDayIndex(date));
+    return userRequest
+        .mealsForDay(weekDayIndex(date))
+        .asMap()
+        .entries
+        .map((e) => selectedMeals[selectionKey(date, e.key)] ?? e.value)
+        .toList();
   }
 
   int calorieTarget(DateTime date) =>
