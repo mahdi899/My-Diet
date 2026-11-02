@@ -126,7 +126,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
   String? error, conversationId;
   List<ConversationMessage> liveMessages = [], outbox = [];
   ChatAttachment? attachment;
-  bool loading = false, recordingNow = false, startingRecording = false;
+  bool loading = false, recordingNow = false, startingRecording = false, sending = false;
   bool? photo;
   int seconds = 0, visibleCount = 30, operation = 0;
   bool get live => store!.serverAuthEnabled;
@@ -254,6 +254,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
   }
 
   Future<void> send([ConversationMessage? retry]) async {
+    if (sending) return;
     if (live && conversationId == null) return;
     if (retry == null && attachment == null && input.text.trim().isEmpty) {
       return;
@@ -284,65 +285,71 @@ class _MessagingScreenState extends State<MessagingScreen> {
       setState(() => error = 'پیام حداکثر ۲۰۰۰ کاراکتر است.');
       return;
     }
+    sending = true;
     if (retry == null) {
-      input.clear();
       setState(() {
         attachment = null;
         error = null;
       });
     }
-    if (live) {
-      setState(() {
-        if (!outbox.contains(message)) outbox.add(message);
-        message.state = MessageState.pending;
-      });
-      try {
-        final data = await store!.customerAuth!.api(
-          'conversations/$conversationId/messages',
-          method: 'POST',
-          body: {'body': message.body},
-        );
-        if (!mounted) return;
+    try {
+      if (live) {
         setState(() {
-          message.id = data['id'];
-          message.state = MessageState.sent;
+          if (!outbox.contains(message)) outbox.add(message);
+          message.state = MessageState.pending;
         });
-      } catch (e) {
-        if (mounted) {
+        try {
+          final data = await store!.customerAuth!.api(
+            'conversations/$conversationId/messages',
+            method: 'POST',
+            body: {'body': message.body},
+          );
+          if (!mounted) return;
           setState(() {
-            message.state = MessageState.failed;
-            error =
-                '$e — ممکن است پیام در سرور ثبت شده باشد؛ پیش از تلاش مجدد تازه‌سازی کن.';
+            message.id = data['id'];
+            message.state = MessageState.sent;
           });
-        }
-      }
-    } else {
-      try {
-        await store!.messaging.send(thread, message);
-        if (!mounted || !store!.userSignedIn) return;
-        if (message.state == MessageState.sent &&
-            !message.legacySynced &&
-            message.body.isNotEmpty) {
-          message.legacySynced = true;
-          store!.send(message.body, threadId: thread);
-          if (thread == 'user-main') {
-            for (final change in store!.messaging.changes.where(
-              (c) => c.awaitingCustomer,
-            )) {
-              store!.messaging.answer(change, message.body);
-            }
+        } catch (e) {
+          if (mounted) {
+            setState(() {
+              message.state = MessageState.failed;
+              error =
+                  '$e — ممکن است پیام در سرور ثبت شده باشد؛ پیش از تلاش مجدد تازه‌سازی کن.';
+            });
           }
         }
-      } catch (e) {
-        if (mounted) setState(() => error = '$e');
+      } else {
+        try {
+          await store!.messaging.send(thread, message);
+          if (!mounted || !store!.userSignedIn) return;
+          if (message.state == MessageState.sent &&
+              !message.legacySynced &&
+              message.body.isNotEmpty) {
+            message.legacySynced = true;
+            store!.send(message.body, threadId: thread);
+            if (thread == 'user-main') {
+              for (final change in store!.messaging.changes.where(
+                (c) => c.awaitingCustomer,
+              )) {
+                store!.messaging.answer(change, message.body);
+              }
+            }
+          }
+        } catch (e) {
+          if (mounted) setState(() => error = '$e');
+        }
       }
-    }
-    if (mounted && scroll.hasClients) {
-      await scroll.animateTo(
-        scroll.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-      );
+      if (retry == null && message.state == MessageState.sent) input.clear();
+      if (mounted && scroll.hasClients) {
+        await scroll.animateTo(
+          scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        );
+      }
+    } finally {
+      sending = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -612,7 +619,8 @@ class _MessagingScreenState extends State<MessagingScreen> {
                   IconButton.filled(
                     tooltip: 'ارسال پیام',
                     onPressed:
-                        recordingNow ||
+                        sending ||
+                            recordingNow ||
                             (live &&
                                 (conversationId == null || attachment != null))
                         ? null

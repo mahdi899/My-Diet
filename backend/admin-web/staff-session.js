@@ -21,7 +21,8 @@
         return data;
       } catch (error) {
         if (error instanceof StaffError) throw error;
-        throw new StaffError('ارتباط با سرور برقرار نشد. اتصال را بررسی کنید.');
+        if (error && error.name === 'AbortError') throw new StaffError('پاسخ سرور به‌موقع نرسید.', 408);
+        throw new StaffError('ارتباط برقرار نیست.', 0);
       } finally { clearTimeout(timer); }
     };
     const clear = () => { token = null; actorId=null; expiresAt = 0; };

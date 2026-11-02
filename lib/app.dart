@@ -2,30 +2,35 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/demo_store.dart';
+import 'data/connection.dart';
 import 'screens/entry.dart';
 import 'screens/splash.dart';
 import 'screens/onboarding.dart';
 import 'screens/user.dart';
 import 'theme.dart';
 import 'widgets/weekly_progress.dart';
+import 'widgets/connection_gate.dart';
 import 'screens/wallet_flow.dart';
 
 class SabzineApp extends StatefulWidget {
   const SabzineApp({
     super.key,
     this.store,
+    this.link,
     this.splashDuration = const Duration(milliseconds: 1300),
     this.restoreOnStart = false,
   });
   final Duration splashDuration;
   final bool restoreOnStart;
   final DemoStore? store;
+  final LinkMonitor? link;
   @override
   State<SabzineApp> createState() => _SabzineAppState();
 }
 
 class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
   late final DemoStore store = widget.store ?? DemoStore();
+  late final LinkMonitor links = widget.link ?? LinkMonitor();
   late bool starting;
   final navigatorKey = GlobalKey<NavigatorState>();
   Timer? sessionTimer;
@@ -53,6 +58,7 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      links.check();
       if (store.serverAuthEnabled) {
         store.refreshServerSession();
       }
@@ -66,6 +72,7 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     wasSignedIn = store.userSignedIn;
     store.addListener(sessionChanged);
+    links.check();
     sessionTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => store.update(),
@@ -92,6 +99,7 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
     sessionTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     store.removeListener(sessionChanged);
+    if (widget.link == null) links.dispose();
     if (widget.store == null) {
       store.customerAuth?.dispose();
       store.dispose();
@@ -110,8 +118,10 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
       locale: const Locale('fa'),
       supportedLocales: const [Locale('fa'), Locale('en')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      builder: (context, child) =>
-          Directionality(textDirection: TextDirection.rtl, child: child!),
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: ConnectionGate(link: links, child: child!),
+      ),
       home: starting ? const SplashScreen() : const AppRoot(),
     ),
   );

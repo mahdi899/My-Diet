@@ -7,7 +7,7 @@
   function chat({repository,session,conversationId}){
     reset();
     const root=e('section',null,'messaging-workspace'),list=e('aside',null,'conversation-list'),room=e('section',null,'conversation-room');root.append(list,room);
-    let alive=true,selected=null,sequence=0,cursor=null,messages=[],pending=[],attachment=null,recording=null,stream=null,timer=null,seconds=0,discardRecording=false,voiceStarting=false;
+    let alive=true,selected=null,sequence=0,cursor=null,messages=[],pending=[],attachment=null,recording=null,stream=null,timer=null,seconds=0,discardRecording=false,voiceStarting=false,submitting=false;
     const urls=new Set(),uploads=new Set();
     const valid=()=>alive&&session.active;
     const alert=e('p',null,'chat-error');alert.setAttribute('role','alert');
@@ -21,7 +21,7 @@
     const url=blob=>{const value=URL.createObjectURL(blob);urls.add(value);return value;};
     const revoke=()=>{for(const u of urls)URL.revokeObjectURL(u);urls.clear();};
     const fail=error=>{if(valid())alert.textContent=error.message||String(error);};
-    function updateSend(){send.disabled=!selected||!!recording||voiceStarting||(!repository.media&&!!attachment);pick.disabled=!!recording;}
+    function updateSend(){send.disabled=submitting||!selected||!!recording||voiceStarting||(!repository.media&&!!attachment);pick.disabled=!!recording||submitting;input.disabled=submitting;}
     function previewMedia(){preview.replaceChildren();preview.hidden=!attachment;if(!attachment){updateSend();return;}
       const media=e(attachment.type.startsWith('image/')?'img':'audio');if(media.tagName==='AUDIO')media.controls=true;else media.alt='پیش‌نمایش عکس انتخابی';media.src=url(attachment);
       preview.append(media,e('p',attachment.name,'chat-note'),button('حذف پیوست',()=>{attachment=null;previewMedia();}));
@@ -55,12 +55,14 @@
       stopRecording(true);selected=row;input.value='';attachment=null;pending=[];messages=[];title.textContent=row.title||'ارتباط با کاربر';
       list.querySelectorAll('[data-conversation]').forEach(b=>b.classList.toggle('active',b.dataset.conversation===row.id));await refresh();updateSend();
     }
-    async function submit(retry){if(!selected||recording||voiceStarting||(!repository.media&&attachment))return;
+    async function submit(retry){if(submitting||!selected||recording||voiceStarting||(!repository.media&&attachment))return;submitting=true;updateSend();try{await deliver(retry);}finally{submitting=false;if(valid())updateSend();}}
+    async function deliver(retry){
       const id=selected.id,m=retry||{id:'pending-'+crypto.randomUUID(),authorId:repository.actorId,body:input.value.trim(),attachment,kind:attachment?(attachment.type.startsWith('image/')?'photo':'voice'):'text',createdAt:new Date().toISOString()};
       if(!m.body&&!m.attachment)return;if(m.body.length>2000)return fail(new Error('پیام حداکثر ۲۰۰۰ کاراکتر است.'));
-      if(!retry){pending.push(m);input.value='';attachment=null;}m.status='pending';m.controller=new AbortController();uploads.add(m.controller);renderMessages();alert.textContent='';
+      if(!retry)pending.push(m);m.status='pending';m.controller=new AbortController();uploads.add(m.controller);renderMessages();alert.textContent='';
       try{const saved=await repository.send(id,m.body,m.attachment,{signal:m.controller.signal,onProgress:value=>{m.progress=value;if(valid()&&selected?.id===id)renderMessages();}});
         Object.assign(m,{...saved,status:saved.status||'sent'});
+        if(!retry&&m.status!=='failed'){input.value='';attachment=null;previewMedia();}
       }catch(error){m.status='failed';m.cancelled=error.name==='AbortError';if(valid()&&selected?.id===id)fail(new Error(m.cancelled?'ثبت نمونه لغو شد.':error.message+(repository.demo?'':' ممکن است ثبت شده باشد؛ پیش از تلاش مجدد تازه‌سازی کنید.')));}
       finally{uploads.delete(m.controller);if(valid()&&selected?.id===id){renderMessages();timeline.scrollTop=timeline.scrollHeight;}}
     }

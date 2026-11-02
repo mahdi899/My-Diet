@@ -1,0 +1,23 @@
+const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const { runInNewContext } = require('node:vm');
+const { resolve } = require('node:path');
+const sandbox = { setTimeout, clearTimeout, AbortController };
+runInNewContext(readFileSync(resolve(__dirname, '../backend/admin-web/connection-gate.js'), 'utf8'), sandbox);
+const { classifyResponse, probe } = sandbox.SabzineConnection;
+assert.equal(classifyResponse(200, false), null);
+assert.equal(classifyResponse(404, false), null);
+assert.equal(classifyResponse(401, false), 'expired');
+assert.equal(classifyResponse(503, false), 'unavailable');
+assert.equal(classifyResponse(500, false), 'unavailable');
+assert.equal(classifyResponse(null, false), 'offline');
+assert.equal(classifyResponse(undefined, true), 'timeout');
+(async () => {
+  assert.equal(await probe(async () => ({ status: 404 })), null);
+  assert.equal(await probe(async () => ({ status: 503 })), 'unavailable');
+  const abort = new Error('aborted');
+  abort.name = 'AbortError';
+  assert.equal(await probe(async () => { throw abort; }), 'timeout');
+  assert.equal(await probe(async () => { throw new Error('network'); }), 'offline');
+  console.log('connection gate passed');
+})().catch((error) => { console.error(error); process.exit(1); });

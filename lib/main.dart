@@ -3,6 +3,7 @@ import 'app.dart';
 import 'data/customer_auth.dart';
 import 'data/secure_auth_storage.dart';
 import 'data/demo_store.dart';
+import 'data/connection.dart';
 import 'data/questionnaire_storage.dart';
 import 'data/nutrition_log_storage.dart';
 import 'data/workspace_settings_storage.dart';
@@ -24,5 +25,13 @@ void main() {
     feedbackRepository: PreferencesWeeklyFeedbackRepository(),
     settingsStorage: PreferencesWorkspaceSettingsStorage(),
   );
-  runApp(DevPreview(child: SabzineApp(store: store, restoreOnStart: true)));
+  runApp(
+    DevPreview(
+      child: SabzineApp(
+        store: store,
+        link: apiBase.isEmpty ? null : LinkMonitor(probe: () => probeHealth(apiBase)),
+        restoreOnStart: true,
+      ),
+    ),
+  );
 }

@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'auth_http_client.dart';
+import 'connection.dart';
 
 class AuthFailure implements Exception {
-  const AuthFailure(this.message, {this.expired = false});
+  const AuthFailure(this.message, {this.expired = false, this.fault});
   final String message;
   final bool expired;
+  final LinkFault? fault;
   @override
   String toString() => message;
 }
@@ -82,13 +84,19 @@ class CustomerAuth {
               ? data['detail'] as String? ?? 'عملیات انجام نشد.'
               : 'عملیات انجام نشد.',
           expired: response.statusCode == 401,
+          fault: classifyLink(status: response.statusCode),
         );
       }
       return data;
     } on AuthFailure {
       rethrow;
+    } on TimeoutException {
+      throw const AuthFailure(
+        'پاسخ سرور به‌موقع نرسید.',
+        fault: LinkFault.timeout,
+      );
     } catch (_) {
-      throw const AuthFailure('ارتباط برقرار نشد؛ دوباره تلاش کن.');
+      throw const AuthFailure('ارتباط برقرار نیست.', fault: LinkFault.offline);
     }
   }
 
@@ -120,14 +128,21 @@ class CustomerAuth {
         throw AuthFailure(
           data['detail'] as String? ?? 'ورود انجام نشد؛ دوباره تلاش کن.',
           expired: response.statusCode == 401,
+          fault: classifyLink(status: response.statusCode),
         );
       }
       return data;
     } on AuthFailure {
       rethrow;
+    } on TimeoutException {
+      throw const AuthFailure(
+        'پاسخ سرور به‌موقع نرسید.',
+        fault: LinkFault.timeout,
+      );
     } catch (_) {
       throw const AuthFailure(
-        'ارتباط با سرور برقرار نشد. اتصال را بررسی کن و دوباره تلاش کن.',
+        'ارتباط برقرار نیست.',
+        fault: LinkFault.offline,
       );
     }
   }
