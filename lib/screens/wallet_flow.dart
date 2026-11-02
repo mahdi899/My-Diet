@@ -17,6 +17,10 @@ Future<void> openPlanServices(BuildContext context) async {
   }
   store.pendingPlanAcquisition = false;
   if (store.walletPricingOpen) return;
+  store.journey.record('plan_purchase_started', {
+    'serviceId': store.selectedPlanServiceId ?? 'unspecified',
+  });
+  store.journey.viewScreen('plan_purchase', store.today);
   store.walletPricingOpen = true;
   try {
     await Navigator.of(context).push<void>(

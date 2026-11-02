@@ -19,6 +19,7 @@ import 'form_config.dart';
 import 'workspace_settings_storage.dart';
 import 'messaging.dart';
 import 'streak_campaign.dart';
+import 'journey_analytics.dart';
 
 enum AppRole { user, expert, admin }
 
@@ -643,6 +644,7 @@ class ChatThread {
 /// Demo UI data. Only the questionnaire has optional local persistence; no backend.
 class DemoStore extends ChangeNotifier {
   final messaging = DemoMessaging();
+  final journey = JourneyAnalytics();
   DemoStore({
     QuestionnaireStorage? storage,
     NutritionLogStorage? nutritionStorage,
@@ -1087,6 +1089,7 @@ class DemoStore extends ChangeNotifier {
       _substitutionHistory
         ..clear()
         ..addAll(history);
+      journey.record('alternative_selected', {'optionId': optionId});
       return true;
     } finally {
       savingSubstitution = false;
@@ -1319,6 +1322,9 @@ class DemoStore extends ChangeNotifier {
       completedMeals
         ..clear()
         ..addAll(next.keys);
+      if (mode != 'skipped') {
+        journey.record('meal_recorded', {'mealId': '${dateKey(date)}|$index'});
+      }
       _noteMealDay(date);
       claimWeeklyReward();
     } finally {
@@ -1458,6 +1464,9 @@ class DemoStore extends ChangeNotifier {
       completedMeals
         ..clear()
         ..addAll(next.keys);
+      if (eaten) {
+        journey.record('meal_recorded', {'mealId': '${dateKey(date)}|$index'});
+      }
       _noteMealDay(date);
       claimWeeklyReward();
     } finally {
@@ -1525,6 +1534,7 @@ class DemoStore extends ChangeNotifier {
     questionnaire.copyFrom(snapshot);
     questionnaireNeedsReview = false;
     questionnaireComplete = true;
+    journey.record('questionnaire_completed', {'schemaVersion': '1'});
     update();
   }
 
@@ -2211,6 +2221,8 @@ class DemoStore extends ChangeNotifier {
       sessionIssuedAt = today;
       sessionExpiresAt = today.add(const Duration(days: 30));
       streakServer.login();
+      journey.startSession(authenticated: true, now: today);
+      journey.viewScreen('home', today);
       saveUserSession();
       if (pendingPlanAcquisition && !questionnaireComplete) {
         entryStage = EntryStage.onboarding;
@@ -2586,6 +2598,7 @@ class DemoStore extends ChangeNotifier {
         threadId: 'support-main',
       ),
     );
+    journey.record('feedback_submitted', {'rating': rating});
     update();
   }
 
