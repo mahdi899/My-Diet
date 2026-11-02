@@ -126,13 +126,16 @@
   }
   function reasonsConfig(){
     const root=e('section',null,'card reason-config');let rows=SabzineMessagingRepository.reasons();const list=e('div'),error=e('p',null,'chat-error');error.setAttribute('role','alert');
-    root.append(e('h2','دلایل تغییر برنامه'),e('p','پیکربندی نمونه در همین مرورگر؛ انتشار برای کاربران به API تنظیمات مدیر نیاز دارد.','workspace-note'),error,list);
+    root.append(e('h2','دلایل تغییر برنامه'),e('p','فاز ۹ · پیکربندی نمونه در همین مرورگر. شناسه و برچسب‌های قبلی حفظ می‌شوند؛ غیرفعال‌سازی گزینه را از پاسخ‌های ثبت‌شده حذف نمی‌کند.','workspace-note'),error,list);
     function draw(){list.replaceChildren();for(const [i,row]of rows.entries()){
-      const line=e('div',null,'change-actions'),label=e('label',row.label),check=e('input');check.type='checkbox';check.checked=row.active;check.setAttribute('aria-label','فعال بودن '+row.label);check.onchange=()=>{row.active=check.checked;};label.prepend(check);
-      line.append(label,button('بالاتر',()=>{[rows[i-1],rows[i]]=[rows[i],rows[i-1]];draw();},i===0),button('حذف دلیل',()=>{rows.splice(i,1);draw();}));list.append(line);
+      const line=e('div',null,'change-actions'),check=e('input'),name=e('input');check.type='checkbox';check.checked=row.active;check.setAttribute('aria-label','فعال بودن '+row.id);name.value=row.label;name.maxLength=120;name.setAttribute('aria-label','برچسب '+row.id);
+      check.onchange=()=>{try{SabzineReports.updateReason(rows,row.id,{active:check.checked});error.textContent='';}catch(err){error.textContent=err.message;}};
+      line.append(e('span','شناسه: '+row.id),name,check,button('ثبت برچسب',()=>{try{SabzineReports.updateReason(rows,row.id,{label:name.value});error.textContent='';draw();}catch(err){error.textContent=err.message;}}),button('بالاتر',()=>{[rows[i-1],rows[i]]=[rows[i],rows[i-1]];draw();},i===0));
+      if(row.historicalLabels?.length)line.append(e('small','برچسب‌های قبلی: '+row.historicalLabels.join('، ')));
+      list.append(line);
     }}
     const input=e('input');input.maxLength=120;input.setAttribute('aria-label','دلیل جدید');input.placeholder='دلیل جدید';
-    root.append(input,button('افزودن دلیل',()=>{const label=input.value.trim();if(!label||rows.some(r=>r.label===label)){error.textContent='دلیل خالی یا تکراری مجاز نیست.';return;}rows.push({id:crypto.randomUUID(),label,active:true});input.value='';error.textContent='';draw();}),button('ذخیره پیکربندی نمونه',()=>{
+    root.append(input,button('افزودن دلیل',()=>{try{SabzineReports.addReason(rows,input.value,crypto.randomUUID());input.value='';error.textContent='';draw();}catch(err){error.textContent=err.message;}}),button('ذخیره پیکربندی نمونه',()=>{
       if(!rows.some(r=>r.active)){error.textContent='حداقل یک دلیل فعال لازم است.';return;}
       try{localStorage.setItem('sabzine.demo.change-reasons',JSON.stringify(rows));error.textContent='در همین مرورگر ذخیره شد؛ روی سرور منتشر نشده است.';}catch{error.textContent='ذخیره مرورگر ممکن نیست.';}
     }));draw();return root;

@@ -163,13 +163,17 @@ async function load() {
   try {
     let view;
     if(section==='reasons') view=SabzineMessaging.reasonsConfig();
-    else if (['questionnaire','user-reports','specialist-reports','journeys'].includes(section)) view = phaseOnePage(section);
+    else if (section==='questionnaire') view=SabzineReports.questionnairePage();
+    else if (section==='user-reports') view=SabzineReports.userReports();
+    else if (section==='specialist-reports') view=SabzineReports.specialistReports();
+    else if (section==='journeys') view = phaseOnePage(section);
     else if (section === 'ai') view = await aiPage();
     else if (section === 'notifications') view = await notificationsPage();
     else if (section === 'streaks') view = SabzineStreak.campaignPage();
     else if (section === 'settings') view = settings();
     else if (section === 'dashboard') { const [stats, orders] = await Promise.all([api('admin/dashboard'), api('admin/orders')]); view = dashboard(stats, orders); }
-    else { const path = section === 'specialists' ? 'specialists' : section === 'reviews' ? 'admin/reviews?status=pending' : section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
+    else if (section === 'reviews') { const stack = element('div', null, 'report-stack'); stack.append(SabzineReports.moderationNote(), tablePage(await api('admin/reviews?status=pending'), section)); view = stack; }
+    else { const path = section === 'specialists' ? 'specialists' : section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
     if (request !== generation || !staffSession.active) return;
     $('content').replaceChildren(view);
     if (section === 'ai') $('page-actions').append(button('افزودن API جدید', addAiModal, { iconName: 'plus' }));
