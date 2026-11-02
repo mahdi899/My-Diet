@@ -12,6 +12,7 @@ const pageMeta = {
   notifications: { title: 'نوتفیکیشن', icon: 'bell', group: 'ارتباط با کاربران', description: 'پیام درست را در زمان درست به دست کاربران برسانید.' },
   ai: { title: 'هوش مصنوعی', icon: 'sparkles', group: 'تنظیمات و ابزارها', description: 'سرویس‌های هوش مصنوعی را متصل و مدیریت کنید.' },
   settings: { title: 'تعرفه و پاداش', icon: 'sliders', group: 'تنظیمات و ابزارها', description: 'تعرفه خدمات و پاداش هفتگی را تنظیم کنید.' },
+  streaks: { title: 'کمپین روزهای پیاپی', icon: 'calendar', group: 'تنظیمات و ابزارها', description: 'شرط، مایل‌ستون و نسخهٔ پاداش روزهای پیاپی.' },
   'audit-logs': { title: 'تاریخچه فعالیت', icon: 'history', group: 'تنظیمات و ابزارها', description: 'ردپای تغییرات و فعالیت‌های مدیریتی.' },
   questionnaire: {title:'پیکربندی پرسش‌نامه',icon:'clipboard',group:'توسعه سامانه',description:'پیکربندی پرسش‌نامه کاربران.'},
   reasons: {title:'دلایل تغییر برنامه',icon:'sliders',group:'توسعه سامانه',description:'گزینه‌های دلیل درخواست تغییر.'},

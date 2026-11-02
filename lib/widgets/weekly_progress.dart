@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../data/demo_store.dart';
 import '../data/day.dart';
+import '../data/streak_campaign.dart';
 import '../data/wallet_catalog.dart';
 import '../screens/user.dart' show ProgramReviewSubmitScreen;
 import '../theme.dart';
@@ -123,9 +124,11 @@ class WeeklyStreakCard extends StatelessWidget {
       7,
       (i) => DateTime(week.year, week.month, week.day + i),
     );
-    final claimed = s.rewardedWeeks.contains(
-      dateKey(s.userRequest.programWeek ?? startOfWeek(s.today)),
-    );
+    final progress = s.streakProgress;
+    final claimed = s.rewardedWeeks.contains(dateKey(week));
+    final byDate = {
+      for (final status in progress.days) dateKey(status.date): status,
+    };
     return Surface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,6 +155,13 @@ class WeeklyStreakCard extends StatelessWidget {
                           persianWeekDays[weekDayIndex(date)],
                           style: const TextStyle(fontSize: 9),
                         ),
+                        Text(
+                          byDate[dateKey(date)]?.state.label ??
+                              StreakDayState.pending.label,
+                          key: ValueKey('streak-state-${dateKey(date)}'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 8, color: pine),
+                        ),
                       ],
                     ),
                   ),
@@ -160,18 +170,52 @@ class WeeklyStreakCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
-            value: s.scheduledWeekDates.isEmpty
+            value: progress.requiredDays == 0
                 ? 0
-                : s.completedProgramDays / s.scheduledWeekDates.length,
+                : (progress.consecutiveQualified / progress.requiredDays)
+                      .clamp(0.0, 1.0),
             minHeight: 6,
             borderRadius: BorderRadius.circular(6),
           ),
           const SizedBox(height: 10),
           Text(
-            claimed
-                ? '${formatToman(s.rewardForWeek(dateKey(week)))} جایزه به کیف پولت اضافه شد.'
-                : 'با تکمیل برنامه، ${formatToman(s.weeklyRewardToman)} اعتبار هدیه بگیر.',
+            progress.todayRequirements,
+            key: const ValueKey('streak-today'),
             style: const TextStyle(color: pine, fontSize: 12),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${fa(progress.consecutiveQualified)} از ${fa(progress.requiredDays)} روز پیاپی',
+            key: const ValueKey('streak-count'),
+            style: const TextStyle(fontSize: 12),
+          ),
+          for (final milestone in progress.milestones)
+            Text(
+              'روز ${fa(milestone.day)}: ${formatToman(milestone.amountToman)}',
+              style: const TextStyle(fontSize: 12),
+            ),
+          Text(
+            progress.resetRule,
+            key: const ValueKey('streak-reset'),
+            style: const TextStyle(color: muted, fontSize: 11),
+          ),
+          if (claimed)
+            Text(
+              '${formatToman(s.rewardForWeek(dateKey(week)))} جایزه به کیف پولت اضافه شد.',
+              key: const ValueKey('streak-credited'),
+            ),
+          if (progress.claimState == 'duplicate')
+            const Text(
+              'این پاداش قبلاً ثبت شده است.',
+              key: ValueKey('streak-duplicate'),
+            ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              key: const ValueKey('streak-claim'),
+              onPressed: () => s.claimWeeklyReward(),
+              child: const Text('بررسی پاداش'),
+            ),
           ),
           if (s.canReviewCurrentProgram)
             TextButton.icon(
@@ -314,7 +358,6 @@ class _WeeklyRewardGateState extends State<WeeklyRewardGate> {
             ModalRoute.of(context)?.isCurrent != true) {
           return;
         }
-        store.claimWeeklyReward();
         if (store.pendingWeeklyRewards.isEmpty || showing) return;
         showing = true;
         final week = store.pendingWeeklyRewards.first;
@@ -332,7 +375,7 @@ class _WeeklyRewardGateState extends State<WeeklyRewardGate> {
               ),
               title: const Text('تبریک! هفته‌ات را کامل کردی 🎉'),
               content: Text(
-                'برنامهٔ این هفته را تکمیل کردی و ${formatToman(store.rewardForWeek(week))} اعتبار جایزه گرفتی.',
+                '${fa(store.streakProgress.requiredDays)} روز پیاپی تأیید شد و ${formatToman(store.rewardForWeek(week))} به کیف پولت نشست.',
               ),
               actions: [
                 TextButton(

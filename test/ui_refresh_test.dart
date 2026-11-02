@@ -21,11 +21,10 @@ void main() {
   test(
     'Admin monetary prices persist, reward credits once, old rewards retain original amount',
     () async {
+      var now = DateTime(2026, 10, 24);
       final memory = SettingsMemory(),
-          s = DemoStore(
-            settingsStorage: memory,
-            clock: () => DateTime(2026, 10, 30),
-          )..loginDemoUser();
+          s = DemoStore(settingsStorage: memory, clock: () => now)
+            ..loginDemoUser();
       expect(s.experts.length, 1);
       expect(
         s.requests.every((r) => r.specialist == s.experts.first.name),
@@ -43,6 +42,7 @@ void main() {
       expect(s.walletBalance, 0);
       expect(s.userRequest.specialist, s.experts.first.name);
       s.approveActiveUserRequest();
+      now = DateTime(2026, 10, 30);
       await completeProgram(s);
       expect(s.walletBalance, 220000);
       expect(s.claimWeeklyReward(), false);

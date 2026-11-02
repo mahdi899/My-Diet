@@ -158,15 +158,17 @@ void main() {
         date = DateTime(2026, 10, day);
         await completeDay(s, date);
       }
-      expect(s.rewardedWeeks.length, 1);
+      expect(s.rewardedWeeks, isEmpty);
+      expect(s.walletBalance, 0);
+      expect(s.streakProgress.consecutiveQualified, 3);
       expect(s.mealsOn(DateTime(2026, 10, 31)), isEmpty);
       s.submitQuestionnaire();
       s.approveActiveUserRequest();
       expect(s.eatenCount(date), 0);
       expect(s.consumedCalories(date), 0);
       await completeDay(s, date);
-      expect(s.rewardedWeeks.length, 1);
-      expect(s.walletBalance, 200000);
+      expect(s.rewardedWeeks, isEmpty);
+      expect(s.walletBalance, 0);
       s.dispose();
     },
   );

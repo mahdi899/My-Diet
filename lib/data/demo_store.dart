@@ -18,6 +18,7 @@ import 'customer_auth.dart';
 import 'form_config.dart';
 import 'workspace_settings_storage.dart';
 import 'messaging.dart';
+import 'streak_campaign.dart';
 
 enum AppRole { user, expert, admin }
 
@@ -678,6 +679,17 @@ class DemoStore extends ChangeNotifier {
       aiRevisionPrice = 150000,
       expertRevisionPrice = 250000;
   int weeklyRewardToman = 200000;
+  StreakRewardServer? _streakServer;
+  StreakRewardServer get streakServer => _streakServer ??= StreakRewardServer(
+    campaign: StreakCampaign(
+      version: 1,
+      consecutiveDays: 7,
+      milestones: [StreakMilestone(day: 7, amountToman: weeklyRewardToman)],
+      effectiveOn: DateTime(2026, 1, 1),
+    ),
+  );
+  final Set<String> _qualifiedDays = {};
+  StreakProgress get streakProgress => streakServer.progress;
   List<PlanServiceOffer> get serviceOffers => planServiceOffers
       .map(
         (offer) => PlanServiceOffer(
@@ -722,6 +734,28 @@ class DemoStore extends ChangeNotifier {
     aiRevisionPrice = ai;
     expertRevisionPrice = expert;
     weeklyRewardToman = reward;
+    streakServer.noteAmount(reward);
+    update();
+  }
+
+  /// Publishes a new campaign version. A user already inside a cycle keeps the old one.
+  void publishStreakCampaign({
+    required int consecutiveDays,
+    required List<StreakMilestone> milestones,
+    required DateTime effectiveOn,
+    DateTime? endsOn,
+    String repeat = 'cycle',
+  }) {
+    streakServer.publish(
+      StreakCampaign(
+        version: 0,
+        consecutiveDays: consecutiveDays,
+        milestones: milestones,
+        effectiveOn: effectiveOn,
+        endsOn: endsOn,
+        repeat: repeat,
+      ),
+    );
     update();
   }
 
@@ -1285,6 +1319,7 @@ class DemoStore extends ChangeNotifier {
       completedMeals
         ..clear()
         ..addAll(next.keys);
+      _noteMealDay(date);
       claimWeeklyReward();
     } finally {
       savingMeal = false;
@@ -1423,6 +1458,7 @@ class DemoStore extends ChangeNotifier {
       completedMeals
         ..clear()
         ..addAll(next.keys);
+      _noteMealDay(date);
       claimWeeklyReward();
     } finally {
       savingMeal = false;
@@ -1616,28 +1652,66 @@ class DemoStore extends ChangeNotifier {
     return count;
   }
 
+  void _noteMealDay(DateTime date) {
+    final key = dateKey(date);
+    if (dayCompleted(date)) {
+      _qualifiedDays.add(key);
+    } else {
+      _qualifiedDays.remove(key);
+    }
+  }
+
+  /// Asks the reward server to settle. Recording meals is the only qualifying activity.
   bool claimWeeklyReward() {
-    if (!weeklyProgramCompleted) return false;
-    final week = dateKey(userRequest.programWeek ?? startOfWeek(today));
-    completedProgramIds.add(userRequest.id);
-    if (rewardedWeeks.contains(week)) return false;
-    rewardedWeeks.add(week);
-    rewardAmounts[week] = weeklyRewardToman;
-    pendingWeeklyRewards.add(week);
-    walletBalance += weeklyRewardToman;
-    walletTransactions.insert(
-      0,
-      MockWalletTransaction(
-        operationId: 'weekly-reward-$week',
-        title: 'جایزهٔ تکمیل برنامهٔ هفتگی',
-        amountToman: weeklyRewardToman,
-        balanceAfter: walletBalance,
-        credit: true,
-      ),
+    if (!hasUserRequest || !userRequest.isPublished) return false;
+    final anchor = userRequest.programWeek ?? startOfWeek(today);
+    final joined = userRequest.programStartsOn ?? anchor;
+    final day = DateTime(today.year, today.month, today.day);
+    final partial = <String>{};
+    final todayKey = dateKey(day);
+    if (!_qualifiedDays.contains(todayKey) && eatenCount(day) > 0) {
+      partial.add(todayKey);
+    }
+    final result = streakServer.settle(
+      today: day,
+      cycleAnchor: anchor,
+      participationStart: joined,
+      qualifiedDates: _qualifiedDays,
+      partialDates: partial,
+      claim: true,
     );
-    saveWalletState();
+    var credited = false;
+    for (final grant in result.grants) {
+      final operationId = grant.day == result.requiredDays
+          ? 'weekly-reward-${grant.weekKey}'
+          : 'weekly-reward-${grant.weekKey}-d${grant.day}';
+      if (walletTransactions.any((item) => item.operationId == operationId)) {
+        continue;
+      }
+      walletBalance += grant.amountToman;
+      if (grant.day == result.requiredDays) {
+        rewardedWeeks.add(grant.weekKey);
+        rewardAmounts[grant.weekKey] = grant.amountToman;
+        if (!pendingWeeklyRewards.contains(grant.weekKey)) {
+          pendingWeeklyRewards.add(grant.weekKey);
+        }
+        completedProgramIds.add(userRequest.id);
+      }
+      walletTransactions.insert(
+        0,
+        MockWalletTransaction(
+          operationId: operationId,
+          title: 'پاداش ${fa(grant.day)} روز پیاپی',
+          amountToman: grant.amountToman,
+          balanceAfter: walletBalance,
+          credit: true,
+        ),
+      );
+      credited = true;
+    }
+    if (credited) saveWalletState();
     update();
-    return true;
+    return credited;
   }
 
   void acknowledgeWeeklyReward(String week) {
@@ -2136,6 +2210,7 @@ class DemoStore extends ChangeNotifier {
       sessionPhone = phone;
       sessionIssuedAt = today;
       sessionExpiresAt = today.add(const Duration(days: 30));
+      streakServer.login();
       saveUserSession();
       if (pendingPlanAcquisition && !questionnaireComplete) {
         entryStage = EntryStage.onboarding;
@@ -2572,6 +2647,7 @@ class DemoStore extends ChangeNotifier {
     r.revisionReply = '';
     if (id == userRequestId) {
       notices.insert(0, 'نسخهٔ ${fa(r.version)} برنامه‌ات آماده است.');
+      claimWeeklyReward();
     }
     update();
   }

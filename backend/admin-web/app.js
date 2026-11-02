@@ -150,7 +150,7 @@ function settings() {
   form.append(formFooter('ذخیره تعرفه', 'check')); onForm(form, async body => { await api('admin/prices', 'PUT', { ...body, amountToman: Number(body.amountToman) }); notice('تعرفه ذخیره شد'); }); priceCard.append(form);
   rewardCard.append(sectionHead('پاداش هفتگی', 'انگیزه‌ای برای ادامهٔ مسیر سلامت.', iconTile('star', 'amber')));
   const reward = element('form'), rewardAmount = field(reward, 'amountToman', 'مبلغ پاداش (تومان)', 'number'); rewardAmount.min = '0'; rewardAmount.step = '1'; rewardAmount.placeholder = 'مثلاً ۲۰۰۰۰';
-  reward.append(infoNote('مبلغ پاداش به تومان است. برای پاداش بدون مبلغ، صفر وارد کنید.'));
+  reward.append(infoNote('مبلغ پاداش به تومان است. برای پاداش بدون مبلغ، صفر وارد کنید. کمپین روزهای پیاپی در بخش جدا ساخته می‌شود و هنوز روی سرور زنده ذخیره نمی‌شود.'));
   reward.append(formFooter('ذخیره پاداش', 'check')); onForm(reward, async body => { await api('admin/reward', 'PUT', { amountToman: Number(body.amountToman) }); notice('پاداش ذخیره شد'); }); rewardCard.append(reward);
   layout.append(priceCard, rewardCard); return layout;
 }
@@ -166,6 +166,7 @@ async function load() {
     else if (['questionnaire','user-reports','specialist-reports','journeys'].includes(section)) view = phaseOnePage(section);
     else if (section === 'ai') view = await aiPage();
     else if (section === 'notifications') view = await notificationsPage();
+    else if (section === 'streaks') view = SabzineStreak.campaignPage();
     else if (section === 'settings') view = settings();
     else if (section === 'dashboard') { const [stats, orders] = await Promise.all([api('admin/dashboard'), api('admin/orders')]); view = dashboard(stats, orders); }
     else { const path = section === 'specialists' ? 'specialists' : section === 'reviews' ? 'admin/reviews?status=pending' : section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
