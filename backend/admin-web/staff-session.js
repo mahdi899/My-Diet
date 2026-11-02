@@ -4,6 +4,7 @@
     constructor(message, status = 0) { super(message); this.status = status; }
   }
   function create({ role, onExpired = () => {} }) {
+    let actorId=null;
     let token = null, expiresAt = 0, refreshing = null;
     const request = async (path, method = 'GET', body, headers = {}) => {
       const controller = new AbortController();
@@ -23,7 +24,7 @@
         throw new StaffError('ارتباط با سرور برقرار نشد. اتصال را بررسی کنید.');
       } finally { clearTimeout(timer); }
     };
-    const clear = () => { token = null; expiresAt = 0; };
+    const clear = () => { token = null; actorId=null; expiresAt = 0; };
     const accept = session => {
       if (session.role !== role) {
         clear();
@@ -34,6 +35,7 @@
         clear(); throw new StaffError('نشست منقضی شده؛ دوباره وارد شوید.', 401);
       }
       token = session.accessToken;
+      try{actorId=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub||null;}catch{actorId=null;}
       expiresAt = expiry;
       return session;
     };
@@ -60,6 +62,7 @@
     return { api, accept, restore, clear,
       login: (path, body) => request(path, 'POST', body),
       async logout() { await api('auth/logout', 'POST'); clear(); },
+      get actorId(){return actorId;},
       get active() { return !!token && Date.now() < expiresAt; },
     };
   }

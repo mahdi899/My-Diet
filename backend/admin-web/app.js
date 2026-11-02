@@ -162,7 +162,8 @@ async function load() {
   $('content').replaceChildren(skeleton()); $('content').setAttribute('aria-busy', 'true');
   try {
     let view;
-    if (['questionnaire','reasons','user-reports','specialist-reports','journeys'].includes(section)) view = phaseOnePage(section);
+    if(section==='reasons') view=SabzineMessaging.reasonsConfig();
+    else if (['questionnaire','user-reports','specialist-reports','journeys'].includes(section)) view = phaseOnePage(section);
     else if (section === 'ai') view = await aiPage();
     else if (section === 'notifications') view = await notificationsPage();
     else if (section === 'settings') view = settings();

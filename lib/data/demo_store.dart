@@ -17,6 +17,7 @@ import 'session_storage.dart';
 import 'customer_auth.dart';
 import 'form_config.dart';
 import 'workspace_settings_storage.dart';
+import 'messaging.dart';
 
 enum AppRole { user, expert, admin }
 
@@ -640,6 +641,7 @@ class ChatThread {
 
 /// Demo UI data. Only the questionnaire has optional local persistence; no backend.
 class DemoStore extends ChangeNotifier {
+  final messaging = DemoMessaging();
   DemoStore({
     QuestionnaireStorage? storage,
     NutritionLogStorage? nutritionStorage,
@@ -2161,6 +2163,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   void logout() {
+    messaging.reset();
     role = null;
     selectedRole = null;
     _userAuthenticated = false;

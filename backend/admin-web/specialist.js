@@ -7,10 +7,13 @@
   const status = { in_review:'در انتظار بررسی',response_received:'پاسخ دریافت شده',queued:'در صف',generating:'در حال تولید',awaiting_review:'منتظر بررسی',reviewing:'در حال بررسی',
     awaiting_user:'در انتظار پاسخ کاربر',needs_info:'نیاز به اطلاعات',published:'منتشرشده',cancelled:'لغوشده' };
   const session = SabzineStaff.create({ role: 'specialist', onExpired: () => signedOut('نشست پایان یافته؛ دوباره وارد شوید.') });
+  let messagingDemo=null;
+  const messagingLive=SabzineMessagingRepository.live(session);
+  const demoMessages=()=>messagingDemo ||= SabzineMessagingRepository.sample();
   let current = 'dashboard', generation = 0, phone = '', challenge = null;
   const notice = text => { $('message').textContent = text || ''; };
   function signedOut(message = '') {
-    SabzineClinical.reset(); generation++; session.clear(); $('panel').hidden = true; $('login').hidden = false;
+    SabzineMessaging.reset();messagingDemo=null; SabzineClinical.reset(); generation++; session.clear(); $('panel').hidden = true; $('login').hidden = false;
     $('phone-form').hidden = false; $('code-form').hidden = true; $('totp-form').hidden = true;
     $('content').replaceChildren(); $('login-state').textContent = message;
   }
@@ -57,7 +60,7 @@
     catch (error) { notice(error.message); }
     finally { $('logout').disabled = false; }
   };
-  function navigate(section) { if(!SabzineClinical.leave())return; current = section; location.hash = section; load(); }
+  function navigate(section) { if(!SabzineClinical.leave()||!SabzineMessaging.leave())return; current = section; location.hash = section; load(); }
   for (const [key, label] of Object.entries(sections)) {
     const button = element('button', label); button.type = 'button'; button.dataset.section = key;
     button.onclick = () => navigate(key); $('nav').append(button);
@@ -98,6 +101,9 @@
     ['نوع', row => row.kind === 'new_plan' ? 'برنامه جدید' : 'بازنگری برنامه'],
     ['زمان ثبت', row => date(row.createdAt)],
   ]);
+  function showChat(repository,conversationId){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='گفتگو با کاربر';$('content').replaceChildren(SabzineMessaging.chat({repository,session,conversationId}));}
+  function changeView(repository){return SabzineMessaging.changes({repository,session,onChat:showChat,onEditor:(repo,request)=>{SabzineMessaging.reset();generation++;$('content').replaceChildren(SabzineClinical.start({repository:repo,request,session,onBack:()=>showChanges(repository)}));}});}
+  function showChanges(repository){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='درخواست‌های تغییر برنامه';$('content').replaceChildren(changeView(repository));}
   async function render(section) {
     if (section === 'dashboard') {
       const [review, changes, conversations] = await Promise.all([
@@ -116,18 +122,16 @@
         element('h2', 'برنامه‌های آماده بررسی'), queueTable(review));
       return view;
     }
-    if (section === 'review' || section === 'changes') {
+    if(section==='changes') {
+      const view=element('div'),sample=element('button','باز کردن درخواست‌های تغییر نمونه','secondary');sample.onclick=()=>showChanges(demoMessages());view.append(sample,changeView(messagingLive));return view;
+    }
+    if (section === 'review') {
       const view = element('div');
       view.append(element('p', 'پرونده و پیش‌نویس را از درخواست‌های اختصاص‌یافته باز کنید. نمونهٔ جداگانه برای بررسی رابط کامل موجود است.', 'workspace-note'),demoButton(),
         queueTable(await session.api('specialist/queue?bucket=' + (section === 'review' ? 'awaiting_review' : 'revisions'))));
       return view;
     }
-    if (section === 'conversations') {
-      const view = element('div');
-      view.append(element('p', 'فهرست گفتگوهای حساب شما؛ صفحه پیام‌رسان در فاز ۷ تکمیل می‌شود.', 'workspace-note'),
-        table(await session.api('conversations'), [['گفتگو', row => row.kind === 'support' ? 'پشتیبانی' : 'ارتباط با کاربر'], ['زمان ایجاد', row => date(row.createdAt)]]));
-      return view;
-    }
+    if(section==='conversations') {const view=element('div'),sample=element('button','باز کردن پیام‌رسان نمونه','secondary');sample.onclick=()=>showChat(demoMessages());view.append(sample,SabzineMessaging.chat({repository:messagingLive,session}));return view;}
     if (section === 'profile') {
       const profile = await session.api('specialist/profile'), card = element('section', null, 'card'), list = element('dl', null, 'definition-list');
       card.append(element('h2', 'هویت حرفه‌ای'));
@@ -160,15 +164,15 @@
   }
   window.addEventListener('hashchange', () => {
     const next = location.hash.slice(1);
-    if (sections[next] && next !== current) { if(!SabzineClinical.leave()){location.hash=current;return;} current = next; load(); }
+    if (sections[next] && next !== current) { if(!SabzineClinical.leave()||!SabzineMessaging.leave()){location.hash=current;return;} current = next; load(); }
   });
   if (sections[location.hash.slice(1)]) current = location.hash.slice(1);
   document.addEventListener('visibilitychange', async () => {
     if (document.hidden || $('panel').hidden) return;
-    try { await session.restore(); if(!SabzineClinical.open)await load(); }
+    try { await session.restore(); if(!SabzineClinical.open&&!SabzineMessaging.open)await load(); }
     catch (error) {
       if (error.status === 401 || error.status === 403) signedOut(error.message);
-      else if(SabzineClinical.open){notice(error.message);} else { $('content').replaceChildren(element('section', 'بررسی نشست انجام نشد. برای ادامه دوباره تلاش کنید.', 'card')); notice(error.message); }
+      else if(SabzineClinical.open||SabzineMessaging.open){notice(error.message);} else { $('content').replaceChildren(element('section', 'بررسی نشست انجام نشد. برای ادامه دوباره تلاش کنید.', 'card')); notice(error.message); }
     }
   });
   setInterval(() => { if (!$('panel').hidden && !session.active) signedOut('نشست پایان یافته؛ دوباره وارد شوید.'); }, 30000);

@@ -5,6 +5,20 @@ import '../theme.dart';
 import 'expert.dart';
 import 'clinic_workspace.dart';
 import '../widgets/ui.dart';
+import 'messaging.dart';
+
+class ChatScreen extends StatelessWidget {
+  const ChatScreen({super.key, required this.threadId});
+  final String threadId;
+  @override
+  Widget build(BuildContext context) =>
+      DemoScope.of(context).role == AppRole.user
+      ? MessagingScreen(
+          threadId: threadId,
+          support: threadId.startsWith('support'),
+        )
+      : LegacyChatScreen(threadId: threadId);
+}
 
 class NoticesScreen extends StatelessWidget {
   const NoticesScreen({super.key});
@@ -52,6 +66,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     final s = DemoScope.of(context), role = s.role ?? AppRole.user;
+    if (s.serverAuthEnabled && role == AppRole.user) {
+      return const LiveConversationsScreen();
+    }
     final threads = s
         .visibleThreads(role, support: widget.support)
         .where(
@@ -227,14 +244,14 @@ class ConversationTile extends StatelessWidget {
   }
 }
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.threadId});
+class LegacyChatScreen extends StatefulWidget {
+  const LegacyChatScreen({super.key, required this.threadId});
   final String threadId;
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<LegacyChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<LegacyChatScreen> {
   final input = TextEditingController(), scroll = ScrollController();
   @override
   void dispose() {

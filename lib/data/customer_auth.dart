@@ -39,6 +39,59 @@ class CustomerAuth {
   final String baseUrl;
   final AuthTokenStorage storage;
   final http.Client _client;
+
+  /// Authenticated feature transport. Refresh retries preserve the exact body.
+  Future<dynamic> api(
+    String path, {
+    String method = 'GET',
+    Map<String, dynamic>? body,
+  }) async {
+    if (session == null) {
+      throw const AuthFailure('ابتدا وارد شو.', expired: true);
+    }
+    Future<http.Response> request() => _client
+        .send(
+          http.Request(
+              method,
+              Uri.parse('${baseUrl.replaceAll(RegExp(r'/+$'), '')}/v1/$path'),
+            )
+            ..headers.addAll({
+              'Content-Type': 'application/json',
+              if (kIsWeb) 'x-sabzine-client': 'web',
+              'Authorization': 'Bearer ${session!.accessToken}',
+            })
+            ..body = body == null ? '' : jsonEncode(body),
+        )
+        .then(http.Response.fromStream)
+        .timeout(const Duration(seconds: 20));
+    try {
+      var response = await request();
+      if (response.statusCode == 401) {
+        if (await restore() == null) {
+          throw const AuthFailure(
+            'نشست پایان یافته؛ دوباره وارد شو.',
+            expired: true,
+          );
+        }
+        response = await request();
+      }
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode >= 400) {
+        throw AuthFailure(
+          data is Map
+              ? data['detail'] as String? ?? 'عملیات انجام نشد.'
+              : 'عملیات انجام نشد.',
+          expired: response.statusCode == 401,
+        );
+      }
+      return data;
+    } on AuthFailure {
+      rethrow;
+    } catch (_) {
+      throw const AuthFailure('ارتباط برقرار نشد؛ دوباره تلاش کن.');
+    }
+  }
+
   CustomerSession? session;
   Future<CustomerSession?>? _refreshing;
 

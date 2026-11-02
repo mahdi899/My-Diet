@@ -1,3 +1,4 @@
+import 'messaging.dart';
 import 'weekly_feedback.dart';
 import 'shopping.dart';
 import '../widgets/meal_choices.dart';
@@ -657,95 +658,7 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
   }
 }
 
-Future<void> showRevision(BuildContext context) async {
-  final store = DemoScope.of(context), details = TextEditingController();
-  String? reason;
-  final form = GlobalKey<FormState>();
-  final sheetRoute = ModalBottomSheetRoute<void>(
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (sheet) => StatefulBuilder(
-      builder: (sheet, setSheet) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          8,
-          24,
-          24 + MediaQuery.viewInsetsOf(sheet).bottom,
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Form(
-              key: form,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'درخواست اصلاح برنامه',
-                    style: Theme.of(sheet).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'کدوم قسمت برنامه با شرایطت جور نیست؟',
-                    style: TextStyle(color: muted),
-                  ),
-                  const SizedBox(height: 18),
-                  DropdownButtonFormField<String>(
-                    initialValue: reason,
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'دلیل تغییر'),
-                    items:
-                        [
-                              'غذاها رو دوست ندارم',
-                              'تهیهٔ غذاها زمان زیادی می‌بره',
-                              'هزینهٔ غذاها بالاست',
-                              'شرایطم تغییر کرده',
-                              'دلیل دیگر',
-                            ]
-                            .map(
-                              (s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(
-                                  s,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: (v) => setSheet(() => reason = v),
-                    validator: (v) => v == null ? 'یک دلیل انتخاب کن.' : null,
-                  ),
-                  const SizedBox(height: 15),
-                  TextField(
-                    controller: details,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'توضیح بیشتر (اختیاری)',
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  PrimaryButton(
-                    'ثبت درخواست',
-                    onPressed: () {
-                      if (!form.currentState!.validate()) return;
-                      store.requestRevision(reason!, details.text.trim());
-                      Navigator.pop(sheet);
-                      showToast(context, 'درخواست اصلاح در نمونه ثبت شد.');
-                    },
-                    icon: Icons.send_outlined,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-  await Navigator.of(context).push<void>(sheetRoute);
-  await sheetRoute.completed;
-  details.dispose();
-}
+Future<void> showRevision(BuildContext context) => showPlanChange(context);
 
 class PlanSummaryScreen extends StatelessWidget {
   const PlanSummaryScreen({super.key});
