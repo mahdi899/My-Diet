@@ -13,6 +13,7 @@ import {
   requiredUuid,
 } from '../common/parse.js';
 import { MoneyService } from '../money/money.service.js';
+import { PublishingService } from '../publishing/publishing.service.js';
 import { MaintenanceService } from '../maintenance/maintenance.service.js';
 import { parseCivilDate } from '../plans/views.js';
 import { AdminService } from './admin.service.js';
@@ -302,11 +303,13 @@ export class PublicConfigController {
   constructor(
     private readonly admin: AdminService,
     private readonly money: MoneyService,
+    private readonly publishing: PublishingService,
   ) {}
 
   @Get('config')
   async config() {
-    return { minAppVersion: '1.0.0', ...(await this.money.catalog()) };
+    const site = await this.publishing.currentConfig();
+    return { minAppVersion: site.minAppVersion, download: site.download, ...(await this.money.catalog()) };
   }
 
   @Get('daily-message')

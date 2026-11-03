@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MaintenanceModule } from '../maintenance/maintenance.module.js';
 import { MoneyModule } from '../money/money.module.js';
+import { PublishingModule } from '../publishing/publishing.module.js';
 import {
   AdminController,
   PublicConfigController,
@@ -12,7 +13,7 @@ import { IntegrationsController } from './integrations.controller.js';
 import { IntegrationsService } from './integrations.service.js';
 
 @Module({
-  imports: [MaintenanceModule, MoneyModule],
+  imports: [MaintenanceModule, MoneyModule, PublishingModule],
   controllers: [AdminController, SpecialistsController, SpecialistProfileController, PublicConfigController, IntegrationsController],
   providers: [AdminService, IntegrationsService],
   exports: [AdminService, MaintenanceModule],
