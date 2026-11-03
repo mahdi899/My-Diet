@@ -10,6 +10,7 @@ import { PrivacyModule } from './privacy/privacy.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { TrackingModule } from './tracking/tracking.module.js';
 import { ShoppingModule } from './shopping/shopping.module.js';
+import { WeeklyFeedbackModule } from './feedback/weekly-feedback.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ShoppingModule } from './shopping/shopping.module.js';
     MoneyModule,
     TrackingModule,
     ShoppingModule,
+    WeeklyFeedbackModule,
     MessagingModule,
     RealtimeModule,
     PrivacyModule,
