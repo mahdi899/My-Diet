@@ -97,6 +97,12 @@ export class MoneyController {
     return this.money.cancelRequest(actor(req).id, requiredUuid(id));
   }
 
+  @Roles('admin')
+  @Post('admin/orders/:id/compensate')
+  compensate(@Req() req: Request, @Param('id') id: string) {
+    return this.money.compensatePermanentFailure(actor(req).id, requiredUuid(id));
+  }
+
   @Public()
   @Get('payments/callback/:gateway')
   callback(@Param('gateway') gateway: string, @Query('paymentId') paymentId?: string) {

@@ -11,6 +11,7 @@ import { RealtimeModule } from './realtime/realtime.module.js';
 import { TrackingModule } from './tracking/tracking.module.js';
 import { ShoppingModule } from './shopping/shopping.module.js';
 import { WeeklyFeedbackModule } from './feedback/weekly-feedback.module.js';
+import { StreakModule } from './rewards/streak.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { WeeklyFeedbackModule } from './feedback/weekly-feedback.module.js';
     TrackingModule,
     ShoppingModule,
     WeeklyFeedbackModule,
+    StreakModule,
     MessagingModule,
     RealtimeModule,
     PrivacyModule,

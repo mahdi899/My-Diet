@@ -4,7 +4,7 @@ import type { Pool, PoolClient } from 'pg';
 import { ENV, type Env } from '../config/env.js';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
-import { insertOutbox, toman, withTransaction } from '../common/sql.js';
+import { audit, insertOutbox, toman, withTransaction } from '../common/sql.js';
 import { PG_POOL } from '../database/database.js';
 import { GATEWAY_SET, type GatewaySet } from '../adapters/payment.js';
 import { PlanDraftService } from '../plans/plans.service.js';
@@ -447,6 +447,55 @@ export class MoneyService {
         [plan.id],
       );
       return this.balance(client, userId);
+    });
+  }
+
+  async compensatePermanentFailure(actorId: string, orderId: string): Promise<WalletBalance> {
+    return withTransaction(this.pool, async (client) => {
+      const found = await client.query<{ user_id: string; status: string; cash_toman: string; promo_toman: string }>(
+        `select user_id, status, cash_toman, promo_toman from orders where id=$1 for update`,
+        [orderId],
+      );
+      const order = found.rows[0];
+      if (!order) throw new ApiError(404, 'not_found', 'سفارش پیدا نشد');
+      await client.query(`select user_id from wallets where user_id=$1 for update`, [order.user_id]);
+      if (order.status === 'refunded') return this.balance(client, order.user_id);
+      if (order.status !== 'paid') throw new ApiError(409, 'refund_not_allowed', 'این سفارش قابل بازگشت نیست');
+      const request = await client.query<{ id: string; status: string }>(
+        `select id, status from plan_requests where order_id=$1 for update`,
+        [orderId],
+      );
+      const plan = request.rows[0];
+      if (!plan || !['queued', 'generating'].includes(plan.status)) {
+        throw new ApiError(409, 'refund_not_allowed', 'فقط شکست دائمی پیش از بررسی متخصص قابل جبران است');
+      }
+      const failed = await client.query(
+        `select 1 from ai_execution_claims where request_id=$1 and status='failed'`,
+        [plan.id],
+      );
+      if ((failed.rowCount ?? 0) === 0) throw new ApiError(409, 'not_failed', 'شکست دائمی خدمت ثبت نشده است');
+      const cash = toman(order.cash_toman);
+      const promo = toman(order.promo_toman);
+      if (cash > 0) {
+        await client.query(
+          `insert into wallet_ledger (id, user_id, bucket, amount_toman, kind, reference_id) values ($1,$2,'cash',$3,'refund',$4)`,
+          [uuidv7(), order.user_id, cash, orderId],
+        );
+      }
+      if (promo > 0) {
+        await client.query(
+          `insert into wallet_ledger (id, user_id, bucket, amount_toman, kind, reference_id) values ($1,$2,'promo',$3,'refund',$4)`,
+          [uuidv7(), order.user_id, promo, orderId],
+        );
+      }
+      await client.query(
+        `update wallets set cash_toman = cash_toman + $2, promo_toman = promo_toman + $3, version = version + 1 where user_id=$1`,
+        [order.user_id, cash, promo],
+      );
+      await client.query(`update orders set status='refunded' where id=$1`, [orderId]);
+      await client.query(`update plan_requests set status='cancelled', updated_at=now() where id=$1`, [plan.id]);
+      await audit(client, actorId, 'order_compensated', 'order', orderId, { cashToman: cash, promoToman: promo });
+      return this.balance(client, order.user_id);
     });
   }
 
