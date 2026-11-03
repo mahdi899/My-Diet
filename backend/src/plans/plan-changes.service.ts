@@ -204,7 +204,12 @@ export class PlanChangeService {
       if (row.status !== 'awaiting_review' || row.substate !== 'none') {
         throw new ApiError(409, 'not_actionable', 'این درخواست الان در صف بررسی نیست');
       }
-      await client.query(`update plan_change_requests set status='under_review', updated_at=now() where id=$1`, [id]);
+      await client.query(
+        `update plan_change_requests
+         set status='under_review', updated_at=now(), first_responded_at=coalesce(first_responded_at, now())
+         where id=$1`,
+        [id],
+      );
     });
   }
 
@@ -219,7 +224,8 @@ export class PlanChangeService {
       );
       await client.query(
         `update plan_change_requests
-         set status='rejected', substate='none', rejection_explanation=$2, updated_at=now()
+         set status='rejected', substate='none', rejection_explanation=$2, updated_at=now(),
+             first_responded_at=coalesce(first_responded_at, now())
          where id=$1`,
         [id, text],
       );
@@ -246,7 +252,10 @@ export class PlanChangeService {
         [uuidv7(), id, text],
       );
       await client.query(
-        `update plan_change_requests set status='under_review', substate='awaiting_clarification', updated_at=now() where id=$1`,
+        `update plan_change_requests
+         set status='under_review', substate='awaiting_clarification', updated_at=now(),
+             first_responded_at=coalesce(first_responded_at, now())
+         where id=$1`,
         [id],
       );
       await notify(client, row.user_id, 'plan_change', { changeRequestId: id });
@@ -284,7 +293,8 @@ export class PlanChangeService {
       const published = await this.plans.publish(specialistId, 'specialist', row.plan_request_id, lock, client);
       await client.query(
         `update plan_change_requests
-         set status='approved', substate='none', published_version_id=$2, updated_at=now()
+         set status='approved', substate='none', published_version_id=$2, updated_at=now(),
+             first_responded_at=coalesce(first_responded_at, now())
          where id=$1`,
         [id, published.versionId],
       );
