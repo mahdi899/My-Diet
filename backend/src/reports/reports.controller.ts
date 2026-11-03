@@ -1,7 +1,8 @@
-import { Controller, Get, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { actor, Roles } from '../common/auth.js';
+import { actor, Public, Roles } from '../common/auth.js';
+import { JourneyService } from './journey.service.js';
 import { ProductReportsService } from './product-reports.service.js';
 import { ReportsService } from './reports.service.js';
 
@@ -11,6 +12,7 @@ export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
     private readonly product: ProductReportsService,
+    private readonly journeys: JourneyService,
   ) {}
 
   @Roles('specialist')
@@ -48,5 +50,25 @@ export class ReportsController {
   @Get('admin/reports/specialists')
   specialists(@Query('sort') sort = 'rating') {
     return this.product.specialists(sort);
+  }
+
+  @Public()
+  @Post('journey/events')
+  @ApiOperation({ summary: 'Record a bounded journey batch. Anonymous installs may later link to one account. Client claims of visit type are not trusted.' })
+  journey(@Req() req: Request, @Body() body: unknown) {
+    return this.journeys.ingest(body, req.header('authorization'));
+  }
+
+  @Roles('admin')
+  @Get('admin/reports/journeys')
+  @ApiOperation({ summary: 'Aggregate screen graph. Output has no session, install, or account identifiers.' })
+  journeyReport(
+    @Query('from') from = '',
+    @Query('to') to = '',
+    @Query('platform') platform = 'all',
+    @Query('appVersion') appVersion = 'all',
+    @Query('sessionType') sessionType = '',
+  ) {
+    return this.journeys.report(from, to, platform, appVersion, sessionType);
   }
 }
