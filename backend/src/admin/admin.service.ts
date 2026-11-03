@@ -16,6 +16,24 @@ import {
 export class AdminService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  async aiExecutions() {
+    return (await this.pool.query(`select request_id as "requestId",status,started_at as "startedAt",
+      finished_at as "finishedAt",error_code as "errorCode" from ai_execution_claims order by started_at desc limit 100`)).rows;
+  }
+
+  async reconcileAi(actorId:string,requestId:string,costMicros:number,reason:string) {
+    if(!Number.isSafeInteger(costMicros)||costMicros<0||reason.trim().length<3)throw new ApiError(400,'validation','هزینه و دلیل بررسی معتبر نیست');
+    return withTransaction(this.pool,async client=>{
+      const claim=(await client.query("select * from ai_execution_claims where request_id=$1 and status='failed' for update",[requestId])).rows[0];
+      if(!claim || claim.error_code==='reconciled')throw new ApiError(409,'conflict','تلاش نامشخصی برای بررسی وجود ندارد');
+      await client.query(`update ai_generations set cost_micros=$2 where id=(select id from ai_generations
+        where request_id=$1 and status='failed' order by created_at desc limit 1)`,[requestId,costMicros]);
+      await client.query("update ai_execution_claims set error_code='reconciled' where request_id=$1",[requestId]);
+      await audit(client,actorId,'ai_cost_reconciled','plan_request',requestId,{costMicros,reason,previousError:claim.error_code});
+      return {ok:true};
+    });
+  }
+
   async dashboard(adminId: string) {
     const today = tehranDayStartUtc();
     const result = await this.pool.query(`select

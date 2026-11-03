@@ -199,12 +199,15 @@ describe('phase 15 product', { concurrency: 1, timeout: 180_000 }, () => {
 
   it('backfills legacy published versions without inventing options or changing content', async () => {
     const before = (await pool.query('select id,title,calories from plan_meals order by id')).rows;
+    await pool.query("update plan_requests set status='generating' where id=$1",[openRequestId]);
     const { runner } = await import('node-pg-migrate');
     await runner({databaseUrl:process.env.DATABASE_URL!,dir:path.resolve('migrations'),
-      direction:'down',count:1,migrationsTable:'pgmigrations',log:()=>undefined});
+      direction:'down',count:2,migrationsTable:'pgmigrations',log:()=>undefined});
     const { migrateUp } = await import('../../dist/database/migrate.js');
     await migrateUp(process.env.DATABASE_URL!);
     await migrateUp(process.env.DATABASE_URL!);
+    assert.equal((await pool.query('select status from ai_execution_claims where request_id=$1',[openRequestId])).rows[0].status,'started');
+    await pool.query("update plan_requests set status='queued' where id=$1",[openRequestId]);
     assert.deepEqual((await pool.query('select id,title,calories from plan_meals order by id')).rows,before);
     assert.equal((await pool.query('select count(*)::int as n from plan_meal_options')).rows[0].n,0);
     assert.equal((await pool.query('select version_id from active_plan_versions where user_id=$1',[userId])).rows[0].version_id,publishedVersionId);

@@ -1,4 +1,5 @@
 import { it } from 'node:test';
+import './provider-request.spec.js';
 import assert from 'node:assert/strict';
 import { connectionSchema, campaignSchema } from '../../src/admin/integration-validation.js';
 import { draftSchema } from '../../src/adapters/configured-ai.js';
@@ -19,7 +20,12 @@ it('requires a device for test notifications and limits notification text',()=>{
 });
 it('validates model output before a specialist sees a draft',()=>{
  assert.equal(draftSchema.safeParse({days:[]}).success,false);
- assert.equal(draftSchema.safeParse({days:Array.from({length:7},()=>({meals:[{mealType:'breakfast',suggestedTime:'08:00',title:'صبحانه',calories:400,notes:'',items:[]}]}))}).success,true);
+ const meal={mealType:'breakfast',suggestedTime:'08:00',title:'صبحانه',calories:400,notes:'',items:[{name:'نان',quantity:50,unit:'g'}]};
+ const week=(meals:unknown[])=>({days:Array.from({length:7},()=>({meals}))});
+ assert.equal(draftSchema.safeParse(week([meal])).success,true);
+ for(const invalid of [{...meal,items:[]},{...meal,title:' '},{...meal,suggestedTime:'99:99'},
+   {...meal,items:[{name:'نان',quantity:0,unit:'g'}]}])assert.equal(draftSchema.safeParse(week([invalid])).success,false);
+ assert.equal(draftSchema.safeParse(week([meal,meal])).success,false);
 });
 it('encrypts credentials even if supplied key resembles a ciphertext prefix',()=>{
  const secret='enc1:not-really-encrypted';const stored=encryptText(JSON.stringify(secret),'test-encryption-key');

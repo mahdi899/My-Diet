@@ -4,6 +4,8 @@ Backend completion roadmap: [Phase 0 audit](docs/backend-roadmap-phase-0.md) and
 [Phase 1 identity/session/assignment contract](docs/backend-roadmap-phase-1.md).
 [Phase 2 versioned meal options and publication](docs/backend-roadmap-phase-2.md)
 documents the additive migration and specialist-editor integration requirements.
+[Phase 3 AI execution and recovery](docs/backend-roadmap-phase-3.md) keeps provider
+connections in the administrator panel and documents uncertain-cost reconciliation.
 These phase numbers refer to the completion roadmap, not legacy migration names.
 
 The API covers accounts, the questionnaire, the toman wallet, plan orders, specialist review, meal logging, and the weekly reward. Staff can turn on an authenticator code, the server can push a notice to a registered device, and chat or request changes can be read as a live stream. The Flutter app still reads its local demo data until a screen is switched over.

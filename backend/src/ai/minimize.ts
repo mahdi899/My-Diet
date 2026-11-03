@@ -13,6 +13,7 @@ export interface UntrustedBlock {
 }
 
 export interface MinimizedModelInput {
+  history?: {recordedMeals:number;eatenMeals:number;daysWithRecords:number;cutoff:string};
   pseudonym: string;
   instruction: string;
   age: number;

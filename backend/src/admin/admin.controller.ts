@@ -175,6 +175,15 @@ export class AdminController {
     return this.maintenance.run(actor(req).id);
   }
 
+  @Get('ai-executions')
+  aiExecutions() { return this.admin.aiExecutions(); }
+
+  @Post('ai-executions/:id/reconcile')
+  reconcileAi(@Req() req:Request,@Param('id') id:string,@Body() body:unknown) {
+    const record=bodyRecord(body);rejectUnknown(record,['costMicros','reason']);
+    return this.admin.reconcileAi(actor(req).id,requiredUuid(id),requiredInt(record.costMicros),requiredString(record,'reason',500));
+  }
+
   @Get('ai-controls')
   aiControls() {
     return this.admin.aiControls();

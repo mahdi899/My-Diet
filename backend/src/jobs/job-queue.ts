@@ -8,7 +8,7 @@ export interface JobQueue {
   send(
     name: string,
     data: object,
-    options?: { singletonKey?: string },
+    options?: { singletonKey?: string; retryLimit?: number; retryDelay?: number },
   ): Promise<string | null>;
   work(
     name: string,

@@ -77,7 +77,7 @@ export class OutboxRelay implements OnModuleInit, OnModuleDestroy {
               aggregateId: row.aggregate_id,
               payload: row.payload,
             },
-            { singletonKey: row.id },
+            { singletonKey: row.id, ...(row.topic==='plan.generate'?{retryLimit:3,retryDelay:30}:{}) },
           );
           await this.pool.query(
             `update outbox_events

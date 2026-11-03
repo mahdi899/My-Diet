@@ -257,7 +257,8 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
     );
     assert.equal(queued.rows[0]?.topic, 'plan.generate');
     const { PlanDraftService } = await import('../../dist/plans/plans.service.js');
-    await api.get(PlanDraftService).generate(placed.body.requestId as string);
+    await Promise.allSettled([1,2].map(()=>api.get(PlanDraftService).generate(placed.body.requestId as string)));
+    assert.equal((await pool.query('select count(*)::int as n from ai_generations where request_id=$1',[placed.body.requestId])).rows[0].n,1);
 
     const detail = await request(api.getHttpServer())
       .get(`/v1/specialist/requests/${placed.body.requestId}`)
@@ -408,6 +409,26 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
     assert.deepEqual((await pool.query('select plan_version_id,option_uid from meal_logs where user_id=$1 order by id',[active.user_id])).rows,beforeLogs);
     const day=await plans.planDay(active.user_id,tehranToday());
     assert.ok(day.meals.every(m=>m.consumption?.versionId===active.version_id));
+  });
+
+  it('recovers uncertain AI execution to manual review without a second charge and audits reconciliation',async()=>{
+    const { PlanDraftService }=await import('../../dist/plans/plans.service.js');
+    const { AdminService }=await import('../../dist/admin/admin.service.js');
+    const row=(await pool.query(`select id from plan_requests r where status='cancelled'
+      and not exists(select 1 from plan_versions v where v.request_id=r.id) limit 1`)).rows[0];
+    assert.ok(row);
+    await pool.query("update plan_requests set status='queued' where id=$1",[row.id]);
+    await pool.query("insert into ai_execution_claims(request_id,status) values($1,'started')",[row.id]);
+    const service=api.get(PlanDraftService);
+    await service.generate(row.id);await service.generate(row.id);
+    assert.equal((await pool.query('select count(*)::int as n from plan_versions where request_id=$1',[row.id])).rows[0].n,1);
+    const attempt=(await pool.query('select provider,skipped_reason from ai_generations where request_id=$1',[row.id])).rows[0];
+    assert.equal(attempt.provider,'unknown');assert.equal(attempt.skipped_reason,'provider_outcome_unknown');
+    const admin=(await pool.query("select id from users where role='admin' limit 1")).rows[0].id;
+    await assert.rejects(api.get(AdminService).reconcileAi(admin,row.id,-1,'bad cost'));
+    await api.get(AdminService).reconcileAi(admin,row.id,0,'Confirmed no charge in provider account');
+    await assert.rejects(api.get(AdminService).reconcileAi(admin,row.id,100,'duplicate'));
+    assert.equal((await pool.query("select count(*)::int as n from audit_logs where action='ai_cost_reconciled' and target_id=$1",[row.id])).rows[0].n,1);
   });
 
   it('serializes concurrent OTP requests and enforces verification lockout', async () => {

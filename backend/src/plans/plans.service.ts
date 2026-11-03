@@ -24,6 +24,7 @@ import { acceptsAnotherAnswer, canWithdrawQuestion, type InfoQuestionStatus } fr
 import { bucketSql, type QueueBucket } from './queue.js';
 import { parseCivilDate, versionForDate, type DatedVersion } from './views.js';
 import { parseOptions, requireApprovedOptions, type MealOption } from './options.js';
+import { GenerationError } from '../ai/provider-request.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MEAL_ALIASES: Record<string, string> = {
@@ -60,6 +61,19 @@ export class PlanDraftService {
   ) {}
 
   async generate(requestId: string): Promise<void> {
+    const lock=await this.pool.connect();
+    try {
+      // Keep the cap check, provider call and persisted cost in one serial lane.
+      const acquired=await lock.query<{locked:boolean}>('select pg_try_advisory_lock(734821901) as locked');
+      if(!acquired.rows[0]?.locked)throw new GenerationError('generation_busy');
+      await this.generateClaimed(requestId);
+    } finally {
+      await lock.query('select pg_advisory_unlock(734821901)').catch(()=>undefined);
+      lock.release();
+    }
+  }
+
+  private async generateClaimed(requestId: string): Promise<void> {
     const claimed = await withTransaction(this.pool, async (client) => {
       const row = await client.query<{
         status: string;
@@ -89,6 +103,20 @@ export class PlanDraftService {
         );
         return null;
       }
+      const claim=await client.query(`insert into ai_execution_claims(request_id,status) values($1,'started')
+        on conflict(request_id) do nothing returning request_id`,[requestId]);
+      if (!claim.rowCount) {
+        // Maintenance may requeue an interrupted job. Never repeat an uncertain
+        // paid call; recover an editable blank week for specialist completion.
+        if(request.status==='queued') {
+          await insertDays(client,requestId,1,null,emptyDraft());
+          await client.query("update plan_requests set status='in_review',updated_at=now() where id=$1",[requestId]);
+          await client.query("update ai_execution_claims set status='failed',finished_at=now(),error_code='provider_outcome_unknown' where request_id=$1",[requestId]);
+          await client.query(`insert into ai_generations(id,request_id,provider,status,skipped_reason)
+            values($1,$2,'unknown','failed','provider_outcome_unknown')`,[uuidv7(),requestId]);
+        }
+        return null;
+      }
       await client.query(
         `update plan_requests set status = 'generating', updated_at = now() where id = $1`,
         [requestId],
@@ -98,7 +126,7 @@ export class PlanDraftService {
     if (!claimed) return;
 
     const highRisk = claimed.flags.some((flag) => (AI_SKIP_FLAGS as readonly string[]).includes(flag));
-    const blocked = highRisk ? null : await this.manualBlock();
+    const blocked = highRisk ? null : await this.manualBlock(requestId);
     const skipReason = highRisk ? 'high_risk' : blocked?.reason ?? null;
     let draft = emptyDraft();
     let aiStatus: 'drafted' | 'skipped' | 'failed' = skipReason ? 'skipped' : 'drafted';
@@ -116,6 +144,11 @@ export class PlanDraftService {
       phone: claimed.phone_e164,
       name: opened.name,
     });
+    const history=(await this.pool.query(`select count(*)::int as recorded,
+      count(*) filter(where eaten)::int as eaten,count(distinct scheduled_date)::int as days
+      from meal_logs where user_id=$1 and scheduled_date>=$2::date-7 and scheduled_date<$2::date`,
+    [claimed.user_id,tehranToday()])).rows[0];
+    minimized.history={recordedMeals:history.recorded,eatenMeals:history.eaten,daysWithRecords:history.days,cutoff:civilNow().toISOString()};
     if (!skipReason) {
       const started = Date.now();
       try {
@@ -132,10 +165,10 @@ export class PlanDraftService {
           aiStatus = 'failed';
           reason = 'invalid_draft';
         }
-      } catch {
+      } catch (error) {
         latencyMs = Math.max(0, Date.now() - started);
         aiStatus = 'failed';
-        reason = 'provider_error';
+        reason = error instanceof GenerationError ? error.code : 'provider_error';
       }
     }
     const warnings = aiStatus === 'drafted' ? draftWarnings(draft, opened.allergies ?? '', opened.dislikes ?? '') : [];
@@ -145,10 +178,17 @@ export class PlanDraftService {
         `select status from plan_requests where id = $1 for update`,
         [requestId],
       );
-      if (current.rows[0]?.status !== 'generating') return;
+      if (current.rows[0]?.status !== 'generating') {
+        await client.query("update ai_execution_claims set status='failed',finished_at=now(),error_code='provider_outcome_unknown' where request_id=$1",[requestId]);
+        await client.query(`insert into ai_generations(id,request_id,provider,status,skipped_reason,cost_micros,tokens,model)
+          values($1,$2,$3,'failed','cancelled_after_generation',$4,$5,$6)`,[uuidv7(),requestId,providerName,costMicros,tokens,model]);
+        return;
+      }
       const existing = await client.query(`select id from plan_versions where request_id = $1 limit 1`, [requestId]);
       if ((existing.rowCount ?? 0) > 0) return;
       await insertDays(client, requestId, 1, null, draft);
+      await client.query(`update ai_execution_claims set status=$2,finished_at=now(),error_code=$3 where request_id=$1`,
+        [requestId,aiStatus==='failed'?'failed':'completed',reason]);
       await client.query(
         `update plan_requests set status = 'in_review', updated_at = now() where id = $1`,
         [requestId],
@@ -206,7 +246,10 @@ export class PlanDraftService {
     });
   }
 
-  private async manualBlock(): Promise<{ reason: 'kill_switch' | 'cost_cap'; spentMicros: number; capMicros: number } | null> {
+  private async manualBlock(requestId:string): Promise<{ reason: 'kill_switch' | 'cost_cap' | 'cost_unresolved'; spentMicros: number; capMicros: number } | null> {
+    const uncertain=await this.pool.query(`select 1 from ai_execution_claims where request_id<>$1 and
+      (status='started' or error_code in ('provider_outcome_unknown','invalid_draft','provider_response_too_large','provider_error','restriction_conflict','provider_rejected')) limit 1`,[requestId]);
+    if(uncertain.rowCount)return {reason:'cost_unresolved',spentMicros:0,capMicros:0};
     const controls = await this.pool.query<{ kill_switch: boolean; daily_cost_cap_micros: string | null }>(
       `select kill_switch, daily_cost_cap_micros from ai_controls where id = true`,
     );
@@ -1025,6 +1068,7 @@ function producedToInput(draft: PlanDraft): MealInput[][] {
 
 function mealFromProvider(meal: MealDraft): MealInput {
   return {
+    options:meal.options,
     mealUid: uuidv7(),
     mealType: meal.mealType,
     suggestedTime: meal.suggestedTime,

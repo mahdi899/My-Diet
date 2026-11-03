@@ -1,4 +1,5 @@
 import type { MinimizedModelInput } from '../ai/minimize.js';
+import type { MealOption } from '../plans/options.js';
 
 export const PLAN_DRAFT_PROVIDER = Symbol('PLAN_DRAFT_PROVIDER');
 
@@ -9,6 +10,7 @@ export interface MealItemDraft {
 }
 
 export interface MealDraft {
+  options?: MealOption[];
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   suggestedTime: string;
   title: string;
