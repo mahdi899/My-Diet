@@ -2,10 +2,12 @@
 const http = require('node:http');
 const https = require('node:https');
 const { readFile } = require('node:fs/promises');
+const { existsSync } = require('node:fs');
 const { resolve, sep, extname } = require('node:path');
 const root = resolve(__dirname,'..');
 const apiTarget = new URL(process.env.SABZINE_API_TARGET || 'http://127.0.0.1:3000');
-const mounts = {admin:resolve(root,'backend/admin-web'),app:resolve(root,'build/web'),site:resolve(root,'..','sabzine site')};
+const demoDir = existsSync(resolve(root, 'demo')) ? resolve(root, 'demo') : resolve(root, '..', 'demo');
+const mounts = {admin:resolve(root,'backend/admin-web'),app:resolve(root,'build/web'),site:resolve(root,'..','sabzine site'),demo:demoDir};
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.ttf':'font/ttf','.woff2':'font/woff2','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.wasm':'application/wasm'};
 http.createServer(async(req,res)=>{
   if(req.url.startsWith('/v1/')){
@@ -30,4 +32,4 @@ http.createServer(async(req,res)=>{
     }
     res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(body);
   }catch{res.writeHead(404).end('Not found');}
-}).listen(Number(process.env.SABZINE_PREVIEW_PORT||8781),'127.0.0.1',()=>console.log('Sabzine frontend preview: http://127.0.0.1:8781/app/ · /admin/ · /admin/specialist.html · /site/'));
+}).listen(Number(process.env.SABZINE_PREVIEW_PORT||8781),'127.0.0.1',()=>console.log('Sabzine frontend preview: http://127.0.0.1:8781/app/ · /admin/ · /admin/specialist.html · /site/ · /demo/'));
