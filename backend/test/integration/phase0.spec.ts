@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'fs/promises';
+import { installGracefulStop } from '../helpers/postgres-stop.js';
 import net from 'net';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
@@ -42,6 +43,7 @@ describe('phase 0 runtime', () => {
       persistent: false,
       initdbFlags: ['--encoding=UTF8', '--locale=C', '--no-sync', '-c', 'io_method=sync'],
     });
+    installGracefulStop(database,directory);
     await database.initialise();
     await database.start();
     await database.createDatabase('sabzine');

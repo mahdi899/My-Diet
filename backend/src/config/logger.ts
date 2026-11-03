@@ -2,6 +2,11 @@ import type { Env } from './env.js';
 
 /** Fields that must never reach application logs. Questionnaire text and chat bodies are untrusted and sensitive. */
 export const logRedactPaths = [
+  'req.body.foodName',
+  'req.body.actual',
+  'req.body.details',
+  'foodName',
+  '*.foodName',
   'req.headers.authorization',
   'req.headers.cookie',
   'req.body.phone',

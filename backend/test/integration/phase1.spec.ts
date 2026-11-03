@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'fs/promises';
+import { installGracefulStop } from '../helpers/postgres-stop.js';
 import { loginAdmin } from '../helpers/admin-login.js';
 import net from 'net';
 import assert from 'node:assert/strict';
@@ -77,6 +78,7 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
       persistent: false,
       initdbFlags: ['--encoding=UTF8', '--locale=C', '--no-sync', '-c', 'io_method=sync'],
     });
+    installGracefulStop(database,directory);
     await database.initialise();
     await database.start();
     await database.createDatabase('sabzine');
@@ -409,6 +411,66 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
     assert.deepEqual((await pool.query('select plan_version_id,option_uid from meal_logs where user_id=$1 order by id',[active.user_id])).rows,beforeLogs);
     const day=await plans.planDay(active.user_id,tehranToday());
     assert.ok(day.meals.every(m=>m.consumption?.versionId===active.version_id));
+  });
+
+  it('records idempotent detailed consumption, approved substitutions and unknown calories with audit history',async()=>{
+    const {MealActivityService}=await import('../../dist/tracking/meal-activity.service.js');
+    const service=api.get(MealActivityService);
+    const row=(await pool.query(`select a.user_id,a.version_id,m.meal_uid,o.option_uid,o.document from active_plan_versions a
+      join plan_days d on d.plan_version_id=a.version_id join plan_meals m on m.plan_day_id=d.id
+      join plan_meal_options o on o.meal_id=m.id where d.civil_date=$1 and o.kind='ai_alternative' limit 1`,[tehranToday()])).rows[0];
+    assert.ok(row);
+    const old=(await pool.query('select * from meal_logs where user_id=$1 and meal_uid=$2 and scheduled_date=$3',[row.user_id,row.meal_uid,tehranToday()])).rows[0];
+    const base={date:tehranToday(),mealUid:row.meal_uid,versionId:row.version_id,optionId:row.option_uid};
+    const cleared=await service.record(row.user_id,{...base,versionId:old.plan_version_id,optionId:old.option_uid,state:'unrecorded',expectedRevision:old.revision,commandId:uuidv7()});
+    await assert.rejects(service.select(row.user_id,{...base,commandId:uuidv7(),expectedRevision:0}));
+    const selection={...base,commandId:uuidv7(),expectedRevision:0,reasonId:'unavailable'};
+    const selected=await service.select(row.user_id,selection);
+    assert.deepEqual(await service.select(row.user_id,selection),selected);
+    const command={...base,commandId:uuidv7(),expectedRevision:cleared.revision,state:'less' as const,actual:{quantity:0.5,unit:'serving' as const}};
+    const logged=await service.record(row.user_id,command);
+    assert.equal(logged.consumedCalories,row.document.calories/2);
+    assert.deepEqual(await service.record(row.user_id,command),logged);
+    await assert.rejects(service.record(row.user_id,{...command,state:'more'}));
+    await assert.rejects(service.record(row.user_id,{...command,commandId:uuidv7()}));
+    await assert.rejects(service.select(row.user_id,{...selection,commandId:uuidv7(),expectedRevision:selected.revision}));
+    const different=await service.record(row.user_id,{...base,commandId:uuidv7(),expectedRevision:logged.revision,state:'different',foodName:'غذای دیگر',actual:{quantity:100,unit:'g'}});
+    assert.equal(different.consumedCalories,null);
+    const unknown=await service.record(row.user_id,{...base,commandId:uuidv7(),expectedRevision:different.revision,state:'less',actual:{quantity:100,unit:'g'}});
+    assert.equal(unknown.consumedCalories,null);
+    const repeated={...base,commandId:uuidv7(),expectedRevision:unknown.revision,state:'as_planned' as const};
+    const parallel=await Promise.all([service.record(row.user_id,repeated),service.record(row.user_id,repeated)]);
+    assert.equal(parallel[0].revision,parallel[1].revision);
+    const reset=await service.record(row.user_id,{...base,commandId:uuidv7(),expectedRevision:parallel[0].revision,state:'unrecorded'});
+    const primary=(await pool.query(`select o.option_uid from plan_meal_options o join plan_meals m on m.id=o.meal_id
+      join plan_days d on d.id=m.plan_day_id where d.plan_version_id=$1 and m.meal_uid=$2 and o.kind='primary'`,[row.version_id,row.meal_uid])).rows[0].option_uid;
+    const previousClock=process.env.SABZINE_NOW;
+    try {
+      process.env.SABZINE_NOW='2026-10-29T08:30:00.000Z';
+      await service.select(row.user_id,{...base,optionId:primary,commandId:uuidv7(),expectedRevision:selected.revision});
+      assert.equal((await pool.query('select revision from meal_logs where id=$1',[old.id])).rows[0].revision,reset.revision);
+    } finally {process.env.SABZINE_NOW=previousClock;}
+    const summary=await service.day(row.user_id,base.date);
+    assert.equal(summary.calories.consumed.total,null);
+    assert.ok(summary.calories.consumed.unknownCount>0);
+    const {PlanDraftService}=await import('../../dist/plans/plans.service.js');
+    const plans=api.get(PlanDraftService);
+    const requestId=(await pool.query('select request_id from plan_versions where id=$1',[row.version_id])).rows[0].request_id;
+    await plans.correct(specialistId,requestId);
+    const next=await plans.staffRequest(specialistId,'specialist',requestId,null);
+    assert.ok(next.version);
+    const saved=await plans.replaceDraft(specialistId,'specialist',requestId,next.version.lockVersion,{days:next.version.days.map(d=>({meals:d.meals.map(m=>({...m,options:m.options?.map(o=>({...o,approved:true}))}))}))});
+    await plans.publish(specialistId,'specialist',requestId,saved.lockVersion);
+    const projected=await plans.planDay(row.user_id,base.date);
+    const slot=projected.meals.find(m=>m.mealUid===base.mealUid)!;
+    assert.equal(slot.selectionRevision,selected.revision+1);
+    await service.select(row.user_id,{...base,versionId:projected.versionId!,optionId:primary,commandId:uuidv7(),expectedRevision:slot.selectionRevision,reasonId:'preference'});
+    await assert.rejects(service.record(row.user_id,{...base,commandId:uuidv7(),expectedRevision:reset.revision,optionId:uuidv7(),state:'as_planned'}));
+    assert.ok((await pool.query('select count(*)::int as n from meal_log_history where log_id=$1',[old.id])).rows[0].n>=4);
+    await assert.rejects(pool.query('delete from meal_log_history where log_id=$1',[old.id]));
+    await assert.rejects(service.record(row.user_id,{...command,commandId:uuidv7(),date:'2026-10-29'}));
+    await assert.rejects(service.select(uuidv7(),{...selection,commandId:uuidv7()}));
+    assert.ok((await pool.query("select 1 from outbox_events where topic='shopping.invalidate' and aggregate_id=$1",[row.user_id])).rowCount);
   });
 
   it('recovers uncertain AI execution to manual review without a second charge and audits reconciliation',async()=>{

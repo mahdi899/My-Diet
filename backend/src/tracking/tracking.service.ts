@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Pool } from 'pg';
+import type { Pool,PoolClient } from 'pg';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { notify, toman, withTransaction } from '../common/sql.js';
@@ -47,6 +47,7 @@ export class TrackingService {
   async setMeal(userId: string, mealUid: string, eaten: boolean) {
     const today = tehranToday();
     return withTransaction(this.pool, async (client) => {
+      await client.query('select id from users where id=$1 for update',[userId]);
       const found = await client.query<{
         request_id: string;
         civil_date: string;
@@ -69,6 +70,10 @@ export class TrackingService {
         [mealUid, userId],
       );
       const meal = found.rows[0];
+      const structured=(await client.query(`select 1 from meal_logs where user_id=$1 and meal_uid=$2
+        and scheduled_date=$3 and details<>'{}'::jsonb union all
+        select 1 from meal_selections where user_id=$1 and meal_uid=$2 and civil_date=$3`,[userId,mealUid,today])).rowCount;
+      if(structured)throw new ApiError(409,'structured_activity_required','این وعده باید از مسیر ثبت مصرف نسخه‌دار اصلاح شود');
       if (!meal?.civil_date || !meal.week_start || !meal.effective_from) {
         throw new ApiError(404, 'not_found', 'این وعده در برنامهٔ تأییدشده نیست');
       }
@@ -87,6 +92,13 @@ export class TrackingService {
       const reward = eaten ? await this.rewardIfComplete(client, userId, meal.request_id, meal.week_start, meal.effective_from, friday) : null;
       return { eaten, reward, anomaly };
     });
+  }
+
+  async rewardForRecordedMeal(client:PoolClient,userId:string,requestId:string) {
+    const request=(await client.query<{week_start:string;effective_from:string}>(
+      'select week_start,effective_from from plan_requests where id=$1 and user_id=$2',[requestId,userId])).rows[0];
+    if(!request?.week_start||!request.effective_from)return null;
+    return this.rewardIfComplete(client,userId,requestId,request.week_start,request.effective_from,addCivilDays(request.week_start,6));
   }
 
   async setWeight(userId: string, kilograms: number) {

@@ -9,6 +9,17 @@ import { loadEnv } from '../../src/config/env.js';
 import { validateSubmission } from '../../src/questionnaire/schema.js';
 import { parseOptions, requireApprovedOptions } from '../../src/plans/options.js';
 import { uuidv7 } from '../../src/common/id.js';
+import { activitySchema,proportionalCalories } from '../../src/tracking/meal-activity.js';
+
+it('keeps unknown calories distinct and scales only compatible portions',()=>{
+ assert.equal(proportionalCalories(400,{quantity:200,unit:'g'},{quantity:0.1,unit:'kg'}),200);
+ assert.equal(proportionalCalories(null,{quantity:1,unit:'serving'},{quantity:0.5,unit:'serving'}),null);
+ assert.equal(proportionalCalories(400,{quantity:1,unit:'cup'},{quantity:100,unit:'g'}),null);
+ const base={commandId:uuidv7(),versionId:uuidv7(),mealUid:uuidv7(),optionId:uuidv7(),date:'2026-10-30',expectedRevision:0};
+ assert.equal(activitySchema.safeParse({...base,state:'different'}).success,false);
+ assert.equal(activitySchema.safeParse({...base,state:'skipped'}).success,true);
+ assert.equal(activitySchema.safeParse({...base,state:'less',actual:{quantity:0,unit:'g'}}).success,false);
+});
 
 it('validates structured option quantities, unknown calories and complete approval', () => {
   const options=['primary','ai_alternative','specialist_alternative'].map(kind=>({

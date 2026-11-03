@@ -1,15 +1,54 @@
 import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation,ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { actor, Public, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { bodyRecord, rejectUnknown, requiredString, requiredUuid } from '../common/parse.js';
 import { TrackingService } from './tracking.service.js';
+import { MealActivityService } from './meal-activity.service.js';
+import { activitySchema,selectionSchema } from './meal-activity.js';
+import { parseCivilDate } from '../plans/views.js';
 
 @ApiTags('tracking')
 @Controller('v1/me')
 export class TrackingController {
-  constructor(private readonly tracking: TrackingService) {}
+  constructor(private readonly tracking: TrackingService,private readonly activity:MealActivityService) {}
+
+  @Roles('user')
+  @Get('substitution-reasons')
+  reasons(){return this.activity.reasons();}
+
+  @Roles('user')
+  @Get('meal-activity/:date')
+  activityDay(@Req() req:Request,@Param('date') date:string){
+    if(!parseCivilDate(date))throw new ApiError(400,'validation','تاریخ معتبر نیست');
+    return this.activity.day(actor(req).id,date);
+  }
+
+  @Roles('user')
+  @Get('meal-activity/:date/history')
+  activityHistory(@Req() req:Request,@Param('date') date:string){
+    if(!parseCivilDate(date))throw new ApiError(400,'validation','تاریخ معتبر نیست');
+    return this.activity.history(actor(req).id,date);
+  }
+
+  @Roles('user')
+  @Post('meal-consumption')
+  @ApiOperation({summary:'Record or correct current-day consumption',description:'Requires commandId, expectedRevision, date, versionId, mealUid, optionId and state. less/more/different require actual quantity and unit; different also requires foodName. See backend-roadmap-phase-4.md. Unknown calories are null; retries use the same commandId.'})
+  record(@Req() req:Request,@Body() body:unknown){
+    const parsed=activitySchema.safeParse(body);
+    if(!parsed.success)throw new ApiError(400,'validation','اطلاعات مصرف معتبر نیست');
+    return this.activity.record(actor(req).id,parsed.data);
+  }
+
+  @Roles('user')
+  @Post('meal-selections')
+  @ApiOperation({summary:'Select an approved meal option without recording consumption',description:'Requires commandId, expectedRevision, date, versionId, mealUid and optionId. Current-day selection requires an active reasonId; past-day changes and consumed-meal replacements are rejected.'})
+  select(@Req() req:Request,@Body() body:unknown){
+    const parsed=selectionSchema.safeParse(body);
+    if(!parsed.success)throw new ApiError(400,'validation','اطلاعات انتخاب معتبر نیست');
+    return this.activity.select(actor(req).id,parsed.data);
+  }
 
   @Roles('user')
   @Get('dashboard')

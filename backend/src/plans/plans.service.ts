@@ -10,7 +10,7 @@ import type { Role } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { requiredUuid } from '../common/parse.js';
 import { uuidv7 } from '../common/id.js';
-import { audit, notify, withTransaction } from '../common/sql.js';
+import { audit, insertOutbox, notify, withTransaction } from '../common/sql.js';
 import { addCivilDays, civilNow, fridayOfWeek, tehranDayStartUtc, tehranToday, weekStartSaturday } from '../common/time.js';
 import { PROMPT_VERSION, manualDraftReason, usageCount } from '../ai/cost.js';
 import { aiAttempts, aiCostCapHits } from '../metrics/metrics.js';
@@ -465,6 +465,7 @@ export class PlanDraftService {
         [uuidv7(), requestId, actorId],
       );
       await notify(client, request.user_id, 'plan_published', { requestId });
+      await insertOutbox(client,'shopping.invalidate',request.user_id,{requestId,versionId:version.id});
       await client.query(`insert into active_plan_versions(user_id,version_id) values($1,$2)
         on conflict(user_id) do update set version_id=excluded.version_id,updated_at=now()`, [request.user_id,version.id]);
       return { status: 'published' as const };
@@ -680,7 +681,6 @@ export class PlanDraftService {
       effectiveFrom: request.effective_from,
       expired: today > friday,
       days: week.days.map((day,dayIndex)=>({...day,dayIndex,meals:day.meals.map(meal=>({...meal,
-        selectedOptionId:meal.options?.find(o=>o.kind==='primary')?.optionId ?? null,
         loggable:day.date===today && day.date>=request.effective_from && today<=friday,
       }))})),
     };
@@ -920,23 +920,36 @@ export class PlanDraftService {
       loaded.set(chosen.versionId, days);
     }
     const day = days.find((item) => item.dayIndex === chosen.dayIndex);
-    const logs = await this.pool.query<{ meal_uid: string; eaten: boolean;plan_version_id:string|null;option_uid:string|null }>(
-      `select meal_uid, eaten,plan_version_id,option_uid from meal_logs
+    const logs = await this.pool.query<{ meal_uid: string; eaten: boolean;plan_version_id:string|null;option_uid:string|null;details:Record<string,unknown>;revision:number }>(
+      `select meal_uid, eaten,plan_version_id,option_uid,details,revision from meal_logs
        where user_id = $1 and request_id = $2 and scheduled_date = $3::date`,
       [userId, chosen.requestId, date],
     );
     const eaten = new Map(logs.rows.map((row) => [row.meal_uid, row.eaten]));
+    const selections=(await this.pool.query<{meal_uid:string;option_uid:string;revision:number;version_id:string}>(`select meal_uid,option_uid,revision,version_id from meal_selections
+      where user_id=$1 and civil_date=$2`,[userId,date])).rows;
     return {
       date,
       requestId: chosen.requestId,
       versionId: chosen.versionId,
       versionStatus: chosen.status,
-      meals: (day?.meals ?? []).map((meal) => ({
+      meals: (day?.meals ?? []).map((meal) => {
+        const selection=selections.find(s=>s.meal_uid===meal.mealUid);
+        const selected=meal.options?.find(o=>selection && selection.version_id===chosen.versionId?o.optionId===selection.option_uid:o.kind==='primary');
+        const log=logs.rows.find(l=>l.meal_uid===meal.mealUid);
+        return ({
         ...meal,
+        selectedOptionId:selected?.optionId ?? null,
+        selectedOption:selected ?? null,
+        selectionRevision:selection?.revision ?? 0,
+        plannedCalories:selected?selected.calories:meal.calories,
+        consumptionRevision:log?.revision ?? 0,
+        consumptionState:log?.details.state ?? (log?.eaten?'as_planned':'unrecorded'),
         eaten: eaten.get(meal.mealUid) === true,
         consumption: logs.rows.filter(l=>l.meal_uid===meal.mealUid)
-          .map(l=>({versionId:l.plan_version_id,optionId:l.option_uid,eaten:l.eaten}))[0] ?? null,
-      })),
+          .map(l=>({versionId:l.plan_version_id,optionId:l.option_uid,eaten:l.eaten,...l.details,
+            consumedCalories:typeof l.details.consumedCalories==='number'?l.details.consumedCalories:null}))[0] ?? null,
+      });}),
     };
   }
 

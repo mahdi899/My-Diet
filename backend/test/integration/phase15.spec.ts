@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'fs/promises';
+import { installGracefulStop } from '../helpers/postgres-stop.js';
 import { loginAdmin } from '../helpers/admin-login.js';
 import net from 'net';
 import assert from 'node:assert/strict';
@@ -59,6 +60,7 @@ describe('phase 15 product', { concurrency: 1, timeout: 180_000 }, () => {
       persistent: false,
       initdbFlags: ['--encoding=UTF8', '--locale=C', '--no-sync', '-c', 'io_method=sync'],
     });
+    installGracefulStop(database,directory);
     await database.initialise();
     await database.start();
     await database.createDatabase('sabzine');
@@ -202,7 +204,7 @@ describe('phase 15 product', { concurrency: 1, timeout: 180_000 }, () => {
     await pool.query("update plan_requests set status='generating' where id=$1",[openRequestId]);
     const { runner } = await import('node-pg-migrate');
     await runner({databaseUrl:process.env.DATABASE_URL!,dir:path.resolve('migrations'),
-      direction:'down',count:2,migrationsTable:'pgmigrations',log:()=>undefined});
+      direction:'down',count:3,migrationsTable:'pgmigrations',log:()=>undefined});
     const { migrateUp } = await import('../../dist/database/migrate.js');
     await migrateUp(process.env.DATABASE_URL!);
     await migrateUp(process.env.DATABASE_URL!);
