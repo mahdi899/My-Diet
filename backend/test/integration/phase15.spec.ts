@@ -57,7 +57,7 @@ describe('phase 15 product', { concurrency: 1, timeout: 180_000 }, () => {
       password: 'sabzine',
       port,
       persistent: false,
-      initdbFlags: ['--encoding=UTF8', '--locale=C'],
+      initdbFlags: ['--encoding=UTF8', '--locale=C', '--no-sync', '-c', 'io_method=sync'],
     });
     await database.initialise();
     await database.start();
@@ -195,6 +195,20 @@ describe('phase 15 product', { concurrency: 1, timeout: 180_000 }, () => {
       // Windows can keep the data directory locked briefly after stop.
     }
     if (directory) await rm(directory, { recursive: true, force: true }).catch(() => undefined);
+  });
+
+  it('backfills legacy published versions without inventing options or changing content', async () => {
+    const before = (await pool.query('select id,title,calories from plan_meals order by id')).rows;
+    const { runner } = await import('node-pg-migrate');
+    await runner({databaseUrl:process.env.DATABASE_URL!,dir:path.resolve('migrations'),
+      direction:'down',count:1,migrationsTable:'pgmigrations',log:()=>undefined});
+    const { migrateUp } = await import('../../dist/database/migrate.js');
+    await migrateUp(process.env.DATABASE_URL!);
+    await migrateUp(process.env.DATABASE_URL!);
+    assert.deepEqual((await pool.query('select id,title,calories from plan_meals order by id')).rows,before);
+    assert.equal((await pool.query('select count(*)::int as n from plan_meal_options')).rows[0].n,0);
+    assert.equal((await pool.query('select version_id from active_plan_versions where user_id=$1',[userId])).rows[0].version_id,publishedVersionId);
+    assert.ok((await pool.query('select questionnaire_snapshot from plan_version_context where version_id=$1',[publishedVersionId])).rowCount);
   });
 
   it('shows the published week, keeps a correction off the user plan, and serves the remaining reads', async () => {

@@ -40,7 +40,7 @@ describe('phase 0 runtime', () => {
       password: 'sabzine',
       port,
       persistent: false,
-      initdbFlags: ['--encoding=UTF8', '--locale=C'],
+      initdbFlags: ['--encoding=UTF8', '--locale=C', '--no-sync', '-c', 'io_method=sync'],
     });
     await database.initialise();
     await database.start();

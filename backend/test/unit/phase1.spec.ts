@@ -7,6 +7,20 @@ import { normalizeIranianMobile } from '../../src/common/phone.js';
 import { addCivilDays, streakLength, tehranToday, weekStartSaturday } from '../../src/common/time.js';
 import { loadEnv } from '../../src/config/env.js';
 import { validateSubmission } from '../../src/questionnaire/schema.js';
+import { parseOptions, requireApprovedOptions } from '../../src/plans/options.js';
+import { uuidv7 } from '../../src/common/id.js';
+
+it('validates structured option quantities, unknown calories and complete approval', () => {
+  const options=['primary','ai_alternative','specialist_alternative'].map(kind=>({
+    optionId:uuidv7(),kind,title:'meal',portion:{quantity:1,unit:'serving',basis:'as_served'},
+    calories:null,preparationMinutes:0,instructions:'prepare',approved:true,
+    ingredients:[{name:'ingredient',quantity:100,unit:'g',basis:'raw'}],
+  }));
+  requireApprovedOptions(parseOptions(options));
+  assert.throws(()=>parseOptions(options.map(o=>({...o,portion:{...o.portion,quantity:0}}))));
+  assert.throws(()=>parseOptions([options[0],options[0],options[2]]));
+  assert.throws(()=>requireApprovedOptions(parseOptions(options.map(o=>({...o,approved:false})))));
+});
 
 const secret = 'test-secret-test-secret';
 const baseEnv = {

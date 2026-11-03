@@ -29,5 +29,7 @@ export function parseCivilDate(value: string): string | null {
 export function versionForDate(rows: DatedVersion[], date: string): DatedVersion | null {
   const covering = rows.filter((row) => row.civilDate === date && row.publishedOn <= date);
   if (covering.length === 0) return null;
-  return covering.reduce((best, row) => (row.publishedAt > best.publishedAt ? row : best));
+  return covering.reduce((best, row) => (
+    row.publishedAt > best.publishedAt || (row.publishedAt===best.publishedAt && row.versionId>best.versionId) ? row : best
+  ));
 }

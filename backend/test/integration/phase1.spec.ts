@@ -75,7 +75,7 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
       password: 'sabzine',
       port,
       persistent: false,
-      initdbFlags: ['--encoding=UTF8', '--locale=C'],
+      initdbFlags: ['--encoding=UTF8', '--locale=C', '--no-sync', '-c', 'io_method=sync'],
     });
     await database.initialise();
     await database.start();
@@ -264,7 +264,7 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
       .set('Authorization', `Bearer ${specialistToken}`);
     assert.equal(detail.status, 200);
     assert.equal(JSON.stringify(detail.body).includes('+98912'), false);
-    const lock = detail.body.version.lockVersion as number;
+    let lock = detail.body.version.lockVersion as number;
     const blocked = await request(api.getHttpServer())
       .post(`/v1/specialist/requests/${placed.body.requestId}/questions`)
       .set('Authorization', `Bearer ${specialistToken}`)
@@ -306,6 +306,22 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
       .post(`/v1/specialist/info-questions/${questionId}/acknowledge`)
       .set('Authorization', `Bearer ${specialistToken}`);
     assertOk(acknowledged);
+    const incomplete = await request(api.getHttpServer())
+      .post(`/v1/specialist/requests/${placed.body.requestId}/publish`)
+      .set('Authorization', `Bearer ${specialistToken}`).set('If-Match',String(lock));
+    assert.equal(incomplete.status,409);
+    assert.equal(incomplete.body.code,'options_required');
+    const fullDays = detail.body.version.days.map((day: {meals:Array<{title:string;calories:number}>})=>({meals:day.meals.map(meal=>({...meal,
+      options:['primary','ai_alternative','specialist_alternative'].map(kind=>({
+        optionId:uuidv7(),kind,title:meal.title,calories:meal.calories,
+        portion:{quantity:1,unit:'serving',basis:'as_served'},preparationMinutes:15,
+        instructions:'Test fixture preparation',ingredients:[{name:'Test ingredient',quantity:100,unit:'g',basis:'raw'}],approved:true,
+      })),
+    }))}));
+    const saved = await request(api.getHttpServer()).put(`/v1/specialist/requests/${placed.body.requestId}/draft`)
+      .set('Authorization', `Bearer ${specialistToken}`).set('If-Match',String(lock)).send({days:fullDays});
+    assertOk(saved);
+    lock=saved.body.lockVersion;
     const published = await request(api.getHttpServer())
       .post(`/v1/specialist/requests/${placed.body.requestId}/publish`)
       .set('Authorization', `Bearer ${specialistToken}`)
@@ -359,6 +375,39 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
     await assert.rejects(pool.query(`update plan_meals set title = 'x' where meal_uid = $1`, [friday.meals[0].mealUid]));
     const me = await request(api.getHttpServer()).get('/v1/me').set('Authorization', `Bearer ${token}`);
     await assert.rejects(pool.query(`update wallet_ledger set amount_toman = 1 where user_id = $1`, [me.body.id]));
+  });
+
+  it('publishes corrections atomically, rejects stale edits and preserves exact consumption history', async () => {
+    const { PlanDraftService } = await import('../../dist/plans/plans.service.js');
+    const plans = api.get(PlanDraftService);
+    const active = (await pool.query(`select a.user_id,a.version_id,v.request_id from active_plan_versions a
+      join plan_versions v on v.id=a.version_id limit 1`)).rows[0];
+    assert.ok(active);
+    const beforeLogs = (await pool.query('select plan_version_id,option_uid from meal_logs where user_id=$1 order by id',[active.user_id])).rows;
+    assert.ok(beforeLogs.length>0 && beforeLogs.every(l=>l.plan_version_id===active.version_id && l.option_uid));
+    const snapshot = (await pool.query('select * from plan_version_context where version_id=$1',[active.version_id])).rows[0];
+    assert.ok(snapshot.generation_id);
+    await assert.rejects(pool.query(`update plan_meal_options set document='{}' where meal_id in
+      (select m.id from plan_meals m join plan_days d on d.id=m.plan_day_id where d.plan_version_id=$1)`,[active.version_id]));
+    await plans.correct(specialistId,active.request_id);
+    const draft = await plans.staffRequest(specialistId,'specialist',active.request_id,null);
+    assert.ok(draft.version);
+    const lock=draft.version.lockVersion;
+    await assert.rejects(plans.publish(specialistId,'specialist',active.request_id,lock));
+    assert.equal((await pool.query('select version_id from active_plan_versions where user_id=$1',[active.user_id])).rows[0].version_id,active.version_id);
+    const days=draft.version.days.map(d=>({meals:d.meals.map(m=>({...m,options:m.options?.map(o=>({...o,approved:true}))}))}));
+    await assert.rejects(plans.replaceDraft(specialistId,'admin',active.request_id,lock,{days}));
+    const saved=await plans.replaceDraft(specialistId,'specialist',active.request_id,lock,{days});
+    await assert.rejects(plans.replaceDraft(specialistId,'specialist',active.request_id,lock,{days}));
+    const outcomes=await Promise.allSettled([1,2].map(()=>plans.publish(specialistId,'specialist',active.request_id,saved.lockVersion)));
+    assert.equal(outcomes.filter(o=>o.status==='fulfilled').length,1);
+    assert.equal(outcomes.filter(o=>o.status==='rejected').length,1);
+    const current=(await pool.query('select version_id from active_plan_versions where user_id=$1',[active.user_id])).rows[0].version_id;
+    assert.notEqual(current,active.version_id);
+    assert.equal((await pool.query('select status from plan_versions where id=$1',[active.version_id])).rows[0].status,'superseded');
+    assert.deepEqual((await pool.query('select plan_version_id,option_uid from meal_logs where user_id=$1 order by id',[active.user_id])).rows,beforeLogs);
+    const day=await plans.planDay(active.user_id,tehranToday());
+    assert.ok(day.meals.every(m=>m.consumption?.versionId===active.version_id));
   });
 
   it('serializes concurrent OTP requests and enforces verification lockout', async () => {

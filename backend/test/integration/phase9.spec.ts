@@ -46,7 +46,7 @@ describe('phase 9 product', { concurrency: 1, timeout: 180_000 }, () => {
       password: 'sabzine',
       port,
       persistent: false,
-      initdbFlags: ['--encoding=UTF8', '--locale=C'],
+      initdbFlags: ['--encoding=UTF8', '--locale=C', '--no-sync', '-c', 'io_method=sync'],
     });
     await database.initialise();
     await database.start();

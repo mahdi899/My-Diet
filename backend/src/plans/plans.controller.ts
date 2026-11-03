@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Put, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { actor, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
@@ -90,6 +90,9 @@ export class PlansController {
 
   @Roles('specialist', 'admin')
   @Put('specialist/requests/:id/draft')
+  @ApiOperation({ summary: 'Save a versioned seven-day draft', description: 'Requires If-Match lockVersion. Each meal can include three options: primary, ai_alternative, specialist_alternative. Options require stable optionId, title, portion (quantity/unit/basis), calories (per portion; nullable for alternatives), preparationMinutes, instructions, ingredients and approved. Only specialists may approve. See docs/backend-roadmap-phase-2.md for the complete contract.' })
+  @ApiResponse({ status: 400, description: 'Invalid units, quantities, duplicate IDs or primary option mismatch.' })
+  @ApiResponse({ status: 409, description: 'Stale lock or request not editable.' })
   replace(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
     const user = actor(req);
     return this.plans.replaceDraft(user.id, user.role, requiredUuid(id), lockVersion(req), body);
@@ -97,6 +100,8 @@ export class PlansController {
 
   @Roles('specialist')
   @Post('specialist/requests/:id/publish')
+  @ApiOperation({ summary: 'Atomically publish a reviewed plan and replace its active pointer' })
+  @ApiResponse({ status: 409, description: 'options_required, plan_incomplete, info_required, lock_conflict or week_closed. The prior active plan remains available.' })
   publish(@Req() req: Request, @Param('id') id: string) {
     const user = actor(req);
     return this.plans.publish(user.id, user.role, requiredUuid(id), lockVersion(req));

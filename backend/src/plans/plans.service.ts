@@ -8,9 +8,10 @@ import {
 } from '../adapters/plan-draft.js';
 import type { Role } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
+import { requiredUuid } from '../common/parse.js';
 import { uuidv7 } from '../common/id.js';
 import { audit, notify, withTransaction } from '../common/sql.js';
-import { addCivilDays, fridayOfWeek, tehranDayStartUtc, tehranToday, weekStartSaturday } from '../common/time.js';
+import { addCivilDays, civilNow, fridayOfWeek, tehranDayStartUtc, tehranToday, weekStartSaturday } from '../common/time.js';
 import { PROMPT_VERSION, manualDraftReason, usageCount } from '../ai/cost.js';
 import { aiAttempts, aiCostCapHits } from '../metrics/metrics.js';
 import { ENV, type Env } from '../config/env.js';
@@ -22,6 +23,7 @@ import { draftWarnings } from '../ai/warnings.js';
 import { acceptsAnotherAnswer, canWithdrawQuestion, type InfoQuestionStatus } from './questions.js';
 import { bucketSql, type QueueBucket } from './queue.js';
 import { parseCivilDate, versionForDate, type DatedVersion } from './views.js';
+import { parseOptions, requireApprovedOptions, type MealOption } from './options.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MEAL_ALIASES: Record<string, string> = {
@@ -39,6 +41,7 @@ interface DayInput {
   meals: MealInput[];
 }
 interface MealInput {
+  options?: MealOption[];
   mealUid: string;
   mealType: string;
   suggestedTime: string | null;
@@ -154,11 +157,11 @@ export class PlanDraftService {
         `select coalesce(max(attempt_no), 0) + 1 as n from ai_generations where request_id = $1`,
         [requestId],
       );
-      await client.query(
+      const generation = await client.query<{id:string}>(
         `insert into ai_generations
            (id, request_id, provider, status, skipped_reason, raw_output, attempt_no, model,
             prompt_version, schema_version, tokens, latency_ms, cost_micros, warnings)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb)`,
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb) returning id`,
         [
           uuidv7(),
           requestId,
@@ -176,6 +179,8 @@ export class PlanDraftService {
           JSON.stringify(warnings),
         ],
       );
+      await client.query(`update plan_version_context set generation_id=$2 where version_id in
+        (select id from plan_versions where request_id=$1 and status='draft')`,[requestId,generation.rows[0]!.id]);
       if (reason === 'cost_cap' && blocked) {
         const dayStart = tehranDayStartUtc();
         const prior = await client.query(
@@ -233,7 +238,7 @@ export class PlanDraftService {
       requestId,
       1,
       null,
-      days.map((day) => day.meals.map((meal) => ({ ...meal, mealUid: uuidv7() }))),
+      days.map((day) => day.meals.map((meal) => ({ ...meal, options:meal.options?.map(o=>({...o,approved:false})) }))),
     );
   }
 
@@ -295,6 +300,9 @@ export class PlanDraftService {
 
   async replaceDraft(actorId: string, role: Role, requestId: string, lock: number, body: unknown) {
     const days = parseDays(body);
+    if (role !== 'specialist' && days.flat().some(m => m.options?.some(o => o.approved))) {
+      throw new ApiError(403, 'forbidden', 'تأیید گزینه فقط با متخصص است');
+    }
     return withTransaction(this.pool, async (client) => {
       const request = await this.lockRequest(client, actorId, role, requestId);
       if (request.status === 'cancelled' || request.status === 'queued' || request.status === 'generating') {
@@ -325,7 +333,7 @@ export class PlanDraftService {
       } else {
         throw new ApiError(409, 'not_ready', 'پیش‌نویس هنوز آمادهٔ ویرایش نیست');
       }
-      if (draft) await insertDayContents(client, draft.id, days);
+      if (draft) await insertDayContents(client, draft.id, days, role === 'specialist' ? actorId : null);
       await client.query(
         `insert into request_events (id, request_id, actor_id, kind) values ($1, $2, $3, 'draft_edited')`,
         [uuidv7(), requestId, actorId],
@@ -352,6 +360,8 @@ export class PlanDraftService {
         throw new ApiError(403, 'not_verified', 'فقط متخصص تأییدشده و فعال می‌تواند برنامه را منتشر کند');
       }
       const request = await this.lockRequest(client, actorId, role, requestId);
+      // Serializes active-pointer replacement across different requests of one owner.
+      await client.query('select id from users where id=$1 for update', [request.user_id]);
       if (request.status !== 'in_review') {
         throw new ApiError(409, 'info_required', 'تا بسته شدن سؤال‌ها نمی‌توان برنامه را تأیید کرد');
       }
@@ -372,11 +382,19 @@ export class PlanDraftService {
       const version = draft.rows[0];
       if (!version) throw new ApiError(409, 'plan_incomplete', 'پیش‌نویسی برای تأیید نیست');
       if (version.lock_version !== lock) throw new ApiError(409, 'lock_conflict', 'نسخهٔ برنامه تغییر کرده است');
+      const base = await client.query(`select 1 from plan_version_context c join plan_requests r on r.id=$2
+        left join active_plan_versions a on a.user_id=r.user_id where c.version_id=$1
+        and c.replaces_version_id is not distinct from a.version_id`,[version.id,requestId]);
+      if (!base.rowCount) throw new ApiError(409,'lock_conflict','برنامه فعال تغییر کرده است؛ پیش‌نویس باید بازبینی شود');
       const days = await readDays(client, version.id);
       assertPublishable(days);
+      for (const day of days) for (const meal of day.meals) requireApprovedOptions(meal.options);
+      await client.query(`update plan_version_context set assigned_specialist_id=$2,review_completed_at=now()
+        where version_id=$1`, [version.id,actorId]);
       const today = tehranToday();
       const weekStart = request.week_start ?? weekStartSaturday(today);
       const effectiveFrom = request.effective_from ?? today;
+      if (today > fridayOfWeek(weekStart)) throw new ApiError(409,'week_closed','هفته این برنامه پایان یافته است');
       for (const day of days) {
         await client.query(`update plan_days set civil_date = $2 where id = $1`, [
           day.id,
@@ -389,8 +407,8 @@ export class PlanDraftService {
         [requestId],
       );
       await client.query(
-        `update plan_versions set status = 'published', published_at = now() where id = $1`,
-        [version.id],
+        `update plan_versions set status = 'published', published_at = $2 where id = $1`,
+        [version.id,civilNow()],
       );
       await client.query(
         `update plan_requests
@@ -404,6 +422,8 @@ export class PlanDraftService {
         [uuidv7(), requestId, actorId],
       );
       await notify(client, request.user_id, 'plan_published', { requestId });
+      await client.query(`insert into active_plan_versions(user_id,version_id) values($1,$2)
+        on conflict(user_id) do update set version_id=excluded.version_id,updated_at=now()`, [request.user_id,version.id]);
       return { status: 'published' as const };
     });
   }
@@ -599,6 +619,8 @@ export class PlanDraftService {
        from plan_versions v
        join plan_requests r on r.id = v.request_id
        where r.user_id = $1 and v.status = 'published' and r.week_start is not null
+         and (not exists(select 1 from active_plan_versions a where a.user_id=r.user_id)
+           or exists(select 1 from active_plan_versions a where a.user_id=r.user_id and a.version_id=v.id))
        order by v.published_at desc
        limit 1`,
       [userId],
@@ -607,35 +629,17 @@ export class PlanDraftService {
     if (!request) return null;
     const today = tehranToday();
     const friday = addCivilDays(request.week_start, 6);
-    const days = await readDays(this.pool, request.version_id);
-    const logs = await this.pool.query<{ meal_uid: string; scheduled_date: string; eaten: boolean }>(
-      `select meal_uid, scheduled_date, eaten from meal_logs where user_id = $1 and request_id = $2`,
-      [userId, request.id],
-    );
-    const eaten = new Map(logs.rows.map((row) => [`${row.scheduled_date}|${row.meal_uid}`, row.eaten]));
+    const week = await this.planWeek(userId,request.week_start);
     return {
       requestId: request.id,
+      versionId: request.version_id,
       weekStart: request.week_start,
       effectiveFrom: request.effective_from,
       expired: today > friday,
-      days: days.map((day) => {
-        const date = addCivilDays(request.week_start, day.dayIndex);
-        return {
-          dayIndex: day.dayIndex,
-          date,
-          meals: day.meals.map((meal) => ({
-            mealUid: meal.mealUid,
-            mealType: meal.mealType,
-            suggestedTime: meal.suggestedTime,
-            title: meal.title,
-            calories: meal.calories,
-            notes: meal.notes,
-            items: meal.items,
-            eaten: eaten.get(`${date}|${meal.mealUid}`) === true,
-            loggable: date === today && date >= request.effective_from && today <= friday,
-          })),
-        };
-      }),
+      days: week.days.map((day,dayIndex)=>({...day,dayIndex,meals:day.meals.map(meal=>({...meal,
+        selectedOptionId:meal.options?.find(o=>o.kind==='primary')?.optionId ?? null,
+        loggable:day.date===today && day.date>=request.effective_from && today<=friday,
+      }))})),
     };
   }
 
@@ -757,7 +761,7 @@ export class PlanDraftService {
         requestId,
         version.version_number + 1,
         actorId,
-        days.map((day) => day.meals),
+        days.map((day) => day.meals.map(meal=>({...meal,options:meal.options?.map(o=>({...o,approved:false}))}))),
       );
       await client.query(
         `update plan_requests set status = 'in_review', updated_at = now() where id = $1`,
@@ -873,8 +877,8 @@ export class PlanDraftService {
       loaded.set(chosen.versionId, days);
     }
     const day = days.find((item) => item.dayIndex === chosen.dayIndex);
-    const logs = await this.pool.query<{ meal_uid: string; eaten: boolean }>(
-      `select meal_uid, eaten from meal_logs
+    const logs = await this.pool.query<{ meal_uid: string; eaten: boolean;plan_version_id:string|null;option_uid:string|null }>(
+      `select meal_uid, eaten,plan_version_id,option_uid from meal_logs
        where user_id = $1 and request_id = $2 and scheduled_date = $3::date`,
       [userId, chosen.requestId, date],
     );
@@ -887,6 +891,8 @@ export class PlanDraftService {
       meals: (day?.meals ?? []).map((meal) => ({
         ...meal,
         eaten: eaten.get(meal.mealUid) === true,
+        consumption: logs.rows.filter(l=>l.meal_uid===meal.mealUid)
+          .map(l=>({versionId:l.plan_version_id,optionId:l.option_uid,eaten:l.eaten}))[0] ?? null,
       })),
     };
   }
@@ -949,11 +955,11 @@ export class PlanDraftService {
       `select id from conversations where request_id = $1 and kind = 'care' limit 1`,
       [requestId],
     );
-    let version: { status: string; lockVersion: number; days: DayInput[] } | null = null;
+    let version: { id:string; versionNumber:number; status: string; lockVersion: number; days: DayInput[] } | null = null;
     let warnings: unknown[] = [];
     if (includeDraft) {
-      const draft = await this.pool.query<{ id: string; status: string; lock_version: number }>(
-        `select id, status, lock_version from plan_versions
+      const draft = await this.pool.query<{ id: string; version_number:number; status: string; lock_version: number }>(
+        `select id, version_number, status, lock_version from plan_versions
          where request_id = $1 and status in ('draft', 'published')
          order by case when status = 'draft' then 0 else 1 end, version_number desc
          limit 1`,
@@ -962,6 +968,8 @@ export class PlanDraftService {
       if (draft.rows[0]) {
         const days = await readDays(this.pool, draft.rows[0].id);
         version = {
+          id:draft.rows[0].id,
+          versionNumber:draft.rows[0].version_number,
           status: draft.rows[0].status,
           lockVersion: draft.rows[0].lock_version,
           days: days.map((day) => ({ meals: day.meals })),
@@ -1040,11 +1048,16 @@ async function insertDays(
      values ($1, $2, $3, 'draft', $4)`,
     [versionId, requestId, versionNumber, createdBy],
   );
-  await insertDayContents(client, versionId, days);
+  await client.query(`insert into plan_version_context(version_id,assigned_specialist_id,questionnaire_schema_version,questionnaire_snapshot,replaces_version_id,generation_id)
+    select $1,r.assigned_specialist_id,s.schema_version,s.answers,a.version_id,
+      (select generation_id from plan_version_context where version_id=a.version_id) from plan_requests r
+    join questionnaire_submissions s on s.id=r.submission_id
+    left join active_plan_versions a on a.user_id=r.user_id where r.id=$2`, [versionId,requestId]);
+  await insertDayContents(client, versionId, days, createdBy);
   return versionId;
 }
 
-async function insertDayContents(client: PoolClient, versionId: string, days: MealInput[][]): Promise<void> {
+async function insertDayContents(client: PoolClient, versionId: string, days: MealInput[][], approver: string | null = null): Promise<void> {
   for (let index = 0; index < days.length; index += 1) {
     const dayId = uuidv7();
     await client.query(
@@ -1069,11 +1082,19 @@ async function insertDayContents(client: PoolClient, versionId: string, days: Me
           [uuidv7(), mealId, itemPosition, item.name, item.quantity, item.unit],
         );
       }
+      for (const option of meal.options ?? []) {
+        const approved = option.approved && approver !== null;
+        await client.query(`insert into plan_meal_options(meal_id,option_uid,kind,document,approved_by,approved_at)
+          values($1,$2,$3,$4::jsonb,$5,case when $5::uuid is null then null else now() end)`,
+        [mealId,option.optionId,option.kind,JSON.stringify({...option,approved}),approved ? approver : null]);
+      }
     }
   }
 }
 
 async function deleteDays(client: PoolClient, versionId: string): Promise<void> {
+  await client.query(`delete from plan_meal_options where meal_id in
+    (select m.id from plan_meals m join plan_days d on d.id=m.plan_day_id where d.plan_version_id=$1)`,[versionId]);
   await client.query(
     `delete from plan_meal_items where meal_id in (
        select m.id from plan_meals m
@@ -1090,6 +1111,9 @@ async function deleteDays(client: PoolClient, versionId: string): Promise<void> 
 }
 
 async function readDays(client: PoolClient | Pool, versionId: string) {
+  const options = await client.query<{meal_id:string;document:MealOption}>(`select o.meal_id,o.document
+    from plan_meal_options o join plan_meals m on m.id=o.meal_id join plan_days d on d.id=m.plan_day_id
+    where d.plan_version_id=$1 order by o.kind`,[versionId]);
   const days = await client.query<{ id: string; day_index: number }>(
     `select id, day_index from plan_days where plan_version_id = $1 order by day_index`,
     [versionId],
@@ -1134,6 +1158,7 @@ async function readDays(client: PoolClient | Pool, versionId: string) {
       .filter((meal) => meal.plan_day_id === day.id)
       .map((meal) => ({
         mealUid: meal.meal_uid,
+        options: options.rows.filter(o => o.meal_id===meal.id).map(o => o.document),
         mealType: meal.meal_type,
         suggestedTime: meal.suggested_time,
         title: meal.title,
@@ -1169,7 +1194,7 @@ function parseDays(body: unknown): MealInput[][] {
   }
   const days = (body as { days: unknown[] }).days;
   if (days.length !== 7) throw new ApiError(400, 'validation', 'برنامه باید هفت روز داشته باشد');
-  return days.map((day) => {
+  const parsed = days.map((day) => {
     if (!day || typeof day !== 'object' || !Array.isArray((day as { meals?: unknown }).meals)) {
       throw new ApiError(400, 'validation', 'وعده‌های روز درست نیست');
     }
@@ -1177,11 +1202,22 @@ function parseDays(body: unknown): MealInput[][] {
     if (meals.length > 12) throw new ApiError(400, 'validation', 'تعداد وعده‌های یک روز زیاد است');
     return meals.map((meal) => parseMeal(meal));
   });
+  const ids = parsed.flat().map(m=>m.mealUid);
+  const optionIds = parsed.flat().flatMap(m=>m.options?.map(o=>o.optionId) ?? []);
+  if (new Set(ids).size!==ids.length || new Set(optionIds).size!==optionIds.length) {
+    throw new ApiError(400,'validation','شناسه وعده و گزینه در نسخه باید یکتا باشد');
+  }
+  return parsed;
 }
 
 function parseMeal(value: unknown): MealInput {
   if (!value || typeof value !== 'object') throw new ApiError(400, 'validation', 'وعده درست نیست');
   const meal = value as Record<string, unknown>;
+  const options = parseOptions(meal.options);
+  const primary = options?.find(o=>o.kind==='primary');
+  if (primary && (primary.title!==meal.title || primary.calories!==meal.calories)) {
+    throw new ApiError(400,'validation','عنوان و کالری اصلی باید با گزینه اصلی یکسان باشد');
+  }
   const mealType = MEAL_ALIASES[String(meal.mealType ?? '')];
   if (!mealType || !MEAL_TYPES.has(mealType)) throw new ApiError(400, 'validation', 'نوع وعده درست نیست');
   const title = typeof meal.title === 'string' ? meal.title.trim() : '';
@@ -1193,27 +1229,28 @@ function parseMeal(value: unknown): MealInput {
   if (notes.length > 500) throw new ApiError(400, 'validation', 'توضیح وعده بیش از حد طولانی است');
   const suggested = meal.suggestedTime;
   const suggestedTime = suggested == null || suggested === '' ? null : String(suggested);
-  if (suggestedTime && !/^\d{2}:\d{2}$/.test(suggestedTime)) {
+  if (suggestedTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(suggestedTime)) {
     throw new ApiError(400, 'validation', 'ساعت وعده درست نیست');
   }
   if (!Array.isArray(meal.items) || meal.items.length === 0 || meal.items.length > 20) {
     throw new ApiError(400, 'validation', 'هر وعده باید مادهٔ غذایی داشته باشد');
   }
-  const mealUid = typeof meal.mealUid === 'string' && /^[0-9a-f-]{36}$/i.test(meal.mealUid) ? meal.mealUid : uuidv7();
+  const mealUid = meal.mealUid === undefined ? uuidv7() : requiredUuid(String(meal.mealUid));
   return {
     mealUid,
+    options,
     mealType,
     suggestedTime,
     title,
     calories,
     notes,
-    items: meal.items.map((item) => {
+    items: (primary?.ingredients ?? meal.items).map((item) => {
       if (!item || typeof item !== 'object') throw new ApiError(400, 'validation', 'مادهٔ غذایی درست نیست');
       const record = item as Record<string, unknown>;
       const name = typeof record.name === 'string' ? record.name.trim() : '';
       if (!name || name.length > 120) throw new ApiError(400, 'validation', 'نام مادهٔ غذایی درست نیست');
       const quantity = record.quantity == null ? null : Number(record.quantity);
-      if (quantity != null && (!Number.isFinite(quantity) || quantity < 0)) {
+      if (quantity != null && (!Number.isFinite(quantity) || quantity <= 0)) {
         throw new ApiError(400, 'validation', 'مقدار مادهٔ غذایی درست نیست');
       }
       const unit = record.unit == null ? null : String(record.unit).trim();

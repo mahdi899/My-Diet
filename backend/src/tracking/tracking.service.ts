@@ -52,12 +52,17 @@ export class TrackingService {
         civil_date: string;
         week_start: string;
         effective_from: string;
+        version_id: string;
+        meal_id: string;
+        option_uid: string | null;
       }>(
-        `select r.id as request_id, d.civil_date, r.week_start, r.effective_from
+        `select r.id as request_id, d.civil_date, r.week_start, r.effective_from,
+                v.id as version_id,m.id as meal_id,o.option_uid
          from plan_meals m
          join plan_days d on d.id = m.plan_day_id
          join plan_versions v on v.id = d.plan_version_id and v.status = 'published'
          join plan_requests r on r.id = v.request_id
+         left join plan_meal_options o on o.meal_id=m.id and o.kind='primary'
          where m.meal_uid = $1 and r.user_id = $2
          order by v.published_at desc
          limit 1`,
@@ -72,11 +77,11 @@ export class TrackingService {
         throw new ApiError(409, 'not_today', 'ثبت وعده فقط برای امروز ممکن است');
       }
       await client.query(
-        `insert into meal_logs (id, user_id, request_id, scheduled_date, meal_uid, eaten)
-         values ($1, $2, $3, $4, $5, $6)
+        `insert into meal_logs (id, user_id, request_id, scheduled_date, meal_uid, eaten,plan_version_id,plan_meal_id,option_uid)
+         values ($1, $2, $3, $4, $5, $6,$7,$8,$9)
          on conflict (user_id, scheduled_date, meal_uid)
          do update set eaten = excluded.eaten, updated_at = now()`,
-        [uuidv7(), userId, meal.request_id, meal.civil_date, mealUid, eaten],
+        [uuidv7(), userId, meal.request_id, meal.civil_date, mealUid, eaten,meal.version_id,meal.meal_id,meal.option_uid],
       );
       const anomaly = await this.flagLateBulk(client, userId, meal.request_id, meal.civil_date);
       const reward = eaten ? await this.rewardIfComplete(client, userId, meal.request_id, meal.week_start, meal.effective_from, friday) : null;
