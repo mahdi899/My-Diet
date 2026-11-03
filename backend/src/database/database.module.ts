@@ -1,4 +1,4 @@
-import { Global, Inject, Module, OnModuleDestroy } from '@nestjs/common';
+import { Global, Inject, Module, OnApplicationShutdown } from '@nestjs/common';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import { ENV, type Env } from '../config/env.js';
@@ -37,14 +37,18 @@ import './pg-types.js';
   ],
   exports: [PG_POOL, PG_REPLICA, KYSELY],
 })
-export class DatabaseModule implements OnModuleDestroy {
+export class DatabaseModule implements OnApplicationShutdown {
   constructor(
     @Inject(KYSELY) private readonly db: Kysely<Database>,
     @Inject(PG_REPLICA) private readonly replica: Pool,
+    @Inject(PG_POOL) private readonly pool: Pool,
   ) {}
 
-  async onModuleDestroy(): Promise<void> {
+  async onApplicationShutdown(): Promise<void> {
     await this.replica.end();
     await this.db.destroy();
+    // Kysely initializes lazily. Direct SQL users may have opened this pool
+    // without ever initializing Kysely's driver, so destroy alone cannot close it.
+    if (!this.pool.ending) await this.pool.end();
   }
 }

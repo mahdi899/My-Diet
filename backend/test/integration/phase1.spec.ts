@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'fs/promises';
+import { loginAdmin } from '../helpers/admin-login.js';
 import net from 'net';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
@@ -111,7 +112,7 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
       [adminId],
     );
     await pool.query(`insert into wallets (user_id) values ($1)`, [adminId]);
-    adminToken = (await login('09120000001')).accessToken;
+    adminToken = (await loginAdmin(api, pool, '09120000001')).accessToken;
     const created = await request(api.getHttpServer())
       .post('/v1/admin/specialists')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -358,6 +359,99 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
     await assert.rejects(pool.query(`update plan_meals set title = 'x' where meal_uid = $1`, [friday.meals[0].mealUid]));
     const me = await request(api.getHttpServer()).get('/v1/me').set('Authorization', `Bearer ${token}`);
     await assert.rejects(pool.query(`update wallet_ledger set amount_toman = 1 where user_id = $1`, [me.body.id]));
+  });
+
+  it('serializes concurrent OTP requests and enforces verification lockout', async () => {
+    const phone = '09120000081';
+    const responses = await Promise.all(Array.from({ length: 8 }, () =>
+      request(api.getHttpServer()).post('/v1/auth/otp/request').send({ phone })));
+    assert.equal(responses.filter(r => r.status === 201).length, 1);
+    assert.equal(responses.filter(r => r.status === 429).length, 7);
+    const code = remembered(normalizeIranianMobile(phone))!;
+    const wrong = code === '000000' ? '111111' : '000000';
+    for (let i = 0; i < 5; i++) {
+      await request(api.getHttpServer()).post('/v1/auth/otp/verify').send({ phone, code: wrong }).expect(401);
+    }
+    await request(api.getHttpServer()).post('/v1/auth/otp/verify').send({ phone, code }).expect(401);
+  });
+
+  it('revokes concurrent refresh reuse, enforces expiry/logout, and keeps web refresh private', async () => {
+    const first = await login('09120000082');
+    const results = await Promise.all([1, 2].map(() => request(api.getHttpServer())
+      .post('/v1/auth/refresh').send({ refreshToken: first.refreshToken })));
+    assert.deepEqual(results.map(r => r.status).sort(), [201, 401]);
+    const winner = results.find(r => r.status === 201)!;
+    await request(api.getHttpServer()).get('/v1/me').set('Authorization', `Bearer ${winner.body.accessToken}`).expect(401);
+    const web = await request(api.getHttpServer()).post('/v1/auth/refresh')
+      .set('x-sabzine-client', 'web').send({ refreshToken: (await login('09120000083')).refreshToken });
+    assert.equal(web.status, 201);
+    assert.equal(web.body.refreshToken, undefined);
+    assert.match(String(web.headers['set-cookie']), /HttpOnly; SameSite=Strict; Path=\/v1\/auth/);
+    await request(api.getHttpServer()).post('/v1/auth/logout').set('Authorization', `Bearer ${web.body.accessToken}`).expect(201);
+    await request(api.getHttpServer()).get('/v1/me').set('Authorization', `Bearer ${web.body.accessToken}`).expect(401);
+    const expired = await login('09120000084');
+    // Move the entire interval, preserving the schema's maximum lifetime constraint.
+    await pool.query(`update sessions set created_at=created_at-interval '31 days',
+      absolute_expires_at=absolute_expires_at-interval '31 days' where id in
+      (select session_id from refresh_tokens where token_hash=encode(sha256($1::bytea),'hex'))`, [expired.refreshToken]);
+    await request(api.getHttpServer()).post('/v1/auth/refresh').send({ refreshToken: expired.refreshToken }).expect(401);
+  });
+
+  it('removes the old specialist from care chat and realtime after reassignment', async () => {
+    const { AdminService } = await import('../../dist/admin/admin.service.js');
+    const { MessagingService } = await import('../../dist/messaging/messaging.service.js');
+    const { RealtimeService } = await import('../../dist/realtime/realtime.service.js');
+    const row = (await pool.query(`select id,user_id from plan_requests where assigned_specialist_id=$1 limit 1`, [specialistId])).rows[0];
+    assert.ok(row);
+    const admin = (await pool.query("select id from users where role='admin' limit 1")).rows[0].id;
+    const next = uuidv7(), conversation = uuidv7();
+    await pool.query("insert into users(id,phone_e164,role) values($1,'+989120000085','specialist')", [next]);
+    await pool.query("insert into specialist_profiles(user_id,display_name,credential,verification_status) values($1,'next','test','verified')", [next]);
+    const nextSession = await login('09120000085');
+    await pool.query("insert into conversations(id,kind,user_id,request_id) values($1,'care',$2,$3)", [conversation,row.user_id,row.id]);
+    await pool.query('insert into conversation_participants(conversation_id,user_id) values($1,$2),($1,$3)', [conversation,row.user_id,specialistId]);
+    const messaging = api.get(MessagingService);
+    await messaging.post(row.user_id, conversation, 'private message');
+    await api.get(AdminService).assign(admin,row.id,next,'care handover');
+    await assert.rejects(messaging.messages(specialistId,conversation));
+    await assert.rejects(messaging.post(specialistId,conversation,'denied'));
+    // Legacy memberships must not grant access even before physical cleanup.
+    await pool.query('insert into conversation_participants(conversation_id,user_id) values($1,$2)',[conversation,specialistId]);
+    await assert.rejects(messaging.messages(specialistId,conversation));
+    await assert.rejects(messaging.markRead(specialistId,conversation));
+    assert.equal((await messaging.list(specialistId)).some(c => c.id===conversation),false);
+    assert.equal((await messaging.messages(next,conversation)).length,1);
+    assert.equal((await messaging.messages(row.user_id,conversation)).length,1);
+    assert.equal((await api.get(RealtimeService).since(specialistId,'2000-01-01T00:00:00Z'))
+      .some(e => e.type==='message' && (e.data as { conversationId?: string }).conversationId===conversation),false);
+    const audit = (await pool.query("select detail from audit_logs where action='request_assigned' and target_id=$1 order by created_at desc limit 1",[row.id])).rows[0];
+    assert.equal(audit.detail.previousSpecialistId,specialistId);
+    await api.get(AdminService).updateSpecialist(admin,next,{active:false});
+    await assert.rejects(messaging.messages(next,conversation));
+    await request(api.getHttpServer()).get('/v1/me').set('Authorization', `Bearer ${nextSession.accessToken}`).expect(403);
+    await assert.rejects(api.get(AdminService).assign(admin,row.id,next,'inactive target'));
+  });
+
+  it('keeps public access but refuses private ownership and client role escalation', async () => {
+    await request(api.getHttpServer()).get('/v1/public/config').expect(200);
+    await request(api.getHttpServer()).get('/v1/me/wallet').expect(401);
+    await request(api.getHttpServer()).post('/v1/auth/otp/request').send({ phone:'09120000086', role:'admin' }).expect(400);
+    const user = await login('09120000086');
+    const sessions = await request(api.getHttpServer()).get('/v1/auth/sessions')
+      .set('Authorization', `Bearer ${user.accessToken}`).expect(200);
+    const ownSessionId = sessions.body.find((s: { current: boolean }) => s.current).id;
+    const outsider = (await loginAdmin(api,pool,'09120000001')).accessToken;
+    await request(api.getHttpServer()).delete(`/v1/auth/sessions/${ownSessionId}`)
+      .set('Authorization', `Bearer ${outsider}`).expect(404);
+    await request(api.getHttpServer()).delete('/v1/auth/sessions/not-a-uuid')
+      .set('Authorization', `Bearer ${user.accessToken}`).expect(400);
+    await request(api.getHttpServer()).get('/v1/admin/users').set('Authorization', `Bearer ${user.accessToken}`).expect(403);
+    const another = (await pool.query("select id from plan_requests where user_id<>(select user_id from sessions where id=(select session_id from refresh_tokens where token_hash=encode(sha256($1::bytea),'hex'))) limit 1",[user.refreshToken])).rows[0];
+    assert.ok(another);
+    await request(api.getHttpServer()).get(`/v1/me/requests/${another.id}`).set('Authorization', `Bearer ${user.accessToken}`).expect(404);
+    await request(api.getHttpServer()).delete(`/v1/auth/sessions/${ownSessionId}`)
+      .set('Authorization', `Bearer ${user.accessToken}`).expect(200);
+    await request(api.getHttpServer()).post('/v1/auth/refresh').send({refreshToken:user.refreshToken}).expect(401);
   });
 
   async function login(phone: string): Promise<{ accessToken: string; refreshToken: string; sessionExpiresAt: string }> {

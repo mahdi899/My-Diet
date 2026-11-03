@@ -81,9 +81,10 @@ export class AdminService {
     credential?: string;
     bio?: string;
   }) {
-    const current = await this.pool.query(`select user_id from specialist_profiles where user_id = $1`, [specialistId]);
+    return withTransaction(this.pool, async (client) => {
+    const current = await client.query(`select user_id from specialist_profiles where user_id = $1 for update`, [specialistId]);
     if (current.rowCount === 0) throw new ApiError(404, 'not_found', 'متخصص پیدا نشد');
-    await this.pool.query(
+    await client.query(
       `update specialist_profiles
        set active = coalesce($2, active),
            capacity = coalesce($3, capacity),
@@ -93,9 +94,13 @@ export class AdminService {
        where user_id = $1`,
       [specialistId, input.active ?? null, input.capacity ?? null, input.displayName ?? null, input.credential ?? null, input.bio ?? null],
     );
-    await audit(this.pool, actorId, 'specialist_updated', 'user', specialistId, input);
+    await audit(client, actorId, 'specialist_updated', 'user', specialistId, input);
     if (input.active === false) {
-      await this.pool.query(
+      await client.query(
+        `delete from conversation_participants cp using conversations c
+         where cp.conversation_id=c.id and c.kind='care' and cp.user_id=$1`, [specialistId],
+      );
+      await client.query(
         `update plan_requests
          set assigned_specialist_id = null, updated_at = now()
          where assigned_specialist_id = $1
@@ -104,6 +109,7 @@ export class AdminService {
       );
     }
     return { ok: true };
+    });
   }
 
   async ownProfile(specialistId: string) {
@@ -211,29 +217,41 @@ export class AdminService {
   }
 
   async assign(actorId: string, requestId: string, specialistId: string, reason: string) {
-    const specialist = await this.pool.query(
-      `select user_id from specialist_profiles where user_id = $1`,
+    return withTransaction(this.pool, async (client) => {
+    const specialist = await client.query(
+      `select p.user_id from specialist_profiles p join users u on u.id=p.user_id
+       where p.user_id = $1 and p.active=true and p.verification_status='verified'
+         and u.status='active' and u.role='specialist' for update of p`,
       [specialistId],
     );
     if (specialist.rowCount === 0) throw new ApiError(404, 'not_found', 'متخصص پیدا نشد');
-    const request = await this.pool.query(`select id from plan_requests where id = $1`, [requestId]);
+    const request = await client.query(`select id, assigned_specialist_id from plan_requests where id = $1 for update`, [requestId]);
     if (request.rowCount === 0) throw new ApiError(404, 'not_found', 'درخواست پیدا نشد');
-    await this.pool.query(
+    await client.query(
       `update plan_requests set assigned_specialist_id = $2, updated_at = now() where id = $1`,
       [requestId, specialistId],
     );
-    await this.pool.query(
+    await client.query(
+      `delete from conversation_participants cp using conversations c, users u
+       where cp.conversation_id=c.id and cp.user_id=u.id and c.request_id=$1
+         and c.kind='care' and u.role='specialist' and cp.user_id<>$2`,
+      [requestId, specialistId],
+    );
+    await client.query(
       `insert into conversation_participants (conversation_id, user_id)
        select id, $2 from conversations where request_id = $1 and kind = 'care'
        on conflict do nothing`,
       [requestId, specialistId],
     );
-    await this.pool.query(
+    await client.query(
       `insert into health_access_logs (id, actor_id, request_id, reason) values ($1, $2, $3, $4)`,
       [uuidv7(), actorId, requestId, reason],
     );
-    await audit(this.pool, actorId, 'request_assigned', 'plan_request', requestId, { specialistId });
+    await audit(client, actorId, 'request_assigned', 'plan_request', requestId, {
+      previousSpecialistId: request.rows[0].assigned_specialist_id, specialistId, reason,
+    });
     return { ok: true };
+    });
   }
 
   async setPrice(actorId: string, serviceCode: string, amountToman: number) {

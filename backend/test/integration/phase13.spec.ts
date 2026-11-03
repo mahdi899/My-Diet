@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'fs/promises';
+import { loginAdmin } from '../helpers/admin-login.js';
 import net from 'net';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
@@ -116,7 +117,7 @@ describe('phase 13 product', { concurrency: 1, timeout: 180_000 }, () => {
     userToken = (await login('09136000001')).accessToken;
     specialistToken = (await login('09136000002')).accessToken;
     otherToken = (await login('09136000003')).accessToken;
-    adminToken = (await login('09136000000')).accessToken;
+    adminToken = (await loginAdmin(api, pool, '09136000000')).accessToken;
   });
 
   after(async () => {

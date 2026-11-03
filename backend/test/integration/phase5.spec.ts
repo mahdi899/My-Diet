@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'fs/promises';
+import { loginAdmin } from '../helpers/admin-login.js';
 import net from 'net';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
@@ -75,7 +76,7 @@ describe('phase 5 product', { concurrency: 1, timeout: 180_000 }, () => {
       [adminId],
     );
     await pool.query(`insert into wallets (user_id) values ($1)`, [adminId]);
-    adminToken = (await login('09128000000')).accessToken;
+    adminToken = (await loginAdmin(api, pool, '09128000000')).accessToken;
     patient = uuidv7();
     await pool.query(`insert into users (id, phone_e164, role) values ($1, '+989128000099', 'user')`, [patient]);
     await pool.query(`insert into wallets (user_id) values ($1)`, [patient]);

@@ -6,7 +6,7 @@ import { actor, Public, Roles } from '../common/auth.js';
 import { ENV, type Env } from '../config/env.js';
 import { ApiError } from '../common/errors.js';
 import { normalizeIranianMobile } from '../common/phone.js';
-import { bodyRecord, optionalString, readCookie, rejectUnknown, requiredString } from '../common/parse.js';
+import { bodyRecord, optionalString, readCookie, rejectUnknown, requiredString, requiredUuid } from '../common/parse.js';
 import { IdentityService } from './identity.service.js';
 
 function clientIp(req: Request): string {
@@ -103,7 +103,7 @@ export class IdentityController {
 
   @Delete('sessions/:id')
   async revoke(@Req() req: Request, @Param('id') id: string) {
-    await this.identity.revokeSession(actor(req).id, id);
+    await this.identity.revokeSession(actor(req).id, requiredUuid(id));
     return { ok: true };
   }
 

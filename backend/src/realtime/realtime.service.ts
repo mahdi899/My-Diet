@@ -76,7 +76,11 @@ export class RealtimeService {
       `select m.id, m.conversation_id, m.created_at
        from messages m
        join conversation_participants p on p.conversation_id = m.conversation_id
+       join conversations c on c.id=m.conversation_id
+       join users viewer on viewer.id=p.user_id
+       left join plan_requests r on r.id=c.request_id
        where p.user_id = $1 and m.author_id <> $1 and m.created_at > $2
+         and (c.kind<>'care' or viewer.role<>'specialist' or r.assigned_specialist_id=$1)
        order by m.created_at`,
       [userId, since],
     );

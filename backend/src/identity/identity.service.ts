@@ -79,6 +79,10 @@ export class IdentityService {
     const challengeId = uuidv7();
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     await withTransaction(this.pool, async (client) => {
+      // Serialize both budgets, including the first request when no row exists.
+      // All callers acquire IP before phone to keep lock ordering consistent.
+      await client.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`otp:ip:${ip}`]);
+      await client.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`otp:phone:${phoneE164}`]);
       const locked = await client.query<{ n: number; latest: Date | null }>(
         `select count(*)::int as n, max(locked_at) as latest
          from otp_challenges
@@ -370,7 +374,7 @@ export class IdentityService {
          join sessions s on s.id = t.session_id
          join users u on u.id = s.user_id
          where t.token_hash = $1
-         for update of t`,
+         for update of s, t`,
         [hashToken(rawToken)],
       );
       const row = found.rows[0];

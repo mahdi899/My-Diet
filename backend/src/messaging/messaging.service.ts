@@ -19,7 +19,10 @@ export class MessagingService {
       `select c.id, c.kind, c.request_id, c.created_at
        from conversations c
        join conversation_participants p on p.conversation_id = c.id
+       join users viewer on viewer.id=p.user_id
+       left join plan_requests r on r.id=c.request_id
        where p.user_id = $1
+         and (c.kind<>'care' or viewer.role<>'specialist' or r.assigned_specialist_id=$1)
        order by c.created_at desc`,
       [userId],
     );
@@ -64,6 +67,7 @@ export class MessagingService {
   }
 
   async markRead(userId: string, conversationId: string) {
+    await this.assertParticipant(userId, conversationId);
     const result = await this.pool.query(
       `update conversation_participants set last_read_at = now()
        where conversation_id = $1 and user_id = $2`,
@@ -149,7 +153,12 @@ export class MessagingService {
 
   private async assertParticipant(userId: string, conversationId: string): Promise<void> {
     const row = await this.pool.query(
-      `select user_id from conversation_participants where conversation_id = $1 and user_id = $2`,
+      `select p.user_id from conversation_participants p
+       join conversations c on c.id=p.conversation_id
+       join users viewer on viewer.id=p.user_id
+       left join plan_requests r on r.id=c.request_id
+       where p.conversation_id = $1 and p.user_id = $2
+         and (c.kind<>'care' or viewer.role<>'specialist' or r.assigned_specialist_id=$2)`,
       [conversationId, userId],
     );
     if (row.rowCount === 0) throw new ApiError(404, 'not_found', 'گفتگو پیدا نشد');

@@ -57,10 +57,12 @@ export class SessionGuard implements CanActivate {
       revoked_at: Date | null;
       role: Role;
       status: string;
+      specialist_active: boolean | null;
     }>(
-      `select s.revoked_at, u.role, u.status
+      `select s.revoked_at, u.role, u.status, p.active as specialist_active
        from sessions s
        join users u on u.id = s.user_id
+       left join specialist_profiles p on p.user_id=u.id
        where s.id = $1 and s.user_id = $2 and s.absolute_expires_at > now()`,
       [claims.sid, claims.sub],
     );
@@ -72,6 +74,9 @@ export class SessionGuard implements CanActivate {
       throw new ApiError(403, 'account_deleted', 'این حساب حذف شده است');
     }
     if (row.status !== 'active') {
+      throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');
+    }
+    if (row.role === 'specialist' && row.specialist_active !== true) {
       throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');
     }
     req.user = { id: claims.sub, role: row.role, sessionId: claims.sid };

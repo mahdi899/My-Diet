@@ -83,6 +83,8 @@ describe('phase 12 product', { concurrency: 1, timeout: 180_000 }, () => {
       [patientId, otherId, specialistId],
     );
     await pool.query(`insert into wallets (user_id) values ($1), ($2), ($3)`, [patientId, otherId, specialistId]);
+    await pool.query(`insert into specialist_profiles(user_id,display_name,credential,verification_status)
+      values($1,'Test specialist','nutrition','verified')`, [specialistId]);
     const submissionId = uuidv7();
     const otherSubmission = uuidv7();
     await pool.query(
