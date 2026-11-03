@@ -10,6 +10,28 @@ import { validateSubmission } from '../../src/questionnaire/schema.js';
 import { parseOptions, requireApprovedOptions } from '../../src/plans/options.js';
 import { uuidv7 } from '../../src/common/id.js';
 import { activitySchema,proportionalCalories } from '../../src/tracking/meal-activity.js';
+import { aggregateIngredients } from '../../src/shopping/aggregate.js';
+import { shoppingScope } from '../../src/shopping/shopping.service.js';
+
+it('aggregates only compatible shopping ingredients and retains ambiguous originals',()=>{
+ const rows=aggregateIngredients([
+  {name:'شیر',quantity:1,unit:'l',basis:'as_served',source:'a'},
+  {name:'شیر',quantity:250,unit:'ml',basis:'as_served',source:'b'},
+  {name:'شیر',quantity:100,unit:'g',basis:'as_served',source:'c'},
+  {name:'برنج خام',quantity:100,unit:'g',basis:'raw',source:'d'},
+  {name:'برنج پخته',quantity:100,unit:'g',basis:'cooked',source:'e'},
+  {name:'نامشخص',quantity:1,unit:'cup',basis:'unknown',source:'f'},
+  {name:'نامشخص',quantity:1,unit:'cup',basis:'unknown',source:'g'},
+ ]);
+ assert.equal(rows.length,6);assert.equal(rows.find(r=>r.unit==='ml')?.quantity,1250);
+ assert.equal(rows.filter(r=>r.incomplete).length,2);
+ assert.equal(rows.filter(r=>r.name==='نامشخص').every(r=>r.quantity===1),true);
+ const canonical=aggregateIngredients([{name:'كيك',quantity:1,unit:'kg',basis:'as_served',source:'1'},
+ {name:'کیک',quantity:200,unit:'g',basis:'as_served',source:'2'}]);
+ assert.equal(canonical.length,1);assert.equal(canonical[0].quantity,1200);assert.equal(canonical[0].originalLabels.length,2);
+ assert.throws(()=>shoppingScope('2026-10-25'));
+ assert.throws(()=>shoppingScope('2026-10-24',['2026-10-31']));
+});
 
 it('keeps unknown calories distinct and scales only compatible portions',()=>{
  assert.equal(proportionalCalories(400,{quantity:200,unit:'g'},{quantity:0.1,unit:'kg'}),200);

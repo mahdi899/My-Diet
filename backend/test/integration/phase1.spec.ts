@@ -473,6 +473,51 @@ describe('phase 1 product', { concurrency: 1, timeout: 180_000 }, () => {
     assert.ok((await pool.query("select 1 from outbox_events where topic='shopping.invalidate' and aggregate_id=$1",[row.user_id])).rowCount);
   });
 
+  it('versions shopping projections, preserves flags after substitution and rejects stale flags',async()=>{
+    const {ShoppingService,shoppingScope}=await import('../../dist/shopping/shopping.service.js');
+    const {MealActivityService}=await import('../../dist/tracking/meal-activity.service.js');
+    const shopping=api.get(ShoppingService),activity=api.get(MealActivityService);
+    const row=(await pool.query(`select a.user_id,a.version_id,m.meal_uid,r.week_start,o.option_uid from active_plan_versions a
+      join plan_versions v on v.id=a.version_id join plan_requests r on r.id=v.request_id
+      join plan_days d on d.plan_version_id=v.id join plan_meals m on m.plan_day_id=d.id
+      join plan_meal_options o on o.meal_id=m.id where d.civil_date=$1 and o.kind='ai_alternative' limit 1`,[tehranToday()])).rows[0];
+    assert.ok(row);
+    const scope=shoppingScope(row.week_start,[tehranToday()]);
+    const list=await shopping.get(row.user_id,scope);assert.ok(list.items.length);
+    assert.equal((await shopping.get(row.user_id,scope)).revision,list.revision);
+    const flagged=await shopping.flag(row.user_id,scope,list.items[0].key,list.revision,true,true);
+    await assert.rejects(shopping.flag(row.user_id,scope,list.items[0].key,list.revision,false,false));
+    assert.equal(flagged.items.find(i=>i.key===list.items[0].key)!.purchased,true);
+    const previous=(await pool.query('select revision from meal_selections where user_id=$1 and meal_uid=$2 and civil_date=$3',[row.user_id,row.meal_uid,tehranToday()])).rows[0];
+    await activity.select(row.user_id,{commandId:uuidv7(),versionId:row.version_id,mealUid:row.meal_uid,optionId:row.option_uid,date:tehranToday(),expectedRevision:previous.revision,reasonId:'preference'});
+    await assert.rejects(shopping.flag(row.user_id,scope,list.items[0].key,flagged.revision,false,false));
+    const refreshed=await shopping.get(row.user_id,scope);
+    assert.ok(refreshed.revision>flagged.revision);
+    assert.equal(refreshed.items.find(i=>i.key===list.items[0].key)!.purchased,true);
+    const subset=await shopping.get(row.user_id,shoppingScope(row.week_start));
+    assert.equal(subset.items.find(i=>i.key===list.items[0].key)!.alreadyHave,true);
+    const text=await shopping.share(row.user_id,scope);assert.ok(text.text.includes(list.items[0].name));
+    assert.equal(text.text.includes(row.user_id),false);
+    const {PlanDraftService}=await import('../../dist/plans/plans.service.js');
+    const plans=api.get(PlanDraftService);
+    const requestId=(await pool.query('select request_id from plan_versions where id=$1',[row.version_id])).rows[0].request_id;
+    await plans.correct(specialistId,requestId);
+    const draft=await plans.staffRequest(specialistId,'specialist',requestId,null);assert.ok(draft.version);
+    const saved=await plans.replaceDraft(specialistId,'specialist',requestId,draft.version.lockVersion,{days:draft.version.days.map((d,di)=>({meals:d.meals.map((m,mi)=>({...m,
+      options:m.options?.map(o=>({...o,approved:true,ingredients:o.ingredients.map((i,ii)=>({...i,quantity:di===6&&mi===0&&ii===0&&o.kind==='primary'?i.quantity*2:i.quantity}))}))
+    }))}))});
+    await plans.publish(specialistId,'specialist',requestId,saved.lockVersion);
+    const corrected=await shopping.get(row.user_id,scope);
+    const changed=corrected.items.find(i=>i.key===list.items[0].key)!;
+    assert.equal(changed.purchased,true);assert.equal(changed.quantityChangedSinceFlag,true);
+    const reviewed=await shopping.flag(row.user_id,scope,changed.key,corrected.revision,true,true);
+    assert.equal(reviewed.items.find(i=>i.key===changed.key)!.quantityChangedSinceFlag,false);
+    const other=await login('09120000087');
+    const otherId=(await request(api.getHttpServer()).get('/v1/me').set('Authorization',`Bearer ${other.accessToken}`)).body.id;
+    assert.equal((await shopping.get(otherId,scope)).items.length,0);
+    await assert.rejects(shopping.flag(otherId,scope,list.items[0].key,1,true,true));
+  });
+
   it('recovers uncertain AI execution to manual review without a second charge and audits reconciliation',async()=>{
     const { PlanDraftService }=await import('../../dist/plans/plans.service.js');
     const { AdminService }=await import('../../dist/admin/admin.service.js');

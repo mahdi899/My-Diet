@@ -12,7 +12,8 @@ export const optionSchema = z.object({
   calories: z.number().finite().nonnegative().max(10000).nullable(),
   preparationMinutes: z.number().int().nonnegative().max(1440),
   instructions: z.string().trim().min(1).max(4000),
-  ingredients: z.array(z.object({ name: z.string().trim().min(1).max(200), quantity: amount, unit, basis })).min(1).max(30),
+  ingredients: z.array(z.object({ name: z.string().trim().min(1).max(200), quantity: amount, unit, basis,
+    category:z.enum(['produce','dairy','protein','grains','pantry','other']).optional() })).min(1).max(30),
   approved: z.boolean(),
 }).strict();
 export type MealOption = z.infer<typeof optionSchema>;
