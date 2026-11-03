@@ -11,6 +11,9 @@ idempotent activity commands, revision checks and unknown calorie semantics.
 [Phase 5 shopping projections](docs/backend-roadmap-phase-5.md) documents server
 lists, compatible ingredient aggregation and versioned purchase flags.
 These phase numbers refer to the completion roadmap, not legacy migration names.
+[Phase 13](docs/backend-roadmap-phase-13.md) records the error envelope, the
+[frontend contract](docs/frontend-contract.md), [provider readiness](docs/provider-readiness.md),
+and [recovery](docs/recovery.md).
 
 The API covers accounts, the questionnaire, the toman wallet, plan orders, specialist review, meal logging, and the weekly reward. Staff can turn on an authenticator code, the server can push a notice to a registered device, and chat or request changes can be read as a live stream. The Flutter app still reads its local demo data until a screen is switched over.
 

@@ -1,6 +1,7 @@
-import { Controller, Get, Inject, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Pool } from 'pg';
+import { ApiError } from '../common/errors.js';
 import { PG_POOL } from '../database/database.js';
 
 @ApiTags('health')
@@ -21,10 +22,7 @@ export class HealthController {
       await this.pool.query('select 1');
       return { status: 'ok' as const, database: 'up' as const };
     } catch {
-      throw new ServiceUnavailableException({
-        status: 'down',
-        database: 'down',
-      });
+      throw new ApiError(503, 'dependency_outage', 'پایگاه داده در دسترس نیست');
     }
   }
 }
