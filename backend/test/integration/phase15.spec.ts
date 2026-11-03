@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'fs/promises';
+import { mkdtemp, readdir, rm } from 'fs/promises';
 import { installGracefulStop } from '../helpers/postgres-stop.js';
 import { loginAdmin } from '../helpers/admin-login.js';
 import net from 'net';
@@ -203,8 +203,11 @@ describe('phase 15 product', { concurrency: 1, timeout: 180_000 }, () => {
     const before = (await pool.query('select id,title,calories from plan_meals order by id')).rows;
     await pool.query("update plan_requests set status='generating' where id=$1",[openRequestId]);
     const { runner } = await import('node-pg-migrate');
+    const names = (await readdir(path.resolve('migrations'))).filter((name) => name.endsWith('.sql')).sort();
+    const cutoff = names.findIndex((name) => name.startsWith('1736726400000'));
+    assert.ok(cutoff >= 0);
     await runner({databaseUrl:process.env.DATABASE_URL!,dir:path.resolve('migrations'),
-      direction:'down',count:4,migrationsTable:'pgmigrations',log:()=>undefined});
+      direction:'down',count:names.length - cutoff,migrationsTable:'pgmigrations',log:()=>undefined});
     const { migrateUp } = await import('../../dist/database/migrate.js');
     await migrateUp(process.env.DATABASE_URL!);
     await migrateUp(process.env.DATABASE_URL!);

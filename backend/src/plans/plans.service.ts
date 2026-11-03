@@ -389,11 +389,11 @@ export class PlanDraftService {
     });
   }
 
-  async publish(actorId: string, role: Role, requestId: string, lock: number) {
+  async publish(actorId: string, role: Role, requestId: string, lock: number, existing?: PoolClient) {
     if (role !== 'specialist') {
       throw new ApiError(403, 'forbidden', 'انتشار برنامه فقط با متخصص است');
     }
-    return withTransaction(this.pool, async (client) => {
+    const run = async (client: PoolClient) => {
       const profile = await client.query<{ active: boolean; verification_status: string }>(
         `select active, verification_status from specialist_profiles where user_id = $1`,
         [actorId],
@@ -468,8 +468,9 @@ export class PlanDraftService {
       await insertOutbox(client,'shopping.invalidate',request.user_id,{requestId,versionId:version.id});
       await client.query(`insert into active_plan_versions(user_id,version_id) values($1,$2)
         on conflict(user_id) do update set version_id=excluded.version_id,updated_at=now()`, [request.user_id,version.id]);
-      return { status: 'published' as const };
-    });
+      return { status: 'published' as const, versionId: version.id };
+    };
+    return existing ? run(existing) : withTransaction(this.pool, run);
   }
 
   async ask(actorId: string, role: Role, requestId: string, prompt: string, required: boolean) {
