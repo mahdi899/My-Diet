@@ -1,4 +1,4 @@
-# سبزینه — رابط سایت
+# رژیم من — رابط سایت
 
 چهار صفحهٔ مستقل: index.html، about.html، articles.html و article.html.
 فقط HTML، CSS و JavaScript؛ بدون بک‌اند و بدون نیاز به نصب پکیج.
