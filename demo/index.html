@@ -41,7 +41,7 @@
     };
   </script>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="theme.css?v=24">
+  <link rel="stylesheet" href="theme.css?v=31">
   <style>
     :root {
       --emerald-glow: rgba(16, 185, 129, 0.35);
@@ -235,16 +235,20 @@
         </div>
       </button>
 
+      <div id="headerQuizProgress" aria-label="پیشرفت پرسشنامه">
+        <span id="headerQuestionChip" aria-live="polite">شروع</span>
+        <div class="header-progress-track" role="progressbar" aria-label="پیشرفت پاسخ‌ها" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="headerProgressFill"></div></div>
+      </div>
       <!-- Funnel Stepper Indicator -->
       <div class="flex items-center gap-1.5 sm:gap-2 text-xs font-medium">
         <button id="navStep1Btn" type="button" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all">
           <span class="w-5 h-5 rounded-full bg-emerald-400 text-slate-950 font-bold flex items-center justify-center text-[11px]">۱</span>
-          <span>انتخاب هدف</span>
+          <span>هدف</span>
         </button>
         <span class="text-slate-600">/</span>
         <button id="navStep2Btn" type="button" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 text-slate-400 border border-white/10 transition-all disabled:opacity-50">
           <span class="w-5 h-5 rounded-full bg-slate-700 text-slate-300 font-bold flex items-center justify-center text-[11px]">۲</span>
-          <span>ارزیابی هوشمند</span>
+          <span>شناخت</span>
         </button>
         <span class="text-slate-600">/</span>
         <button id="navStep3Btn" type="button" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 text-slate-400 border border-white/10 transition-all disabled:opacity-50">
@@ -265,42 +269,40 @@
 
       <!-- STAGE 1A: SLOGAN + LET'S GO BUTTON -->
       <div id="sloganStage" class="w-full max-w-2xl mx-auto text-center transition-all duration-500">
-        <!-- Animated Slogan Box -->
-        <div class="hero-slogan-box relative px-4 py-6 sm:py-8 rounded-3xl border border-white/10 shadow-xl mb-6 overflow-hidden">
-          <h1 id="sloganHeading" class="relative z-10 text-2xl sm:text-4xl md:text-5xl font-black leading-[1.85] sm:leading-[1.85] tracking-tight text-white min-h-[5.2rem] py-2 flex flex-wrap items-center justify-center gap-x-2.5 sm:gap-x-3.5 gap-y-1 overflow-visible">
-            <!-- Populated dynamically with special word-by-word reveal effect -->
-          </h1>
+        <h1 id="sloganHeading" class="hero-title relative z-10 text-3xl sm:text-5xl font-black leading-snug tracking-tight text-white min-h-[4.2rem] mb-6 py-2 flex flex-wrap items-center justify-center gap-x-2.5 sm:gap-x-3.5 gap-y-1"></h1>
 
-          <p id="sloganSubtext" class="relative z-10 mt-4 text-sm sm:text-base text-slate-100 max-w-lg mx-auto opacity-0 translate-y-3 transition-all duration-700">
-            بدون گرسنگی، بدون حذف غذاهای مورد علاقه و کاملاً منطبق با متابولیسم بدن تو؛ فقط در ۲ دقیقه برنامه‌ات رو بساز!
-          </p>
-        </div>
-
-        <div id="heroFeatureStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-8 opacity-0 translate-y-3 transition-all duration-700">
+        <div id="heroFeatureStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mb-5 opacity-0 translate-y-3 transition-all duration-700">
           <div class="hero-feature-card">
-            <span class="hero-feature-icon">🩺</span>
+            <span class="hero-feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" d="M12 8.2v7.6M8.2 12h7.6"/></svg>
+            </span>
             <span class="hero-feature-text">تحت نظر متخصص</span>
           </div>
           <div class="hero-feature-card">
-            <span class="hero-feature-icon">🤖</span>
+            <span class="hero-feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5l1.2 3.6L17 8.2l-3.8 1.1L12 13l-1.2-3.7L7 8.2l3.8-1.1L12 3.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M18 13.5l.6 1.8 1.9.5-1.9.6-.6 1.8-.6-1.8-1.9-.6 1.9-.5.6-1.8z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.2 14.2l.5 1.4 1.5.4-1.5.5-.5 1.4-.5-1.4-1.5-.5 1.5-.4.5-1.4z"/></svg>
+            </span>
             <span class="hero-feature-text">برنامه شخصی‌سازی‌شده با AI</span>
           </div>
           <div class="hero-feature-card">
-            <span class="hero-feature-icon">🤝</span>
+            <span class="hero-feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 13a8 8 0 0 1 16 0"/><rect x="3.2" y="12.5" width="3.6" height="6" rx="1.4"/><rect x="17.2" y="12.5" width="3.6" height="6" rx="1.4"/><path stroke-linecap="round" d="M20.8 16.2v1.2a2.8 2.8 0 0 1-2.8 2.8H15"/></svg>
+            </span>
             <span class="hero-feature-text">پشتیبانی مسیر</span>
           </div>
           <div class="hero-feature-card">
-            <span class="hero-feature-icon">📅</span>
+            <span class="hero-feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5.5" width="16" height="14" rx="2"/><path stroke-linecap="round" d="M8 3.8v3.2M16 3.8v3.2M4 10h16"/></svg>
+            </span>
             <span class="hero-feature-text">برنامه هفتگی / ماهانه / VIP</span>
           </div>
         </div>
 
-        <!-- "بزن بریم" Button (Appears after slogan effect completes) -->
-        <div id="letsGoBtnWrapper" class="opacity-0 translate-y-6 pointer-events-none transition-all duration-700 flex flex-col items-center gap-3">
+        <div id="letsGoBtnWrapper" class="w-full opacity-0 translate-y-6 pointer-events-none transition-all duration-700 flex flex-col items-center gap-3">
           <button
             id="letsGoBtn"
             type="button"
-            class="cta-pulse group relative inline-flex items-center justify-center gap-3 px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-black text-lg sm:text-xl tracking-tight hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+            class="cta-pulse group relative inline-flex w-full items-center justify-center gap-3 px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-black text-lg sm:text-xl tracking-tight hover:brightness-110 active:scale-95 transition-all cursor-pointer"
           >
             <span>بزن بریم!</span>
             <svg class="w-6 h-6 transform group-hover:-translate-x-1.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -312,14 +314,8 @@
 
       <!-- STAGE 1B: GOAL SELECTION (Shown after clicking "بزن بریم" in the same page) -->
       <div id="goalSelectionStage" class="hidden w-full max-w-3xl mx-auto">
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-semibold mb-3">
-            <span>گام اول • شخصی‌سازی مسیر</span>
-          </div>
+        <div class="text-center mb-6">
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">هدفت چیه؟</h2>
-          <p class="mt-2 text-sm sm:text-base text-slate-300">
-            یکی از اهداف زیر رو انتخاب کن تا سوالات تخصصی متناسب با شرایطت نمایش داده بشه:
-          </p>
         </div>
 
         <!-- Goal Cards Grid -->
@@ -391,23 +387,17 @@
           <div id="questionsVerticalList" class="quiz-question-stack max-w-2xl mx-auto min-h-[min(72vh,520px)] flex flex-col py-4 sm:py-6">
           </div>
 
-          <div id="submitAnswersSection" class="hidden max-w-2xl mx-auto pb-10 text-center stage-fade-in">
-            <div class="quiz-complete-card p-6 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-teal-500/15 to-slate-900 border-2 border-emerald-400/50 shadow-2xl shadow-emerald-950/80">
-              <h3 class="quiz-complete-title text-xl sm:text-2xl font-black mb-2">برنامه اختصاصی تو آماده پردازش نهاییه</h3>
-              <p class="quiz-complete-subtitle text-xs sm:text-sm mb-5">
-                پاسخ‌هات ثبت شده؛ برای ادامه دکمه زیر را بزن:
-              </p>
-              <button
-                id="openPlanModalBtn"
-                type="button"
-                class="quiz-green-btn cta-pulse w-full sm:w-auto min-w-[260px] inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-              >
-                <span>ثبت پاسخ‌ها</span>
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
-            </div>
+          <div id="submitAnswersSection" class="hidden max-w-2xl mx-auto px-1 pb-6 text-center">
+            <button
+              id="openPlanModalBtn"
+              type="button"
+              class="quiz-green-btn cta-pulse w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+            >
+              <span>ثبت پاسخ‌ها</span>
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -660,37 +650,21 @@
       <div class="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"></div>
 
       <!-- Modal Top Bar -->
-      <div class="px-5 pt-5 pb-3 flex items-center justify-between border-b border-white/10">
-        <!-- Right Side: Step Title & Indicator -->
-        <div class="flex items-center gap-2.5 min-w-0">
-          <img src="assets/logo.png" alt="رژیم من" class="app-logo-img app-logo-img--sm" width="36" height="36" />
-          <h3 id="modalHeaderTitle" class="text-lg sm:text-xl font-black text-white">
+      <div class="modal-topbar px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2 min-w-0">
+          <img src="assets/logo.png" alt="رژیم من" class="app-logo-img app-logo-img--sm" width="28" height="28" />
+          <h3 id="modalHeaderTitle" class="text-base font-black text-white">
             انتخاب نوع برنامه
           </h3>
         </div>
-
-        <!-- Left Side (سمت چپ بالاش): Back Button on Step 2 + Close Modal Button -->
-        <div class="flex items-center gap-2">
-          <button
-            id="modalBackToPlansBtn"
-            type="button"
-            class="modal-back-plans-btn hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
-          >
-            <span>تغییر پلن</span>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-          </button>
-
-          <button
-            id="closeModalBtn"
-            type="button"
-            title="بستن"
-            class="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 text-slate-400 hover:text-white flex items-center justify-center border border-white/10 transition-colors cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
+        <button
+          id="closeModalBtn"
+          type="button"
+          title="بستن"
+          class="w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-[#173f2a] flex items-center justify-center transition-colors cursor-pointer"
+        >
+          ✕
+        </button>
       </div>
 
       <!-- MODAL BODY -->
@@ -701,10 +675,6 @@
              Clicking any plan immediately switches modal content to Step 2!
              ====================================== -->
         <div id="modalStep1Content" class="space-y-3.5">
-          <p class="text-xs sm:text-sm text-slate-300 mb-3">
-            یکی از پلن‌های زیر رو انتخاب کن تا بلافاصله وارد مرحله دریافت برنامه بشی:
-          </p>
-
           <!-- Plan Option 1: Weekly -->
           <button
             type="button"
@@ -714,9 +684,11 @@
             <div class="flex items-start justify-between gap-3 w-full">
               <div class="min-w-0 flex-1">
                 <div class="plan-option-title font-black text-white text-base">برنامه هفتگی</div>
-                <p class="plan-option-features text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-                  طراحی هوشمند با AI · جایگزینی خودکار مواد غذایی · لیست خرید اقتصادی هفتگی
-                </p>
+                <ul class="plan-option-features">
+                  <li>طراحی هوشمند</li>
+                  <li>جایگزینی غذا</li>
+                  <li>لیست خرید</li>
+                </ul>
               </div>
               <div class="text-left shrink-0">
                 <span class="plan-option-price text-base sm:text-lg font-black text-emerald-400">۶۹۹ هزار تومان</span>
@@ -734,9 +706,11 @@
             <div class="flex items-start justify-between gap-3 w-full">
               <div class="min-w-0 flex-1">
                 <div class="plan-option-title font-black text-base">برنامه ماهانه</div>
-                <p class="plan-option-features text-[11px] mt-1.5 leading-relaxed">
-                  آنالیز متابولیسم با هوش مصنوعی · پشتیبانی رایگان ۲۴ ساعته · آپدیت هفتگی بر اساس وزن جدید
-                </p>
+                <ul class="plan-option-features">
+                  <li>آنالیز متابولیسم</li>
+                  <li>پشتیبانی ۲۴ساعته</li>
+                  <li>آپدیت هفتگی</li>
+                </ul>
               </div>
               <div class="text-left shrink-0">
                 <span class="plan-option-price text-base sm:text-lg font-black">۱/۶۹۹ هزار تومان</span>
@@ -753,9 +727,11 @@
             <div class="flex items-start justify-between gap-3 w-full">
               <div class="min-w-0 flex-1">
                 <div class="plan-option-title font-black text-white text-base">برنامه ۳ ماهه VIP</div>
-                <p class="plan-option-features text-[11px] mt-1.5 leading-relaxed">
-                  پکیج کامل تثبیت · کوچینگ هوشمند روزانه AI · پشتیبانی رایگان VIP با متخصص · دستور پخت‌های رژیمی + برنامه تثبیت
-                </p>
+                <ul class="plan-option-features">
+                  <li>تثبیت وزن</li>
+                  <li>کوچینگ روزانه</li>
+                  <li>پشتیبانی متخصص</li>
+                </ul>
               </div>
               <div class="text-left shrink-0">
                 <span class="plan-option-price plan-option-price--vip text-base sm:text-lg font-black">۴ میلیون تومان</span>
@@ -767,37 +743,21 @@
         <!-- ======================================
              MODAL STEP 2: PHONE INPUT -> MORPHS INTO OTP INPUT IN-PLACE
              ====================================== -->
-        <div id="modalStep2Content" class="hidden space-y-5 stage-fade-in">
-          <!-- Selected Plan Summary Pill -->
-          <div class="modal-plan-summary p-3.5 rounded-2xl flex items-center justify-between">
-            <div class="min-w-0">
-              <div class="modal-plan-summary-label text-[11px]">پلن انتخاب‌شده شما:</div>
-              <div id="step2PlanTitle" class="modal-plan-summary-title text-sm font-black">برنامه ماهانه — ۱/۶۹۹ هزار تومان</div>
-            </div>
-            <span class="modal-plan-summary-badge text-[11px] font-semibold">آماده فعال‌سازی</span>
-          </div>
-
-          <!-- Single Morphing Input Box (Transforms from Phone Input to OTP Input in-place) -->
-          <div id="morphingInputWrapper" class="modal-phone-shell input-morph-shell p-5 rounded-2xl">
-            <div class="flex items-center justify-between mb-2">
-              <label id="morphInputLabel" for="morphSingleInput" class="text-sm font-extrabold text-white flex items-center gap-2">
-                <span id="morphInputIcon">📱</span>
-                <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
-              </label>
-
-              <!-- Edit phone number link (only visible when morphed to OTP mode) -->
-              <button
-                id="editPhoneInOtpModeBtn"
-                type="button"
-                class="hidden text-xs text-[#205638] hover:text-[#173f2a] underline cursor-pointer font-semibold"
-              >
-                ویرایش شماره موبایل
-              </button>
-            </div>
-
-            <p id="morphInputSubtitle" class="text-xs text-slate-400 mb-3.5">
-              کد تایید و لینک اختصاصی برنامه غذایی به این شماره ارسال میشه.
+        <div id="modalStep2Content" class="hidden space-y-4 stage-fade-in">
+          <div id="morphingInputWrapper" class="modal-phone-shell input-morph-shell p-4 rounded-2xl">
+            <label id="morphInputLabel" for="morphSingleInput" class="text-sm font-extrabold text-white block mb-1">
+              <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
+            </label>
+            <p id="morphInputSubtitle" class="text-xs text-slate-400 mb-3">
+              کد تایید ۴ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.
             </p>
+            <button
+              id="editPhoneInOtpModeBtn"
+              type="button"
+              class="hidden text-xs text-[#205638] hover:text-[#173f2a] underline cursor-pointer font-semibold mb-3"
+            >
+              ویرایش شماره موبایل
+            </button>
 
             <!-- THE SINGLE INPUT ELEMENT THAT MORPHS FROM PHONE TO OTP -->
             <div class="relative">
@@ -813,7 +773,7 @@
             </div>
 
             <!-- Demo OTP Code Hint Banner (Shown when morphed into OTP mode) -->
-            <div id="otpDemoHintBox" class="modal-otp-hint hidden mt-3 p-2.5 rounded-xl flex items-center justify-between text-xs">
+            <div id="otpDemoHintBox" class="modal-otp-hint hidden" hidden>
               <span class="modal-otp-hint-text">💡 کد تایید آزمایشی ارسال شده: <strong class="font-mono text-sm">1234</strong></span>
               <button
                 id="autoFillOtpBtn"
@@ -838,6 +798,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
             </button>
+          </div>
+
+          <div class="modal-plan-line">
+            <div class="min-w-0">
+              <div class="modal-plan-summary-label">پلن انتخاب‌شده</div>
+              <div id="step2PlanTitle" class="modal-plan-summary-title">برنامه ماهانه — ۱/۶۹۹ هزار تومان</div>
+            </div>
+            <button id="modalBackToPlansBtn" type="button" class="modal-plan-change hidden">تغییر پلن</button>
           </div>
         </div>
 
@@ -898,12 +866,10 @@
     // PAGE 1: SLOGAN ANIMATION & GOAL CARDS
     // =========================================================
     const SLOGAN_WORDS = [
-      { text: 'جای', highlight: false },
-      { text: 'درستی', highlight: true },
-      { text: 'اومدی', highlight: false },
-      { text: 'برای', highlight: false },
-      { text: 'وزن', highlight: true },
-      { text: 'ایده‌آل!', highlight: true }
+      { text: 'رژیم', highlight: false },
+      { text: 'اختصاصی', highlight: true },
+      { text: 'خودتو', highlight: false },
+      { text: 'بساز!', highlight: true }
     ];
 
     let sloganTimers = [];
@@ -916,12 +882,10 @@
     function playSloganIntroEffect() {
       clearSloganTimers();
       const heading = document.getElementById('sloganHeading');
-      const subtext = document.getElementById('sloganSubtext');
       const btnWrapper = document.getElementById('letsGoBtnWrapper');
       const featureStrip = document.getElementById('heroFeatureStrip');
 
       heading.innerHTML = '';
-      subtext.classList.add('opacity-0', 'translate-y-3');
       btnWrapper.classList.add('opacity-0', 'translate-y-6', 'pointer-events-none');
       if (featureStrip) featureStrip.classList.add('opacity-0', 'translate-y-3');
 
@@ -941,7 +905,6 @@
 
       // Reveal subtitle
       sloganTimers.push(setTimeout(() => {
-        subtext.classList.remove('opacity-0', 'translate-y-3');
         if (featureStrip) featureStrip.classList.remove('opacity-0', 'translate-y-3');
       }, totalWordTime + 100));
 
@@ -1158,10 +1121,6 @@
               ${disabled ? 'disabled' : ''}
             />
           </div>
-          <div class="metric-slider-range-labels">
-            <span>${toPersianDigits(cfg.min)}</span>
-            <span>${toPersianDigits(cfg.max)}</span>
-          </div>
           <button type="button" data-field-submit="${qIdx}" ${disabled ? 'disabled' : ''}
             class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40 mt-4">
             ثبت و ادامه
@@ -1202,11 +1161,25 @@
     }
 
     function buildOptionCardsHTML(qIdx, qItem) {
-      return buildImageOptionCardsHTML(qIdx, qItem, {
-        listClass: 'quiz-option-card-list',
-        cardClass: 'quiz-option-card',
-        grid: true,
+      let html = '<div class="quiz-flash-grid">';
+      qItem.options.forEach((opt, optIdx) => {
+        const selected = typeof state.answers[qIdx] === 'object'
+          ? state.answers[qIdx].choice === optIdx
+          : state.answers[qIdx] === optIdx;
+        const img = opt.image || 'assets/vegetables.jpg';
+        html += `
+          <button type="button" data-q-index="${qIdx}" data-opt-index="${optIdx}"
+            style="animation-delay: ${optIdx * 55}ms"
+            class="quiz-option-card quiz-flash-card quiz-option-enter ${selected ? 'quiz-option-card--selected' : ''}">
+            <span class="quiz-flash-photo"><img src="${img}" alt="" loading="lazy" /></span>
+            <span class="quiz-flash-foot">
+              <span class="quiz-flash-label">${opt.label}</span>
+              <span class="quiz-choice-dot" aria-hidden="true">${selected ? '✓' : ''}</span>
+            </span>
+          </button>`;
       });
+      html += '</div>';
+      return html;
     }
 
     function parseSleepWakeAnswer(raw, defaultSleep, defaultWake) {
@@ -1328,7 +1301,7 @@
     }
 
     function buildQuestionHeroHTML(qItem) {
-      const src = qItem.heroImage;
+      const src = qItem.heroImage || 'assets/quiz-hero-diet.jpg';
       if (!src) return '';
       return `
         <div class="quiz-question-hero" aria-hidden="true">
@@ -1346,8 +1319,19 @@
       const answeredCount = countAnsweredQuestions();
       const qIdx = Math.min(state.focusedQuestionIndex, total - 1);
       const qItem = questions[qIdx];
+      let actions = document.getElementById('headerQuizActions');
+      if (!actions) {
+        actions = document.createElement('div');
+        actions.id = 'headerQuizActions';
+        document.getElementById('headerQuizProgress').after(actions);
+        ['scrollPrevAnsweredBtn','scrollNextUnlockedBtn'].forEach(id => actions.appendChild(document.getElementById(id)));
+      }
 
       document.getElementById('quizProgressBar').style.width = `${Math.round((answeredCount / total) * 100)}%`;
+      const progress = Math.round((answeredCount / total) * 100);
+      document.getElementById('headerQuestionChip').textContent = `${toPersianDigits(qIdx + 1)} / ${toPersianDigits(total)}`;
+      document.getElementById('headerProgressFill').style.width = `${progress}%`;
+      document.querySelector('.header-progress-track').setAttribute('aria-valuenow', progress);
 
       const heroHTML = buildQuestionHeroHTML(qItem);
       if (heroHTML) {
@@ -1390,9 +1374,7 @@
           const selected = typeof state.answers[qIdx] === 'object'
             ? state.answers[qIdx].choice === optIdx
             : state.answers[qIdx] === optIdx;
-          const baseClasses = selected
-            ? 'bg-gradient-to-l from-emerald-500/30 to-teal-500/20 border-emerald-400 text-white shadow-lg shadow-emerald-950/50'
-            : 'bg-slate-950/70 hover:bg-slate-800/80 border-white/10 hover:border-emerald-400/40 text-slate-200';
+          const baseClasses = selected ? 'is-selected' : '';
           const thumb = opt.image
             ? `<span class="quiz-option-thumb-wrap"><img class="quiz-option-thumb" src="${opt.image}" alt="" loading="lazy" /></span>`
             : '';
@@ -1401,11 +1383,12 @@
                 style="animation-delay: ${optIdx * 45}ms"
                 class="quiz-option-btn quiz-option-enter w-full text-right p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-200 flex items-center justify-between gap-3 cursor-pointer ${baseClasses}">
                 <span class="text-xs sm:text-sm font-bold leading-snug flex-1">${opt.label}</span>
-                <span class="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${selected ? 'border-[#205638] bg-[#205638] text-white font-black' : 'border-slate-600'}">${selected ? '✓' : ''}</span>
+                <span class="quiz-choice-dot" aria-hidden="true">${selected ? '✓' : ''}</span>
                 ${thumb}
               </button>`;
         });
-        bodyHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">${optionsHTML}</div>`;
+        const compactChoices = qItem.options.length >= 6;
+        bodyHTML = `<div class="${compactChoices ? 'quiz-choice-grid quiz-choice-grid--compact' : 'grid grid-cols-1 sm:grid-cols-2 gap-2.5'}">${optionsHTML}</div>`;
         const ans = state.answers[qIdx];
         const needsDetail = qItem.followUpText && typeof ans === 'object' && followUpRequiredForChoice(qItem, ans.choice);
         if (needsDetail) {
@@ -1683,7 +1666,6 @@
     function setMorphInputMode(mode) {
       state.inputMode = mode;
       const wrapper = document.getElementById('morphingInputWrapper');
-      const iconEl = document.getElementById('morphInputIcon');
       const labelTextEl = document.getElementById('morphInputLabelText');
       const subtitleEl = document.getElementById('morphInputSubtitle');
       const inputEl = document.getElementById('morphSingleInput');
@@ -1700,8 +1682,8 @@
       wrapper.classList.add('input-morph-flash');
 
       if (mode === 'phone') {
-        iconEl.textContent = '📱';
         labelTextEl.textContent = 'شماره تلفن همراهت رو وارد کن:';
+        subtitleEl.hidden = false;
         subtitleEl.textContent = 'کد تایید ۴ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.';
         inputEl.value = state.userPhone || '';
         inputEl.placeholder = '09123456789';
@@ -1709,21 +1691,19 @@
         inputEl.classList.remove('tracking-[0.6em]', 'text-2xl', 'border-emerald-500');
         inputEl.classList.add('tracking-wider', 'text-lg');
         editPhoneBtn.classList.add('hidden');
-        otpHintBox.classList.add('hidden');
+        if (otpHintBox) otpHintBox.classList.add('hidden');
         confirmBtnText.textContent = 'تایید و دریافت کد تایید';
         setTimeout(() => inputEl.focus(), 80);
       } else {
-        // MORPH THAT SAME INPUT INTO THE OTP CODE INPUT!
-        iconEl.textContent = '🔐';
-        labelTextEl.textContent = 'کد تایید ۴ رقمی (OTP) رو وارد کن:';
-        subtitleEl.textContent = `کد پیامک‌شده به شماره ${state.userPhone} رو در کادر زیر وارد کن:`;
+        labelTextEl.textContent = 'کد تایید ۴ رقمی رو وارد کن:';
+        subtitleEl.hidden = true;
         inputEl.value = '';
         inputEl.placeholder = '• • • •';
         inputEl.maxLength = 4;
         inputEl.classList.remove('tracking-wider', 'text-lg');
         inputEl.classList.add('tracking-[0.6em]', 'text-2xl', 'border-emerald-500');
         editPhoneBtn.classList.remove('hidden');
-        otpHintBox.classList.remove('hidden');
+        if (otpHintBox) otpHintBox.classList.add('hidden');
         confirmBtnText.textContent = 'دریافت برنامه غذایی';
         setTimeout(() => inputEl.focus(), 80);
       }
