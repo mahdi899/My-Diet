@@ -5,9 +5,22 @@
   const goals=new Set(['weight_loss','weight_gain','pregnancy','detox']);
   const queue=[];
   let current=location.pathname.endsWith('goals.html')?'goals':location.pathname.endsWith('quiz.html')?'quiz':'intro';
+  // One anonymous path per tab; returning to the start/goal page begins a new
+  // path. Reloading quiz resets its answers, so that also begins a new path.
+  const page=current;
+  const journeyKey='mydiet.analytics.journey';
+  let journey;
+  const selectJourney=()=>{
+    let saved;try{saved=JSON.parse(sessionStorage.getItem(journeyKey)||'null');}catch{}
+    const valid=saved&&/^[0-9a-f-]{36}$/.test(saved.id);
+    const restart=page==='intro'||saved?.page==='quiz';
+    journey=valid&&!restart?saved.id:crypto.randomUUID();
+    try{sessionStorage.setItem(journeyKey,JSON.stringify({id:journey,page}));}catch{}
+  };
+  selectJourney();
   let context={},lastTick=performance.now(),lastActivity=lastTick,activeMs=0,hidden=document.hidden;
   const event=(name,data={})=>{
-    const item={name,data:{step:current,...context,...data}};
+    const item={name,data:{step:current,journey,...context,...data}};
     if(window.umami) { try { Promise.resolve(window.umami.track(item.name,item.data)).catch(()=>{}); } catch { /* analytics never blocks navigation */ } }
     else if(queue.length<200)queue.push(item);
   };
@@ -40,6 +53,7 @@
     const data={};
     for(const [key,value] of Object.entries(payload.data||{})) {
       if(key==='step'&&/^(intro|goals|quiz|preparing|plans|contact|payment|question:(weight_loss|weight_gain|pregnancy|detox):\d{1,3})$/.test(value))data[key]=value;
+      if(key==='journey'&&typeof value==='string'&&/^[0-9a-f-]{36}$/.test(value))data[key]=value;
       if(key==='goal'&&goals.has(value))data[key]=value;
       if(key==='question'&&Number.isInteger(value)&&value>=0&&value<1000)data[key]=value;
       if(key==='activeMs'&&Number.isFinite(value))data[key]=Math.max(0,Math.min(30000,value));
@@ -55,7 +69,11 @@
   addEventListener('pagehide',()=>event('presence_end'));
   document.addEventListener('visibilitychange',()=>{flush();hidden=document.hidden;lastTick=performance.now();if(!hidden)lastActivity=lastTick;});
   addEventListener('pagehide',flush);
-  addEventListener('pageshow',e=>{if(e.persisted){lastTick=performance.now();lastActivity=lastTick;event('step_view');}});
+  addEventListener('pageshow',e=>{if(e.persisted){
+    if(page!=='quiz')selectJourney();
+    else try{sessionStorage.setItem(journeyKey,JSON.stringify({id:journey,page}));}catch{}
+    lastTick=performance.now();lastActivity=lastTick;event('step_view');
+  }});
   document.addEventListener('click',e=>{
     const target=e.target.closest?.('button,a');if(!target)return;
     if(target.dataset.trackingGoal)event('goal_selected',{goal:target.dataset.trackingGoal});
