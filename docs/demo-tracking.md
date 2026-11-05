@@ -21,8 +21,20 @@ ASCII campaign codes (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`,
 Active time is checkpointed every 10 seconds and on visibility/navigation changes.
 Hidden time and inactivity beyond 60 seconds are excluded. Abrupt browser or OS
 termination can lose the last checkpoint. Exits are the last observed step in
-visits inactive for 30 minutes, not proof that a browser was closed. Recent paths
-are limited to 30 visits; stage tables include at most 200 steps.
+visits inactive for two minutes that have not registered a phone. These are
+provisional and disappear when the visitor returns, not proof a browser closed.
+Exit percentages divide by all such abandoned visits. Individual paths are not
+returned or displayed. Stage tables include at most 200 steps.
+The admin view polls every five seconds while visible. Active visits have a
+foreground heartbeat within 25 seconds and no subsequent presence-end event.
+The client sends heartbeats every ten seconds until 60 seconds of inactivity.
+
+`POST /v1/demo/submissions` stores completed questionnaire snapshots in the main
+database, separately from Umami. A normalized phone is indexed by keyed HMAC;
+phone and all answer snapshots are encrypted with the server's FIELD_KEY.
+Submission UUIDs make retries idempotent; no public lookup exists. The existing
+demo OTP is not a real SMS verification, so `phone_verified` remains false.
+Keep FIELD_KEY backed up securely: it is required to decrypt submissions.
 Events tagged `qa` are excluded from every admin report. Reporting starts at
 installation; historical activity cannot be recovered. Browser blocking and
 network failures may reduce counts. DNT, GPC, and the localStorage preference
