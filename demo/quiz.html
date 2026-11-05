@@ -41,7 +41,7 @@
     };
   </script>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="theme.css?v=47">
+  <link rel="stylesheet" href="theme.css?v=48">
   <link rel="stylesheet" href="intro.css?v=2">
   <link rel="stylesheet" href="goals.css?v=6">
   <style>
@@ -209,8 +209,9 @@
       animation: shakeError 0.4s ease-in-out;
     }
   </style>
-  <link rel="stylesheet" href="matching.css?v=15">
-  <link rel="stylesheet" href="plans.css?v=1">
+  <link rel="stylesheet" href="matching.css?v=21">
+  <link rel="stylesheet" href="plans.css?v=6">
+  <link rel="stylesheet" href="verification.css?v=7">
 </head>
 <body class="selection:bg-[#205638] selection:text-white">
 
@@ -418,6 +419,7 @@
           </div>
           <h2 class="ai-prep-title">اطلاعات شما<br>در حال آنالیز است</h2>
           <div class="ai-prep-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="پیشرفت آنالیز"><div id="aiPrepProgressFill" class="ai-prep-progress-fill"></div></div>
+          <p class="analysis-wait-hint">صبر کنید</p>
         </div>
         <div id="aiReadyPhase" class="ai-prep-phase ai-prep-phase--ready hidden">
           <div class="community-hero">
@@ -614,7 +616,7 @@
         ✕
       </button>
       <div class="payment-success-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-black">
-        ✓
+        <svg class="demo-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
       </div>
       <h3 id="paymentSuccessModalTitle" class="text-xl sm:text-2xl font-black text-[#233c2d] mb-6">
         پرداخت با موفقیت انجام شد!
@@ -663,19 +665,31 @@
       </div>
 
       <!-- MODAL BODY -->
-      <div class="p-5 sm:p-6 max-h-[82vh] overflow-y-auto">
+      <div class="modal-scroll-body p-5 sm:p-6 max-h-[82vh] overflow-y-auto">
 
         <!-- ======================================
              MODAL STEP 1: PLAN SELECTION (3 OPTIONS)
-             Clicking any plan immediately switches modal content to Step 2!
+             Click a plan to inspect features; purchase buttons remain visible.
              ====================================== -->
 <div id="modalStep1Content">
-<div class="plans-intro"><h2>همراهی مناسب تو</h2><p>پلنت را انتخاب کن؛ امکاناتش را ببین.</p></div><div class="plans-stack"><section class="plan-tier" data-tier="weekly"><button type="button" class="plan-option-card" data-plan-id="weekly" aria-expanded="false" aria-controls="features-weekly"><span class="plan-heading"><strong>شروع</strong><span class="plan-duration">۱۵ روزه</span><span class="plan-chevron" aria-hidden="true">⌄</span></span><span class="plan-description">یک شروع مشخص، متناسب با تو</span><span class="plan-price"><strong>۱٬۲۹۰٬۰۰۰</strong><span>تومان</span></span></button><div id="features-weekly" class="plan-details" hidden><ul><li>برنامه تغذیه اختصاصی با <span class="plan-doctor-name"></span></li><li>جایگزین‌های غذایی متناسب با سلیقه‌ات</li><li>لیست خرید برنامه</li></ul><button type="button" class="plan-continue" data-continue-plan="weekly">ادامه با پلن شروع<span aria-hidden="true">←</span></button></div></section><section class="plan-tier" data-tier="monthly"><span class="plan-recommendation">پیشنهاد ما</span><button type="button" class="plan-option-card" data-plan-id="monthly" aria-expanded="false" aria-controls="features-monthly"><span class="plan-heading"><strong>همراه</strong><span class="plan-duration">۳۰ روزه</span><span class="plan-chevron" aria-hidden="true">⌄</span></span><span class="plan-description">زمان بیشتر، همراهی نزدیک‌تر</span><span class="plan-price"><strong>۱٬۹۹۰٬۰۰۰</strong><span>تومان</span></span></button><div id="features-monthly" class="plan-details" hidden><ul><li>همه امکانات پلن شروع با <span class="plan-doctor-name"></span></li><li>۲ نوبت بازبینی و اصلاح برنامه</li><li>پیگیری هفتگی روند و اجرای برنامه</li><li>پشتیبانی متنی در طول دوره</li></ul><button type="button" class="plan-continue" data-continue-plan="monthly">ادامه با پلن همراه<span aria-hidden="true">←</span></button></div></section><section class="plan-tier" data-tier="quarterly"><button type="button" class="plan-option-card" data-plan-id="quarterly" aria-expanded="false" aria-controls="features-quarterly"><span class="plan-heading"><strong>VIP</strong><span class="plan-duration">۹۰ روزه</span><span class="plan-chevron" aria-hidden="true">⌄</span></span><span class="plan-description">همراهی خصوصی و پیوسته</span><span class="plan-price"><strong>۸٬۹۹۰٬۰۰۰</strong><span>تومان</span></span></button><div id="features-quarterly" class="plan-details" hidden><ul><li>برنامه اختصاصی و همراهی <span class="plan-doctor-name"></span></li><li>۶ نوبت بازبینی و اصلاح برنامه</li><li>۳ جلسه آنلاین با متخصص منتخب</li><li>پیگیری هفتگی و پشتیبانی اولویت‌دار</li><li>برنامه حفظ عادت‌ها در پایان دوره</li></ul><button type="button" class="plan-continue" data-continue-plan="quarterly">ادامه با پلن VIP<span aria-hidden="true">←</span></button></div></section></div></div>
+<div class="plans-stack"><section class="plan-tier" data-tier="weekly"><button type="button" class="plan-option-card" data-plan-id="weekly" aria-expanded="false" aria-controls="features-weekly"><span class="plan-heading"><strong>شروع</strong><span class="plan-duration">۱۵ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">یک شروع مشخص، متناسب با تو</span></button><div id="features-weekly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه تغذیه اختصاصی با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>جایگزین‌های غذایی متناسب با سلیقه‌ات</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>لیست خرید برنامه</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۲۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="weekly">خرید پلن شروع<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="monthly"><button type="button" class="plan-option-card" data-plan-id="monthly" aria-expanded="false" aria-controls="features-monthly"><span class="plan-heading"><strong>همراه</strong><span class="plan-duration">۳۰ روزه</span><span class="plan-recommendation">پیشنهاد ما</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">زمان بیشتر، همراهی نزدیک‌تر</span></button><div id="features-monthly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>همه امکانات پلن شروع با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۲ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی روند و اجرای برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پشتیبانی متنی در طول دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="monthly">خرید پلن همراه<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="quarterly"><button type="button" class="plan-option-card" data-plan-id="quarterly" aria-expanded="false" aria-controls="features-quarterly"><span class="plan-heading"><strong>VIP</strong><span class="plan-duration">۹۰ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">همراهی خصوصی و پیوسته</span></button><div id="features-quarterly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه اختصاصی و همراهی <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۶ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۳ جلسه آنلاین با متخصص منتخب</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی و پشتیبانی اولویت‌دار</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه حفظ عادت‌ها در پایان دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۸٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="quarterly">خرید پلن VIP<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section></div></div>
 
         <!-- ======================================
              MODAL STEP 2: PHONE INPUT -> MORPHS INTO OTP INPUT IN-PLACE
              ====================================== -->
         <div id="modalStep2Content" class="hidden space-y-4 stage-fade-in">
+          <div class="modal-plan-line">
+            <p class="modal-plan-summary-inline min-w-0">
+              <span class="modal-plan-k">پلن:</span>
+              <strong id="step2PlanTier">همراه</strong>
+              <span class="modal-plan-sep" aria-hidden="true">·</span>
+              <span id="step2PlanDuration">۳۰ روزه</span>
+              <span class="modal-plan-sep" aria-hidden="true">·</span>
+              <span id="step2PlanPrice">۱٬۹۹۰٬۰۰۰ تومان</span>
+            </p>
+            <button id="modalBackToPlansBtn" type="button" class="modal-plan-change hidden">تغییر پلن</button>
+          </div>
+          <div id="verificationSuccess" class="hidden" role="status" tabindex="-1"><span class="verification-success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><h2>شماره‌ات تأیید شد</h2><p>در حال ورود به پرداخت</p></div>
           <div id="morphingInputWrapper" class="modal-phone-shell input-morph-shell p-4 rounded-2xl">
             <label id="morphInputLabel" for="morphSingleInput" class="text-sm font-extrabold text-white block mb-1">
               <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
@@ -694,7 +708,7 @@
             <!-- THE SINGLE INPUT ELEMENT THAT MORPHS FROM PHONE TO OTP -->
             <div class="relative">
               <input
-                id="morphSingleInput"
+                id="morphSingleInput" aria-describedby="morphInputSubtitle morphErrorText" autocomplete="tel-national"
                 type="tel"
                 dir="ltr"
                 inputmode="numeric"
@@ -716,9 +730,6 @@
               </button>
             </div>
 
-            <!-- Validation / Error message -->
-            <p id="morphErrorText" class="hidden mt-2 text-xs text-rose-400 font-semibold text-center"></p>
-
             <!-- Confirm Button below the input -->
             <button
               id="morphConfirmBtn"
@@ -730,15 +741,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
             </button>
+
+            <!-- Validation / Error message -->
+            <p id="morphErrorText" role="alert" class="hidden mt-3 text-xs text-rose-400 font-semibold text-center"></p>
           </div>
 
-          <div class="modal-plan-line">
-            <div class="min-w-0">
-              <div class="modal-plan-summary-label">پلن انتخاب‌شده</div>
-              <div id="step2PlanTitle" class="modal-plan-summary-title">همراه · ۳۰ روزه — ۱٬۹۹۰٬۰۰۰ تومان</div>
-            </div>
-            <button id="modalBackToPlansBtn" type="button" class="modal-plan-change hidden">تغییر پلن</button>
-          </div>
+
         </div>
 
       </div>
@@ -758,21 +766,28 @@
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
     // =========================================================
+    const CHECK_ICON = '<svg class="demo-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
     const GOALS_DATA = window.SABZINE_QUESTIONNAIRE.goals;
 
     const PLANS_CATALOG = {
       weekly: {
         id: 'weekly',
+        tierLabel: 'شروع',
+        duration: '۱۵ روزه',
         name: 'شروع · ۱۵ روزه',
         priceText: '۱٬۲۹۰٬۰۰۰ تومان',
       },
       monthly: {
         id: 'monthly',
+        tierLabel: 'همراه',
+        duration: '۳۰ روزه',
         name: 'همراه · ۳۰ روزه',
         priceText: '۱٬۹۹۰٬۰۰۰ تومان',
       },
       quarterly: {
         id: 'quarterly',
+        tierLabel: 'VIP',
+        duration: '۹۰ روزه',
         name: 'VIP · ۹۰ روزه',
         priceText: '۸٬۹۹۰٬۰۰۰ تومان',
       }
@@ -827,15 +842,17 @@
       const selectedId = state.selectedSpecialist?.id;
       list.innerHTML = people.map((person) => `
         <button type="button" class="specialist-card${person.id === selectedId ? ' is-selected' : ''}" aria-pressed="${person.id === selectedId}" data-specialist-id="${person.id}">
-          <span class="specialist-avatar" aria-hidden="true">${person.initials}</span>
-          <span class="specialist-copy">
-            <span class="specialist-name">${person.name}</span>
-            <span class="specialist-role">متخصص تغذیه</span>
-            <span class="specialist-focus">${person.focus}</span>
+          <span class="specialist-portrait-group">
+            <img class="specialist-portrait" src="assets/doctor-demo-${['amir','reza','parsa'].includes(person.id) ? 'male' : 'female'}.jpg" alt="پرتره نمونه برای نمایش دمو" width="640" height="800" />
             <span class="specialist-rating" aria-label="امتیاز ۴٫۸ از ۵">
               <span class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="is-partial"></i></span>
               <span class="star-score">۴٫۸</span>
             </span>
+          </span>
+          <span class="specialist-copy">
+            <span class="specialist-name">${person.name}</span>
+            <span class="specialist-role">متخصص تغذیه</span>
+            <span class="specialist-focus">${person.focus}</span>
           </span>
           <span class="specialist-mark" aria-hidden="true"></span>
         </button>
@@ -1139,7 +1156,7 @@
             style="animation-delay: ${optIdx * 55}ms"
             class="${cardClass} quiz-option-enter ${selected ? `${cardClass}--selected` : ''}">
             <span class="age-range-radio" aria-hidden="true">
-              <span class="age-range-radio-mark">${selected ? '✓' : ''}</span>
+              <span class="age-range-radio-mark">${selected ? CHECK_ICON : ''}</span>
             </span>
             <span class="age-range-label">${opt.label}</span>
             <span class="age-range-photo-wrap">
@@ -1172,7 +1189,7 @@
             <span class="quiz-flash-photo"><img src="${img}" alt="" loading="lazy" /></span>
             <span class="quiz-flash-foot">
               <span class="quiz-flash-label">${opt.label}</span>
-              <span class="quiz-choice-dot" aria-hidden="true">${selected ? '✓' : ''}</span>
+              <span class="quiz-choice-dot" aria-hidden="true">${selected ? CHECK_ICON : ''}</span>
             </span>
           </button>`;
       });
@@ -1383,7 +1400,7 @@
                 style="animation-delay: ${optIdx * 45}ms"
                 class="quiz-option-btn quiz-option-enter w-full text-right p-3.5 sm:p-4 rounded-2xl border-2 flex items-center justify-between gap-3 cursor-pointer ${baseClasses}">
                 <span class="text-xs sm:text-sm font-bold leading-snug flex-1">${opt.label}</span>
-                <span class="quiz-choice-dot" aria-hidden="true">${selected ? '✓' : ''}</span>
+                <span class="quiz-choice-dot" aria-hidden="true">${selected ? CHECK_ICON : ''}</span>
                 ${thumb}
               </button>`;
         });
@@ -1513,7 +1530,7 @@
         btn.classList.toggle('is-selected', selected);
         btn.classList.toggle('quiz-option-card--selected', selected);
         const dot = btn.querySelector('.quiz-choice-dot');
-        if (dot) dot.textContent = selected ? '✓' : '';
+        if (dot) dot.innerHTML = selected ? CHECK_ICON : '';
       });
 
       const card = document.getElementById(`questionCard_${qIdx}`);
@@ -1675,7 +1692,7 @@
 
     // =========================================================
     // TWO-STEP MODAL LOGIC:
-    // Step 1: Plan Selection (clicking any plan immediately transitions modal content to Step 2)
+    // Step 1: Expand plan details; the persistent purchase button opens Step 2
     // Step 2: Phone Input -> Morphs into OTP Input in-place -> Redirects to Payment Page
     // =========================================================
     function openPlanSelectionModal(startAtStep = 1) {
@@ -1691,16 +1708,19 @@
     }
 
     function closePlanSelectionModal() {
+      if (state.verificationBusy) return;
       const backdrop = document.getElementById('twoStepModalBackdrop');
       backdrop.classList.add('hidden');
       backdrop.classList.remove('flex');
     }
 
     function showModalStep1() {
+      if (state.verificationBusy) return;
+      state.inputMode = 'phone';
       window.demoTracking?.step('plans');
       state.modalStep = 1;
       document.querySelectorAll('.plan-doctor-name').forEach(el => { el.textContent = state.selectedSpecialist?.name || 'متخصص منتخب شما'; });
-      selectPlanDetails(state.selectedPlan.id);
+      selectPlanDetails(null);
       document.getElementById('modalHeaderTitle').textContent = 'انتخاب نوع برنامه';
 
       // Hide top-left Back button on Step 1
@@ -1713,9 +1733,9 @@
     }
 
     function selectPlanDetails(planId) {
-      state.selectedPlan = PLANS_CATALOG[planId] || PLANS_CATALOG.monthly;
+      if (planId && PLANS_CATALOG[planId]) state.selectedPlan = PLANS_CATALOG[planId];
       document.querySelectorAll('.plan-option-card').forEach(button => {
-        const selected = button.dataset.planId === state.selectedPlan.id;
+        const selected = button.dataset.planId === planId;
         button.setAttribute('aria-expanded', String(selected));
         button.closest('.plan-tier').classList.toggle('is-open', selected);
         document.getElementById(button.getAttribute('aria-controls')).hidden = !selected;
@@ -1727,6 +1747,7 @@
       const plan = PLANS_CATALOG[planId] || PLANS_CATALOG.monthly;
       state.selectedPlan = plan;
       state.modalStep = 2;
+      document.getElementById('twoStepModalCard').dataset.plan = plan.id;
 
       document.getElementById('modalHeaderTitle').textContent = 'تایید شماره همراه';
 
@@ -1735,7 +1756,9 @@
       backBtn.classList.remove('hidden');
       backBtn.classList.add('inline-flex');
 
-      document.getElementById('step2PlanTitle').textContent = `${plan.name} — ${plan.priceText}`;
+      document.getElementById('step2PlanTier').textContent = plan.tierLabel;
+      document.getElementById('step2PlanDuration').textContent = plan.duration;
+      document.getElementById('step2PlanPrice').textContent = plan.priceText;
 
       document.getElementById('modalStep1Content').classList.add('hidden');
       document.getElementById('modalStep2Content').classList.remove('hidden');
@@ -1745,7 +1768,11 @@
     }
 
     function setMorphInputMode(mode) {
+      if (state.verificationBusy) return;
       state.inputMode = mode;
+      document.getElementById('twoStepModalCard').dataset.verification = mode;
+      document.getElementById('verificationSuccess').classList.add('hidden');
+      document.getElementById('morphingInputWrapper').classList.remove('hidden');
       const wrapper = document.getElementById('morphingInputWrapper');
       const labelTextEl = document.getElementById('morphInputLabelText');
       const subtitleEl = document.getElementById('morphInputSubtitle');
@@ -1763,29 +1790,32 @@
       wrapper.classList.add('input-morph-flash');
 
       if (mode === 'phone') {
-        labelTextEl.textContent = 'شماره تلفن همراهت رو وارد کن:';
+        labelTextEl.textContent = 'شماره همراهت';
         subtitleEl.hidden = false;
-        subtitleEl.textContent = 'کد تایید ۶ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.';
+        subtitleEl.textContent = 'برای دریافت کد تأیید';
         inputEl.value = state.userPhone || '';
         inputEl.placeholder = '09123456789';
         inputEl.maxLength = 11;
+        inputEl.autocomplete = 'tel-national';
         inputEl.classList.remove('tracking-[0.6em]', 'text-2xl', 'border-emerald-500');
         inputEl.classList.add('tracking-wider', 'text-lg');
         editPhoneBtn.classList.add('hidden');
         if (otpHintBox) otpHintBox.classList.add('hidden');
-        confirmBtnText.textContent = 'تایید و دریافت کد تایید';
+        confirmBtnText.textContent = 'دریافت کد تأیید';
         setTimeout(() => inputEl.focus(), 80);
       } else {
-        labelTextEl.textContent = 'کد تایید ۶ رقمی رو وارد کن:';
-        subtitleEl.hidden = true;
+        labelTextEl.textContent = 'کد تأیید';
+        subtitleEl.hidden = false;
+        subtitleEl.textContent = `ارسال شد به ${state.userPhone}`;
         inputEl.value = '';
         inputEl.placeholder = '• • • • • •';
         inputEl.maxLength = 6;
+        inputEl.autocomplete = 'one-time-code';
         inputEl.classList.remove('tracking-wider', 'text-lg');
         inputEl.classList.add('tracking-[0.6em]', 'text-2xl', 'border-emerald-500');
         editPhoneBtn.classList.remove('hidden');
         if (otpHintBox) otpHintBox.classList.add('hidden');
-        confirmBtnText.textContent = 'دریافت برنامه غذایی';
+        confirmBtnText.textContent = 'تأیید و ادامه';
         setTimeout(() => inputEl.focus(), 80);
       }
     }
@@ -1807,6 +1837,7 @@
     }
 
     async function handleMorphConfirmAction() {
+      if (state.verificationBusy || state.inputMode === 'success') return;
       const inputEl = document.getElementById('morphSingleInput');
       const errorEl = document.getElementById('morphErrorText');
       const rawVal = normalizeDigits(inputEl.value);
@@ -1829,6 +1860,9 @@
         const saveButton=document.getElementById('morphConfirmBtn');
         if(saveButton.disabled)return;
         saveButton.disabled=true;
+        state.verificationBusy=true;
+        document.getElementById('morphConfirmBtnText').textContent='در حال ارسال…';
+        inputEl.setAttribute('aria-busy', 'true');
         try {
           if(countAnsweredQuestions()!==state.selectedGoal.questions.length)throw new Error('ابتدا پرسش‌نامه را کامل کنید.');
           if(state.submissionPhone!==normalizedPhone){state.submissionId=crypto.randomUUID();state.submissionPhone=normalizedPhone;}
@@ -1838,9 +1872,9 @@
           if(!sms.ok){const problem=await sms.json().catch(()=>({}));throw new Error(problem.detail||'ارسال کد انجام نشد؛ دوباره تلاش کنید.');}
           window.demoTracking?.registered();
         } catch(error) {errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}
-        finally{saveButton.disabled=false;}
+        finally{saveButton.disabled=false;state.verificationBusy=false;inputEl.removeAttribute('aria-busy');document.getElementById('morphConfirmBtnText').textContent='دریافت کد تأیید';}
         state.userPhone = normalizedPhone;
-        showToast('کد تأیید شش‌رقمی پیامک شد.');
+
         // Transform the phone input into the OTP input in-place!
         setMorphInputMode('otp');
       } else {
@@ -1853,7 +1887,7 @@
           return;
         }
 
-        const verifyButton=document.getElementById('morphConfirmBtn');if(verifyButton.disabled)return;verifyButton.disabled=true;
+        const verifyButton=document.getElementById('morphConfirmBtn');if(verifyButton.disabled)return;verifyButton.disabled=true;state.verificationBusy=true;document.getElementById('morphConfirmBtnText').textContent='در حال تأیید…';
         try{
           if(!state.smsSession||state.smsSession.phone!==state.userPhone){
             const response=await fetch('/v1/auth/otp/verify',{method:'POST',headers:{'Content-Type':'application/json','x-sabzine-client':'web'},body:JSON.stringify({phone:state.userPhone,code:rawVal,platform:'demo-web'}),signal:AbortSignal.timeout(15000)});
@@ -1862,8 +1896,16 @@
           }
           const saved=await fetch('/v1/demo/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
           if(!saved.ok)throw new Error('تأیید شماره ذخیره نشد؛ دوباره تلاش کنید.');
-        }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;}
-        // Proceed only after server verification.
+        }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;state.verificationBusy=false;document.getElementById('morphConfirmBtnText').textContent='تأیید و ادامه';}
+        // Success is displayed only after both server verification requests succeed.
+        state.inputMode = 'success';
+        document.getElementById('twoStepModalCard').dataset.verification = 'success';
+        document.getElementById('morphingInputWrapper').classList.add('hidden');
+        const success = document.getElementById('verificationSuccess');
+        success.classList.remove('hidden');
+        success.focus();
+        await new Promise(resolve => setTimeout(resolve, 1100));
+        if (state.inputMode !== 'success' || document.getElementById('twoStepModalBackdrop').classList.contains('hidden')) return;
         closePlanSelectionModal();
         populateAndShowPaymentPage();
       }
@@ -2038,7 +2080,9 @@
     function showToast(message, icon = '✨') {
       const toast = document.getElementById('toastNotification');
       document.getElementById('toastText').textContent = message;
-      document.getElementById('toastIcon').textContent = icon;
+      const toastIcon = document.getElementById('toastIcon');
+      if (icon === '✅' || icon === '✓') toastIcon.innerHTML = CHECK_ICON;
+      else toastIcon.textContent = icon;
       toast.classList.remove('hidden');
       toast.classList.add('flex');
       if (toastTimeout) clearTimeout(toastTimeout);
@@ -2123,11 +2167,12 @@
         document.querySelector(`[data-specialist-id="${person.id}"]`)?.focus();
       });
 
-      // Modal Step 1: Clicking ANY of the 3 plan cards immediately switches modal content to Step 2
-      document.querySelectorAll('.plan-option-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const planId = card.dataset.planId;
-          selectPlanDetails(planId);
+      // Modal Step 1: Toggle details independently from purchasing
+      document.querySelectorAll('.plan-tier').forEach(tier => {
+        tier.addEventListener('click', (event) => {
+          if (event.target.closest('[data-continue-plan]')) return;
+          const card = tier.querySelector('.plan-option-card');
+          selectPlanDetails(card.getAttribute('aria-expanded') === 'true' ? null : card.dataset.planId);
         });
       });
       document.querySelectorAll('[data-continue-plan]').forEach(button => {
@@ -2176,7 +2221,7 @@
       // Page 3: Request dynamic pin simulation
       document.getElementById('requestDynamicPinBtn').addEventListener('click', (e) => {
         const btn = e.currentTarget;
-        btn.textContent = 'ارسال شد ✓';
+        btn.innerHTML = 'ارسال شد ' + CHECK_ICON;
         document.getElementById('bankOtpInput').value = '739104';
         showToast('رمز دوم پویا به شماره موبایل شما پیامک شد', '🔐');
       });
