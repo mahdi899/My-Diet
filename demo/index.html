@@ -1501,11 +1501,14 @@
         return;
       }
       state.answers[qIdx] = optIdx;
-      renderQuizQuestions();
       if (qIdx === state.focusedQuestionIndex && qIdx < total - 1) {
+        // Do not re-render the current option list before auto-advance. The
+        // old render made every click visibly load the same options twice.
         scheduleAutoAdvance(qIdx, wasAlreadyAllAnswered, q.ui === 'age-range' || q.ui === 'option-cards' ? 360 : 280);
       } else if (qIdx === total - 1) {
         advanceAfterAnswer(qIdx, wasAlreadyAllAnswered);
+      } else {
+        renderQuizQuestions();
       }
     }
 
