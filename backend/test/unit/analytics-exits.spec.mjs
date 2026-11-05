@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import pg from 'pg';
+import process from 'node:process';
 import { analyticsExitsSql } from '../../dist/admin/analytics-exits.js';
 
 test('independent paths preserve earlier exits and scope registration/inactivity', async () => {
