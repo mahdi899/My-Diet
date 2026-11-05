@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#205638">
+  <title>هدفت چیه؟ | رژیم من</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="icon" href="assets/logo.png" type="image/png">
+  <link rel="stylesheet" href="theme.css?v=31">
+  <style>body{font-family:Vazirmatn,sans-serif;background:#f7f8f0;color:#233c2d;margin:0;min-height:100vh}.wrap{width:min(100% - 32px,780px);margin:0 auto;padding:26px 0 60px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:42px}.brand{display:flex;gap:8px;align-items:center;text-decoration:none;color:#205638;font-weight:900}.brand img{width:32px;height:32px}.back{color:#586b50;text-decoration:none;font-size:14px}.goal{display:flex;align-items:center;gap:18px;text-decoration:none;color:inherit;background:#fff;border:1px solid #dfe8d6;border-radius:20px;padding:18px 20px;box-shadow:0 8px 24px #2056380c;transition:transform .18s,border-color .18s}.goal:hover{transform:translateY(-2px);border-color:#83a66c}.goal-icon{width:54px;height:54px;display:grid;place-items:center;background:#edf3e5;border-radius:16px;font-size:26px;flex:none}.goal img{width:54px;height:54px;object-fit:cover;border-radius:16px;flex:none}.goal h2{font-size:18px;margin:0 0 5px;font-weight:850}.goal p{font-size:13px;color:#76836e;margin:0;line-height:1.8}.arrow{margin-right:auto;color:#5d8a3d;font-size:20px}@media(max-width:560px){.top{margin-bottom:30px}.goal{padding:14px;gap:12px}.goal img,.goal-icon{width:46px;height:46px}.goal h2{font-size:16px}.goal p{font-size:12px}}</style>
+</head>
+<body>
+  <main class="wrap">
+    <nav class="top" aria-label="مسیر">
+      <a class="brand" href="index.html"><img src="assets/logo.png" alt="">رژیم من</a>
+      <a class="back" href="index.html">→ بازگشت</a>
+    </nav>
+    <header style="text-align:center;margin-bottom:28px">
+      <p style="color:#76836e;font-size:13px;margin:0 0 8px">قدم اول برای ساختن مسیر خودت</p>
+      <h1 style="font-size:clamp(28px,6vw,38px);font-weight:900;margin:0">هدفت چیه؟</h1>
+      <p style="color:#586b50;line-height:1.9;margin:8px 0 0">یک گزینه رو انتخاب کن تا پرسش‌نامه مخصوص خودت شروع بشه.</p>
+    </header>
+    <section id="goals" style="display:grid;gap:12px" aria-label="انتخاب هدف"></section>
+  </main>
+  <script src="analytics.js?v=2"></script>
+  <script src="questionnaire-common.js?v=1"></script>
+  <script src="questionnaire-weight-loss.js?v=1"></script>
+  <script src="questionnaire-weight-gain.js?v=1"></script>
+  <script src="questionnaire-pregnancy.js?v=1"></script>
+  <script src="questionnaire-detox.js?v=1"></script>
+  <script src="questionnaire-data.js?v=11"></script>
+  <script>
+    window.demoAnalytics.view('goals');
+    const params = new URLSearchParams(location.search);
+    const campaign = new URLSearchParams();
+    for (const key of ['utm_source','utm_medium','utm_campaign','utm_content']) {
+      const value = params.get(key);
+      if (value) campaign.set(key, value);
+    }
+    const cards = document.getElementById('goals');
+    for (const goal of window.SABZINE_QUESTIONNAIRE.goals) {
+      const link = document.createElement('a');
+      link.className = 'goal';
+      link.href = `quiz.html?goal=${encodeURIComponent(goal.id)}${campaign.size ? `&${campaign}` : ''}`;
+      link.innerHTML = `<img src="${goal.image}" alt=""><span><h2>${goal.title}</h2><p>${goal.desc}</p></span><span class="arrow" aria-hidden="true">←</span>`;
+      link.addEventListener('click', () => window.demoAnalytics.choice(goal.id));
+      cards.appendChild(link);
+    }
+  </script>
+</body>
+</html>
