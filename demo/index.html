@@ -10,7 +10,7 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+          fontFamily: { sans: ['IRANSansX', 'Tahoma', 'sans-serif'] },
           colors: {
             emerald: {
               200: '#c3d0bb',
@@ -41,7 +41,9 @@
     };
   </script>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="theme.css?v=32">
+  <link rel="stylesheet" href="theme.css?v=47">
+  <link rel="stylesheet" href="intro.css?v=2">
+  <link rel="stylesheet" href="goals.css?v=6">
   <style>
     :root {
       --emerald-glow: rgba(16, 185, 129, 0.35);
@@ -52,7 +54,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     body {
-      font-family: 'Vazirmatn', sans-serif;
+      font-family: 'IRANSansX', Tahoma, sans-serif;
       background: #f7f8f0;
       color: #233c2d;
       margin: 0;
@@ -207,6 +209,8 @@
       animation: shakeError 0.4s ease-in-out;
     }
   </style>
+  <link rel="stylesheet" href="matching.css?v=15">
+  <link rel="stylesheet" href="plans.css?v=1">
 </head>
 <body class="selection:bg-[#205638] selection:text-white">
 
@@ -220,7 +224,7 @@
       <button
         id="appLogoHomeBtn"
         type="button"
-        class="flex items-center gap-2.5 text-right rounded-2xl p-1 -m-1 hover:bg-[#205638]/10 transition-colors cursor-pointer"
+        class="header-logo-btn flex items-center gap-2.5 text-right rounded-2xl p-1 -m-1 hover:bg-[#205638]/10 transition-colors cursor-pointer"
         title="بازگشت به صفحه اصلی"
       >
         <img
@@ -271,40 +275,32 @@
       <div id="sloganStage" class="w-full max-w-2xl mx-auto text-center transition-all duration-500">
         <h1 id="sloganHeading" class="hero-title relative z-10 text-3xl sm:text-5xl font-black leading-snug tracking-tight text-white min-h-[4.2rem] mb-6 py-2 flex flex-wrap items-center justify-center gap-x-2.5 sm:gap-x-3.5 gap-y-1"></h1>
 
-        <div id="heroFeatureStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mb-5 opacity-0 translate-y-3 transition-all duration-700">
+        <div id="heroFeatureStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mb-5">
           <div class="hero-feature-card">
-            <span class="hero-feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" d="M12 8.2v7.6M8.2 12h7.6"/></svg>
-            </span>
-            <span class="hero-feature-text">تحت نظر متخصص</span>
+            <img class="hero-feature-photo" src="assets/intro-specialist.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">نظارت متخصص</span>
           </div>
           <div class="hero-feature-card">
-            <span class="hero-feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5l1.2 3.6L17 8.2l-3.8 1.1L12 13l-1.2-3.7L7 8.2l3.8-1.1L12 3.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M18 13.5l.6 1.8 1.9.5-1.9.6-.6 1.8-.6-1.8-1.9-.6 1.9-.5.6-1.8z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.2 14.2l.5 1.4 1.5.4-1.5.5-.5 1.4-.5-1.4-1.5-.5 1.5-.4.5-1.4z"/></svg>
-            </span>
-            <span class="hero-feature-text">برنامه شخصی‌سازی‌شده با AI</span>
+            <img class="hero-feature-photo" src="assets/intro-ai.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">رژیم هوشمند</span>
           </div>
           <div class="hero-feature-card">
-            <span class="hero-feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 13a8 8 0 0 1 16 0"/><rect x="3.2" y="12.5" width="3.6" height="6" rx="1.4"/><rect x="17.2" y="12.5" width="3.6" height="6" rx="1.4"/><path stroke-linecap="round" d="M20.8 16.2v1.2a2.8 2.8 0 0 1-2.8 2.8H15"/></svg>
-            </span>
-            <span class="hero-feature-text">پشتیبانی مسیر</span>
+            <img class="hero-feature-photo" src="assets/intro-support.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">پشتیبانی همراه</span>
           </div>
           <div class="hero-feature-card">
-            <span class="hero-feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5.5" width="16" height="14" rx="2"/><path stroke-linecap="round" d="M8 3.8v3.2M16 3.8v3.2M4 10h16"/></svg>
-            </span>
-            <span class="hero-feature-text">برنامه هفتگی / ماهانه / VIP</span>
+            <img class="hero-feature-photo" src="assets/intro-plans.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">پلن‌های متنوع</span>
           </div>
         </div>
 
-        <div id="letsGoBtnWrapper" class="w-full opacity-0 translate-y-6 pointer-events-none transition-all duration-700 flex flex-col items-center gap-3">
+        <div id="letsGoBtnWrapper" class="w-full flex flex-col items-center gap-3">
           <button
             id="letsGoBtn"
             type="button"
-            class="cta-pulse group relative inline-flex w-full items-center justify-center gap-3 px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-black text-lg sm:text-xl tracking-tight hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+            class="group relative inline-flex w-full items-center justify-center gap-3 px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-black text-lg sm:text-xl tracking-tight hover:brightness-110 active:scale-95 transition-all cursor-pointer"
           >
-            <span>بزن بریم!</span>
+            <span>بزن بریم</span>
             <svg class="w-6 h-6 transform group-hover:-translate-x-1.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
@@ -406,32 +402,31 @@
     </section>
 
     <!-- PAGE: AI preparing program (after quiz submit) -->
-    <section id="pageAiPreparingContainer" class="hidden min-h-[min(78vh,640px)] flex items-center justify-center px-4 py-10">
+    <section id="pageAiPreparingContainer" class="hidden w-full flex items-center justify-center">
       <div class="ai-prep-card w-full max-w-md rounded-3xl border-2 p-8 sm:p-10 text-center shadow-xl">
         <div id="aiPreparingPhase" class="ai-prep-phase">
-          <div class="ai-prep-orbit mx-auto mb-6" aria-hidden="true">
-            <img src="assets/logo.png" alt="" class="ai-prep-orbit-logo" width="48" height="48" />
-            <span class="ai-prep-orbit-ring"></span>
+          <div class="analysis-visual" aria-hidden="true">
+            <span class="analysis-orbit analysis-orbit--outer">
+              <span class="analysis-ring ring-outer"></span>
+            </span>
+            <span class="analysis-orbit analysis-orbit--inner">
+              <span class="analysis-ring ring-inner"></span>
+            </span>
+            <span class="analysis-spark spark-outer" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.2 13.7 8.8 21.6 12 13.7 15.2 12 22.8 10.3 15.2 2.4 12 10.3 8.8Z"/></svg></span>
+            <span class="analysis-spark analysis-spark--sm spark-inner" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.2 13.7 8.8 21.6 12 13.7 15.2 12 22.8 10.3 15.2 2.4 12 10.3 8.8Z"/></svg></span>
+            <span class="analysis-core"><img src="assets/logo.png" alt="" width="58" height="58"></span>
           </div>
-          <h2 class="ai-prep-title text-lg sm:text-xl font-black leading-relaxed mb-6 w-full">
-            هوش مصنوعی در حال آماده‌سازی برنامه مخصوص خودته!
-          </h2>
-          <div class="ai-prep-progress w-full" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="پیشرفت آماده‌سازی">
-            <div id="aiPrepProgressFill" class="ai-prep-progress-fill"></div>
-          </div>
+          <h2 class="ai-prep-title">اطلاعات شما<br>در حال آنالیز است</h2>
+          <div class="ai-prep-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="پیشرفت آنالیز"><div id="aiPrepProgressFill" class="ai-prep-progress-fill"></div></div>
         </div>
-
         <div id="aiReadyPhase" class="ai-prep-phase ai-prep-phase--ready hidden">
-          <div class="ai-ready-check mb-5" aria-hidden="true">
-            <svg class="ai-ready-check-svg" viewBox="0 0 72 72" fill="none">
-              <circle class="ai-ready-check-circle" cx="36" cy="36" r="32" stroke-width="4" />
-              <path class="ai-ready-check-mark" d="M22 38 L32 48 L50 26" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+          <div class="community-hero">
+            <p class="community-hero-number" id="communityNumber" aria-live="polite">۱٬۰۰۰</p>
+            <p class="community-hero-copy">نفری هستی که عضو<br>جامعه رژیم من میشی</p>
           </div>
-          <h2 class="ai-prep-title text-lg sm:text-xl font-black mb-6 w-full">برنامه‌ت آماده‌ست!</h2>
-          <button id="aiReadyGoBtn" type="button" class="quiz-green-btn w-full py-3.5 rounded-2xl font-black text-base cursor-pointer">
-            بزن بریم
-          </button>
+          <p class="matching-section-lead">۲ متخصص، متناسب با اطلاعات شما</p>
+          <div id="specialistList" class="specialist-list" role="group" aria-label="انتخاب متخصص"></div>
+          <button id="aiReadyGoBtn" type="button" class="quiz-green-btn w-full py-3.5 rounded-2xl font-black text-base cursor-pointer"><span>انتخاب پلن و ادامه</span><span aria-hidden="true">←</span></button>
         </div>
       </div>
     </section>
@@ -477,7 +472,7 @@
                 </div>
                 <div class="flex justify-between">
                   <span class="text-slate-400">پلن انتخاب شده:</span>
-                  <span id="paymentPlanNameSummary" class="font-bold text-emerald-300">برنامه ماهانه</span>
+                  <span id="paymentPlanNameSummary" class="font-bold text-emerald-300">همراه · ۳۰ روزه</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-slate-400">تحلیل هوش مصنوعی:</span>
@@ -521,7 +516,7 @@
                 </div>
                 <div class="text-left">
                   <div class="text-[11px] text-slate-400">مبلغ قابل پرداخت</div>
-                  <div id="paymentTotalAmount" class="text-lg sm:text-xl font-black text-emerald-400">۱/۶۹۹ هزار تومان</div>
+                  <div id="paymentTotalAmount" class="text-lg sm:text-xl font-black text-emerald-400">۱٬۹۹۰٬۰۰۰ تومان</div>
                 </div>
               </div>
 
@@ -674,71 +669,8 @@
              MODAL STEP 1: PLAN SELECTION (3 OPTIONS)
              Clicking any plan immediately switches modal content to Step 2!
              ====================================== -->
-        <div id="modalStep1Content" class="space-y-3.5">
-          <!-- Plan Option 1: Weekly -->
-          <button
-            type="button"
-            data-plan-id="weekly"
-            class="plan-option-card group w-full text-right p-4 rounded-2xl transition-all duration-200 cursor-pointer"
-          >
-            <div class="flex items-start justify-between gap-3 w-full">
-              <div class="min-w-0 flex-1">
-                <div class="plan-option-title font-black text-white text-base">برنامه هفتگی</div>
-                <ul class="plan-option-features">
-                  <li>طراحی هوشمند</li>
-                  <li>جایگزینی غذا</li>
-                  <li>لیست خرید</li>
-                </ul>
-              </div>
-              <div class="text-left shrink-0">
-                <span class="plan-option-price text-base sm:text-lg font-black text-emerald-400">۶۹۹ هزار تومان</span>
-              </div>
-            </div>
-          </button>
-
-          <!-- Plan Option 2: Monthly (Popular) -->
-          <button
-            type="button"
-            data-plan-id="monthly"
-            class="plan-option-card plan-option-card--featured group relative w-full text-right p-4 pt-5 rounded-2xl transition-all duration-200 cursor-pointer"
-          >
-            <div class="plan-option-popular-badge">محبوب‌ترین انتخاب کاربران</div>
-            <div class="flex items-start justify-between gap-3 w-full">
-              <div class="min-w-0 flex-1">
-                <div class="plan-option-title font-black text-base">برنامه ماهانه</div>
-                <ul class="plan-option-features">
-                  <li>آنالیز متابولیسم</li>
-                  <li>پشتیبانی ۲۴ساعته</li>
-                  <li>آپدیت هفتگی</li>
-                </ul>
-              </div>
-              <div class="text-left shrink-0">
-                <span class="plan-option-price text-base sm:text-lg font-black">۱/۶۹۹ هزار تومان</span>
-              </div>
-            </div>
-          </button>
-
-          <!-- Plan Option 3: 3-Month VIP -->
-          <button
-            type="button"
-            data-plan-id="quarterly"
-            class="plan-option-card plan-option-card--vip group w-full text-right p-4 rounded-2xl transition-all duration-200 cursor-pointer"
-          >
-            <div class="flex items-start justify-between gap-3 w-full">
-              <div class="min-w-0 flex-1">
-                <div class="plan-option-title font-black text-white text-base">برنامه ۳ ماهه VIP</div>
-                <ul class="plan-option-features">
-                  <li>تثبیت وزن</li>
-                  <li>کوچینگ روزانه</li>
-                  <li>پشتیبانی متخصص</li>
-                </ul>
-              </div>
-              <div class="text-left shrink-0">
-                <span class="plan-option-price plan-option-price--vip text-base sm:text-lg font-black">۴ میلیون تومان</span>
-              </div>
-            </div>
-          </button>
-        </div>
+<div id="modalStep1Content">
+<div class="plans-intro"><h2>همراهی مناسب تو</h2><p>پلنت را انتخاب کن؛ امکاناتش را ببین.</p></div><div class="plans-stack"><section class="plan-tier" data-tier="weekly"><button type="button" class="plan-option-card" data-plan-id="weekly" aria-expanded="false" aria-controls="features-weekly"><span class="plan-heading"><strong>شروع</strong><span class="plan-duration">۱۵ روزه</span><span class="plan-chevron" aria-hidden="true">⌄</span></span><span class="plan-description">یک شروع مشخص، متناسب با تو</span><span class="plan-price"><strong>۱٬۲۹۰٬۰۰۰</strong><span>تومان</span></span></button><div id="features-weekly" class="plan-details" hidden><ul><li>برنامه تغذیه اختصاصی با <span class="plan-doctor-name"></span></li><li>جایگزین‌های غذایی متناسب با سلیقه‌ات</li><li>لیست خرید برنامه</li></ul><button type="button" class="plan-continue" data-continue-plan="weekly">ادامه با پلن شروع<span aria-hidden="true">←</span></button></div></section><section class="plan-tier" data-tier="monthly"><span class="plan-recommendation">پیشنهاد ما</span><button type="button" class="plan-option-card" data-plan-id="monthly" aria-expanded="false" aria-controls="features-monthly"><span class="plan-heading"><strong>همراه</strong><span class="plan-duration">۳۰ روزه</span><span class="plan-chevron" aria-hidden="true">⌄</span></span><span class="plan-description">زمان بیشتر، همراهی نزدیک‌تر</span><span class="plan-price"><strong>۱٬۹۹۰٬۰۰۰</strong><span>تومان</span></span></button><div id="features-monthly" class="plan-details" hidden><ul><li>همه امکانات پلن شروع با <span class="plan-doctor-name"></span></li><li>۲ نوبت بازبینی و اصلاح برنامه</li><li>پیگیری هفتگی روند و اجرای برنامه</li><li>پشتیبانی متنی در طول دوره</li></ul><button type="button" class="plan-continue" data-continue-plan="monthly">ادامه با پلن همراه<span aria-hidden="true">←</span></button></div></section><section class="plan-tier" data-tier="quarterly"><button type="button" class="plan-option-card" data-plan-id="quarterly" aria-expanded="false" aria-controls="features-quarterly"><span class="plan-heading"><strong>VIP</strong><span class="plan-duration">۹۰ روزه</span><span class="plan-chevron" aria-hidden="true">⌄</span></span><span class="plan-description">همراهی خصوصی و پیوسته</span><span class="plan-price"><strong>۸٬۹۹۰٬۰۰۰</strong><span>تومان</span></span></button><div id="features-quarterly" class="plan-details" hidden><ul><li>برنامه اختصاصی و همراهی <span class="plan-doctor-name"></span></li><li>۶ نوبت بازبینی و اصلاح برنامه</li><li>۳ جلسه آنلاین با متخصص منتخب</li><li>پیگیری هفتگی و پشتیبانی اولویت‌دار</li><li>برنامه حفظ عادت‌ها در پایان دوره</li></ul><button type="button" class="plan-continue" data-continue-plan="quarterly">ادامه با پلن VIP<span aria-hidden="true">←</span></button></div></section></div></div>
 
         <!-- ======================================
              MODAL STEP 2: PHONE INPUT -> MORPHS INTO OTP INPUT IN-PLACE
@@ -803,7 +735,7 @@
           <div class="modal-plan-line">
             <div class="min-w-0">
               <div class="modal-plan-summary-label">پلن انتخاب‌شده</div>
-              <div id="step2PlanTitle" class="modal-plan-summary-title">برنامه ماهانه — ۱/۶۹۹ هزار تومان</div>
+              <div id="step2PlanTitle" class="modal-plan-summary-title">همراه · ۳۰ روزه — ۱٬۹۹۰٬۰۰۰ تومان</div>
             </div>
             <button id="modalBackToPlansBtn" type="button" class="modal-plan-change hidden">تغییر پلن</button>
           </div>
@@ -821,7 +753,7 @@
 
   <script src="tracking-config.js?v=1"></script>
   <script src="tracking.js?v=2"></script>
-  <script src="questionnaire-data.js?v=11"></script>
+  <script src="questionnaire-data.js?v=12"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -831,18 +763,18 @@
     const PLANS_CATALOG = {
       weekly: {
         id: 'weekly',
-        name: 'برنامه هفتگی',
-        priceText: '۶۹۹ هزار تومان',
+        name: 'شروع · ۱۵ روزه',
+        priceText: '۱٬۲۹۰٬۰۰۰ تومان',
       },
       monthly: {
         id: 'monthly',
-        name: 'برنامه ماهانه',
-        priceText: '۱/۶۹۹ هزار تومان',
+        name: 'همراه · ۳۰ روزه',
+        priceText: '۱٬۹۹۰٬۰۰۰ تومان',
       },
       quarterly: {
         id: 'quarterly',
-        name: 'برنامه ۳ ماهه VIP',
-        priceText: '۴ میلیون تومان',
+        name: 'VIP · ۹۰ روزه',
+        priceText: '۸٬۹۹۰٬۰۰۰ تومان',
       }
     };
 
@@ -862,7 +794,53 @@
       isAutoScrolling: false,
       autoAdvanceTimer: null,
       aiPreparingTimer: null,
+      selectedSpecialist: null,
     };
+
+    const SPECIALISTS_BY_GOAL = {
+      weight_loss: [
+        { id: 'sara', name: 'دکتر سارا محمدی', focus: 'کاهش وزن پایدار', initials: 'سم' },
+        { id: 'amir', name: 'دکتر امیر حسینی', focus: 'متابولیسم و چربی‌سوزی', initials: 'اح' },
+      ],
+      weight_gain: [
+        { id: 'nazanin', name: 'دکتر نازنین کریمی', focus: 'افزایش وزن سالم', initials: 'نک' },
+        { id: 'reza', name: 'دکتر رضا احمدی', focus: 'عضله‌سازی و انرژی', initials: 'را' },
+      ],
+      pregnancy: [
+        { id: 'maryam', name: 'دکتر مریم نوری', focus: 'تغذیه بارداری', initials: 'من' },
+        { id: 'elham', name: 'دکتر الهام صادقی', focus: 'تغذیه شیردهی', initials: 'اص' },
+      ],
+      detox: [
+        { id: 'parsa', name: 'دکتر پارسا کیانی', focus: 'گوارش و پاکسازی', initials: 'پک' },
+        { id: 'hanieh', name: 'دکتر هانیه مرادی', focus: 'انرژی و تعادل روزانه', initials: 'هم' },
+      ],
+    };
+
+    function specialistsForGoal() {
+      return SPECIALISTS_BY_GOAL[state.selectedGoal?.id] || SPECIALISTS_BY_GOAL.weight_loss;
+    }
+
+    function renderSpecialistChoices() {
+      const list = document.getElementById('specialistList');
+      if (!list) return;
+      const people = specialistsForGoal();
+      const selectedId = state.selectedSpecialist?.id;
+      list.innerHTML = people.map((person) => `
+        <button type="button" class="specialist-card${person.id === selectedId ? ' is-selected' : ''}" aria-pressed="${person.id === selectedId}" data-specialist-id="${person.id}">
+          <span class="specialist-avatar" aria-hidden="true">${person.initials}</span>
+          <span class="specialist-copy">
+            <span class="specialist-name">${person.name}</span>
+            <span class="specialist-role">متخصص تغذیه</span>
+            <span class="specialist-focus">${person.focus}</span>
+            <span class="specialist-rating" aria-label="امتیاز ۴٫۸ از ۵">
+              <span class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="is-partial"></i></span>
+              <span class="star-score">۴٫۸</span>
+            </span>
+          </span>
+          <span class="specialist-mark" aria-hidden="true"></span>
+        </button>
+      `).join('');
+    }
 
     // =========================================================
     // PAGE 1: SLOGAN ANIMATION & GOAL CARDS
@@ -888,32 +866,21 @@
       const featureStrip = document.getElementById('heroFeatureStrip');
 
       heading.innerHTML = '';
-      btnWrapper.classList.add('opacity-0', 'translate-y-6', 'pointer-events-none');
-      if (featureStrip) featureStrip.classList.add('opacity-0', 'translate-y-3');
+      btnWrapper.classList.remove('opacity-0', 'translate-y-6', 'pointer-events-none');
+      if (featureStrip) featureStrip.classList.remove('opacity-0', 'translate-y-3');
 
       SLOGAN_WORDS.forEach((wordObj, idx) => {
         const span = document.createElement('span');
-        span.className = 'slogan-word ' + (wordObj.highlight ? 'slogan-highlight font-black' : '');
+        span.className = 'slogan-word revealed ' + (wordObj.highlight ? 'slogan-highlight font-black' : '');
         span.textContent = wordObj.text;
+        if (idx === 2) {
+          const lineBreak = document.createElement('span');
+          lineBreak.className = 'slogan-line-break';
+          lineBreak.setAttribute('aria-hidden', 'true');
+          heading.appendChild(lineBreak);
+        }
         heading.appendChild(span);
-
-        const timer = setTimeout(() => {
-          span.classList.add('revealed');
-        }, 140 + idx * 170);
-        sloganTimers.push(timer);
       });
-
-      const totalWordTime = 140 + SLOGAN_WORDS.length * 170;
-
-      // Reveal subtitle
-      sloganTimers.push(setTimeout(() => {
-        if (featureStrip) featureStrip.classList.remove('opacity-0', 'translate-y-3');
-      }, totalWordTime + 100));
-
-      // Reveal "بزن بریم" button right after slogan finishes appearing
-      sloganTimers.push(setTimeout(() => {
-        btnWrapper.classList.remove('opacity-0', 'translate-y-6', 'pointer-events-none');
-      }, totalWordTime + 350));
     }
 
     function renderGoalCards() {
@@ -927,11 +894,11 @@
         const image = goal.image || 'assets/vegetables.jpg';
         btn.className = 'goal-card group w-full text-right cursor-pointer';
         btn.innerHTML = `
-          <span class="goal-card-bg" style="background-image: url('${image}')"></span>
-          <span class="goal-card-overlay" aria-hidden="true"></span>
+          <img class="goal-card-photo" src="${image}" alt="" width="1200" height="600" decoding="async" />
           <span class="goal-card-body">
-            <h3 class="goal-card-title">${goal.title}</h3>
-            <p class="goal-card-desc">${goal.desc}</p>
+            <span class="goal-card-copy">
+              <span class="goal-card-title">${goal.title}</span>
+            </span>
           </span>
         `;
         btn.addEventListener('click', () => {
@@ -945,17 +912,7 @@
 
     function transitionFromSloganToGoals() {
       const params = new URLSearchParams(window.location.search);
-      const sloganStage = document.getElementById('sloganStage');
-      const goalStage = document.getElementById('goalSelectionStage');
-
-      sloganStage.classList.add('stage-fade-out');
-      setTimeout(() => {
-        sloganStage.classList.add('hidden');
-        sloganStage.classList.remove('stage-fade-out');
-        goalStage.classList.remove('hidden');
-        goalStage.classList.add('stage-fade-in');
-        window.location.href = `goals.html${params.size ? `?${params}` : ''}`;
-      }, 380);
+      window.location.href = `goals.html${params.size ? `?${params}` : ''}`;
     }
 
     function goToIntroHome() {
@@ -1329,7 +1286,7 @@
             type="text"
             dir="rtl"
             data-field-index="${qIdx}"
-            class="quiz-field w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d] focus:outline-none focus:border-[#205638] focus:ring-2 focus:ring-[#205638]/20 transition-all"
+            class="quiz-field w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d] transition-colors"
             placeholder="${qItem.placeholder || ''}"
             value="${val}"
             ${disabled ? 'disabled' : ''}
@@ -1424,7 +1381,7 @@
           optionsHTML += `
               <button type="button" data-q-index="${qIdx}" data-opt-index="${optIdx}"
                 style="animation-delay: ${optIdx * 45}ms"
-                class="quiz-option-btn quiz-option-enter w-full text-right p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-200 flex items-center justify-between gap-3 cursor-pointer ${baseClasses}">
+                class="quiz-option-btn quiz-option-enter w-full text-right p-3.5 sm:p-4 rounded-2xl border-2 flex items-center justify-between gap-3 cursor-pointer ${baseClasses}">
                 <span class="text-xs sm:text-sm font-bold leading-snug flex-1">${opt.label}</span>
                 <span class="quiz-choice-dot" aria-hidden="true">${selected ? '✓' : ''}</span>
                 ${thumb}
@@ -1437,7 +1394,7 @@
         if (needsDetail) {
           bodyHTML += `
             <div class="mt-3 space-y-2 quiz-followup-panel">
-              <input type="text" data-detail-index="${qIdx}" class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d] focus:outline-none focus:border-[#205638] focus:ring-2 focus:ring-[#205638]/20"
+              <input type="text" data-detail-index="${qIdx}" class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d]"
                 placeholder="${qItem.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${ans.detail || ''}" />
               <button type="button" data-detail-submit="${qIdx}" class="quiz-green-btn w-full py-2.5 rounded-xl font-bold text-sm">ثبت و ادامه</button>
             </div>`;
@@ -1542,8 +1499,47 @@
         showToast('جزئیات را بنویسید', '⚠️');
         return;
       }
-      if (q.multi) { renderQuizQuestions(); return; }
+      if (q.multi) { updateMultiChoiceUI(qIdx); return; }
       advanceAfterAnswer(qIdx, answeredBefore === total);
+    }
+
+    function updateMultiChoiceUI(qIdx) {
+      const q = state.selectedGoal.questions[qIdx];
+      const ans = state.answers[qIdx] || { choices: [], detail: '' };
+      const choices = ans.choices || [];
+      document.querySelectorAll(`button[data-q-index="${qIdx}"][data-opt-index]`).forEach((btn) => {
+        const optIdx = Number(btn.dataset.optIndex);
+        const selected = choices.includes(optIdx);
+        btn.classList.toggle('is-selected', selected);
+        btn.classList.toggle('quiz-option-card--selected', selected);
+        const dot = btn.querySelector('.quiz-choice-dot');
+        if (dot) dot.textContent = selected ? '✓' : '';
+      });
+
+      const card = document.getElementById(`questionCard_${qIdx}`);
+      if (!card) {
+        renderQuizQuestions();
+        return;
+      }
+
+      const needsDetail = q.followUpText && choices.some((i) => followUpRequiredForChoice(q, i));
+      const panel = card.querySelector('.quiz-followup-panel');
+      if (needsDetail && !panel) {
+        const markup = `
+            <div class="mt-3 space-y-2 quiz-followup-panel">
+              <input type="text" data-detail-index="${qIdx}" class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d]"
+                placeholder="${q.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${ans.detail || ''}" />
+              <button type="button" data-detail-submit="${qIdx}" class="quiz-green-btn w-full py-2.5 rounded-xl font-bold text-sm">ثبت و ادامه</button>
+            </div>`;
+        const submitBtn = card.querySelector('[data-multi-submit]');
+        if (submitBtn) submitBtn.insertAdjacentHTML('beforebegin', markup);
+        else card.insertAdjacentHTML('beforeend', markup);
+        card.querySelector('[data-detail-submit]')?.addEventListener('click', () => handleQuestionDetailSubmit(qIdx));
+        setTimeout(() => card.querySelector('input[data-detail-index]')?.focus(), 60);
+      } else if (!needsDetail && panel) {
+        panel.remove();
+        if (state.answers[qIdx]?.detail) state.answers[qIdx].detail = '';
+      }
     }
 
     function handleQuestionOptionSelect(qIdx, optIdx) {
@@ -1560,7 +1556,7 @@
           : exclusive.includes(label) ? [optIdx]
           : [...current.choices.filter(i => !exclusive.includes(q.options[i]?.label)), optIdx];
         state.answers[qIdx] = { choices, detail: choices.some(i => followUpRequiredForChoice(q, i)) ? current.detail : '' };
-        renderQuizQuestions();
+        updateMultiChoiceUI(qIdx);
         return;
       }
       if (followUpRequiredForChoice(q, optIdx)) {
@@ -1703,6 +1699,8 @@
     function showModalStep1() {
       window.demoTracking?.step('plans');
       state.modalStep = 1;
+      document.querySelectorAll('.plan-doctor-name').forEach(el => { el.textContent = state.selectedSpecialist?.name || 'متخصص منتخب شما'; });
+      selectPlanDetails(state.selectedPlan.id);
       document.getElementById('modalHeaderTitle').textContent = 'انتخاب نوع برنامه';
 
       // Hide top-left Back button on Step 1
@@ -1712,6 +1710,16 @@
 
       document.getElementById('modalStep1Content').classList.remove('hidden');
       document.getElementById('modalStep2Content').classList.add('hidden');
+    }
+
+    function selectPlanDetails(planId) {
+      state.selectedPlan = PLANS_CATALOG[planId] || PLANS_CATALOG.monthly;
+      document.querySelectorAll('.plan-option-card').forEach(button => {
+        const selected = button.dataset.planId === state.selectedPlan.id;
+        button.setAttribute('aria-expanded', String(selected));
+        button.closest('.plan-tier').classList.toggle('is-open', selected);
+        document.getElementById(button.getAttribute('aria-controls')).hidden = !selected;
+      });
     }
 
     function showModalStep2(planId) {
@@ -1864,7 +1872,7 @@
     // =========================================================
     // PAGE 3: PAYMENT GATEWAY PAGE
     // =========================================================
-    function populateAndShowPaymentPage() {
+    function populateAndShowPaymentPage(source) {
       switchPage(3);
 
       document.getElementById('paymentUserPhoneBadge').textContent = state.userPhone || '09123456789';
@@ -1888,7 +1896,9 @@
         answersContainer.appendChild(row);
       });
 
-      showToast('کد تایید شد! به درگاه پرداخت هدایت شدید 💳');
+      showToast(source === 'specialist'
+        ? `نوبت با ${state.selectedSpecialist.name} ثبت شد. ادامه در پرداخت`
+        : 'کد تایید شد! به درگاه پرداخت هدایت شدید 💳');
     }
 
     function closePaymentSuccessModal() {
@@ -1938,7 +1948,11 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    let matchingTicker = null;
+    let communityTicker = null;
     function clearAiPreparingTimer() {
+      clearInterval(matchingTicker);
+      clearInterval(communityTicker);
       if (state.aiPreparingTimer) {
         clearTimeout(state.aiPreparingTimer);
         state.aiPreparingTimer = null;
@@ -1949,6 +1963,19 @@
       const fill = document.getElementById('aiPrepProgressFill');
       if (!fill) return;
       fill.classList.remove('ai-prep-progress-fill--run');
+      const started = performance.now();
+      const update = () => {
+        const percent = Math.min(100, Math.floor((performance.now() - started) / 200));
+        const phase = Math.min(2, Math.floor(percent / 34));
+        const percentEl = document.getElementById('analysisPercent');
+        const statusEl = document.getElementById('analysisStatus');
+        if (percentEl) percentEl.textContent = percent.toLocaleString('fa-IR') + '٪';
+        if (statusEl) statusEl.textContent = ['شناخت هدف و شرایط تو', 'بررسی عادت‌های غذایی', 'آماده‌سازی پیشنهاد متخصص'][phase];
+        fill.parentElement.setAttribute('aria-valuenow', percent);
+        document.querySelectorAll('.analysis-steps span').forEach((el, i) => { el.classList.toggle('is-active', i === phase); el.classList.toggle('is-done', i < phase); });
+      };
+      update();
+      matchingTicker = setInterval(update, 200);
       void fill.offsetWidth;
       fill.classList.add('ai-prep-progress-fill--run');
     }
@@ -1960,11 +1987,22 @@
     }
 
     function showAiReadyPhase() {
+      clearInterval(matchingTicker);
+      const counter = document.getElementById('communityNumber');
+      counter.textContent = (1000).toLocaleString('fa-IR');
+      const began = performance.now();
+      clearInterval(communityTicker);
+      communityTicker = setInterval(() => {
+        const t = Math.min(1, (performance.now() - began) / 1400);
+        counter.textContent = Math.round(1000 + 622 * (1 - Math.pow(1 - t, 3))).toLocaleString('fa-IR');
+        if (t === 1) clearInterval(communityTicker);
+      }, 40);
       state.aiPreparingTimer = null;
       document.getElementById('aiPreparingPhase').classList.add('hidden');
       const ready = document.getElementById('aiReadyPhase');
       ready.classList.remove('hidden');
       ready.classList.add('ai-prep-phase--enter');
+      renderSpecialistChoices();
     }
 
     function startAiPreparingFlow() {
@@ -1987,9 +2025,11 @@
     }
 
     function openPlanFlowAfterPreparing() {
-      hideAiPreparingScreen();
-      document.getElementById('page2Container').classList.remove('hidden');
-      openPlanSelectionModal(1);
+      if (!state.selectedSpecialist) {
+        showToast('اول متخصص رو انتخاب کن', '👋');
+        return;
+      }
+      openPlanSelectionModal();
     }
 
     let toastTimeout = null;
@@ -2017,7 +2057,6 @@
       if (currentFile === 'goals.html') {
         document.getElementById('sloganStage').classList.add('hidden');
         document.getElementById('goalSelectionStage').classList.remove('hidden');
-        document.getElementById('goalSelectionStage').classList.add('stage-fade-in');
       } else if (currentFile === 'quiz.html') {
         const goalId = new URLSearchParams(window.location.search).get('goal');
         if (!GOALS_DATA.some((goal) => goal.id === goalId)) {
@@ -2065,13 +2104,29 @@
       document.getElementById('aiReadyGoBtn').addEventListener('click', () => {
         openPlanFlowAfterPreparing();
       });
+      document.getElementById('specialistList').addEventListener('click', (event) => {
+        if (event.target.closest('.specialist-rating')) {
+          showToast('امتیازها در اپلیکیشن قابل مشاهده است', '★');
+          return;
+        }
+        const card = event.target.closest('[data-specialist-id]');
+        if (!card) return;
+        const person = specialistsForGoal().find((item) => item.id === card.dataset.specialistId);
+        if (!person) return;
+        state.selectedSpecialist = person;
+        renderSpecialistChoices();
+        document.querySelector(`[data-specialist-id="${person.id}"]`)?.focus();
+      });
 
       // Modal Step 1: Clicking ANY of the 3 plan cards immediately switches modal content to Step 2
       document.querySelectorAll('.plan-option-card').forEach(card => {
         card.addEventListener('click', () => {
           const planId = card.dataset.planId;
-          showModalStep2(planId);
+          selectPlanDetails(planId);
         });
+      });
+      document.querySelectorAll('[data-continue-plan]').forEach(button => {
+        button.addEventListener('click', () => showModalStep2(button.dataset.continuePlan));
       });
 
       // Modal Step 2: Top-left Back button returns to Step 1 (plan selection)

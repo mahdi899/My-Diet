@@ -15,8 +15,26 @@ if (!existsSync(desktopHtml)) {
 }
 
 mkdirSync(assetsDir, { recursive: true });
-for (const name of ['Vazirmatn-Regular.ttf', 'Vazirmatn-Bold.ttf', 'mark.svg', 'salad.jpg']) {
+const iranFontDir = resolve(process.env.USERPROFILE, 'Desktop', 'New folder (17)');
+const iranFonts = [
+  'IRANSansX-Regular.ttf',
+  'IRANSansX-Medium.ttf',
+  'IRANSansX-DemiBold.ttf',
+  'IRANSansX-Bold.ttf',
+  'IRANSansX-ExtraBold.ttf',
+  'IRANSansX-Black.ttf',
+];
+for (const name of ['mark.svg', 'salad.jpg']) {
   copyFileSync(resolve(siteAssets, name), resolve(assetsDir, name));
+}
+for (const name of iranFonts) {
+  const fromIran = resolve(iranFontDir, name);
+  const fromAssets = resolve(assetsDir, name);
+  if (existsSync(fromIran)) {
+    copyFileSync(fromIran, resolve(assetsDir, name));
+  } else if (!existsSync(fromAssets)) {
+    console.warn('Missing demo font:', name);
+  }
 }
 const logoFromSite = resolve(siteAssets, 'logo.png');
 if (existsSync(logoFromSite)) {
@@ -53,7 +71,7 @@ html = html.replace(
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+          fontFamily: { sans: ['IRANSansX', 'Tahoma', 'sans-serif'] },
           colors: {
             emerald: {
               200: '#c3d0bb',
@@ -88,7 +106,7 @@ html = html.replace(
 html = html.replace(
   /body \{\s*font-family:[^;]+;\s*background:[^;]+;\s*color:[^;]+;/,
   `body {
-      font-family: 'Vazirmatn', sans-serif;
+      font-family: 'IRANSansX', Tahoma, sans-serif;
       background: #f7f8f0;
       color: #233c2d;`,
 );
