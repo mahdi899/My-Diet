@@ -1,4 +1,5 @@
 /* Phase 10 journey analytics. Graphs come from fixture transitions, not an inferred model. */
+(() => {
 const screenLabels = {
   home: 'خانه',
   plan_purchase: 'خرید برنامه',
@@ -183,4 +184,5 @@ function journeyPage() {
   return root;
 }
 
-var SabzineJourneys = { sessions, journeyReport, journeyPage, screenLabels };
+globalThis.SabzineJourneys = { sessions, journeyReport, journeyPage, screenLabels };
+})();

@@ -12,7 +12,7 @@ if not env.exists():
     env.write_text(''.join(f'{k}={v}\n' for k,v in values.items()));os.chmod(env,0o600)
 existing=subprocess.run(['docker','inspect','sabzine-admin'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
 if existing:run('docker','rm','-f','sabzine-admin')
-run('docker','run','-d','--name','sabzine-admin','--restart','unless-stopped','--network','sabzine_default','--env-file',str(env),'-p','127.0.0.1:3003:3000','sabzine-admin:tracking')
+run('docker','run','-d','--name','sabzine-admin','--restart','unless-stopped','--network','sabzine_default','--env-file',str(env),'-v','/opt/sabzine/backend/admin-web:/app/admin-web:ro','-p','127.0.0.1:3003:3000','sabzine-admin:tracking')
 site=pathlib.Path('/etc/nginx/sites-available/my-diet.ir')
 backup=site.with_name('my-diet.ir.pre-tracking')
 if not backup.exists():backup.write_text(site.read_text())
@@ -65,4 +65,19 @@ pathlib.Path('/etc/nginx/conf.d/mydiet-analytics.conf').write_text('''map $http_
 }
 ''')
 run('nginx','-t');run('systemctl','reload','nginx')
+pathlib.Path('/usr/local/sbin/sabzine-db-backup').write_text('''#!/usr/bin/env bash
+set -euo pipefail
+backup_dir=/var/backups/sabzine/postgres
+install -d -m 700 "$backup_dir"
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+for database in sabzine umami; do
+  tmp="$backup_dir/.$database-$stamp.dump.tmp"
+  docker exec sabzine-postgres pg_dump --username sabzine --dbname "$database" --format=custom > "$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" "$backup_dir/$database-$stamp.dump"
+done
+find "$backup_dir" -maxdepth 1 -type f -name '*.dump' -mtime +14 -delete
+''')
+os.chmod('/usr/local/sbin/sabzine-db-backup',0o700)
+run('/usr/local/sbin/sabzine-db-backup')
 print('Staff panel and analytics gateway deployed')
