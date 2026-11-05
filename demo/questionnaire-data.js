@@ -27,7 +27,7 @@
   }
 
   function withGeneral(goalQuestions) {
-    return applyHeroImages(GENERAL_QUESTIONS.concat(goalQuestions)).map((q, i) => ({ ...q, originalNumber: i + 1 }));
+    return applyHeroImages(GENERAL_QUESTIONS.concat(goalQuestions));
   }
 
   const GENERAL_QUESTIONS = [
@@ -59,7 +59,6 @@
     {
       category: CAT.general,
       q: 'به چه غذاهایی حساسیت داری؟',
-      multi: true,
       options: [O('بدون حساسیت'), O('لبنیات'), O('آجیل'), O('تخم‌مرغ'), O('گلوتن'), O('سایر')],
       followUpText: true,
       followUpWhenLabel: 'سایر',
@@ -78,8 +77,6 @@
     {
       category: CAT.general,
       q: 'بیماری خاص یا شرایط پزشکی داری؟',
-      multi: true,
-      exclusiveLabels: ['خیر'],
       options: [
         O('خیر'),
         O('دیابت'),
@@ -104,7 +101,6 @@
       category: CAT.general,
       q: 'چه غذاهایی را دوست نداری یا نمی‌خوری؟',
       type: 'text',
-      optional: true,
       subtitle: 'انتخاب یا متن',
       placeholder: 'مثلاً بادمجان، ماهی…',
     },
@@ -139,7 +135,7 @@
     {
       category: CAT.general,
       q: 'هفته‌ای چند روز ورزش می‌کنی؟',
-      options: [O('ورزش نمی‌کنم'), O('۱ روز'), O('۲ روز'), O('۳ روز'), O('۴ روز'), O('۵ روز'), O('۶ روز'), O('۷ روز')],
+      options: [O('۰ روز'), O('۱ روز'), O('۲ روز'), O('۳ روز'), O('۴ روز'), O('۵ روز'), O('۶ روز'), O('۷ روز')],
     },
     {
       category: CAT.general,
@@ -170,7 +166,6 @@
     {
       category: CAT.loss,
       q: 'بزرگ‌ترین چالشت برای کاهش وزن چیه؟',
-      multi: true,
       options: [
         O('ریزه‌خواری در طول روز'),
         O('علاقه زیاد به شیرینی و تنقلات'),
@@ -256,7 +251,7 @@
     {
       category: CAT.preg,
       q: 'در چه مرحله‌ای هستی؟',
-      options: [O('باردار هستم'), O('در دوران شیردهی هستم')],
+      options: [O('باردار هستم'), O('در دوران شیردهی هستم'), O('هم باردار هستم و هم شیردهی می‌کنم')],
     },
     { category: CAT.pregP, q: 'در هفته چندم بارداری هستی؟', type: 'number', subtitle: 'هفته بارداری', placeholder: 'مثلاً ۱۲' },
     { category: CAT.pregP, q: 'قبل از بارداری چند کیلوگرم وزن داشتی؟', type: 'number', subtitle: 'کیلوگرم', placeholder: 'وزن قبل از بارداری' },
@@ -278,15 +273,11 @@
     {
       category: CAT.pregP,
       q: 'در دوران بارداری کدام مشکلات را تجربه می‌کنی؟',
-      multi: true,
-      exclusiveLabels: ['هیچ‌کدام'],
       options: [O('تهوع'), O('استفراغ'), O('یبوست'), O('سوزش معده'), O('بی‌اشتهایی'), O('هیچ‌کدام')],
     },
     {
       category: CAT.pregP,
       q: 'آیا به یکی از شرایط زیر مبتلا هستی؟',
-      multi: true,
-      exclusiveLabels: ['هیچ‌کدام'],
       options: [
         O('دیابت بارداری'),
         O('فشار خون بالا یا پره‌اکلامپسیا'),
@@ -299,8 +290,6 @@
     {
       category: CAT.pregP,
       q: 'چه مکمل‌هایی مصرف می‌کنی؟',
-      multi: true,
-      exclusiveLabels: ['هیچ‌کدام'],
       options: [O('اسید فولیک'), O('آهن'), O('ویتامین D'), O('مولتی‌ویتامین بارداری'), O('سایر'), O('هیچ‌کدام')],
     },
     {
@@ -344,7 +333,6 @@
     {
       category: CAT.health,
       q: 'بیشتر دوست داری کدام بخش از سلامتت بهتر بشه؟',
-      multi: true,
       options: [
         O('افزایش انرژی روزانه'),
         O('بهبود کیفیت تغذیه'),
@@ -367,7 +355,6 @@
     {
       category: CAT.health,
       q: 'وضعیت گوارشت معمولاً چطوره؟',
-      multi: true,
       options: [O('طبیعی'), O('یبوست مکرر'), O('نفخ'), O('سوزش معده'), O('اسهال مکرر'), O('مشکلات دیگر')],
     },
     {
@@ -383,7 +370,6 @@
     {
       category: CAT.health,
       q: 'بیشتر دوست داری چه تغییری در تغذیه‌ات ایجاد کنی؟',
-      multi: true,
       options: [
         O('وعده‌های منظم‌تر'),
         O('مصرف سبزیجات بیشتر'),
@@ -396,11 +382,6 @@
     {
       category: CAT.health,
       q: 'آیا پزشک برای بهبود وضعیت سلامتت توصیه غذایی خاصی داشته؟',
-      multi: true,
-      exclusiveLabels: ['خیر'],
-      followUpText: true,
-      followUpWhenLabel: 'سایر موارد',
-      followUpPlaceholder: 'توصیهٔ پزشک را توضیح بده',
       options: [
         O('خیر'),
         O('بله، کنترل قند خون'),

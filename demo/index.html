@@ -819,7 +819,7 @@
     <span id="toastText">عملیات با موفقیت انجام شد</span>
   </div>
 
-  <script src="questionnaire-data.js?v=11"></script>
+  <script src="questionnaire-data.js?v=10"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -968,15 +968,7 @@
     // =========================================================
     function selectGoalAndGoToPage2(goalId) {
       const found = GOALS_DATA.find(g => g.id === goalId) || GOALS_DATA[0];
-      const questions = found.questions.filter(q => goalId !== 'pregnancy' || ![3, 32].includes(q.originalNumber)).map(q => ({ ...q }));
-      if (goalId === 'pregnancy') {
-        questions.forEach(q => {
-          if ([8, 10, 25, 26, 27].includes(q.originalNumber) && q.options) q.multi = true;
-          if (q.originalNumber === 25 && !q.options.some(option => option.label === 'هیچ‌کدام')) q.options = [...q.options, { label: 'هیچ‌کدام' }];
-        });
-      }
-      state.selectedGoal = { ...found, questions };
-      state.allGoalQuestions = questions;
+      state.selectedGoal = found;
       state.answers = {};
       state.maxUnlockedIndex = 0;
       state.focusedQuestionIndex = 0;
@@ -1001,14 +993,10 @@
       const answer = state.answers[qIdx];
       if (answer === undefined || answer === null) return false;
       const q = state.selectedGoal.questions[qIdx];
-      if (q.multi) {
-        if (!Array.isArray(answer.choices) || answer.choices.length === 0) return false;
-        return !answer.choices.some(i => followUpRequiredForChoice(q, i)) || String(answer.detail || '').trim() !== '';
-      }
       if (q.ui === 'sleep-wake') {
         return answer && answer.sleep != null && answer.wake != null;
       }
-      if (q.type === 'text' || q.type === 'number') return answer === '__skipped__' ? !!q.optional : String(answer).trim() !== '';
+      if (q.type === 'text' || q.type === 'number') return String(answer).trim() !== '';
       if (typeof answer === 'object') {
         if (answer.choice === undefined) return false;
         if (followUpRequiredForChoice(q, answer.choice)) {
@@ -1023,37 +1011,12 @@
       return state.selectedGoal.questions.filter((_, i) => isQuestionAnswered(i)).length;
     }
 
-    function updateConditionalQuestions(answeredQuestion) {
-      const oldQuestions = state.selectedGoal.questions;
-      const answersByQuestion = new Map(oldQuestions.map((q, i) => [q.originalNumber, state.answers[i]]));
-      const exerciseAnswer = answersByQuestion.get(17);
-      const noExercise = exerciseAnswer === 0;
-      const stageAnswer = answersByQuestion.get(20);
-      const stage = state.selectedGoal.id === 'pregnancy' ? stageAnswer : null;
-      const questions = state.allGoalQuestions.filter(q => {
-        if (noExercise && [18, 19].includes(q.originalNumber)) return false;
-        if (stage === 0 && q.category === 'سؤالات مخصوص شیردهی') return false;
-        if (stage === 1 && q.category === 'سؤالات مخصوص بارداری') return false;
-        return true;
-      });
-      state.selectedGoal.questions = questions;
-      state.answers = Object.fromEntries(questions.map((q, i) => [i, answersByQuestion.get(q.originalNumber)]).filter(([, value]) => value !== undefined));
-      const newIndex = questions.indexOf(answeredQuestion);
-      state.focusedQuestionIndex = Math.max(0, Math.min(newIndex, questions.length - 1));
-      state.maxUnlockedIndex = Math.max(state.focusedQuestionIndex, Math.min(state.maxUnlockedIndex, questions.length - 1));
-      return state.focusedQuestionIndex;
-    }
-
     function answerLabel(qObj, answer) {
       if (answer === undefined || answer === null) return 'ثبت نشده';
       if (qObj.ui === 'sleep-wake' && answer && answer.sleep != null) {
         return `خواب ${toPersianDigits(answer.sleep)} — بیداری ${toPersianDigits(answer.wake)}`;
       }
-      if (qObj.type === 'text' || qObj.type === 'number') return answer === '__skipped__' ? 'ثبت نشده (اختیاری)' : String(answer);
-      if (qObj.multi && Array.isArray(answer.choices)) {
-        const labels = answer.choices.map(i => qObj.options[i]?.label).filter(Boolean).join('، ');
-        return answer.detail ? `${labels} — ${answer.detail}` : labels;
-      }
+      if (qObj.type === 'text' || qObj.type === 'number') return String(answer);
       if (typeof answer === 'object') {
         const base = qObj.options?.[answer.choice]?.label || '';
         return answer.detail ? `${base} — ${answer.detail}` : base;
@@ -1170,7 +1133,7 @@
       const listCls = grid ? `${listClass} ${listClass}--grid` : listClass;
       let html = `<div class="${listCls}">`;
       qItem.options.forEach((opt, optIdx) => {
-        const selected = qItem.multi ? (state.answers[qIdx]?.choices || []).includes(optIdx) : typeof state.answers[qIdx] === 'object'
+        const selected = typeof state.answers[qIdx] === 'object'
           ? state.answers[qIdx].choice === optIdx
           : state.answers[qIdx] === optIdx;
         const img = opt.image || 'assets/vegetables.jpg';
@@ -1201,7 +1164,7 @@
     function buildOptionCardsHTML(qIdx, qItem) {
       let html = '<div class="quiz-flash-grid">';
       qItem.options.forEach((opt, optIdx) => {
-        const selected = qItem.multi ? (state.answers[qIdx]?.choices || []).includes(optIdx) : typeof state.answers[qIdx] === 'object'
+        const selected = typeof state.answers[qIdx] === 'object'
           ? state.answers[qIdx].choice === optIdx
           : state.answers[qIdx] === optIdx;
         const img = opt.image || 'assets/vegetables.jpg';
@@ -1335,7 +1298,6 @@
             class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40 mt-3">
             ثبت و ادامه
           </button>
-          ${qItem.optional ? `<button type="button" data-skip-index="${qIdx}" class="quiz-skip-btn w-full py-3 text-sm text-[#205638]">رد شدن از این سؤال</button>` : ''}
         </div>`;
     }
 
@@ -1410,7 +1372,7 @@
       } else if (qItem.options) {
         let optionsHTML = '';
         qItem.options.forEach((opt, optIdx) => {
-          const selected = qItem.multi ? (state.answers[qIdx]?.choices || []).includes(optIdx) : typeof state.answers[qIdx] === 'object'
+          const selected = typeof state.answers[qIdx] === 'object'
             ? state.answers[qIdx].choice === optIdx
             : state.answers[qIdx] === optIdx;
           const baseClasses = selected ? 'is-selected' : '';
@@ -1429,7 +1391,7 @@
         const compactChoices = qItem.options.length >= 6;
         bodyHTML = `<div class="${compactChoices ? 'quiz-choice-grid quiz-choice-grid--compact' : 'grid grid-cols-1 sm:grid-cols-2 gap-2.5'}">${optionsHTML}</div>`;
         const ans = state.answers[qIdx];
-        const needsDetail = qItem.followUpText && typeof ans === 'object' && (qItem.multi ? (ans.choices || []).some(i => followUpRequiredForChoice(qItem, i)) : followUpRequiredForChoice(qItem, ans.choice));
+        const needsDetail = qItem.followUpText && typeof ans === 'object' && followUpRequiredForChoice(qItem, ans.choice);
         if (needsDetail) {
           bodyHTML += `
             <div class="mt-3 space-y-2 quiz-followup-panel">
@@ -1438,7 +1400,6 @@
               <button type="button" data-detail-submit="${qIdx}" class="quiz-green-btn w-full py-2.5 rounded-xl font-bold text-sm">ثبت و ادامه</button>
             </div>`;
         }
-        if (qItem.multi) bodyHTML += `<button type="button" data-multi-submit="${qIdx}" class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3">ثبت انتخاب‌ها و ادامه</button>`;
       }
 
       const showAgeTitle = qItem.ui === 'age-range' || qItem.ui === 'option-cards';
@@ -1451,7 +1412,6 @@
           <span class="text-xs font-extrabold text-emerald-400">سوال ${toPersianDigits(qIdx + 1)} از ${toPersianDigits(total)}</span>
         </div>
         <h3 class="${titleClass} mb-4 leading-relaxed">${qItem.q}</h3>
-        ${qItem.multi ? '<p class="text-sm text-[#205638] mb-3">می‌تونی چند گزینه انتخاب کنی</p>' : ''}
         ${bodyHTML}
       `;
       listEl.appendChild(card);
@@ -1469,16 +1429,6 @@
       listEl.querySelectorAll('[data-detail-submit]').forEach(btn => {
         btn.addEventListener('click', () => handleQuestionDetailSubmit(parseInt(btn.dataset.detailSubmit, 10)));
       });
-      listEl.querySelectorAll('[data-multi-submit]').forEach(btn => btn.addEventListener('click', () => {
-        const index = Number(btn.dataset.multiSubmit);
-        if (!isQuestionAnswered(index)) { showToast('گزینه‌ها و توضیحات لازم را کامل کن', '⚠️'); return; }
-        advanceAfterAnswer(index, false);
-      }));
-      listEl.querySelectorAll('[data-skip-index]').forEach(btn => btn.addEventListener('click', () => {
-        const index = Number(btn.dataset.skipIndex);
-        state.answers[index] = '__skipped__';
-        advanceAfterAnswer(index, false);
-      }));
 
       listEl.querySelectorAll('.metric-slider-input').forEach((input) => {
         syncMetricSlider(input);
@@ -1538,7 +1488,6 @@
         showToast('جزئیات را بنویسید', '⚠️');
         return;
       }
-      if (q.multi) { renderQuizQuestions(); return; }
       advanceAfterAnswer(qIdx, answeredBefore === total);
     }
 
@@ -1547,30 +1496,18 @@
       const q = state.selectedGoal.questions[qIdx];
       const total = state.selectedGoal.questions.length;
       const wasAlreadyAllAnswered = countAnsweredQuestions() === total;
-      if (q.multi) {
-        const current = state.answers[qIdx] || { choices: [], detail: '' };
-        const exclusive = q.exclusiveLabels || ['بدون حساسیت', 'هیچ‌کدام'];
-        const label = q.options[optIdx]?.label;
-        const choices = current.choices.includes(optIdx)
-          ? current.choices.filter(i => i !== optIdx)
-          : exclusive.includes(label) ? [optIdx]
-          : [...current.choices.filter(i => !exclusive.includes(q.options[i]?.label)), optIdx];
-        state.answers[qIdx] = { choices, detail: choices.some(i => followUpRequiredForChoice(q, i)) ? current.detail : '' };
-        renderQuizQuestions();
-        return;
-      }
       if (followUpRequiredForChoice(q, optIdx)) {
         state.answers[qIdx] = { choice: optIdx, detail: '' };
         renderQuizQuestions();
         return;
       }
       state.answers[qIdx] = optIdx;
-      const currentIndex = [17, 20].includes(q.originalNumber) ? updateConditionalQuestions(q) : qIdx;
-      if (currentIndex !== qIdx) renderQuizQuestions();
-      if (currentIndex === state.focusedQuestionIndex && currentIndex < state.selectedGoal.questions.length - 1) {
-        scheduleAutoAdvance(currentIndex, wasAlreadyAllAnswered, q.ui === 'age-range' || q.ui === 'option-cards' ? 360 : 280);
-      } else if (currentIndex === state.selectedGoal.questions.length - 1) {
-        advanceAfterAnswer(currentIndex, wasAlreadyAllAnswered);
+      if (qIdx === state.focusedQuestionIndex && qIdx < total - 1) {
+        // Do not re-render the current option list before auto-advance. The
+        // old render made every click visibly load the same options twice.
+        scheduleAutoAdvance(qIdx, wasAlreadyAllAnswered, q.ui === 'age-range' || q.ui === 'option-cards' ? 360 : 280);
+      } else if (qIdx === total - 1) {
+        advanceAfterAnswer(qIdx, wasAlreadyAllAnswered);
       } else {
         renderQuizQuestions();
       }
