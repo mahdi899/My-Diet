@@ -1335,6 +1335,14 @@ body:has(#page2Container:not(.hidden)) main { padding-top: 10px !important; }
 body:has(#page1Container:not(.hidden)) {
   background: #f7f3ea;
 }
+body:has(#page1Container:not(.hidden)) header:has(#appLogoHomeBtn) {
+  background: transparent !important;
+  border-bottom-color: transparent !important;
+  backdrop-filter: none;
+}
+body:has(#page1Container:not(.hidden)) header:has(#appLogoHomeBtn) > div {
+  justify-content: center !important;
+}
 body:has(#page1Container:not(.hidden))::before {
   content: '';
   position: fixed;
