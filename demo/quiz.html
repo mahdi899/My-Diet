@@ -749,7 +749,7 @@
               <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
             </label>
             <p id="morphInputSubtitle" class="text-xs text-slate-400 mb-3">
-              کد تایید ۴ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.
+              کد تایید ۶ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.
             </p>
             <button
               id="editPhoneInOtpModeBtn"
@@ -1757,7 +1757,7 @@
       if (mode === 'phone') {
         labelTextEl.textContent = 'شماره تلفن همراهت رو وارد کن:';
         subtitleEl.hidden = false;
-        subtitleEl.textContent = 'کد تایید ۴ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.';
+        subtitleEl.textContent = 'کد تایید ۶ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.';
         inputEl.value = state.userPhone || '';
         inputEl.placeholder = '09123456789';
         inputEl.maxLength = 11;
@@ -1768,11 +1768,11 @@
         confirmBtnText.textContent = 'تایید و دریافت کد تایید';
         setTimeout(() => inputEl.focus(), 80);
       } else {
-        labelTextEl.textContent = 'کد تایید ۴ رقمی رو وارد کن:';
+        labelTextEl.textContent = 'کد تایید ۶ رقمی رو وارد کن:';
         subtitleEl.hidden = true;
         inputEl.value = '';
-        inputEl.placeholder = '• • • •';
-        inputEl.maxLength = 4;
+        inputEl.placeholder = '• • • • • •';
+        inputEl.maxLength = 6;
         inputEl.classList.remove('tracking-wider', 'text-lg');
         inputEl.classList.add('tracking-[0.6em]', 'text-2xl', 'border-emerald-500');
         editPhoneBtn.classList.remove('hidden');
@@ -1826,17 +1826,18 @@
           if(state.submissionPhone!==normalizedPhone){state.submissionId=crypto.randomUUID();state.submissionPhone=normalizedPhone;}
           const result=await fetch('/v1/demo/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>({question:q.q,answer:answerLabel(q,state.answers[i])}))}),signal:AbortSignal.timeout(15000)});
           if(!result.ok)throw new Error('ذخیرهٔ اطلاعات انجام نشد؛ دوباره تلاش کنید.');
+          const sms=await fetch('/v1/auth/otp/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:normalizedPhone}),signal:AbortSignal.timeout(18000)});
+          if(!sms.ok){const problem=await sms.json().catch(()=>({}));throw new Error(problem.detail||'ارسال کد انجام نشد؛ دوباره تلاش کنید.');}
           window.demoTracking?.registered();
         } catch(error) {errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}
         finally{saveButton.disabled=false;}
         state.userPhone = normalizedPhone;
-        showToast('اطلاعات با این شماره ذخیره شد؛ کد این مرحلهٔ دمو آزمایشی است: ۱۲۳۴');
+        showToast('کد تأیید شش‌رقمی پیامک شد.');
         // Transform the phone input into the OTP input in-place!
         setMorphInputMode('otp');
       } else {
-        // Validate OTP code (accept 1234 or any 4-digit code)
-        if (rawVal.length < 4) {
-          errorEl.textContent = 'لطفاً کد تایید ۴ رقمی را کامل وارد کنید (مثلاً ۱۲۳۴).';
+        if (!/^\d{6}$/.test(rawVal)) {
+          errorEl.textContent = 'کد شش‌رقمی پیامک‌شده را وارد کنید.';
           errorEl.classList.remove('hidden');
           inputEl.classList.remove('shake-error');
           void inputEl.offsetWidth;
@@ -1844,7 +1845,17 @@
           return;
         }
 
-        // Valid OTP! Redirect to Payment Page (Page 3)
+        const verifyButton=document.getElementById('morphConfirmBtn');if(verifyButton.disabled)return;verifyButton.disabled=true;
+        try{
+          if(!state.smsSession||state.smsSession.phone!==state.userPhone){
+            const response=await fetch('/v1/auth/otp/verify',{method:'POST',headers:{'Content-Type':'application/json','x-sabzine-client':'web'},body:JSON.stringify({phone:state.userPhone,code:rawVal,platform:'demo-web'}),signal:AbortSignal.timeout(15000)});
+            const session=await response.json();if(!response.ok||!session.accessToken||session.role!=='user')throw new Error(session.detail||'کد تأیید معتبر نیست.');
+            state.smsSession={phone:state.userPhone,token:session.accessToken};
+          }
+          const saved=await fetch('/v1/demo/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
+          if(!saved.ok)throw new Error('تأیید شماره ذخیره نشد؛ دوباره تلاش کنید.');
+        }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;}
+        // Proceed only after server verification.
         closePlanSelectionModal();
         populateAndShowPaymentPage();
       }

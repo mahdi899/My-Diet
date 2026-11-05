@@ -30,7 +30,7 @@ snippet='''
         proxy_set_header Host $host;
         add_header Cache-Control "no-store" always;
     }
-    location ~ ^/v1/auth/(admin/login|refresh|logout|totp)$ {
+    location ~ ^/v1/auth/(admin/login|refresh|logout|totp|otp/request|otp/verify)$ {
         limit_except POST { deny all; }
         proxy_pass http://127.0.0.1:3003;
         proxy_set_header Host $host;
@@ -56,6 +56,18 @@ snippet='''
     location /insights/ { return 404; }
 '''
 text=site.read_text()
+text=text.replace('(admin/login|refresh|logout|totp)$','(admin/login|refresh|logout|totp|otp/request|otp/verify)$')
+if 'location ~ ^/v1/demo/submissions/' not in text:
+    text=text.replace('    location /v1/ {', '''    location ~ ^/v1/demo/submissions/[a-fA-F0-9-]+/verify$ {
+        limit_except POST { deny all; }
+        proxy_pass http://127.0.0.1:3003;
+        add_header Cache-Control "private, no-store" always;
+    }
+    location /v1/ {''')
+    site.write_text(text)
+text=text.replace('proxy_set_header X-Forwarded-Proto https;\n        proxy_set_header X-Forwarded-For $mydiet_analytics_ip;', 'proxy_set_header X-Forwarded-Proto https;')
+text=text.replace('proxy_set_header X-Forwarded-Proto https;', 'proxy_set_header X-Forwarded-Proto https;\n        proxy_set_header X-Forwarded-For $mydiet_analytics_ip;')
+site.write_text(text)
 if 'location = /v1/demo/submissions' not in text:
     text=text.replace('    location /v1/ {', '''    location = /v1/demo/submissions {
         limit_except POST { deny all; }

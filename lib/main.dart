@@ -13,7 +13,7 @@ import 'data/session_storage.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  const apiBase = String.fromEnvironment('API_BASE_URL');
+  const apiBase = String.fromEnvironment('API_BASE_URL',defaultValue:'https://my-diet.ir');
   final store = DemoStore(
     customerAuth: apiBase.isEmpty
         ? null

@@ -23,7 +23,11 @@ export const envSchema = z.object({
     .default('false')
     .transform((value) => value === 'true'),
   SENTRY_DSN: z.preprocess(emptyToUndefined, z.string().url().optional()),
-  SMS_PROVIDER: z.enum(['console', 'kavenegar']).default('console'),
+  SMS_PROVIDER: z.enum(['console', 'kavenegar','melipayamak']).default('console'),
+  MELIPAYAMAK_USERNAME: z.preprocess(emptyToUndefined,z.string().optional()),
+  MELIPAYAMAK_API_KEY: z.preprocess(emptyToUndefined,z.string().optional()),
+  MELIPAYAMAK_FROM: z.preprocess(emptyToUndefined,z.string().optional()),
+  MELIPAYAMAK_PATTERN_ID: z.preprocess(emptyToUndefined,z.string().regex(/^\d+$/).optional()),
   PAYMENT_GATEWAY: z.enum(['sandbox', 'zarinpal', 'idpay']).default('sandbox'),
   PAYMENT_GATEWAYS: z.string().default(''),
   AI_PROVIDER: z.enum(['fake', 'openai', 'configured']).default('fake'),

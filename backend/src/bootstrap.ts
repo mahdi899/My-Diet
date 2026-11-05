@@ -18,6 +18,8 @@ export async function createApp(): Promise<{
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
+  // The container is exposed only to the local Nginx proxy, which overwrites XFF.
+  app.getHttpAdapter().getInstance().set('trust proxy',1);
   app.useGlobalFilters(new ProblemFilter());
   app.use('/admin', express.static(resolve(process.cwd(), 'admin-web'), {
     setHeaders(res) {

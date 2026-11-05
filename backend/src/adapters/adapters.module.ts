@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MelipayamakSmsProvider } from './melipayamak.js';
 import type { Pool } from 'pg';
 import { PG_POOL } from '../database/database.js';
 import { ConfiguredAiProvider } from './configured-ai.js';
@@ -35,6 +36,7 @@ import {
       provide: SMS_PROVIDER,
       inject: [ENV],
       useFactory: (env: Env) => {
+        if(env.SMS_PROVIDER==='melipayamak')return new MelipayamakSmsProvider(env);
         if (env.SMS_PROVIDER === 'console') return new ConsoleSmsProvider();
         if (env.NODE_ENV !== 'production') return new UnavailableSmsProvider();
         throw new EnvError('Kavenegar adapter is not available in this build');
