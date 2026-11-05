@@ -431,11 +431,14 @@ body[data-page="home"] #home-posts.blog-slider .article-card-excerpt {
 .testimonials {
   padding-top: 70px;
   padding-bottom: 70px;
+  direction: rtl;
+  text-align: right;
 }
 
 .testimonials-intro {
   max-width: 520px;
   margin: 0 auto 28px;
+  text-align: center;
 }
 
 .testimonials-intro h2 {
@@ -444,11 +447,16 @@ body[data-page="home"] #home-posts.blog-slider .article-card-excerpt {
 
 .testimonials-slider.blog-slider {
   padding-bottom: 8px;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-x;
+  direction: rtl;
 }
 
 .testimonials-slider .testimonial-card {
   flex: 0 0 calc((100% - 56px) / 3);
   min-width: 0;
+  min-height: 232px;
   scroll-snap-align: start;
   margin-bottom: 0;
   background: #fff;
@@ -458,6 +466,8 @@ body[data-page="home"] #home-posts.blog-slider .article-card-excerpt {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  direction: rtl;
+  text-align: right;
 }
 
 .testimonial-stars {
@@ -514,6 +524,7 @@ body[data-page="home"] #home-posts.blog-slider .article-card-excerpt {
 
   .testimonials-slider .testimonial-card {
     flex-basis: 88%;
+    min-height: 218px;
     padding: 18px 16px 16px;
     border-radius: 16px;
   }

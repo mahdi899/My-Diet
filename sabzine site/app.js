@@ -7,7 +7,8 @@ function wireHorizontalSlider(track,itemSelector,{autoplayMs=0}={}){
   track.tabIndex=0;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const stepSize=()=>{const first=track.querySelector(itemSelector);if(!first)return 0;return first.getBoundingClientRect().width+parseFloat(getComputedStyle(track).gap);};
-  const move=direction=>{const step=stepSize();if(!step)return;track.scrollBy({left:direction*step,behavior:reduced.matches?'instant':'smooth'});};
+  const isRtl=()=>getComputedStyle(track).direction==='rtl';
+  const move=direction=>{const step=stepSize();if(!step)return;const sign=isRtl()?-direction:direction;track.scrollBy({left:sign*step,behavior:reduced.matches?'instant':'smooth'});};
   track.addEventListener('keydown',e=>{if(e.target!==track)return;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();move(e.key==='ArrowLeft'?-1:1);}});
   let startX=0,startScroll=0,down=false,dragging=false,lastDrag=-Infinity;
   track.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;down=true;dragging=false;startX=e.clientX;startScroll=track.scrollLeft;});
@@ -16,22 +17,37 @@ function wireHorizontalSlider(track,itemSelector,{autoplayMs=0}={}){
   track.addEventListener('pointerup',end);track.addEventListener('pointercancel',end);track.addEventListener('pointerleave',e=>{if(!dragging)down=false;});
   track.addEventListener('click',e=>{if(performance.now()-lastDrag<300){e.preventDefault();e.stopPropagation();}},true);
   if(autoplayMs>0&&!reduced.matches){
-    let paused=false;
+    let inView=false;
+    let pagePointerDown=false;
+    let sliderPaused=false;
     const items=()=>[...track.querySelectorAll(itemSelector)];
     let index=0;
+    const scrollToItem=el=>{
+      const r=track.getBoundingClientRect();
+      const e=el.getBoundingClientRect();
+      const delta=isRtl()?(e.right-r.right):(e.left-r.left);
+      track.scrollBy({left:delta,behavior:reduced.matches?'auto':'smooth'});
+    };
+    const viewRoot=track.closest('.testimonials')||track;
+    const io=new IntersectionObserver(([entry])=>{
+      inView=!!entry?.isIntersecting;
+    },{threshold:0.12});
+    io.observe(viewRoot);
+    const onPointerUp=()=>{pagePointerDown=false;};
+    addEventListener('pointerdown',()=>{pagePointerDown=true;},{passive:true,capture:true});
+    addEventListener('pointerup',onPointerUp,{passive:true,capture:true});
+    addEventListener('pointercancel',onPointerUp,{passive:true,capture:true});
     const tick=()=>{
-      if(paused||dragging||down||document.hidden)return;
+      if(!inView||pagePointerDown||sliderPaused||dragging||down||document.hidden)return;
       const list=items();
       if(!list.length)return;
       index=(index+1)%list.length;
-      list[index].scrollIntoView({behavior:'smooth',inline:'start',block:'nearest'});
+      scrollToItem(list[index]);
     };
     const timer=setInterval(tick,autoplayMs);
-    track.addEventListener('pointerenter',()=>{paused=true;});
-    track.addEventListener('pointerleave',()=>{paused=false;});
-    track.addEventListener('touchstart',()=>{paused=true;},{passive:true});
-    track.addEventListener('touchend',()=>{paused=false;},{passive:true});
-    addEventListener('pagehide',()=>clearInterval(timer));
+    track.addEventListener('pointerenter',()=>{sliderPaused=true;});
+    track.addEventListener('pointerleave',()=>{sliderPaused=false;});
+    addEventListener('pagehide',()=>{clearInterval(timer);io.disconnect();});
   }
 }
 const posts=[{id:'weekly-planning',title:'یک هفته غذای خوب؛ بدون سردرگمی',category:'برنامه‌ریزی غذایی',image:1,time:'۵',intro:'از خرید مواد اولیه تا انتخاب وعده‌ها؛ چطور برای روزهای شلوغ، تصمیم‌های ساده‌تری بگیریم؟'},{id:'balanced-plate',title:'بشقاب متعادل از کجا شروع می‌شود؟',category:'تغذیه سالم',image:0,time:'۴',intro:'نگاهی ساده به تنوع غذاها و ساختن بشقابی که با سلیقه و زندگی روزمره‌ات هماهنگ باشد.'},{id:'small-habits',title:'عادت‌های کوچک برای روزهای پرمشغله',category:'سبک زندگی',image:2,time:'۶',intro:'برای مراقبت از خودت همیشه به تغییرهای بزرگ نیاز نداری؛ از یک قدم کوچک شروع کن.'},{id:'shopping-list',title:'یک فهرست خرید، چند وعدهٔ متفاوت',category:'برنامه‌ریزی غذایی',image:3,time:'۴',intro:'چطور مواد اولیهٔ مشترک، آشپزی در طول هفته را ساده‌تر می‌کنند؟'},{id:'food-variety',title:'رنگ‌های بیشتر، انتخاب‌های متنوع‌تر',category:'تغذیه سالم',image:1,time:'۳',intro:'تنوع در آشپزخانه با آشنا شدن با مواد اولیه و روش‌های آماده‌سازی شروع می‌شود.'},{id:'mindful-meals',title:'برای وعدهٔ غذایی‌ات کمی وقت بگذار',category:'سبک زندگی',image:0,time:'۵',intro:'چند پیشنهاد برای اینکه در میان کارهای روزانه، زمان غذا خوردن را فراموش نکنیم.'}];
