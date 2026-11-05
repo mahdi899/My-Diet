@@ -41,7 +41,7 @@ const credentials=JSON.parse(fs.readFileSync('backend/.env.local-admin.json','ut
     await page.locator('#login-password').fill(credentials.adminPassword);
     await page.locator('#login-form [type=submit]').click();
     await page.locator('#panel').waitFor({state:'visible'});
-    await page.getByText('آخرین مرحلهٔ نشست‌های غیرفعال',{exact:true}).waitFor();
+    await page.getByText('ریزش کاربران بر اساس صفحه و سؤال',{exact:true}).waitFor();
     await page.screenshot({path:'screenshots/admin-demo-analytics.png',fullPage:true});
     assert.equal((await fetch('https://my-diet.ir/v1/admin/web-analytics?days=7')).status,401,'Authenticated report leaked through cache');
     assert.deepEqual(errors,[]);

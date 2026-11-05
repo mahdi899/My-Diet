@@ -24,17 +24,18 @@ export class WebAnalyticsController implements OnApplicationShutdown {
       steps as (select e.*,d.string_value as step from e join d on d.website_event_id=e.event_id and d.data_key='step' where e.event_name='step_view') `;
     const query = (text: string) => this.pool!.query(prefix + text,[this.env.ANALYTICS_WEBSITE_ID,days]).then(r=>r.rows);
     try {
-      const [summary,events,goals,stages,exits,sources,daily,journeys] = await Promise.all([
+      const [summary,events,goals,stages,exits,sources,daily,active] = await Promise.all([
         query(`select count(*) filter(where event_type=1)::int as pageviews,count(distinct session_id)::int as visitors,count(distinct visit_id)::int as visits,count(distinct visit_id) filter(where event_name='questionnaire_completed')::int as completed from e`),
         query(`select event_name as name,count(*)::int as count,count(distinct visit_id)::int as visits from e where event_type=2 group by event_name order by count(*) desc limit 50`),
         query(`select d.string_value as goal,count(*)::int as clicks,count(distinct e.visit_id)::int as visits from e join d on d.website_event_id=e.event_id and d.data_key='goal' where e.event_name='goal_selected' group by d.string_value order by count(*) desc`),
         query(`, times as (select e.visit_id,s.string_value as step,sum(least(30000,greatest(0,t.number_value)))/1000.0 as seconds from e join d s on s.website_event_id=e.event_id and s.data_key='step' join d t on t.website_event_id=e.event_id and t.data_key='activeMs' where e.event_name='step_time' group by e.visit_id,s.string_value), views as (select step,count(*)::int as views,count(distinct visit_id)::int as visits from steps group by step) select v.*,round(coalesce(avg(t.seconds),0),1)::float as "averageSeconds",round(coalesce(sum(t.seconds),0),1)::float as "totalSeconds" from views v left join times t on t.step=v.step group by v.step,v.views,v.visits order by v.views desc limit 200`),
-        query(`, inactive as (select visit_id from e group by visit_id having max(created_at)<now()-interval '30 minutes'), last_steps as (select distinct on(s.visit_id) s.visit_id,s.step from steps s join inactive i on i.visit_id=s.visit_id order by s.visit_id,s.created_at desc) select step,count(*)::int as visits from last_steps group by step order by count(*) desc limit 100`),
+        query(`, inactive as (select visit_id from e group by visit_id having max(created_at)<now()-interval '2 minutes' and count(*) filter(where event_name='phone_registered')=0), last_steps as (select distinct on(s.visit_id) s.visit_id,s.step from steps s join inactive i on i.visit_id=s.visit_id order by s.visit_id,s.created_at desc) select step,count(*)::int as visits,round(100.0*count(*)/nullif(sum(count(*)) over(),0),1)::float as percent from last_steps group by step order by count(*) desc`),
         query(`select coalesce(nullif(utm_source,''),nullif(referrer_domain,''),'direct') as source,coalesce(utm_campaign,'') as campaign,count(distinct visit_id)::int as visits from e where event_type=1 group by 1,2 order by count(distinct visit_id) desc limit 100`),
         query(`select to_char(created_at at time zone 'Asia/Tehran','YYYY-MM-DD') as day,count(*) filter(where event_type=1)::int as pageviews,count(distinct visit_id)::int as visits from e group by 1 order by 1`),
-        query(`select visit_id as id,min(created_at) as started,max(created_at) as last_seen,string_agg(step,' → ' order by created_at) as path from steps group by visit_id order by max(created_at) desc limit 30`),
+        query(`, presence as (select distinct on(visit_id) visit_id,event_name,created_at from e where event_name in ('active_heartbeat','presence_end') order by visit_id,created_at desc) select count(*)::int as count from presence where event_name='active_heartbeat' and created_at>now()-interval '25 seconds'`),
       ]);
-      return {days,generatedAt:new Date().toISOString(),summary:summary[0],events,goals,stages,exits,sources,daily,journeys};
+      const totalClicks=goals.reduce((n,r)=>n+Number(r.clicks),0);
+      return {days,generatedAt:new Date().toISOString(),summary:summary[0],activeSessions:active[0]?.count||0,events,goals:goals.map(r=>({...r,percent:totalClicks?Math.round(Number(r.clicks)/totalClicks*1000)/10:0})),stages,exits,sources,daily};
     } catch {
       throw new ApiError(503,'analytics_unavailable','دریافت گزارش رهگیری انجام نشد؛ دوباره تلاش کنید');
     }

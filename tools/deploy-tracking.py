@@ -56,6 +56,16 @@ snippet='''
     location /insights/ { return 404; }
 '''
 text=site.read_text()
+if 'location = /v1/demo/submissions' not in text:
+    text=text.replace('    location /v1/ {', '''    location = /v1/demo/submissions {
+        limit_except POST { deny all; }
+        limit_req zone=demo_leads burst=10 nodelay;
+        client_max_body_size 128k;
+        proxy_pass http://127.0.0.1:3003;
+        add_header Cache-Control "private, no-store" always;
+    }
+    location /v1/ {''')
+    site.write_text(text)
 if '# My Diet analytics/admin' not in text:
     site.write_text(text.replace('    location / {',snippet+'\n    location / {',1))
 pathlib.Path('/etc/nginx/conf.d/mydiet-analytics.conf').write_text('''map $http_ar_real_ip $mydiet_analytics_ip {
@@ -63,6 +73,7 @@ pathlib.Path('/etc/nginx/conf.d/mydiet-analytics.conf').write_text('''map $http_
     ~^[0-9.]+$ $http_ar_real_ip;
     ~^[0-9a-fA-F:]+$ $http_ar_real_ip;
 }
+limit_req_zone $mydiet_analytics_ip zone=demo_leads:10m rate=10r/m;
 ''')
 run('nginx','-t');run('systemctl','reload','nginx')
 pathlib.Path('/usr/local/sbin/sabzine-db-backup').write_text('''#!/usr/bin/env bash

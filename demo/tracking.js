@@ -27,6 +27,7 @@
       event('step_view');
     },
     complete(){event('questionnaire_completed');},
+    registered(){event('phone_registered');},
   };
   window.mydietBeforeSend=(type,payload)=>{
     if(type!=='event')return false;
@@ -47,7 +48,11 @@
     return {...payload,url:url.pathname+(safe.size?'?'+safe:''),referrer,title:'My Diet Demo',data};
   };
   for(const type of ['pointerdown','keydown','touchstart','scroll'])addEventListener(type,()=>{lastActivity=performance.now();},{passive:true});
-  setInterval(flush,10000);
+  const heartbeat=()=>{if(!document.hidden&&performance.now()-lastActivity<60000)event('active_heartbeat');};
+  setInterval(()=>{flush();heartbeat();},10000);
+  heartbeat();
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)event('presence_end');else heartbeat();});
+  addEventListener('pagehide',()=>event('presence_end'));
   document.addEventListener('visibilitychange',()=>{flush();hidden=document.hidden;lastTick=performance.now();if(!hidden)lastActivity=lastTick;});
   addEventListener('pagehide',flush);
   addEventListener('pageshow',e=>{if(e.persisted){lastTick=performance.now();lastActivity=lastTick;event('step_view');}});
