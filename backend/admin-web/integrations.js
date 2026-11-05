@@ -53,7 +53,7 @@ function addAiModal() {
 async function aiPage() {
   const rows = await api('admin/ai-connections'), view = element('div', null, 'ai-page'), active = rows.find(row => row.active);
   const summary = element('section', null, 'card integration-summary'), title = element('div', null, 'integration-summary-title'), text = element('div');
-  text.append(element('h2', 'هوش مصنوعی، در خدمت سبزینه'), element('p', 'انتخاب سرویس تولید برنامه از یک نقطه.')); title.append(iconTile('sparkles'), text);
+  text.append(element('h2', 'هوش مصنوعی، در خدمت رژیم من'), element('p', 'انتخاب سرویس تولید برنامه از یک نقطه.')); title.append(iconTile('sparkles'), text);
   const metrics = element('div', null, 'summary-metrics');
   for (const [label, value] of [['سرویس‌های متصل', number(rows.length)], ['سرویس فعال', active ? active.name : 'انتخاب نشده'], ['وضعیت کلیدها', 'خصوصی']]) { const metric = element('div', null, 'summary-metric'); metric.append(element('small', label), typeof value === 'string' && value.length > 4 ? badge(active || label === 'وضعیت کلیدها' ? 'active' : 'draft', value) : element('strong', value)); metrics.append(metric); }
   summary.append(title, metrics); view.append(summary);
@@ -83,8 +83,8 @@ async function notificationModal() {
   openModal('ساخت اعلان جدید', (body, dialog) => {
     const form = element('form'), title = field(form, 'title', 'عنوان اعلان'); title.maxLength = 120; title.placeholder = 'عنوان کوتاه و روشن برای پیام شما';
     const message = field(form, 'body', 'متن اعلان', 'textarea'); message.maxLength = 1000; message.rows = 3; message.placeholder = 'چه پیامی برای کاربران دارید؟';
-    const preview = element('div', null, 'notification-preview'), previewText = element('div'), previewTitle = element('strong', 'سبزینه'), previewBody = element('p', 'پیش‌نمایش پیام شما'); previewText.append(previewTitle, previewBody); preview.append(iconTile('leaf'), previewText, element('small', 'پیش‌نمایش')); form.append(preview);
-    title.oninput = () => { previewTitle.textContent = title.value || 'سبزینه'; }; message.oninput = () => { previewBody.textContent = message.value || 'پیش‌نمایش پیام شما'; };
+    const preview = element('div', null, 'notification-preview'), previewText = element('div'), previewTitle = element('strong', 'رژیم من'), previewBody = element('p', 'پیش‌نمایش پیام شما'); previewText.append(previewTitle, previewBody); preview.append(iconTile('leaf'), previewText, element('small', 'پیش‌نمایش')); form.append(preview);
+    title.oninput = () => { previewTitle.textContent = title.value || 'رژیم من'; }; message.oninput = () => { previewBody.textContent = message.value || 'پیش‌نمایش پیام شما'; };
     const audience = field(form, 'audience', 'مخاطبان', 'select');
     for (const [value, label] of [['device', 'آزمایشی · یک دستگاه'], ['all', 'همه کاربران']]) audience.append(Object.assign(element('option', label), { value }));
     const device = field(form, 'deviceId', 'دستگاه آزمایشی', 'select'); device.append(Object.assign(element('option', 'یک دستگاه انتخاب کنید'), { value: '' }));

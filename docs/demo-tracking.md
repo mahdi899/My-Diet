@@ -33,7 +33,8 @@ The client sends heartbeats every ten seconds until 60 seconds of inactivity.
 database, separately from Umami. A normalized phone is indexed by keyed HMAC;
 phone and all answer snapshots are encrypted with the server's FIELD_KEY.
 Submission UUIDs make retries idempotent; no public lookup exists. The existing
-demo OTP is not a real SMS verification, so `phone_verified` remains false.
+OTP is now verified through the shared SMS API. Until a valid code is verified,
+`phone_verified` remains false. SMS delivery depends on provider template approval.
 Keep FIELD_KEY backed up securely: it is required to decrypt submissions.
 Events tagged `qa` are excluded from every admin report. Reporting starts at
 installation; historical activity cannot be recovered. Browser blocking and

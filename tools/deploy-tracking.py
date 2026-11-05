@@ -56,6 +56,17 @@ snippet='''
     location /insights/ { return 404; }
 '''
 text=site.read_text()
+if 'location ^~ /go/' not in text:
+    text=text.replace('    location / {', '''    location ^~ /go/ {
+        limit_except GET HEAD { deny all; }
+        proxy_pass http://127.0.0.1:3003;
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "private, no-store, no-cache, max-age=0" always;
+        add_header CDN-Cache-Control "no-store" always;
+        add_header Surrogate-Control "no-store" always;
+    }
+    location / {''',1)
+    site.write_text(text)
 text=text.replace('(admin/login|refresh|logout|totp)$','(admin/login|refresh|logout|totp|otp/request|otp/verify)$')
 if 'location ~ ^/v1/demo/submissions/' not in text:
     text=text.replace('    location /v1/ {', '''    location ~ ^/v1/demo/submissions/[a-fA-F0-9-]+/verify$ {

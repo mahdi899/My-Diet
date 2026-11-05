@@ -13,10 +13,11 @@ import { IntegrationsController } from './integrations.controller.js';
 import { IntegrationsService } from './integrations.service.js';
 import { WebAnalyticsController } from './web-analytics.controller.js';
 import { DemoLeadsController } from './demo-leads.controller.js';
+import { CampaignLinksController, CampaignRedirectController } from './campaign-links.controller.js';
 
 @Module({
   imports: [MaintenanceModule, MoneyModule, PublishingModule],
-  controllers: [AdminController, SpecialistsController, SpecialistProfileController, PublicConfigController, IntegrationsController, WebAnalyticsController, DemoLeadsController],
+  controllers: [AdminController, SpecialistsController, SpecialistProfileController, PublicConfigController, IntegrationsController, WebAnalyticsController, DemoLeadsController, CampaignLinksController, CampaignRedirectController],
   providers: [AdminService, IntegrationsService],
   exports: [AdminService, MaintenanceModule],
 })

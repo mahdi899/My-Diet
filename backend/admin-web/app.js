@@ -98,7 +98,7 @@ const orderColumns = [
 function dashboard(stats, orders) {
   const view = element('div', null, 'dashboard-page');
   const hero = element('section', null, 'dashboard-hero'), copy = element('div', null, 'hero-copy'), decoration = element('div', null, 'hero-decoration'); decoration.setAttribute('aria-hidden', 'true'); decoration.append(icon('leaf'));
-  copy.append(element('span', 'هر روز، یک قدم به سلامت نزدیک‌تر', 'eyebrow'), element('h2', 'سبزینه را با یک نگاه مدیریت کنید.'), element('p', 'از پیگیری درخواست‌ها تا ارتباط با کاربران؛ همهٔ مسیرهای مهم، همین‌جا در دسترس شماست.'), button('مشاهده درخواست‌ها', () => navigate('requests'), { iconName: 'arrow-left', secondary: true })); hero.append(copy, decoration); view.append(hero);
+  copy.append(element('span', 'هر روز، یک قدم به سلامت نزدیک‌تر', 'eyebrow'), element('h2', 'رژیم من را با یک نگاه مدیریت کنید.'), element('p', 'از پیگیری درخواست‌ها تا ارتباط با کاربران؛ همهٔ مسیرهای مهم، همین‌جا در دسترس شماست.'), button('مشاهده درخواست‌ها', () => navigate('requests'), { iconName: 'arrow-left', secondary: true })); hero.append(copy, decoration); view.append(hero);
   const cards = element('div', null, 'metrics-grid');
   for (const item of [
     { label: 'کاربران', value: stats.users, note: number(stats.newUsers) + ' عضو جدید در ۷ روز اخیر', icon: 'users', tone: 'green' },
@@ -134,7 +134,7 @@ const genericColumns = {
 };
 function auditLabel(action) { return ({ ai_connection_created: 'افزودن سرویس هوش مصنوعی', ai_connection_deleted: 'حذف سرویس هوش مصنوعی', ai_connection_activation: 'تغییر وضعیت سرویس', push_draft_created: 'ساخت پیش‌نویس اعلان', push_queued: 'قرارگیری اعلان در صف', push_deleted: 'حذف اعلان', firebase_configured: 'تنظیم اتصال Firebase', user_status: 'تغییر وضعیت کاربر', wallet_adjusted: 'اصلاح موجودی', price_updated: 'تغییر تعرفه', reward_updated: 'تغییر پاداش' })[action] || action; }
 function tablePage(rows, section) {
-  const empty = { users: ['کاربری برای نمایش نیست', 'حساب‌های ثبت‌شدهٔ سبزینه در این بخش قرار می‌گیرند.'], requests: ['درخواست جدیدی ثبت نشده', 'وضعیت درخواست‌های برنامه را از همین بخش دنبال خواهید کرد.'], orders: ['هنوز سفارشی ثبت نشده', 'جزئیات خرید خدمات کاربران پس از ثبت سفارش نمایش داده می‌شود.'], payments: ['پرداختی برای نمایش نیست', 'تراکنش‌های کاربران پس از ثبت در این فهرست نمایش داده می‌شوند.'], reviews: ['همه‌چیز بررسی شده است', 'نظر جدیدی که به بررسی شما نیاز داشته باشد، اینجا نمایش داده می‌شود.'], messages: ['هنوز گفت‌وگویی ندارید', 'گفت‌وگوهای مرتبط با حساب شما در این بخش قرار می‌گیرند.'], tickets: ['تیکتی ثبت نشده است', 'درخواست‌های پشتیبانی کاربران در این بخش نمایش داده می‌شوند.'], specialists: ['پزشک فعالی برای نمایش نیست', 'اطلاعات پزشکان فعال سبزینه در این فهرست نمایش داده می‌شود.'], 'audit-logs': ['هنوز فعالیتی ثبت نشده', 'تغییرات مدیریتی با زمان و شناسه در این بخش ثبت می‌شوند.'] };
+  const empty = { users: ['کاربری برای نمایش نیست', 'حساب‌های ثبت‌شدهٔ رژیم من در این بخش قرار می‌گیرند.'], requests: ['درخواست جدیدی ثبت نشده', 'وضعیت درخواست‌های برنامه را از همین بخش دنبال خواهید کرد.'], orders: ['هنوز سفارشی ثبت نشده', 'جزئیات خرید خدمات کاربران پس از ثبت سفارش نمایش داده می‌شود.'], payments: ['پرداختی برای نمایش نیست', 'تراکنش‌های کاربران پس از ثبت در این فهرست نمایش داده می‌شوند.'], reviews: ['همه‌چیز بررسی شده است', 'نظر جدیدی که به بررسی شما نیاز داشته باشد، اینجا نمایش داده می‌شود.'], messages: ['هنوز گفت‌وگویی ندارید', 'گفت‌وگوهای مرتبط با حساب شما در این بخش قرار می‌گیرند.'], tickets: ['تیکتی ثبت نشده است', 'درخواست‌های پشتیبانی کاربران در این بخش نمایش داده می‌شوند.'], specialists: ['پزشک فعالی برای نمایش نیست', 'اطلاعات پزشکان فعال رژیم من در این فهرست نمایش داده می‌شود.'], 'audit-logs': ['هنوز فعالیتی ثبت نشده', 'تغییرات مدیریتی با زمان و شناسه در این بخش ثبت می‌شوند.'] };
   const filters = [...new Set(rows.map(r => r.status).filter(Boolean))].map(value => [value, statusLabels[value] || value]);
   return listPanel(rows, { title: sections[section], description: number(rows.length) + ' مورد در فهرست', columns: section === 'orders' ? orderColumns : genericColumns[section], iconName: pageMeta[section].icon, filters, emptyTitle: empty[section][0], emptyDescription: empty[section][1] });
 }
@@ -156,7 +156,7 @@ function settings() {
 }
 async function load() {
   const request = ++generation, section = current, meta = pageMeta[section];
-  $('title').textContent = meta.title; $('breadcrumb').textContent = meta.title; $('page-eyebrow').textContent = meta.group; $('page-description').textContent = meta.description; document.title = meta.title + ' | مدیریت سبزینه';
+  $('title').textContent = meta.title; $('breadcrumb').textContent = meta.title; $('page-eyebrow').textContent = meta.group; $('page-description').textContent = meta.description; document.title = meta.title + ' | مدیریت رژیم من';
   $('page-actions').replaceChildren();
   document.querySelectorAll('.nav-link').forEach(link => { const active = link.dataset.section === section; link.classList.toggle('active', active); if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current'); });
   $('content').replaceChildren(skeleton()); $('content').setAttribute('aria-busy', 'true');
@@ -168,6 +168,7 @@ async function load() {
     else if (section==='specialist-reports') view=SabzineReports.specialistReports();
     else if (section==='journeys') view = SabzineJourneys.journeyPage();
     else if (section==='web-analytics') view = await webAnalyticsPage();
+    else if (section==='campaign-links') view = await campaignLinksPage();
     else if (section === 'ai') view = await aiPage();
     else if (section === 'notifications') view = await notificationsPage();
     else if (section === 'streaks') view = SabzineStreak.campaignPage();
