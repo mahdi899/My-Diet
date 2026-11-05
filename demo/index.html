@@ -931,12 +931,17 @@
             <p class="goal-card-desc">${goal.desc}</p>
           </span>
         `;
-        btn.addEventListener('click', () => selectGoalAndGoToPage2(goal.id));
+        btn.addEventListener('click', () => {
+          const params = new URLSearchParams(window.location.search);
+          params.set('goal', goal.id);
+          window.location.href = `quiz.html?${params.toString()}`;
+        });
         grid.appendChild(btn);
       });
     }
 
     function transitionFromSloganToGoals() {
+      const params = new URLSearchParams(window.location.search);
       const sloganStage = document.getElementById('sloganStage');
       const goalStage = document.getElementById('goalSelectionStage');
 
@@ -946,16 +951,12 @@
         sloganStage.classList.remove('stage-fade-out');
         goalStage.classList.remove('hidden');
         goalStage.classList.add('stage-fade-in');
+        window.location.href = `goals.html${params.size ? `?${params}` : ''}`;
       }, 380);
     }
 
     function goToIntroHome() {
-      switchPage(1);
-      const sloganStage = document.getElementById('sloganStage');
-      const goalStage = document.getElementById('goalSelectionStage');
-      goalStage.classList.add('hidden');
-      sloganStage.classList.remove('hidden');
-      playSloganIntroEffect();
+      window.location.href = `index.html${window.location.search}`;
     }
 
     function replaySloganIntro() {
@@ -1916,15 +1917,32 @@
     // =========================================================
     window.addEventListener('DOMContentLoaded', () => {
       renderGoalCards();
-      playSloganIntroEffect();
       setupQuizScrollEnforcement();
+
+      const currentFile = window.location.pathname.split('/').pop() || 'index.html';
+      if (currentFile === 'goals.html') {
+        document.getElementById('sloganStage').classList.add('hidden');
+        document.getElementById('goalSelectionStage').classList.remove('hidden');
+        document.getElementById('goalSelectionStage').classList.add('stage-fade-in');
+      } else if (currentFile === 'quiz.html') {
+        const goalId = new URLSearchParams(window.location.search).get('goal');
+        if (!GOALS_DATA.some((goal) => goal.id === goalId)) {
+          window.location.replace(`goals.html${window.location.search}`);
+          return;
+        }
+        selectGoalAndGoToPage2(goalId);
+      } else {
+        playSloganIntroEffect();
+      }
 
       // Page 1 buttons
       document.getElementById('letsGoBtn').addEventListener('click', transitionFromSloganToGoals);
       document.getElementById('appLogoHomeBtn').addEventListener('click', goToIntroHome);
 
       // Header stepper navigation
-      document.getElementById('navStep1Btn').addEventListener('click', () => switchPage(1));
+      document.getElementById('navStep1Btn').addEventListener('click', () => {
+        window.location.href = `goals.html${window.location.search}`;
+      });
       document.getElementById('navStep2Btn').addEventListener('click', () => {
         if (!document.getElementById('navStep2Btn').disabled) switchPage(2);
       });
@@ -1934,9 +1952,7 @@
 
       // Page 2 controls
       document.getElementById('backToGoalsBtn').addEventListener('click', () => {
-        switchPage(1);
-        document.getElementById('sloganStage').classList.add('hidden');
-        document.getElementById('goalSelectionStage').classList.remove('hidden');
+        window.location.href = `goals.html${window.location.search}`;
       });
 
       document.getElementById('scrollPrevAnsweredBtn').addEventListener('click', () => {
