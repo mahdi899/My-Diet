@@ -14,7 +14,7 @@ class AdminHome extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('مدیریت سبزینه')),
+      appBar: AppBar(title: const Text('مدیریت رژیم من')),
       body: PageBody(
         children: [
           const ClinicianPerformanceCard(),
@@ -233,7 +233,7 @@ Future<void> requestDetails(BuildContext context, DietRequest r) async {
             }),
             const SizedBox(height: 16),
             const Notice(
-              'تمام درخواست‌ها برای پزشک سبزینه ارسال می‌شوند؛ تأیید برنامه در پنل پزشک انجام می‌شود.',
+              'تمام درخواست‌ها برای پزشک رژیم من ارسال می‌شوند؛ تأیید برنامه در پنل پزشک انجام می‌شود.',
             ),
           ],
         ),
@@ -306,7 +306,7 @@ class ClinicianPerformanceCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Heading(
-            'عملکرد پزشک سبزینه',
+            'عملکرد پزشک رژیم من',
             subtitle:
                 'بر اساس همهٔ بازخوردهای ثبت‌شده؛ مستقل از تأیید نمایش عمومی',
           ),

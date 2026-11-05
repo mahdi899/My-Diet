@@ -1,11 +1,11 @@
 /* Shared visual components. User-provided strings are always rendered as text. */
 const pageMeta = {
-  dashboard: { title: 'داشبورد', icon: 'grid', group: 'نمای کلی', description: 'تصویر امروز سبزینه؛ همه‌چیز در یک نگاه.' },
+  dashboard: { title: 'داشبورد', icon: 'grid', group: 'نمای کلی', description: 'تصویر امروز رژیم من؛ همه‌چیز در یک نگاه.' },
   users: { title: 'کاربران', icon: 'users', group: 'مدیریت خدمات', description: 'حساب‌ها و وضعیت کاربران را از اینجا دنبال کنید.' },
   specialists: { title: 'پزشکان', icon: 'medical', group: 'مدیریت خدمات', description: 'پزشکان فعال و اطلاعات تخصصی آن‌ها.' },
   requests: { title: 'درخواست‌ها', icon: 'clipboard', group: 'مدیریت خدمات', description: 'مسیر درخواست‌ها، از ثبت تا انتشار برنامه.' },
   orders: { title: 'سفارش‌ها', icon: 'bag', group: 'مدیریت خدمات', description: 'جزئیات سفارش‌ها و وضعیت خرید خدمات.' },
-  payments: { title: 'پرداخت‌ها', icon: 'wallet', group: 'مدیریت خدمات', description: 'پرداخت‌ها و تراکنش‌های ثبت‌شده در سبزینه.' },
+  payments: { title: 'پرداخت‌ها', icon: 'wallet', group: 'مدیریت خدمات', description: 'پرداخت‌ها و تراکنش‌های ثبت‌شده در رژیم من.' },
   reviews: { title: 'نظرات', icon: 'star', group: 'ارتباط با کاربران', description: 'نظرات در انتظار بررسی را بخوانید و مدیریت کنید.' },
   messages: { title: 'پیام‌ها', icon: 'message', group: 'ارتباط با کاربران', description: 'گفت‌وگوهای مرتبط با حساب مدیریت شما.' },
   tickets: { title: 'تیکت‌ها', icon: 'headphones', group: 'ارتباط با کاربران', description: 'درخواست‌های پشتیبانی و ارتباط کاربران با تیم شما.' },

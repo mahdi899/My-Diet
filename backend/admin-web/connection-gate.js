@@ -58,7 +58,7 @@ function ensureConnection(doc) {
   screen.hidden = true;
   screen.setAttribute('role', 'alertdialog');
   screen.setAttribute('aria-labelledby', 'connection-title');
-  screen.innerHTML = '<div><strong style="color:#205638;font-size:28px">سبزینه</strong><h1 id="connection-title"></h1><p>برنامهٔ ذخیره‌شده به‌صورت آفلاین نمایش داده نمی‌شود.</p><button id="connection-retry" type="button">تلاش دوباره</button></div>';
+  screen.innerHTML = '<div><strong style="color:#205638;font-size:28px">رژیم من</strong><h1 id="connection-title"></h1><p>برنامهٔ ذخیره‌شده به‌صورت آفلاین نمایش داده نمی‌شود.</p><button id="connection-retry" type="button">تلاش دوباره</button></div>';
   doc.body.appendChild(screen);
 }
 
