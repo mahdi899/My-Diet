@@ -819,6 +819,8 @@
     <span id="toastText">عملیات با موفقیت انجام شد</span>
   </div>
 
+  <script src="tracking-config.js?v=1"></script>
+  <script src="tracking.js?v=1"></script>
   <script src="questionnaire-data.js?v=11"></script>
   <script>
     // =========================================================
@@ -921,6 +923,7 @@
       GOALS_DATA.forEach((goal) => {
         const btn = document.createElement('button');
         btn.type = 'button';
+        btn.dataset.trackingGoal = goal.id;
         const image = goal.image || 'assets/vegetables.jpg';
         btn.className = 'goal-card group w-full text-right cursor-pointer';
         btn.innerHTML = `
@@ -1358,6 +1361,7 @@
       const answeredCount = countAnsweredQuestions();
       const qIdx = Math.min(state.focusedQuestionIndex, total - 1);
       const qItem = questions[qIdx];
+      window.demoTracking?.step('question', {goal:state.selectedGoal.id,question:Number(qItem.originalNumber)||qIdx+1});
       let actions = document.getElementById('headerQuizActions');
       if (!actions) {
         actions = document.createElement('div');
@@ -1697,6 +1701,7 @@
     }
 
     function showModalStep1() {
+      window.demoTracking?.step('plans');
       state.modalStep = 1;
       document.getElementById('modalHeaderTitle').textContent = 'انتخاب نوع برنامه';
 
@@ -1710,6 +1715,7 @@
     }
 
     function showModalStep2(planId) {
+      window.demoTracking?.step('contact');
       const plan = PLANS_CATALOG[planId] || PLANS_CATALOG.monthly;
       state.selectedPlan = plan;
       state.modalStep = 2;
@@ -1879,6 +1885,7 @@
     // NAVIGATION & HELPERS
     // =========================================================
     function switchPage(pageNum) {
+      if(pageNum===3)window.demoTracking?.step('payment');
       hideAiPreparingScreen(false);
       state.currentPage = pageNum;
       const p1 = document.getElementById('page1Container');
@@ -1939,6 +1946,8 @@
     }
 
     function startAiPreparingFlow() {
+      window.demoTracking?.complete();
+      window.demoTracking?.step('preparing');
       clearAiPreparingTimer();
       document.getElementById('page1Container').classList.add('hidden');
       document.getElementById('page2Container').classList.add('hidden');

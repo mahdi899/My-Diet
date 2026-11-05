@@ -126,7 +126,7 @@ export class IdentityController {
         0,
         Math.floor((new Date(issued.sessionExpiresAt).getTime() - Date.now()) / 1000),
       );
-      const secure = this.env.NODE_ENV === 'production' ? '; Secure' : '';
+      const secure = ['production','staging'].includes(this.env.NODE_ENV) ? '; Secure' : '';
       res.setHeader(
         'Set-Cookie',
         `sabzine_refresh=${encodeURIComponent(issued.refreshToken)}; HttpOnly; SameSite=Strict; Path=/v1/auth; Max-Age=${maxAge}${secure}`,
@@ -142,7 +142,7 @@ export class IdentityController {
   }
 
   private clearCookie(res: Response): void {
-    const secure = this.env.NODE_ENV === 'production' ? '; Secure' : '';
+    const secure = ['production','staging'].includes(this.env.NODE_ENV) ? '; Secure' : '';
     res.setHeader(
       'Set-Cookie',
       `sabzine_refresh=; HttpOnly; SameSite=Strict; Path=/v1/auth; Max-Age=0${secure}`,

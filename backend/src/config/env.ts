@@ -13,6 +13,8 @@ export const envSchema = z.object({
   WORKER_PORT: z.coerce.number().int().positive().default(3001),
   DATABASE_URL: z.string().min(1),
   DATABASE_REPLICA_URL: z.string().default(''),
+  ANALYTICS_DATABASE_URL: z.preprocess(emptyToUndefined, z.string().optional()),
+  ANALYTICS_WEBSITE_ID: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info'),

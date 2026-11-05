@@ -11,10 +11,11 @@ import {
 import { AdminService } from './admin.service.js';
 import { IntegrationsController } from './integrations.controller.js';
 import { IntegrationsService } from './integrations.service.js';
+import { WebAnalyticsController } from './web-analytics.controller.js';
 
 @Module({
   imports: [MaintenanceModule, MoneyModule, PublishingModule],
-  controllers: [AdminController, SpecialistsController, SpecialistProfileController, PublicConfigController, IntegrationsController],
+  controllers: [AdminController, SpecialistsController, SpecialistProfileController, PublicConfigController, IntegrationsController, WebAnalyticsController],
   providers: [AdminService, IntegrationsService],
   exports: [AdminService, MaintenanceModule],
 })

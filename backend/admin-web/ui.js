@@ -19,6 +19,7 @@ const pageMeta = {
   'user-reports': {title:'گزارش کاربران',icon:'users',group:'گزارش‌ها',description:'ادامه استفاده و انتخاب غذاها.'},
   'specialist-reports': {title:'گزارش متخصصان',icon:'medical',group:'گزارش‌ها',description:'عملکرد و زمان پاسخ‌گویی.'},
   journeys: {title:'مسیر کاربران',icon:'history',group:'گزارش‌ها',description:'مسیرهای ورود اول و بازگشت کاربران.'},
+  'web-analytics': {title:'رهگیری سایت دمو',icon:'history',group:'گزارش‌ها',description:'ورودی تبلیغات، انتخاب هدف، زمان مراحل و مسیر واقعی کاربران دمو.'},
 };
 const iconPaths = {
   leaf: ['M20 3C8 2 3 8 6 15c7 4 15-1 14-12Z', 'M4 21 15 9'],
