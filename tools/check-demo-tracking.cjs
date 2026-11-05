@@ -36,13 +36,14 @@ const credentials=JSON.parse(fs.readFileSync('backend/.env.local-admin.json','ut
     const response=await fetch('https://my-diet.ir/v1/admin/web-analytics?days=7',{headers});assert.equal(response.status,200);
     const report=await response.json();assert(!report.sources.some(s=>s.source==='tracking_qa'),'QA traffic leaked into reporting');
     assert.equal((await fetch('https://my-diet.ir/v1/admin/web-analytics?days=999',{headers})).status,400);
-    await page.goto('https://my-diet.ir/admin/#web-analytics');
+    await page.goto('https://my-diet.ir/admin/?v=tracking-2#web-analytics');
     await page.locator('[name=username]').fill(credentials.adminUsername);
     await page.locator('#login-password').fill(credentials.adminPassword);
     await page.locator('#login-form [type=submit]').click();
     await page.locator('#panel').waitFor({state:'visible'});
     await page.getByText('آخرین مرحلهٔ نشست‌های غیرفعال',{exact:true}).waitFor();
     await page.screenshot({path:'screenshots/admin-demo-analytics.png',fullPage:true});
+    assert.equal((await fetch('https://my-diet.ir/v1/admin/web-analytics?days=7')).status,401,'Authenticated report leaked through cache');
     assert.deepEqual(errors,[]);
     console.log('PASS: demo navigation/back, event delivery, private-data stripping, active time, admin authentication, QA exclusion, report rendering');
     console.log('Captured QA requests: '+bodies.length+'; live report visits: '+report.summary.visits);
