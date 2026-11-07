@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/demo_store.dart';
 import 'data/connection.dart';
 import 'screens/entry.dart';
+import 'screens/first_login.dart';
 import 'screens/splash.dart';
 import 'screens/onboarding.dart';
 import 'screens/user.dart';
@@ -133,6 +134,7 @@ class AppRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     // Legacy fixtures may still set staff roles; the shipped client is user-only.
+    if (!store.userSignedIn) return const FirstLoginScreen();
     store.selectedRole = AppRole.user;
     if (store.entryStage != EntryStage.login) store.role = AppRole.user;
     return switch (store.entryStage) {
