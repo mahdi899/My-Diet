@@ -3,15 +3,27 @@ async function demoQuestionnairePage() {
   if (!response.ok) throw new Error('دریافت تنظیمات پرسش‌نامه ممکن نشد.');
   const saved = await response.json();
   const goals = window.SABZINE_QUESTIONNAIRE.goals;
-  const root = element('section', null, 'card');
+  const root = element('section');
+  const grid = element('div', null, 'demo-goal-grid');
+  const editor = element('section', null, 'card report-stack');
   const form = element('form', null, 'report-stack');
-  const select = field(root, 'goal', 'هدف رژیم', 'select');
-  for (const goal of goals) select.append(Object.assign(element('option', saved[goal.id]?.title ?? goal.title), {value:goal.id}));
+  const heading = element('h2');
+  heading.tabIndex = -1;
   const title = field(form, 'title', 'عنوان هدف');
   title.maxLength = 120;
   const list = element('div', null, 'report-stack');
   const drafts = new Map();
-  let current;
+  let current, activeGoal, activeCard;
+  const back = button('بازگشت به دسته‌بندی‌ها', () => {
+    editor.hidden = true;
+    grid.hidden = false;
+    activeCard.focus();
+  }, {secondary:true});
+  for (const goal of goals) {
+    const card = button(saved[goal.id]?.title ?? goal.title, () => changeGoal(goal, card), {className:'demo-goal-card'});
+    card.style.backgroundImage = 'linear-gradient(rgb(12 23 17 / 53%), rgb(12 23 17 / 53%)), url("/demo/' + goal.image + '")';
+    grid.append(card);
+  }
   function render() {
     list.replaceChildren();
     current.questions.forEach((question, index) => {
@@ -46,8 +58,7 @@ async function demoQuestionnairePage() {
       list.append(row);
     });
   }
-  function changeGoal() {
-    const goal = goals.find(item => item.id === select.value);
+  function changeGoal(goal, card) {
     if (!drafts.has(goal.id)) {
       drafts.set(goal.id, structuredClone(saved[goal.id] ?? {
         title: goal.title,
@@ -56,11 +67,16 @@ async function demoQuestionnairePage() {
       }));
     }
     current = drafts.get(goal.id);
+    activeGoal = goal.id;
+    activeCard = card;
     title.value = current.title;
+    heading.textContent = current.title;
     render();
+    grid.hidden = true;
+    editor.hidden = false;
+    heading.focus();
   }
   title.oninput = () => current.title = title.value;
-  select.onchange = changeGoal;
   const add = button('افزودن سؤال', () => {
     if (current.questions.length >= 100) return notice('هر هدف حداکثر ۱۰۰ سؤال دارد.', 'error');
     const id = Math.max(100, ...current.questions.map(q => q.id)) + 1;
@@ -70,15 +86,16 @@ async function demoQuestionnairePage() {
   }, {iconName:'plus',secondary:true});
   form.append(list, add, formFooter('ذخیره و اعمال در دمو'));
   onForm(form, async () => {
-    const goal = select.value;
-    select.disabled = true;
+    back.disabled = true;
     try {
-      await api('admin/demo-questionnaire/' + goal, 'PUT', current);
-      select.selectedOptions[0].textContent = current.title;
+      const document = await api('admin/demo-questionnaire/' + activeGoal, 'PUT', current);
+      heading.textContent = document.title;
+      activeCard.textContent = document.title;
       notice('تنظیمات پرسش‌نامه ذخیره شد');
-    } finally { select.disabled = false; }
+    } finally { back.disabled = false; }
   });
-  root.append(form);
-  changeGoal();
+  editor.append(back, heading, form);
+  editor.hidden = true;
+  root.append(grid, editor);
   return root;
 }
