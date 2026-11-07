@@ -1,5 +1,6 @@
 /* Shared visual components. User-provided strings are always rendered as text. */
 const pageMeta = {
+  articles: {title:'مقالات',icon:'clipboard',group:'محتوا',description:'نوشتن، ویرایش و انتشار مقاله‌های مجلهٔ رژیم من.'},
   dashboard: { title: 'داشبورد', icon: 'grid', group: 'نمای کلی', description: 'تصویر امروز رژیم من؛ همه‌چیز در یک نگاه.' },
   users: { title: 'کاربران', icon: 'users', group: 'مدیریت خدمات', description: 'حساب‌ها و وضعیت کاربران را از اینجا دنبال کنید.' },
   specialists: { title: 'پزشکان', icon: 'medical', group: 'مدیریت خدمات', description: 'پزشکان فعال و اطلاعات تخصصی آن‌ها.' },

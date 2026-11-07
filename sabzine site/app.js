@@ -50,8 +50,7 @@ function wireHorizontalSlider(track,itemSelector,{autoplayMs=0}={}){
     addEventListener('pagehide',()=>{clearInterval(timer);io.disconnect();});
   }
 }
-const posts=[{id:'weekly-planning',title:'یک هفته غذای خوب؛ بدون سردرگمی',category:'برنامه‌ریزی غذایی',image:1,time:'۵',intro:'از خرید مواد اولیه تا انتخاب وعده‌ها؛ چطور برای روزهای شلوغ، تصمیم‌های ساده‌تری بگیریم؟'},{id:'balanced-plate',title:'بشقاب متعادل از کجا شروع می‌شود؟',category:'تغذیه سالم',image:0,time:'۴',intro:'نگاهی ساده به تنوع غذاها و ساختن بشقابی که با سلیقه و زندگی روزمره‌ات هماهنگ باشد.'},{id:'small-habits',title:'عادت‌های کوچک برای روزهای پرمشغله',category:'سبک زندگی',image:2,time:'۶',intro:'برای مراقبت از خودت همیشه به تغییرهای بزرگ نیاز نداری؛ از یک قدم کوچک شروع کن.'},{id:'shopping-list',title:'یک فهرست خرید، چند وعدهٔ متفاوت',category:'برنامه‌ریزی غذایی',image:3,time:'۴',intro:'چطور مواد اولیهٔ مشترک، آشپزی در طول هفته را ساده‌تر می‌کنند؟'},{id:'food-variety',title:'رنگ‌های بیشتر، انتخاب‌های متنوع‌تر',category:'تغذیه سالم',image:1,time:'۳',intro:'تنوع در آشپزخانه با آشنا شدن با مواد اولیه و روش‌های آماده‌سازی شروع می‌شود.'},{id:'mindful-meals',title:'برای وعدهٔ غذایی‌ات کمی وقت بگذار',category:'سبک زندگی',image:0,time:'۵',intro:'چند پیشنهاد برای اینکه در میان کارهای روزانه، زمان غذا خوردن را فراموش نکنیم.'}];
-const card=(p,{showIntro=false}={})=>`<a class="article-card" href="article.html?id=${p.id}"><div class="photo"><img loading="lazy" src="assets/${photos[p.image]}" alt="غذای تازه و سبزیجات"></div><h3>${p.title}</h3>${showIntro?`<p class="article-card-excerpt">${p.intro}</p>`:''}</a>`;
+const card=(p,{showIntro=false}={})=>`<a class="article-card" href="article.html?id=${encodeURIComponent(p.id)}"><div class="photo"><img loading="lazy" src="assets/${photos[p.image]}" alt="غذای تازه و سبزیجات"></div><h3>${escapeArticle(p.title)}</h3>${showIntro?`<p class="article-card-excerpt">${escapeArticle(p.intro)}</p>`:''}</a>`;
 const page=document.body.dataset.page;
 document.querySelector('#header').innerHTML=`<header class="header"><nav class="nav wrap" aria-label="منوی اصلی"><a class="brand" href="index.html">${svg('leaf')}رژیم من</a><div class="navlinks" id="navlinks">${[['index.html','خانه','home'],['about.html','دربارهٔ ما','about'],['articles.html','مقالات','articles']].map(([url,label,key])=>`<a ${page===key||page==='article'&&key==='articles'?'class="active" aria-current="page"':''} href="${url}">${label}</a>`).join('')}</div><button class="btn" data-download>دانلود اپلیکیشن ${svg('arrow')}</button><button class="menu" aria-label="باز کردن منو" aria-expanded="false" aria-controls="navlinks">${svg('menu')}</button></nav></header>`;
 document.querySelector('#footer').innerHTML=`<footer class="footer"><div class="wrap"><div class="footer-grid"><div class="footer-brand"><a class="brand" href="index.html">${svg('leaf')}رژیم من</a><p>غذای خوب، متناسب با زندگی تو.<br>ترکیب هوش مصنوعی و نگاه متخصص، برای یک مسیر شخصی‌تر در تغذیه.</p></div><div class="footer-links-block"><div class="footer-nav"><h3>دسترسی سریع</h3><a href="index.html">خانه</a><a href="about.html">دربارهٔ ما</a><a href="articles.html">مقالات</a><a href="#" data-download>دانلود اپلیکیشن</a></div><div class="footer-trust" aria-label="نمادهای اعتماد"><a class="trust-badge trust-badge--1" href="https://ecunion.ir" target="_blank" rel="noopener noreferrer" title="اتحادیه کسب‌وکارهای مجازی"></a><a class="trust-badge trust-badge--2" href="https://nec.ir" target="_blank" rel="noopener noreferrer" title="نظام صنفی رایانه‌ای کشور"></a><a class="trust-badge trust-badge--3" href="https://www.enamad.ir" target="_blank" rel="noopener noreferrer" title="نماد اعتماد الکترونیک"></a><a class="trust-badge trust-badge--4" href="https://samandehi.ir" target="_blank" rel="noopener noreferrer" title="ساماندهی"></a></div></div></div><div class="footer-bottom"><span>طراحی شده با عشق توسط آکادمی رستمی ❤️</span><span>با فکرِ حال بهتر تو ${svg('leaf')}</span></div></div></footer><dialog class="dialog" id="start-dialog"><button class="close" aria-label="بستن">×</button><div class="iconbox">${svg('phone')}</div><h2 style="margin-top:18px">شروع یک مسیر سبز</h2><p>در اپلیکیشن رژیم من می‌توانی اطلاعاتت را تکمیل کنی، برنامه بگیری و با متخصص گفتگو کنی.</p><p class="sample-label">این سایت فعلاً نسخهٔ طراحی رابط است؛ دریافت اپلیکیشن و ثبت درخواست پس از آماده شدن سرویس فعال می‌شود.</p><button class="btn light" id="dialog-done">متوجه شدم</button></dialog><div class="toast" id="toast" role="status" hidden></div>`;
@@ -59,28 +58,107 @@ document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=svg(el.dataset
 document.querySelectorAll('[data-start]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();document.querySelector('#start-dialog').showModal()}));
 const dialog=document.querySelector('dialog');document.querySelectorAll('.close,#dialog-done').forEach(b=>b.addEventListener('click',()=>dialog.close()));dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close()}});
 document.querySelector('.menu').addEventListener('click',e=>{const b=e.currentTarget;const open=b.getAttribute('aria-expanded')!=='true';b.setAttribute('aria-expanded',open);document.querySelector('.navlinks').classList.toggle('open',open)});
-if(page==='home'){
-  const reviewsEl=document.querySelector('#home-reviews');
-  if(reviewsEl){
-    reviewsEl.className='blog-slider testimonials-slider';
-    reviewsEl.setAttribute('role','region');
-    reviewsEl.setAttribute('aria-label','اسلایدر نظرات کاربران');
-    reviewsEl.innerHTML=reviews.map(reviewCard).join('');
-    wireHorizontalSlider(reviewsEl,'.testimonial-card',{autoplayMs:5000});
-  }
-  const track=document.querySelector('#home-posts');
-  track.className='blog-slider';
-  track.setAttribute('role','region');track.setAttribute('aria-label','اسلایدر مقاله‌های رژیم من');
-  track.innerHTML=posts.map(p=>card(p,{showIntro:true})).join('');
-  track.querySelectorAll('img').forEach(img=>img.draggable=false);
-  wireHorizontalSlider(track,'.article-card');
-}
-if(page==='articles'){document.querySelector('#article-grid').innerHTML=posts.map(p=>card(p,{showIntro:true})).join('');}
-if(page==='article'){const requested=new URLSearchParams(location.search).get('id');const p=posts.find(p=>p.id===requested)||posts[0];document.title=p.title+' | مجلهٔ رژیم من';document.querySelector('#article-title').textContent=p.title;document.querySelector('#article-category').textContent=p.category;document.querySelector('#article-time').textContent=p.time+' دقیقه مطالعه';document.querySelector('#article-cover').src='assets/'+photos[p.image];document.querySelector('#article-intro').textContent=p.intro;document.querySelector('#related-posts').innerHTML=posts.filter(x=>x.id!==p.id).slice(0,3).map(card).join('');document.querySelector('#article-content').innerHTML=articleContent(p);document.querySelector('#toc-links').innerHTML=Array.from(document.querySelectorAll('#article-content h2')).map(h=>`<a href="#${h.id}">${h.textContent}</a>`).join('');document.querySelector('#share').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href);toast('لینک مقاله کپی شد')}catch{toast('می‌توانی آدرس این صفحه را از نوار مرورگر کپی کنی.')}});const update=()=>{const a=document.querySelector('#article-content').getBoundingClientRect();const progress=Math.min(1,Math.max(0,(100-a.top)/Math.max(1,a.height-innerHeight/2)));document.querySelector('.reading-progress').style.width=progress*100+'%'};addEventListener('scroll',update,{passive:true});update()}
-function toast(t){const e=document.querySelector('#toast');e.textContent=t;e.hidden=false;clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>e.hidden=true,3500)}
-function articleContent(p){const bodies={
-'weekly-planning':[['از برنامهٔ واقعی هفته شروع کن','پیش از انتخاب غذا، به روزهای پیش رو نگاه کن. کدام روز وقت آشپزی داری؟ چه وعده‌هایی را در خانه می‌خوری و چه وعده‌هایی را بیرون از خانه؟ برنامه‌ای که این تفاوت‌ها را در نظر بگیرد، برای اجرا روشن‌تر است.'],['چند انتخاب آشنا داشته باش','برای شروع، غذاهایی را بنویس که دوست داری و با روش تهیهٔ آن‌ها آشنایی داری. مواد اولیهٔ مشترک را کنار هم قرار بده تا فهرست خریدت منظم‌تر شود. قرار نیست همهٔ وعده‌های هفته تازه و متفاوت باشند.'],['آماده‌سازی را تقسیم کن','شستن سبزیجات، مرتب کردن مواد اولیه و مشخص کردن ظرف‌های مورد نیاز را می‌توان در زمان‌های جدا انجام داد. مواد آماده را با توجه به شیوهٔ نگهداری مناسبشان در یخچال یا فریزر قرار بده.'],['برنامه، جای گفت‌وگو هم دارد','اگر یک غذا با زمان، بودجه یا سلیقه‌ات جور نیست، آن را با متخصص در میان بگذار. توضیح دادن دلیل تغییر، به هماهنگ شدن برنامه با زندگی روزمره کمک می‌کند.']],
-'balanced-plate':[['تنوع را روی میز ببین','هنگام نگاه کردن به وعده‌ها، به مواد اولیهٔ متفاوت و روش آماده‌سازی آن‌ها توجه کن. یک بشقاب می‌تواند مجموعه‌ای از رنگ‌ها، بافت‌ها و طعم‌های آشنا باشد.'],['مقدارها را از برنامه بخوان','مقدار غذا برای همه یکسان نیست. اگر برنامهٔ شخصی داری، اندازه‌ها و جزئیات هر وعده را از همان برنامه دنبال کن و برای تغییر آن با متخصص گفتگو کن.'],['سلیقه‌ات را فراموش نکن','غذاهایی که از خوردنشان لذت می‌بری بخشی از زندگی تو هستند. یادداشت کردن علاقه‌ها و محدودیت‌ها، به روشن‌تر شدن گفت‌وگو با متخصص کمک می‌کند.'],['با یک نگاه ساده شروع کن','برای شناخت عادت‌هایت، لازم نیست دربارهٔ هر وعده قضاوت کنی. می‌توانی فقط آنچه خورده‌ای و سؤال‌هایی را که داری یادداشت کنی.']],
-};const fallback=[['از زندگی روزمره شروع کن','برای فکر کردن به عادت‌های غذایی، ابتدا به برنامهٔ روزت نگاه کن. ساعت کار، زمان رفت‌وآمد و غذاهایی که در دسترس داری، همگی بخشی از این تصویرند.'],['یک قدم مشخص انتخاب کن','به جای نوشتن یک فهرست طولانی از تغییرات، یک کار روشن و قابل انجام انتخاب کن؛ مثلاً مشخص کردن وعدهٔ فردا یا نوشتن فهرست خرید پیش از رفتن به فروشگاه.'],['یادداشت کن و مرور کن','چیزهایی را که اجرای برنامه را آسان‌تر یا سخت‌تر می‌کنند یادداشت کن. این یادداشت‌ها می‌توانند شروع یک گفت‌وگوی دقیق‌تر با متخصص باشند.'],['مسیر را با خودت هماهنگ کن','اگر شرایطت تغییر کرد، دربارهٔ آن سؤال بپرس. برنامهٔ غذایی شخصی باید با اطلاعات به‌روز و بررسی متخصص تنظیم شود.']];return(bodies[p.id]||fallback).map(([h,t],i)=>`<h2 id="part-${i}">${h}</h2><p>${t}</p>${i===1?'<div class="callout">قرار نیست همه‌چیز را یک‌باره عوض کنی؛ یک انتخاب ساده، شروع خوبی برای شناختن مسیر خودت است.</div>':''}`).join('')}
+const escapeArticle = text => String(text).replace(/[&<>"']/g, char => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
+})[char]);
 
+async function articleApi(path) {
+  const response = await fetch('/v1/public/articles' + path, {cache:'no-store'});
+  if (!response.ok) throw new Error(response.status === 404 ? 'مقاله پیدا نشد.' : 'دریافت مقالات ممکن نشد.');
+  return response.json();
+}
+
+if (page === 'home') {
+  const reviewsEl = document.querySelector('#home-reviews');
+  if (reviewsEl) {
+    reviewsEl.className = 'blog-slider testimonials-slider';
+    reviewsEl.setAttribute('role', 'region');
+    reviewsEl.setAttribute('aria-label', 'اسلایدر نظرات کاربران');
+    reviewsEl.innerHTML = reviews.map(reviewCard).join('');
+    wireHorizontalSlider(reviewsEl, '.testimonial-card', {autoplayMs:5000});
+  }
+}
+
+async function renderMagazine() {
+  const query = new URLSearchParams(location.search);
+  const requestedPage = Number(query.get('page'));
+  const current = Number.isInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 1000 ? requestedPage : 1;
+  if (page === 'article') {
+    const slug = query.get('id') || '';
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('مقاله پیدا نشد.');
+    const article = await articleApi('/' + encodeURIComponent(slug));
+    document.title = article.title + ' | مجلهٔ رژیم من';
+    document.querySelector('#article-title').textContent = article.title;
+    document.querySelector('#article-category').textContent = article.category;
+    document.querySelector('#article-time').textContent = article.time + ' دقیقه مطالعه';
+    document.querySelector('#article-cover').src = 'assets/' + photos[article.image];
+    document.querySelector('#article-intro').textContent = article.intro;
+    const content = document.querySelector('#article-content');
+    const toc = document.querySelector('#toc-links');
+    for (const [index, section] of article.sections.entries()) {
+      const heading = document.createElement('h2');
+      heading.id = 'part-' + index;
+      heading.textContent = section.heading;
+      const paragraph = document.createElement('p');
+      paragraph.textContent = section.body;
+      paragraph.style.whiteSpace = 'pre-line';
+      content.append(heading, paragraph);
+      const link = document.createElement('a');
+      link.href = '#' + heading.id;
+      link.textContent = section.heading;
+      toc.append(link);
+    }
+    document.querySelector('#share').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(location.href); toast('لینک مقاله کپی شد'); }
+      catch { toast('آدرس مقاله را از نوار مرورگر کپی کن.'); }
+    });
+    const update = () => {
+      const box = content.getBoundingClientRect();
+      const progress = Math.min(1, Math.max(0, (100 - box.top) / Math.max(1, box.height - innerHeight / 2)));
+      document.querySelector('.reading-progress').style.width = progress * 100 + '%';
+    };
+    addEventListener('scroll', update, {passive:true});
+    update();
+    try {
+      const related = await articleApi('?pageSize=4');
+      document.querySelector('#related-posts').innerHTML = related.items.filter(item => item.id !== slug).slice(0, 3).map(card).join('');
+    } catch { /* Article remains available without recommendations. */ }
+    return;
+  }
+  const home = page === 'home';
+  const target = document.querySelector(home ? '#home-posts' : '#article-grid');
+  const result = await articleApi(home ? '?pageSize=6' : '?page=' + current);
+  target.innerHTML = result.items.map(item => card(item, {showIntro:true})).join('');
+  if (!result.items.length) target.textContent = 'مقاله‌ای برای نمایش وجود ندارد.';
+  if (home) {
+    target.className = 'blog-slider';
+    target.setAttribute('role', 'region');
+    target.setAttribute('aria-label', 'اسلایدر مقاله‌های رژیم من');
+    target.querySelectorAll('img').forEach(img => img.draggable = false);
+    if (result.items.length) wireHorizontalSlider(target, '.article-card');
+  } else {
+    const pager = document.createElement('nav');
+    pager.setAttribute('aria-label', 'صفحه‌بندی مقالات');
+    for (const [visible, value, label] of [
+      [current > 1, current - 1, 'صفحهٔ قبل'],
+      [current * result.pageSize < result.total, current + 1, 'صفحهٔ بعد'],
+    ]) {
+      if (!visible) continue;
+      const link = document.createElement('a');
+      link.className = 'btn light';
+      link.href = '?page=' + value;
+      link.textContent = label;
+      pager.append(link);
+    }
+    if (pager.childElementCount) target.after(pager);
+  }
+}
+
+if (['home','articles','article'].includes(page)) {
+  renderMagazine().catch(error => {
+    const target = document.querySelector(page === 'home' ? '#home-posts' : page === 'articles' ? '#article-grid' : '#article-title');
+    target.textContent = error.message;
+    if (page === 'article') document.querySelector('#article-cover').hidden = true;
+  });
+}
 document.querySelectorAll('[data-download]').forEach(button=>button.addEventListener('click',()=>toast('نسخهٔ قابل دانلود به‌زودی منتشر می‌شود.')));

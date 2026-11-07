@@ -169,6 +169,7 @@ async function load() {
     else if (section==='journeys') view = SabzineJourneys.journeyPage();
     else if (section==='web-analytics') view = await webAnalyticsPage();
     else if (section==='campaign-links') view = await campaignLinksPage();
+    else if (section==='articles') view = await articlesPage();
     else if (section === 'ai') view = await aiPage();
     else if (section === 'notifications') view = await notificationsPage();
     else if (section === 'streaks') view = SabzineStreak.campaignPage();
