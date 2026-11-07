@@ -163,7 +163,7 @@ async function load() {
   try {
     let view;
     if(section==='reasons') view=SabzineMessaging.reasonsConfig();
-    else if (section==='questionnaire') view=SabzineReports.questionnairePage();
+    else if (section==='questionnaire') view=await demoQuestionnairePage();
     else if (section==='user-reports') view=SabzineReports.userReports();
     else if (section==='specialist-reports') view=SabzineReports.specialistReports();
     else if (section==='journeys') view = SabzineJourneys.journeyPage();

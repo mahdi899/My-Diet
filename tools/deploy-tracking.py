@@ -56,6 +56,13 @@ snippet='''
     location /insights/ { return 404; }
 '''
 text=site.read_text()
+if 'location = /v1/public/demo-questionnaire' not in text:
+    text=text.replace('    location / {', '''    location = /v1/public/demo-questionnaire {
+        limit_except GET HEAD { deny all; }
+        proxy_pass http://127.0.0.1:3003;
+    }
+    location / {''',1)
+    site.write_text(text)
 if 'location ~ ^/v1/public/articles' not in text:
     text=text.replace('    location / {', '''    location ~ ^/v1/public/articles(?:/[a-z0-9-]+)?$ {
         limit_except GET HEAD { deny all; }

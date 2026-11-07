@@ -761,7 +761,7 @@
 
   <script src="tracking-config.js?v=1"></script>
   <script src="tracking.js?v=3"></script>
-  <script src="questionnaire-data.js?v=12"></script>
+  <script src="questionnaire-data.js?v=12"></script><script src="questionnaire-settings.js?v=1"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -2093,7 +2093,8 @@
     // =========================================================
     // INITIALIZATION & EVENT LISTENERS
     // =========================================================
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadDemoQuestionnaire(GOALS_DATA);
       renderGoalCards();
       setupQuizScrollEnforcement();
 

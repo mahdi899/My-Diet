@@ -1,4 +1,4 @@
-import { Body, Controller, Inject, Post, Param, Req } from '@nestjs/common';
+import { Body, Controller, Get, Header, Inject, Post, Put, Param, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { createHmac } from 'node:crypto';
 import type { Pool } from 'pg';
@@ -9,6 +9,42 @@ import { encryptText } from '../common/field-crypto.js';
 import { normalizeIranianMobile } from '../common/phone.js';
 import { PG_POOL } from '../database/database.js';
 import { ENV, type Env } from '../config/env.js';
+import { plainText } from '../publishing/content.js';
+
+const demoGoals = ['weight_loss', 'weight_gain', 'pregnancy', 'detox'];
+
+@Controller('v1')
+export class DemoQuestionnaireController {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+
+  @Public()
+  @Get('public/demo-questionnaire')
+  @Header('Cache-Control', 'no-store')
+  async list() {
+    const { rows } = await this.pool.query('select goal, document from demo_questionnaire_settings');
+    return Object.fromEntries(rows.map(row => [row.goal, row.document]));
+  }
+
+  @Roles('admin')
+  @Put('admin/demo-questionnaire/:goal')
+  async save(@Param('goal') goal: string, @Body() body: { title?: unknown; questions?: unknown }) {
+    const invalid = () => new ApiError(400, 'validation', 'تنظیمات هدف یا سؤال‌ها معتبر نیست');
+    if (!demoGoals.includes(goal) || !Array.isArray(body?.questions) || !body.questions.length || body.questions.length > 100) throw invalid();
+    const used = new Set<number>();
+    const questions = body.questions.map(raw => {
+      if (!raw || !Number.isInteger(raw.id) || raw.id < 1 || raw.id > 10000 || used.has(raw.id)) throw invalid();
+      used.add(raw.id);
+      const q = plainText(raw.q, 500);
+      if (raw.id <= 100) return { id: raw.id, q };
+      if (raw.type === 'text') return { id: raw.id, q, type: 'text' };
+      if (raw.type !== 'choice' || !Array.isArray(raw.options) || raw.options.length < 2 || raw.options.length > 12) throw invalid();
+      return { id: raw.id, q, type: 'choice', options: raw.options.map((label: unknown) => plainText(label, 120)) };
+    });
+    const document = { title: plainText(body.title, 120), questions };
+    await this.pool.query('insert into demo_questionnaire_settings(goal,document) values($1,$2) on conflict(goal) do update set document=excluded.document', [goal, JSON.stringify(document)]);
+    return document;
+  }
+}
 
 @Controller('v1/demo/submissions')
 export class DemoLeadsController {
@@ -27,7 +63,7 @@ export class DemoLeadsController {
  @Post()
  async save(@Body() body:unknown) {
   const b=body as Record<string,unknown>;
-  if(!b||typeof b!=='object'||typeof b.id!=='string'||! /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(b.id)||typeof b.phone!=='string'||!['weight_loss','weight_gain','pregnancy','detox'].includes(String(b.goal))||!Array.isArray(b.answers)||b.answers.length<20||b.answers.length>100)throw new ApiError(400,'validation','اطلاعات پرسش‌نامه کامل نیست');
+  if(!b||typeof b!=='object'||typeof b.id!=='string'||! /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(b.id)||typeof b.phone!=='string'||!['weight_loss','weight_gain','pregnancy','detox'].includes(String(b.goal))||!Array.isArray(b.answers)||b.answers.length<1||b.answers.length>100)throw new ApiError(400,'validation','اطلاعات پرسش‌نامه کامل نیست');
   const phone=normalizeIranianMobile(b.phone);
   for(const answer of b.answers)if(!answer||typeof answer.question!=='string'||typeof answer.answer!=='string'||answer.question.length>500||answer.answer.length>2000)throw new ApiError(400,'validation','پاسخ معتبر نیست');
   const hash=createHmac('sha256',this.env.FIELD_KEY).update(phone).digest('hex');
