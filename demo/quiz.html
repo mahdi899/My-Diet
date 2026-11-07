@@ -761,7 +761,7 @@
 
   <script src="tracking-config.js?v=1"></script>
   <script src="tracking.js?v=3"></script>
-  <script src="questionnaire-data.js?v=12"></script><script src="questionnaire-settings.js?v=1"></script>
+  <script src="questionnaire-data.js?v=13"></script><script src="questionnaire-settings.js?v=1"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -974,6 +974,11 @@
       return label === 'بله';
     }
 
+    function detailAttribute(value) {
+      return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     function isQuestionAnswered(qIdx) {
       const answer = state.answers[qIdx];
       if (answer === undefined || answer === null) return false;
@@ -985,6 +990,7 @@
       if (q.ui === 'sleep-wake') {
         return answer && answer.sleep != null && answer.wake != null;
       }
+      if (q.type === 'number' && q.metric?.startsWith('target-')) return validTargetWeight(q, answer);
       if (q.type === 'text' || q.type === 'number') return answer === '__skipped__' ? !!q.optional : String(answer).trim() !== '';
       if (typeof answer === 'object') {
         if (answer.choice === undefined) return false;
@@ -1065,7 +1071,12 @@
       const sub = (qItem.subtitle || '').trim();
       const q = qItem.q || '';
       if (sub.includes('کیلو') || q.includes('وزن')) {
-        return { min: 35, max: 240, step: 1, default: 68, unit: 'کیلوگرم' };
+        const weight = currentWeight();
+        return {
+          min: qItem.metric === 'target-gain' && weight != null ? weight + 1 : 35,
+          max: qItem.metric === 'target-loss' && weight != null ? weight - 1 : 240,
+          step: 1, default: 68, unit: 'کیلوگرم',
+        };
       }
       if (sub.includes('سانتی') || q.includes('قدت')) {
         return { min: 120, max: 230, step: 1, default: 165, unit: 'سانتی‌متر' };
@@ -1080,6 +1091,17 @@
         return { min: 0, max: 24, step: 1, default: 4, unit: 'ماه' };
       }
       return { min: 0, max: 100, step: 1, default: 50, unit: sub || 'عدد' };
+    }
+
+    function currentWeight() {
+      const index = state.selectedGoal.questions.findIndex(question => question.metric === 'current-weight');
+      return parseNumericAnswer(state.answers[index], null);
+    }
+
+    function validTargetWeight(question, raw) {
+      const weight = parseNumericAnswer(raw, null);
+      const { min, max } = getMetricSliderConfig(question);
+      return weight != null && weight >= min && weight <= max;
     }
 
     function parseNumericAnswer(raw, fallback) {
@@ -1114,6 +1136,7 @@
 
     function buildMetricSliderHTML(qIdx, qItem, disabled) {
       const cfg = getMetricSliderConfig(qItem);
+      if (cfg.min > cfg.max) return '<p>با وزن فعلی، در بازهٔ این پرسش‌نامه وزن هدف قابل انتخاب نیست.</p>';
       const stored = state.answers[qIdx];
       const numVal = clampMetric(parseNumericAnswer(stored, cfg.default), cfg.min, cfg.max);
       return `
@@ -1188,7 +1211,7 @@
             class="quiz-option-card quiz-flash-card quiz-option-enter ${selected ? 'quiz-option-card--selected' : ''}">
             <span class="quiz-flash-photo"><img src="${img}" alt="" loading="lazy" /></span>
             <span class="quiz-flash-foot">
-              <span class="quiz-flash-label">${opt.label}</span>
+              <span class="quiz-flash-label">${opt.label}${opt.description ? `<small class="block mt-1 font-normal">${opt.description}</small>` : ''}</span>
               <span class="quiz-choice-dot" aria-hidden="true">${selected ? CHECK_ICON : ''}</span>
             </span>
           </button>`;
@@ -1387,6 +1410,8 @@
         bodyHTML = buildTextFieldHTML(qIdx, qItem, false);
       } else if (qItem.options) {
         let optionsHTML = '';
+        const locked = qItem.lockOtherChoicesWhen &&
+          state.answers[qIdx]?.choices?.some(i => qItem.options[i]?.label === qItem.lockOtherChoicesWhen);
         qItem.options.forEach((opt, optIdx) => {
           const selected = qItem.multi ? (state.answers[qIdx]?.choices || []).includes(optIdx) : typeof state.answers[qIdx] === 'object'
             ? state.answers[qIdx].choice === optIdx
@@ -1397,6 +1422,7 @@
             : '';
           optionsHTML += `
               <button type="button" data-q-index="${qIdx}" data-opt-index="${optIdx}"
+                ${locked && !selected ? 'disabled' : ''}
                 style="animation-delay: ${optIdx * 45}ms"
                 class="quiz-option-btn quiz-option-enter w-full text-right p-3.5 sm:p-4 rounded-2xl border-2 flex items-center justify-between gap-3 cursor-pointer ${baseClasses}">
                 <span class="text-xs sm:text-sm font-bold leading-snug flex-1">${opt.label}</span>
@@ -1412,8 +1438,8 @@
           bodyHTML += `
             <div class="mt-3 space-y-2 quiz-followup-panel">
               <input type="text" data-detail-index="${qIdx}" class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d]"
-                placeholder="${qItem.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${ans.detail || ''}" />
-              <button type="button" data-detail-submit="${qIdx}" class="quiz-green-btn w-full py-2.5 rounded-xl font-bold text-sm">ثبت و ادامه</button>
+                placeholder="${qItem.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${detailAttribute(ans.detail)}" />
+              ${qItem.multi ? '' : `<button type="button" data-detail-submit="${qIdx}" class="quiz-green-btn w-full py-2.5 rounded-xl font-bold text-sm">ثبت و ادامه</button>`}
             </div>`;
         }
         if (qItem.multi) bodyHTML += `<button type="button" data-multi-submit="${qIdx}" class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3">ثبت انتخاب‌ها و ادامه</button>`;
@@ -1449,6 +1475,8 @@
       });
       listEl.querySelectorAll('[data-multi-submit]').forEach(btn => btn.addEventListener('click', () => {
         const index = Number(btn.dataset.multiSubmit);
+        const detail = listEl.querySelector(`input[data-detail-index="${index}"]`);
+        if (detail) state.answers[index].detail = detail.value.trim();
         if (!isQuestionAnswered(index)) { showToast('گزینه‌ها و توضیحات لازم را کامل کن', '⚠️'); return; }
         advanceAfterAnswer(index, false);
       }));
@@ -1489,6 +1517,11 @@
         showToast('لطفاً پاسخ را وارد کنید', '⚠️');
         return;
       }
+      const question = state.selectedGoal.questions[qIdx];
+      if (question.metric?.startsWith('target-') && !validTargetWeight(question, raw)) {
+        showToast('وزن هدف را در بازهٔ مجاز انتخاب کن', '⚠️');
+        return;
+      }
       const total = state.selectedGoal.questions.length;
       const wasAlreadyAllAnswered = countAnsweredQuestions() === total;
       state.answers[qIdx] = input.type === 'range' ? String(raw) : raw;
@@ -1524,9 +1557,11 @@
       const q = state.selectedGoal.questions[qIdx];
       const ans = state.answers[qIdx] || { choices: [], detail: '' };
       const choices = ans.choices || [];
+      const locked = q.lockOtherChoicesWhen && choices.some(i => q.options[i]?.label === q.lockOtherChoicesWhen);
       document.querySelectorAll(`button[data-q-index="${qIdx}"][data-opt-index]`).forEach((btn) => {
         const optIdx = Number(btn.dataset.optIndex);
         const selected = choices.includes(optIdx);
+        if (q.lockOtherChoicesWhen) btn.disabled = Boolean(locked && !selected);
         btn.classList.toggle('is-selected', selected);
         btn.classList.toggle('quiz-option-card--selected', selected);
         const dot = btn.querySelector('.quiz-choice-dot');
@@ -1545,13 +1580,11 @@
         const markup = `
             <div class="mt-3 space-y-2 quiz-followup-panel">
               <input type="text" data-detail-index="${qIdx}" class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d]"
-                placeholder="${q.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${ans.detail || ''}" />
-              <button type="button" data-detail-submit="${qIdx}" class="quiz-green-btn w-full py-2.5 rounded-xl font-bold text-sm">ثبت و ادامه</button>
+                placeholder="${q.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${detailAttribute(ans.detail)}" />
             </div>`;
         const submitBtn = card.querySelector('[data-multi-submit]');
         if (submitBtn) submitBtn.insertAdjacentHTML('beforebegin', markup);
         else card.insertAdjacentHTML('beforeend', markup);
-        card.querySelector('[data-detail-submit]')?.addEventListener('click', () => handleQuestionDetailSubmit(qIdx));
         setTimeout(() => card.querySelector('input[data-detail-index]')?.focus(), 60);
       } else if (!needsDetail && panel) {
         panel.remove();
@@ -1566,8 +1599,12 @@
       const wasAlreadyAllAnswered = countAnsweredQuestions() === total;
       if (q.multi) {
         const current = state.answers[qIdx] || { choices: [], detail: '' };
+        const detail = document.querySelector(`input[data-detail-index="${qIdx}"]`);
+        if (detail) current.detail = detail.value.trim();
         const exclusive = q.exclusiveLabels || ['بدون حساسیت', 'هیچ‌کدام'];
         const label = q.options[optIdx]?.label;
+        if (q.lockOtherChoicesWhen && label !== q.lockOtherChoicesWhen &&
+            current.choices.some(i => q.options[i]?.label === q.lockOtherChoicesWhen)) return;
         const choices = current.choices.includes(optIdx)
           ? current.choices.filter(i => i !== optIdx)
           : exclusive.includes(label) ? [optIdx]

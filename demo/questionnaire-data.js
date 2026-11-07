@@ -45,7 +45,7 @@
       options: [O('زن'), O('مرد')],
     },
     { category: CAT.general, q: 'قدت چقدره؟', type: 'number', subtitle: 'سانتی‌متر', placeholder: 'مثلاً ۱۶۵', slider: { min: 120, max: 230, step: 1, default: 165, unit: 'سانتی‌متر' } },
-    { category: CAT.general, q: 'وزن فعلیت چقدره؟', type: 'number', subtitle: 'کیلوگرم', placeholder: 'مثلاً ۷۲', slider: { min: 35, max: 240, step: 1, default: 68, unit: 'کیلوگرم' } },
+    { category: CAT.general, q: 'وزن فعلیت چقدره؟', type: 'number', metric: 'current-weight', subtitle: 'کیلوگرم', placeholder: 'مثلاً ۷۲', slider: { min: 35, max: 240, step: 1, default: 68, unit: 'کیلوگرم' } },
     {
       category: CAT.general,
       q: 'میزان فعالیت روزانه‌ات چقدره؟',
@@ -70,9 +70,9 @@
       q: 'سبک تغذیه‌ات چیه؟',
       ui: 'option-cards',
       options: [
-        O('معمولی', '•', { image: 'assets/diet-normal.jpg' }),
-        O('گیاه‌خواری', '•', { image: 'assets/diet-vegetarian.jpg' }),
-        O('وگان', '•', { image: 'assets/diet-vegan.jpg' }),
+        O('همه‌چیزخواری', '•', { image: 'assets/diet-normal.jpg', description: 'غذاهای گیاهی و حیوانی' }),
+        O('گیاه‌خواری با لبنیات یا تخم‌مرغ', '•', { image: 'assets/diet-vegetarian.jpg', description: 'بدون گوشت، مرغ و ماهی' }),
+        O('وگان (کاملاً گیاهی)', '•', { image: 'assets/diet-vegan.jpg', description: 'بدون گوشت، لبنیات، تخم‌مرغ و سایر محصولات حیوانی' }),
       ],
     },
     {
@@ -160,7 +160,7 @@
   ];
 
   const LOSS_QUESTIONS = [
-    { category: CAT.loss, q: 'دوست داری به چه وزنی برسی؟', type: 'number', subtitle: 'کیلوگرم', placeholder: 'وزن هدف' },
+    { category: CAT.loss, q: 'دوست داری به چه وزنی برسی؟', type: 'number', metric: 'target-loss', subtitle: 'کیلوگرم', placeholder: 'وزن هدف' },
     {
       category: CAT.loss,
       q: 'ترجیح می‌دی با چه سرعتی وزن کم کنی؟',
@@ -208,7 +208,7 @@
   ];
 
   const GAIN_QUESTIONS = [
-    { category: CAT.gain, q: 'دوست داری وزنت به چند کیلوگرم برسه؟', type: 'number', subtitle: 'کیلوگرم', placeholder: 'وزن هدف' },
+    { category: CAT.gain, q: 'دوست داری وزنت به چند کیلوگرم برسه؟', type: 'number', metric: 'target-gain', subtitle: 'کیلوگرم', placeholder: 'وزن هدف' },
     {
       category: CAT.gain,
       q: 'هدفت از افزایش وزن بیشتر چیه؟',
@@ -368,6 +368,8 @@
       category: CAT.health,
       q: 'وضعیت گوارشت معمولاً چطوره؟',
       multi: true,
+      lockOtherChoicesWhen: 'طبیعی',
+      exclusiveLabels: ['طبیعی'],
       options: [O('طبیعی'), O('یبوست مکرر'), O('نفخ'), O('سوزش معده'), O('اسهال مکرر'), O('مشکلات دیگر')],
     },
     {
