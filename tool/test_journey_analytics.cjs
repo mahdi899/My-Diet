@@ -3,7 +3,7 @@ const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { resolve } = require('node:path');
 const sandbox = { Intl };
-runInNewContext(readFileSync(resolve(__dirname, '../backend/admin-web/journey-analytics.js'), 'utf8'), sandbox);
+runInNewContext(readFileSync(resolve(__dirname, '../admin/journey-analytics.js'), 'utf8'), sandbox);
 const { sessions, journeyReport } = sandbox.SabzineJourneys;
 const range = { from: '2026-10-01', to: '2026-10-31', platform: 'all', appVersion: 'all' };
 const first = journeyReport(sessions, { ...range, sessionType: 'first_visit' });

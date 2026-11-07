@@ -6,7 +6,7 @@ const desktopHtml = resolve(root, '..', '..', 'sabzine.html');
 const demoDir = existsSync(resolve(root, 'demo'))
   ? resolve(root, 'demo')
   : resolve(root, '..', 'demo');
-const siteAssets = resolve(root, '..', 'sabzine site', 'assets');
+const siteAssets = resolve(root, 'site', 'assets');
 const assetsDir = resolve(demoDir, 'assets');
 
 if (!existsSync(desktopHtml)) {

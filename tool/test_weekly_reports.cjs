@@ -4,7 +4,7 @@ const { createServer } = require('node:http');
 const { readFile, mkdir } = require('node:fs/promises');
 const { resolve, extname, sep } = require('node:path');
 const assert = require('node:assert/strict');
-const root = resolve(__dirname, '../backend/admin-web');
+const root = resolve(__dirname, '../admin');
 const server = createServer(async (req, res) => {
   const file = resolve(root, '.' + new URL(req.url, 'http://localhost').pathname);
   if (!file.startsWith(root + sep)) return res.writeHead(403).end();
@@ -44,7 +44,7 @@ async function main() {
     assert((await page.locator('#content').innerText()).includes('آماده‌سازی ناموفق'));
     await page.getByLabel('کاربر نمونه',{exact:true}).selectOption('کاربر نمونه الف');
     await page.evaluate(() => document.fonts.ready);
-    const shots=resolve(__dirname,'../screenshots/phase5');await mkdir(shots,{recursive:true});
+    const shots=resolve(__dirname,'../references/screenshots/phase5');await mkdir(shots,{recursive:true});
     await page.screenshot({path:resolve(shots,'specialist-weekly-report-demo.png'),fullPage:true});
     await page.setViewportSize({width:768,height:1024});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

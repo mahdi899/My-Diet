@@ -1,0 +1,15 @@
+.git
+app
+demo
+site
+references
+tool
+graphify-out
+**/.dart_tool
+**/build
+**/node_modules
+**/.pgdata
+**/dist
+**/.env
+**/.env.*
+!**/.env.example

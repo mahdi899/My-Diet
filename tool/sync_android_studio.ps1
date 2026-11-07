@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not $Source) {
-    $Source = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+    $Source = (Resolve-Path (Join-Path $PSScriptRoot "..\app")).Path
 }
 
 function Find-AndroidStudioSabzineRoot {

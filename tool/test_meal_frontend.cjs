@@ -4,7 +4,7 @@ const { createServer } = require('node:http');
 const { readFile, mkdir } = require('node:fs/promises');
 const { resolve, extname, sep } = require('node:path');
 const assert = require('node:assert/strict');
-const root = resolve(__dirname, '../backend/admin-web');
+const root = resolve(__dirname, '../admin');
 const server = createServer(async (req, res) => {
   const file = resolve(root, '.' + new URL(req.url, 'http://localhost').pathname);
   if (!file.startsWith(root + sep)) return res.writeHead(403).end();
@@ -36,7 +36,7 @@ async function main() {
     await page.getByText('یک جایگزین هوش مصنوعی لازم است',{exact:true}).waitFor();
     assert(await page.getByText('زمان آماده‌سازی ثبت نشده',{exact:true}).isVisible());
     assert.equal(await page.getByRole('button',{name:'انتشار',exact:true}).count(),0);
-    const shots = resolve(__dirname,'../screenshots/phase2'); await mkdir(shots,{recursive:true});
+    const shots = resolve(__dirname,'../references/screenshots/phase2'); await mkdir(shots,{recursive:true});
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({path:resolve(shots,'specialist-incomplete-demo.png'),fullPage:true});
     const checks = await page.evaluate(() => {

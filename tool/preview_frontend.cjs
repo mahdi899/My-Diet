@@ -7,7 +7,7 @@ const { resolve, sep, extname } = require('node:path');
 const root = resolve(__dirname,'..');
 const apiTarget = new URL(process.env.SABZINE_API_TARGET || 'http://127.0.0.1:3000');
 const demoDir = existsSync(resolve(root, 'demo')) ? resolve(root, 'demo') : resolve(root, '..', 'demo');
-const mounts = {admin:resolve(root,'backend/admin-web'),app:resolve(root,'build/web'),site:resolve(root,'..','sabzine site'),demo:demoDir};
+const mounts = {admin:resolve(root,'admin'),app:resolve(root,'app/build/web'),site:resolve(root,'site'),demo:demoDir};
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.ttf':'font/ttf','.woff2':'font/woff2','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.wasm':'application/wasm'};
 http.createServer(async(req,res)=>{
   if(req.url.startsWith('/v1/')){

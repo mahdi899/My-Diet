@@ -3,7 +3,7 @@ const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { resolve } = require('node:path');
 const sandbox = { setTimeout, clearTimeout, AbortController };
-runInNewContext(readFileSync(resolve(__dirname, '../backend/admin-web/connection-gate.js'), 'utf8'), sandbox);
+runInNewContext(readFileSync(resolve(__dirname, '../admin/connection-gate.js'), 'utf8'), sandbox);
 const { classifyResponse, probe } = sandbox.SabzineConnection;
 assert.equal(classifyResponse(200, false), null);
 assert.equal(classifyResponse(404, false), null);

@@ -5,7 +5,7 @@ const { createServer } = require('node:http');
 const { readFile, mkdir } = require('node:fs/promises');
 const { resolve, extname } = require('node:path');
 const assert = require('node:assert/strict');
-const root = resolve(__dirname, '..', 'backend', 'admin-web');
+const root = resolve(__dirname, '..', 'admin');
 const shots = resolve(__dirname, '..', 'screenshots', 'phase1');
 const server = createServer(async (req, res) => {
   try {

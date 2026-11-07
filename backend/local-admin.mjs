@@ -37,5 +37,5 @@ if(firstRun){
   }catch(e){await client.query('rollback');throw e;}
 }
 await client.end();
-const {createApp}=await import('./dist/bootstrap.js');const {app}=await createApp();await app.listen(3000,'127.0.0.1');
+const {createApp}=await import('./dist/bootstrap.js');const {app}=await createApp();await app.listen(3000,'0.0.0.0');
 console.log('Admin ready: http://localhost:3000/admin/');

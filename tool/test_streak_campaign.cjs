@@ -3,7 +3,7 @@ const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { resolve } = require('node:path');
 const sandbox = { structuredClone };
-runInNewContext(readFileSync(resolve(__dirname, '../backend/admin-web/streak-campaign.js'), 'utf8'), sandbox);
+runInNewContext(readFileSync(resolve(__dirname, '../admin/streak-campaign.js'), 'utf8'), sandbox);
 const { createRepository } = sandbox.SabzineStreak;
 
 const repo = createRepository();

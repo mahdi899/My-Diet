@@ -3,7 +3,7 @@ const { readFileSync } = require('node:fs');
 const { runInNewContext } = require('node:vm');
 const { resolve } = require('node:path');
 const sandbox = { structuredClone, Intl };
-runInNewContext(readFileSync(resolve(__dirname, '../backend/admin-web/admin-reports.js'), 'utf8'), sandbox);
+runInNewContext(readFileSync(resolve(__dirname, '../admin/admin-reports.js'), 'utf8'), sandbox);
 const reports = sandbox.SabzineReports;
 const range = { from: '2026-08-01', to: '2026-10-30', event: 'activity' };
 const ready = reports.retentionReport(reports.cohorts, range);

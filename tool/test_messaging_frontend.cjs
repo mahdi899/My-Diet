@@ -4,7 +4,7 @@ const {createServer}=require('node:http');
 const {readFile,mkdir}=require('node:fs/promises');
 const {resolve,extname,sep}=require('node:path');
 const assert=require('node:assert/strict');
-const root=resolve(__dirname,'../backend/admin-web');
+const root=resolve(__dirname,'../admin');
 const server=createServer(async(req,res)=>{
   const file=resolve(root,'.'+new URL(req.url,'http://localhost').pathname.replace(/^\/admin/,''));
   if(!file.startsWith(root+sep))return res.writeHead(403).end();
@@ -49,7 +49,7 @@ async function main(){
     await page.evaluate(()=>{window.originalGetUserMedia=navigator.mediaDevices.getUserMedia;navigator.mediaDevices.getUserMedia=()=>Promise.reject(new DOMException('denied','NotAllowedError'));});
     await page.getByRole('button',{name:'ضبط ویس',exact:true}).click();await page.getByRole('alert').filter({hasText:'اجازه میکروفن داده نشد'}).waitFor();
     await page.evaluate(()=>navigator.mediaDevices.getUserMedia=window.originalGetUserMedia);
-    const shots=resolve(__dirname,'../screenshots/phase7');await mkdir(shots,{recursive:true});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:resolve(shots,'specialist-chat-demo.png'),fullPage:true});
+    const shots=resolve(__dirname,'../references/screenshots/phase7');await mkdir(shots,{recursive:true});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:resolve(shots,'specialist-chat-demo.png'),fullPage:true});
     await page.getByRole('button',{name:'درخواست‌های تغییر برنامه',exact:true}).click();await page.getByRole('button',{name:'باز کردن درخواست‌های تغییر نمونه',exact:true}).click();
     await page.getByRole('button',{name:'جزئیات درخواست',exact:true}).click();await page.getByRole('button',{name:'شروع بررسی',exact:true}).click();
     await page.getByRole('button',{name:'رد درخواست با توضیح',exact:true}).click();await page.getByRole('alert').filter({hasText:'دلیل رد الزامی است'}).waitFor();

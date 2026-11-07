@@ -13,7 +13,9 @@ Android Studio is opened on a second copy:
 
 `%USERPROFILE%\source\repos\سبزینه`
 
-After you **create, edit, or delete** any project file (especially under `lib/`, `test/`, `assets/`, `android/`, `pubspec.yaml`), run:
+The Flutter project is the `app/` directory (`app/pubspec.yaml`). Android Studio must open that app root, not the monorepo root.
+
+After you **create, edit, or delete** any project file (especially under `app/lib/`, `app/test/`, `app/assets/`, `app/android/`, `app/pubspec.yaml`), run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tool/sync_android_studio.ps1
@@ -23,4 +25,4 @@ Do this before ending the task so the user can preview in Android Studio without
 
 Do not edit only the `source\repos\سبزینه` path; always change files in this workspace, then sync.
 
-Optional long-term fix: close Android Studio, rename the old `source\repos\سبزینه` folder, and create a directory junction to this workspace so sync is unnecessary.
+Optional long-term fix: close Android Studio, rename the old `source\repos\سبزینه` folder, and create a directory junction to the `app` folder so sync is unnecessary.

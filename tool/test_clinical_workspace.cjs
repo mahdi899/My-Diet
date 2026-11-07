@@ -4,7 +4,7 @@ const { createServer } = require('node:http');
 const { readFile,mkdir } = require('node:fs/promises');
 const { resolve,extname,sep } = require('node:path');
 const assert = require('node:assert/strict');
-const root=resolve(__dirname,'../backend/admin-web');
+const root=resolve(__dirname,'../admin');
 const server=createServer(async(req,res)=>{
   const file=resolve(root,'.'+new URL(req.url,'http://localhost').pathname);
   if(!file.startsWith(root+sep))return res.writeHead(403).end();
@@ -46,7 +46,7 @@ async function main(){
     assert((await page.locator('.clinical-workspace').innerText()).includes('ارائه نشده'));
     await page.getByRole('button',{name:'دریافت تاریخچهٔ برنامه‌ها',exact:true}).click();
     await page.getByText('نسخه 1 ·',{exact:false}).first().waitFor();
-    const shots=resolve(__dirname,'../screenshots/phase6');await mkdir(shots,{recursive:true});
+    const shots=resolve(__dirname,'../references/screenshots/phase6');await mkdir(shots,{recursive:true});
     await page.evaluate(()=>document.fonts.ready);await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:resolve(shots,'patient-demo.png'),fullPage:true});
     await page.getByRole('button',{name:'ویرایش برنامه',exact:true}).click();
     const publish=page.getByRole('button',{name:'تأیید و انتشار نمونه',exact:true});assert(await publish.isDisabled());

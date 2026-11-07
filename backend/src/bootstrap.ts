@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import express from 'express';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -21,7 +22,9 @@ export async function createApp(): Promise<{
   // The container is exposed only to the local Nginx proxy, which overwrites XFF.
   app.getHttpAdapter().getInstance().set('trust proxy',1);
   app.useGlobalFilters(new ProblemFilter());
-  app.use('/admin', express.static(resolve(process.cwd(), 'admin-web'), {
+  const bundledAdmin = resolve(process.cwd(), 'admin-web');
+  const adminDir = existsSync(bundledAdmin) ? bundledAdmin : resolve(process.cwd(), '..', 'admin');
+  app.use('/admin', express.static(adminDir, {
     setHeaders(res) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('X-Content-Type-Options', 'nosniff');
