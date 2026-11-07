@@ -433,204 +433,25 @@
       </div>
     </section>
 
-    <!-- ==========================================
-         PAGE 3: PAYMENT GATEWAY PAGE (صفحه پرداخت)
-         ========================================== -->
-    <section id="page3Container" class="hidden stage-fade-in">
-      <div class="max-w-3xl mx-auto">
-        <!-- Payment Header -->
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <div>
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold mb-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              تایید شماره موبایل با موفقیت انجام شد
-            </span>
-            <h2 class="text-2xl sm:text-3xl font-black text-white">صفحه پرداخت و دریافت آنی برنامه غذایی</h2>
-          </div>
-          <button
-            id="changePlanFromPaymentBtn"
-            type="button"
-            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 border border-white/15 text-xs font-bold transition-all cursor-pointer"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-            </svg>
-            <span>تغییر پلن یا شماره</span>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <!-- Right Column: Personalized Plan & Quiz Summary (2 cols) -->
-          <div class="lg:col-span-2 space-y-4">
-            <div class="p-5 rounded-3xl bg-slate-900/80 border border-emerald-400/30 backdrop-blur-xl">
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-bold text-emerald-400">خلاصه پرونده تغذیه شما</span>
-                <span id="paymentUserPhoneBadge" class="text-xs font-mono bg-white/10 px-2.5 py-0.5 rounded-lg text-slate-200" dir="ltr">0912***6789</span>
-              </div>
-              <div class="space-y-2.5 text-xs border-t border-white/10 pt-3">
-                <div class="flex justify-between">
-                  <span class="text-slate-400">هدف انتخابی:</span>
-                  <span id="paymentGoalSummary" class="font-bold text-white">کاهش وزن و لاغری</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-400">پلن انتخاب شده:</span>
-                  <span id="paymentPlanNameSummary" class="font-bold text-emerald-300">همراه · ۳۰ روزه</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-400">تحلیل هوش مصنوعی:</span>
-                  <span class="font-bold text-amber-300">تطابق ۹۸.۴٪ با متابولیسم</span>
-                </div>
-              </div>
-
-              <!-- User's Quiz Answers Accordion List -->
-              <div class="mt-4 pt-3 border-t border-white/10">
-                <div class="text-xs font-bold text-slate-300 mb-2">پاسخ‌های ثبت‌شده شما:</div>
-                <div id="paymentQuizAnswersList" class="space-y-1.5 max-h-48 overflow-y-auto text-[11px] pr-1">
-                  <!-- Populated dynamically -->
-                </div>
-              </div>
-            </div>
-
-            <!-- Guarantee card -->
-            <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-400/25 flex items-start gap-3">
-              <div class="w-9 h-9 rounded-xl bg-emerald-400/20 text-emerald-300 flex items-center justify-center shrink-0 font-bold">
-                🛡️
-              </div>
-              <div class="text-xs text-slate-300 leading-relaxed">
-                <strong class="text-white block mb-0.5">ضمانت ۱۰۰٪ بازگشت وجه</strong>
-                در صورت عدم رضایت از برنامه غذایی تا ۷ روز، کل مبلغ بدون قید و شرط به حسابتان بازگردانده می‌شود.
-              </div>
-            </div>
-          </div>
-
-          <!-- Left Column: Simulated Shaparak Payment Gateway (3 cols) -->
-          <div class="lg:col-span-3">
-            <div id="paymentFormCard" class="p-6 rounded-3xl bg-slate-900/90 border border-white/15 backdrop-blur-xl shadow-2xl">
-              <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-5">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-lg">
-                    💳
-                  </div>
-                  <div>
-                    <h3 class="font-extrabold text-white text-base">درگاه پرداخت امن شاپرک</h3>
-                    <p class="text-[11px] text-slate-400">پرداخت اینترنتی با کلیه کارت‌های عضو شبکه شتاب</p>
-                  </div>
-                </div>
-                <div class="text-left">
-                  <div class="text-[11px] text-slate-400">مبلغ قابل پرداخت</div>
-                  <div id="paymentTotalAmount" class="text-lg sm:text-xl font-black text-emerald-400">۱٬۹۹۰٬۰۰۰ تومان</div>
-                </div>
-              </div>
-
-              <!-- Simulated Bank Card Inputs -->
-              <form id="simulatedBankForm" class="space-y-4">
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1.5">شماره کارت ۱۶ رقمی</label>
-                  <input
-                    id="bankCardInput"
-                    type="text"
-                    dir="ltr"
-                    maxlength="19"
-                    value="6037 - 9975 - 1234 - 5678"
-                    placeholder="6037 - **** - **** - ****"
-                    class="w-full px-4 py-3 rounded-xl bg-slate-950/90 border border-white/15 text-white font-mono text-center text-base tracking-widest focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1.5">رمز دوم (پویا)</label>
-                    <div class="flex gap-2">
-                      <input
-                        id="bankOtpInput"
-                        type="password"
-                        dir="ltr"
-                        maxlength="8"
-                        value="849201"
-                        placeholder="******"
-                        class="w-full px-3 py-2.5 rounded-xl bg-slate-950/90 border border-white/15 text-white font-mono text-center focus:outline-none focus:border-emerald-400"
-                      />
-                      <button
-                        id="requestDynamicPinBtn"
-                        type="button"
-                        class="shrink-0 px-3 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-300 text-xs font-bold transition-all cursor-pointer"
-                      >
-                        دریافت رمز پویا
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1.5">کد CVV2 و تاریخ انقضا</label>
-                    <div class="grid grid-cols-2 gap-2" dir="ltr">
-                      <input
-                        type="text"
-                        maxlength="4"
-                        value="482"
-                        placeholder="CVV2"
-                        class="w-full px-2 py-2.5 rounded-xl bg-slate-950/90 border border-white/15 text-white font-mono text-center text-sm focus:outline-none focus:border-emerald-400"
-                      />
-                      <input
-                        type="text"
-                        maxlength="5"
-                        value="06/04"
-                        placeholder="ماه/سال"
-                        class="w-full px-2 py-2.5 rounded-xl bg-slate-950/90 border border-white/15 text-white font-mono text-center text-sm focus:outline-none focus:border-emerald-400"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  id="completePaymentBtn"
-                  type="submit"
-                  class="cta-pulse w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-black text-base sm:text-lg hover:brightness-110 active:scale-98 transition-all cursor-pointer mt-2"
-                >
-                  پرداخت و دانلود برنامه غذایی اختصاصی
-                </button>
-              </form>
-            </div>
-          </div>
+    <!-- Order summary: online payments are not available yet. -->
+    <section id="page3Container" class="hidden stage-fade-in" aria-labelledby="orderSummaryTitle">
+      <div class="max-w-3xl mx-auto rounded-3xl bg-white border border-[#dee5d5] p-6 sm:p-8 text-[#233c2d]">
+        <p class="font-bold text-sm mb-3">خلاصهٔ انتخاب شما</p>
+        <h2 id="orderSummaryTitle" class="text-2xl font-black mb-4">پرداخت آنلاین هنوز فعال نشده است</h2>
+        <p class="leading-8 mb-6">شمارهٔ شما تأیید شد. در این مرحله هیچ مبلغی دریافت نمی‌شود و خرید، رزرو نوبت یا سفارش قطعی ثبت نشده است. پس از فعال‌شدن پرداخت آنلاین، امکان خرید فراهم خواهد شد.</p>
+        <dl class="grid gap-4 sm:grid-cols-2 mb-6">
+          <div><dt>هدف</dt><dd id="paymentGoalSummary" class="font-bold mt-1"></dd></div>
+          <div><dt>پلن انتخابی</dt><dd id="paymentPlanNameSummary" class="font-bold mt-1"></dd></div>
+          <div><dt>تعرفهٔ پلن (غیرقابل پرداخت در حال حاضر)</dt><dd id="paymentTotalAmount" class="font-bold mt-1"></dd></div>
+        </dl>
+        <div class="flex flex-wrap gap-3">
+          <button id="changePlanFromPaymentBtn" type="button" class="quiz-green-btn rounded-xl px-5 py-3 font-bold">تغییر پلن</button>
+          <a href="/pricing.html" class="rounded-xl px-5 py-3 border border-[#dee5d5]">خدمات و تعرفه‌ها</a>
         </div>
       </div>
     </section>
 
   </main>
-
-  <!-- Payment success modal (over page 3 gateway) -->
-  <div
-    id="paymentSuccessModalBackdrop"
-    class="payment-success-backdrop fixed inset-0 z-[60] hidden items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md"
-  >
-    <div
-      id="paymentSuccessModalCard"
-      class="payment-success-modal relative w-full max-w-md rounded-3xl p-6 sm:p-8 text-center stage-fade-in shadow-2xl"
-      role="dialog"
-      aria-labelledby="paymentSuccessModalTitle"
-    >
-      <button
-        id="closePaymentSuccessModalBtn"
-        type="button"
-        title="بستن"
-        class="absolute top-4 left-4 w-8 h-8 rounded-xl bg-white/80 hover:bg-white text-slate-500 hover:text-slate-800 flex items-center justify-center border border-[#dee5d5] transition-colors cursor-pointer"
-      >
-        ✕
-      </button>
-      <div class="payment-success-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-black">
-        <svg class="demo-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
-      </div>
-      <h3 id="paymentSuccessModalTitle" class="text-xl sm:text-2xl font-black text-[#233c2d] mb-6">
-        پرداخت با موفقیت انجام شد!
-      </h3>
-  
-      <button
-        id="downloadAppBtn"
-        type="button"
-        class="quiz-green-btn w-full py-3.5 rounded-xl font-black text-base cursor-pointer"
-      >
-        دانلود اپلیکیشن
-      </button>
-    </div>
-  </div>
 
   <!-- ==========================================
        TWO-STEP MODAL (انتخاب نوع برنامه -> تایید شماره و OTP)
@@ -672,7 +493,7 @@
              Click a plan to inspect features; purchase buttons remain visible.
              ====================================== -->
 <div id="modalStep1Content">
-<div class="plans-stack"><section class="plan-tier" data-tier="weekly"><button type="button" class="plan-option-card" data-plan-id="weekly" aria-expanded="false" aria-controls="features-weekly"><span class="plan-heading"><strong>شروع</strong><span class="plan-duration">۱۵ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">یک شروع مشخص، متناسب با تو</span></button><div id="features-weekly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه تغذیه اختصاصی با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>جایگزین‌های غذایی متناسب با سلیقه‌ات</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>لیست خرید برنامه</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۲۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="weekly">خرید پلن شروع<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="monthly"><button type="button" class="plan-option-card" data-plan-id="monthly" aria-expanded="false" aria-controls="features-monthly"><span class="plan-heading"><strong>همراه</strong><span class="plan-duration">۳۰ روزه</span><span class="plan-recommendation">پیشنهاد ما</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">زمان بیشتر، همراهی نزدیک‌تر</span></button><div id="features-monthly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>همه امکانات پلن شروع با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۲ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی روند و اجرای برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پشتیبانی متنی در طول دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="monthly">خرید پلن همراه<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="quarterly"><button type="button" class="plan-option-card" data-plan-id="quarterly" aria-expanded="false" aria-controls="features-quarterly"><span class="plan-heading"><strong>VIP</strong><span class="plan-duration">۹۰ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">همراهی خصوصی و پیوسته</span></button><div id="features-quarterly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه اختصاصی و همراهی <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۶ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۳ جلسه آنلاین با متخصص منتخب</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی و پشتیبانی اولویت‌دار</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه حفظ عادت‌ها در پایان دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۸٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="quarterly">خرید پلن VIP<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section></div></div>
+<div class="plans-stack"><section class="plan-tier" data-tier="weekly"><button type="button" class="plan-option-card" data-plan-id="weekly" aria-expanded="false" aria-controls="features-weekly"><span class="plan-heading"><strong>شروع</strong><span class="plan-duration">۱۵ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">یک شروع مشخص، متناسب با تو</span></button><div id="features-weekly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه تغذیه اختصاصی با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>جایگزین‌های غذایی متناسب با سلیقه‌ات</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>لیست خرید برنامه</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۲۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="weekly">انتخاب پلن شروع<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="monthly"><button type="button" class="plan-option-card" data-plan-id="monthly" aria-expanded="false" aria-controls="features-monthly"><span class="plan-heading"><strong>همراه</strong><span class="plan-duration">۳۰ روزه</span><span class="plan-recommendation">پیشنهاد ما</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">زمان بیشتر، همراهی نزدیک‌تر</span></button><div id="features-monthly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>همه امکانات پلن شروع با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۲ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی روند و اجرای برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پشتیبانی متنی در طول دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="monthly">انتخاب پلن همراه<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="quarterly"><button type="button" class="plan-option-card" data-plan-id="quarterly" aria-expanded="false" aria-controls="features-quarterly"><span class="plan-heading"><strong>VIP</strong><span class="plan-duration">۹۰ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">همراهی خصوصی و پیوسته</span></button><div id="features-quarterly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه اختصاصی و همراهی <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۶ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۳ جلسه آنلاین با متخصص منتخب</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی و پشتیبانی اولویت‌دار</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه حفظ عادت‌ها در پایان دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۸٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="quarterly">انتخاب پلن VIP<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section></div></div>
 
         <!-- ======================================
              MODAL STEP 2: PHONE INPUT -> MORPHS INTO OTP INPUT IN-PLACE
@@ -689,7 +510,7 @@
             </p>
             <button id="modalBackToPlansBtn" type="button" class="modal-plan-change hidden">تغییر پلن</button>
           </div>
-          <div id="verificationSuccess" class="hidden" role="status" tabindex="-1"><span class="verification-success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><h2>شماره‌ات تأیید شد</h2><p>در حال ورود به پرداخت</p></div>
+          <div id="verificationSuccess" class="hidden" role="status" tabindex="-1"><span class="verification-success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><h2>شماره‌ات تأیید شد</h2><p>شمارهٔ شما تأیید شد؛ در حال نمایش خلاصهٔ انتخاب</p></div>
           <div id="morphingInputWrapper" class="modal-phone-shell input-morph-shell p-4 rounded-2xl">
             <label id="morphInputLabel" for="morphSingleInput" class="text-sm font-extrabold text-white block mb-1">
               <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
@@ -1911,48 +1732,13 @@
       }
     }
 
-    // =========================================================
-    // PAGE 3: PAYMENT GATEWAY PAGE
-    // =========================================================
-    function populateAndShowPaymentPage(source) {
+    // The final demo stage is an unpaid summary, never a payment gateway.
+    function populateAndShowPaymentPage() {
       switchPage(3);
-
-      document.getElementById('paymentUserPhoneBadge').textContent = state.userPhone || '09123456789';
       document.getElementById('paymentGoalSummary').textContent = state.selectedGoal.title;
       document.getElementById('paymentPlanNameSummary').textContent = state.selectedPlan.name;
       document.getElementById('paymentTotalAmount').textContent = state.selectedPlan.priceText;
-
-      closePaymentSuccessModal();
-
-      // Populate quiz answers summary
-      const answersContainer = document.getElementById('paymentQuizAnswersList');
-      answersContainer.innerHTML = '';
-      state.selectedGoal.questions.forEach((qObj, idx) => {
-        const chosenText = answerLabel(qObj, state.answers[idx]);
-        const row = document.createElement('div');
-        row.className = 'p-2 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-0.5';
-        row.innerHTML = `
-          <span class="text-slate-400">${toPersianDigits(idx + 1)}. ${qObj.q}</span>
-          <span class="text-emerald-300 font-bold">← ${chosenText}</span>
-        `;
-        answersContainer.appendChild(row);
-      });
-
-      showToast(source === 'specialist'
-        ? `نوبت با ${state.selectedSpecialist.name} ثبت شد. ادامه در پرداخت`
-        : 'کد تایید شد! به درگاه پرداخت هدایت شدید 💳');
-    }
-
-    function closePaymentSuccessModal() {
-      const backdrop = document.getElementById('paymentSuccessModalBackdrop');
-      backdrop.classList.add('hidden');
-      backdrop.classList.remove('flex');
-    }
-
-    function openPaymentSuccessModal() {
-      const backdrop = document.getElementById('paymentSuccessModalBackdrop');
-      backdrop.classList.remove('hidden');
-      backdrop.classList.add('flex');
+      showToast('شماره تأیید شد؛ پرداخت آنلاین هنوز فعال نیست.');
     }
 
     // =========================================================
@@ -2213,29 +1999,6 @@
         openPlanSelectionModal(1);
       });
 
-      // Page 3: Request dynamic pin simulation
-      document.getElementById('requestDynamicPinBtn').addEventListener('click', (e) => {
-        const btn = e.currentTarget;
-        btn.innerHTML = 'ارسال شد ' + CHECK_ICON;
-        document.getElementById('bankOtpInput').value = '739104';
-        showToast('رمز دوم پویا به شماره موبایل شما پیامک شد', '🔐');
-      });
-
-      // Page 3: Complete payment simulation
-      document.getElementById('simulatedBankForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        openPaymentSuccessModal();
-        showToast('پرداخت با موفقیت انجام شد! برنامه غذایی شما آماده است', '✅');
-      });
-
-      document.getElementById('closePaymentSuccessModalBtn').addEventListener('click', closePaymentSuccessModal);
-      document.getElementById('paymentSuccessModalBackdrop').addEventListener('click', (e) => {
-        if (e.target.id === 'paymentSuccessModalBackdrop') closePaymentSuccessModal();
-      });
-
-      document.getElementById('downloadAppBtn').addEventListener('click', () => {
-        showToast('لینک دانلود اپ به زودی فعال می‌شود', '📲');
-      });
     });
   </script>
 </body>
