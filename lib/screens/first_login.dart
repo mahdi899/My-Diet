@@ -55,22 +55,6 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 44),
-                Center(
-                  child: Container(
-                    width: 108,
-                    height: 108,
-                    decoration: BoxDecoration(
-                      color: sage,
-                      borderRadius: BorderRadius.circular(36),
-                    ),
-                    child: const Icon(
-                      Icons.eco_outlined,
-                      size: 58,
-                      color: pine,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
                 Text(
                   'ادامهٔ مسیر سلامتی تو',
                   textAlign: TextAlign.center,
@@ -78,7 +62,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'برنامه‌ات آمادهٔ همراهی با توست.\nبا شماره‌ای که در سایت ثبت کردی وارد شو.',
+                  'برنامه‌ات آمادهٔ همراهی با توست.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: ink, height: 1.9, fontSize: 15),
                 ),
@@ -157,28 +141,6 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                         ],
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'هنوز ثبت‌نام نکردی؟',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: ink),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'ثبت‌نام و ساخت برنامه از طریق سایت رژیم من',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: ink, height: 1.8),
-                ),
-                const SelectableText(
-                  'my-diet.ir/demo/',
-                  textAlign: TextAlign.center,
-                  textDirection: TextDirection.ltr,
-                  style: TextStyle(
-                    color: pine,
-                    height: 2,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
