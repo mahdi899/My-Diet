@@ -8,6 +8,19 @@ import android.content.Intent
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ir.sabzine/registration")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "open") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://my-diet.ir/demo/")))
+                    result.success(null)
+                } catch (error: android.content.ActivityNotFoundException) {
+                    result.error("no_browser", "No browser available", null)
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ir.sabzine/share")
             .setMethodCallHandler { call, result ->
                 if (call.method != "text") { result.notImplemented(); return@setMethodCallHandler }

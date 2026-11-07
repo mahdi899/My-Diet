@@ -34,8 +34,11 @@ export class IdentityController {
   @Post('otp/request')
   request(@Req() req: Request, @Body() body: unknown) {
     const record = bodyRecord(body);
-    rejectUnknown(record, ['phone']);
-    return this.identity.requestOtp(normalizeIranianMobile(requiredString(record, 'phone', 32)), clientIp(req));
+    rejectUnknown(record, ['phone', 'existingAccountOnly']);
+    if ('existingAccountOnly' in record && typeof record.existingAccountOnly !== 'boolean') {
+      throw new ApiError(400, 'validation', 'نوع درخواست معتبر نیست');
+    }
+    return this.identity.requestOtp(normalizeIranianMobile(requiredString(record, 'phone', 32)), clientIp(req), record.existingAccountOnly === true);
   }
 
   @Public()

@@ -6,7 +6,13 @@ import 'auth_http_client.dart';
 import 'connection.dart';
 
 class AuthFailure implements Exception {
-  const AuthFailure(this.message, {this.expired = false, this.fault});
+  const AuthFailure(
+    this.message, {
+    this.expired = false,
+    this.fault,
+    this.code,
+  });
+  final String? code;
   final String message;
   final bool expired;
   final LinkFault? fault;
@@ -126,7 +132,10 @@ class CustomerAuth {
           : <String, dynamic>{};
       if (response.statusCode >= 400) {
         throw AuthFailure(
-          data['detail'] as String? ?? 'ورود انجام نشد؛ دوباره تلاش کن.',
+          data['messageFa'] as String? ??
+              data['detail'] as String? ??
+              'ورود انجام نشد؛ دوباره تلاش کن.',
+          code: data['code'] as String?,
           expired: response.statusCode == 401,
           fault: classifyLink(status: response.statusCode),
         );
@@ -140,15 +149,18 @@ class CustomerAuth {
         fault: LinkFault.timeout,
       );
     } catch (_) {
-      throw const AuthFailure(
-        'ارتباط برقرار نیست.',
-        fault: LinkFault.offline,
-      );
+      throw const AuthFailure('ارتباط برقرار نیست.', fault: LinkFault.offline);
     }
   }
 
-  Future<void> requestCode(String phone) async {
-    await _post('auth/otp/request', {'phone': phone});
+  Future<void> requestCode(
+    String phone, {
+    bool existingAccountOnly = false,
+  }) async {
+    await _post('auth/otp/request', {
+      'phone': phone,
+      if (existingAccountOnly) 'existingAccountOnly': true,
+    });
   }
 
   Future<CustomerSession> verify(String phone, String code) async {

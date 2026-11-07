@@ -75,7 +75,7 @@ export class IdentityService {
     @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
   ) {}
 
-  async requestOtp(phoneE164: string, ip: string): Promise<{ expiresInSeconds: number; resendAfterSeconds: number }> {
+  async requestOtp(phoneE164: string, ip: string, existingAccountOnly = false): Promise<{ expiresInSeconds: number; resendAfterSeconds: number }> {
     const challengeId = uuidv7();
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     await withTransaction(this.pool, async (client) => {
@@ -131,6 +131,15 @@ export class IdentityService {
       );
       if (cooling.rows[0]?.cooling) {
         throw new ApiError(429, 'rate_limited', 'درخواست کد جدید کمی بعد ممکن است');
+      }
+      if (existingAccountOnly) {
+        const account = await client.query(
+          "select 1 from users where phone_e164 = $1 and role = 'user' and status = 'active'",
+          [phoneE164],
+        );
+        if (!account.rowCount) {
+          throw new ApiError(404, 'account_not_registered', 'هنوز ثبت‌نام نکردی');
+        }
       }
       await client.query(
         `update otp_challenges
