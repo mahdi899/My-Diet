@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
-import 'package:sabzine_flutter/screens/user.dart';
-import 'package:sabzine_flutter/widgets/meal_choices.dart';
+import 'package:sabzine_flutter/presentation/screens/user.dart';
+import 'package:sabzine_flutter/presentation/widgets/meal_choices.dart';
 import 'nutrition_test.dart' show LogMemory;
 
 void main() {

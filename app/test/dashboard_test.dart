@@ -4,10 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
-import 'package:sabzine_flutter/theme.dart';
-import 'package:sabzine_flutter/widgets/nutrition.dart';
-import 'package:sabzine_flutter/widgets/meal_logging.dart';
-import 'package:sabzine_flutter/widgets/ui.dart';
+import 'package:sabzine_flutter/core/theme/theme.dart';
+import 'package:sabzine_flutter/presentation/widgets/nutrition.dart';
+import 'package:sabzine_flutter/presentation/widgets/meal_logging.dart';
 import 'widget_test.dart' show mobile;
 
 void main() {

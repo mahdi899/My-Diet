@@ -4,10 +4,10 @@ import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/data/wallet_state_storage.dart';
-import 'package:sabzine_flutter/screens/expert.dart';
-import 'package:sabzine_flutter/screens/wallet_flow.dart';
-import 'package:sabzine_flutter/theme.dart';
-import 'package:sabzine_flutter/widgets/ui.dart';
+import 'package:sabzine_flutter/presentation/screens/expert.dart';
+import 'package:sabzine_flutter/presentation/screens/wallet_flow.dart';
+import 'package:sabzine_flutter/core/theme/theme.dart';
+import 'package:sabzine_flutter/presentation/widgets/ui.dart';
 import 'widget_test.dart' show mobile;
 
 class WalletMemory implements WalletStateStorage {

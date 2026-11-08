@@ -20,6 +20,9 @@ import 'workspace_settings_storage.dart';
 import 'messaging.dart';
 import 'streak_campaign.dart';
 import 'journey_analytics.dart';
+import '../domain/commerce/commerce.dart';
+import '../domain/plan/plan.dart';
+import 'session/services.dart';
 
 enum AppRole { user, expert, admin }
 
@@ -537,7 +540,8 @@ class DietRequest {
             ? publishedOtherDays[day - 1]
             : <Meal>[]);
   int version = 0;
-  bool get isPublished => published.isNotEmpty;
+  bool get isPublished =>
+      published.isNotEmpty || publishedOtherDays.any((day) => day.isNotEmpty);
 }
 
 class ChatMessage {
@@ -962,6 +966,10 @@ class DemoStore extends ChangeNotifier {
   String selectionKey(DateTime date, int index) =>
       '$userRequestId|${userRequest.version}|${dateKey(date)}|$index';
   List<Meal> originalMealsOn(DateTime date) {
+    // Sample patients (numeric ids) stay in the file for tests. A real session never shows them.
+    if (serverAuthEnabled && int.tryParse(userRequestId ?? '') != null) {
+      return const [];
+    }
     if (userRequestId == null || !userRequest.isPublished) return const [];
     final week = userRequest.programWeek;
     if (week == null || dateKey(startOfWeek(date)) != dateKey(week)) {
@@ -984,6 +992,7 @@ class DemoStore extends ChangeNotifier {
         .toList();
     return approved.isNotEmpty ? approved : all.take(1).toList();
   }
+
   bool canSubstituteOn(DateTime date) =>
       originalMealsOn(date).isNotEmpty &&
       dateKey(date).compareTo(dateKey(today)) >= 0;
@@ -1205,11 +1214,47 @@ class DemoStore extends ChangeNotifier {
       _shoppingMarks
         ..clear()
         ..addAll(next);
+      await reportShopping?.call(row.ingredient.name, status);
     } finally {
       savingShopping = false;
       update();
     }
   }
+
+  /// Copies a server shopping flag onto the local row with the same ingredient name.
+  void applyRemoteShopping(
+    String ingredientName, {
+    required bool alreadyHave,
+    required bool purchased,
+  }) {
+    if (!hasActiveShoppingPlan) return;
+    final wanted = _shoppingName(ingredientName);
+    ShoppingIngredient? row;
+    for (final candidate in shoppingIngredients()) {
+      if (_shoppingName(candidate.ingredient.name) == wanted) {
+        row = candidate;
+        break;
+      }
+    }
+    if (row == null) return;
+    final key = _shoppingMarkKey(row);
+    final previous = reportShopping;
+    reportShopping = null;
+    if (purchased) {
+      _shoppingMarks[key] = ShoppingMark('purchased', row.quantity);
+    } else if (alreadyHave) {
+      _shoppingMarks[key] = ShoppingMark('have', row.quantity);
+    } else {
+      _shoppingMarks.remove(key);
+    }
+    reportShopping = previous;
+  }
+
+  String _shoppingName(String value) => value
+      .replaceAll('ي', 'ی')
+      .replaceAll('ك', 'ک')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 
   Future<void> acknowledgeShoppingChanges() async {
     if (!hasActiveShoppingPlan ||
@@ -1339,8 +1384,19 @@ class DemoStore extends ChangeNotifier {
     }
   }
 
-  int calorieTarget(DateTime date) =>
-      mealsOn(date).fold(0, (n, m) => n + m.calories);
+  /// Doctor-side daily target from the nutrition profile. Meal sums are only the fallback.
+  int? liveTargetKcal;
+  int calorieTarget(DateTime date) {
+    final target = liveTargetKcal;
+    if (target != null &&
+        hasUserRequest &&
+        userRequest.programWeek != null &&
+        dateKey(startOfWeek(date)) == dateKey(userRequest.programWeek!)) {
+      return target;
+    }
+    return mealsOn(date).fold(0, (n, m) => n + m.calories);
+  }
+
   int consumedCalories(DateTime date) => _mealCalories.entries
       .where(
         (e) => e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
@@ -1475,10 +1531,27 @@ class DemoStore extends ChangeNotifier {
       }
       _noteMealDay(date);
       claimWeeklyReward();
+      final uid = serverMealUids['${dateKey(date)}|$index'];
+      if (uid != null) await reportEaten?.call(uid, eaten);
     } finally {
       savingMeal = false;
       update();
     }
+  }
+
+  /// Records a server meal so the existing checkbox and the API stay on the same bite.
+  void rememberServerMeal({
+    required DateTime date,
+    required int index,
+    required String uid,
+    required bool eaten,
+    required int calories,
+  }) {
+    serverMealUids['${dateKey(date)}|$index'] = uid;
+    if (!eaten) return;
+    final key = mealLogKey(date, index);
+    _mealCalories[key] = calories;
+    completedMeals.add(key);
   }
 
   bool questionnaireNeedsReview = false;
@@ -2001,9 +2074,27 @@ class DemoStore extends ChangeNotifier {
 
   String? userRequestId;
   final userRequestIds = <String>{};
-  bool notificationsEnabled = true,
-      mealReminders = false,
-      questionnaireComplete = false;
+  bool notificationsEnabled = true;
+  bool mealReminders = false;
+  bool questionnaireComplete = false;
+
+  /// Real sessions stay on the sign-in gate until the server plan is loaded.
+  bool liveReady = false;
+
+  /// Meal uid per civil date and index, so "خوردم" updates the server plan.
+  final serverMealUids = <String, String>{};
+  Future<void> Function(String uid, bool eaten)? reportEaten;
+
+  /// Shared server clients for this signed-in session. Null in fixture mode.
+  Services? liveServices;
+  List<InfoQuestion> liveOpenQuestions = [];
+  List<TopupPackage> liveTopups = [];
+  ShoppingList? liveShopping;
+  String? liveOrderKey;
+  String? liveNotice;
+
+  /// Pushes a shopping tick to the server. Null in fixture mode.
+  Future<void> Function(String ingredientName, String? status)? reportShopping;
   double latestWeight = 72;
   final List<DateTime> weightDates = [];
   List<DateTime> get weightEntryDates =>
@@ -2267,6 +2358,17 @@ class DemoStore extends ChangeNotifier {
     userRequestId = null;
     foodPreferences = null;
     userRequestIds.clear();
+    liveReady = false;
+    liveTargetKcal = null;
+    serverMealUids.clear();
+    reportEaten = null;
+    liveServices = null;
+    liveOpenQuestions = [];
+    liveTopups = [];
+    liveShopping = null;
+    liveOrderKey = null;
+    liveNotice = null;
+    reportShopping = null;
     role = selectedRole = AppRole.user;
     entryStage = EntryStage.home;
     update();

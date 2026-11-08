@@ -7,8 +7,8 @@ import 'package:http/testing.dart';
 import 'package:sabzine_flutter/data/customer_auth.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/messaging.dart';
-import 'package:sabzine_flutter/screens/messaging.dart';
-import 'package:sabzine_flutter/theme.dart';
+import 'package:sabzine_flutter/presentation/screens/messaging.dart';
+import 'package:sabzine_flutter/core/theme/theme.dart';
 
 class Tokens implements AuthTokenStorage {
   String? value;

@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/screens/expert.dart';
-import 'package:sabzine_flutter/screens/meal_editor.dart';
+import 'package:sabzine_flutter/presentation/screens/expert.dart';
+import 'package:sabzine_flutter/presentation/screens/meal_editor.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
-import 'package:sabzine_flutter/screens/weekly_feedback.dart';
+import 'package:sabzine_flutter/presentation/screens/weekly_feedback.dart';
 
 class FailingFeedbackRepository extends MemoryWeeklyFeedbackRepository {
   bool fail = false;

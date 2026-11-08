@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/screens/expert.dart';
-import 'package:sabzine_flutter/screens/shared.dart';
-import 'package:sabzine_flutter/screens/user.dart';
-import 'package:sabzine_flutter/screens/clinic_workspace.dart';
-import 'package:sabzine_flutter/theme.dart';
+import 'package:sabzine_flutter/presentation/screens/expert.dart';
+import 'package:sabzine_flutter/presentation/screens/shared.dart';
+import 'package:sabzine_flutter/presentation/screens/user.dart';
+import 'package:sabzine_flutter/presentation/screens/clinic_workspace.dart';
+import 'package:sabzine_flutter/core/theme/theme.dart';
 import 'widget_test.dart' show mobile;
 
 void main() {

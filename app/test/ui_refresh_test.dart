@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
-import 'package:sabzine_flutter/screens/pricing_admin.dart';
-import 'package:sabzine_flutter/widgets/weekly_progress.dart';
-import 'package:sabzine_flutter/screens/shared.dart';
+import 'package:sabzine_flutter/presentation/screens/pricing_admin.dart';
+import 'package:sabzine_flutter/presentation/widgets/weekly_progress.dart';
+import 'package:sabzine_flutter/presentation/screens/shared.dart';
 import 'widget_test.dart' show mobile;
 import 'panels_test.dart' show SettingsMemory;
 

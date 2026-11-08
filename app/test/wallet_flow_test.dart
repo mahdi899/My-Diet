@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/screens/wallet_flow.dart';
-import 'package:sabzine_flutter/widgets/ui.dart';
+import 'package:sabzine_flutter/presentation/screens/wallet_flow.dart';
+import 'package:sabzine_flutter/presentation/widgets/ui.dart';
 import 'widget_test.dart' show mobile;
 
 Future<void> tapWallet(WidgetTester t, Finder f) async {

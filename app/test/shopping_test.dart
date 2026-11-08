@@ -5,7 +5,7 @@ import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/data/share_text_native.dart';
-import 'package:sabzine_flutter/screens/shopping.dart';
+import 'package:sabzine_flutter/presentation/screens/shopping.dart';
 import 'nutrition_test.dart' show LogMemory;
 
 void main() {

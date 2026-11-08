@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/screens/admin.dart';
-import 'package:sabzine_flutter/screens/clinic_workspace.dart';
-import 'package:sabzine_flutter/screens/expert.dart';
-import 'package:sabzine_flutter/screens/shared.dart';
-import 'package:sabzine_flutter/theme.dart';
+import 'package:sabzine_flutter/presentation/screens/admin.dart';
+import 'package:sabzine_flutter/presentation/screens/clinic_workspace.dart';
+import 'package:sabzine_flutter/presentation/screens/expert.dart';
+import 'package:sabzine_flutter/presentation/screens/shared.dart';
+import 'package:sabzine_flutter/core/theme/theme.dart';
 
 class LegacyStaffHarness extends StatelessWidget {
   const LegacyStaffHarness({super.key, required this.store});

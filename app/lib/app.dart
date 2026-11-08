@@ -3,15 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/demo_store.dart';
 import 'data/connection.dart';
-import 'screens/entry.dart';
-import 'screens/first_login.dart';
-import 'screens/splash.dart';
-import 'screens/onboarding.dart';
-import 'screens/user.dart';
-import 'theme.dart';
-import 'widgets/weekly_progress.dart';
-import 'widgets/connection_gate.dart';
-import 'screens/wallet_flow.dart';
+import 'presentation/screens/entry.dart';
+import 'presentation/screens/first_login.dart';
+import 'presentation/screens/splash.dart';
+import 'presentation/screens/onboarding.dart';
+import 'presentation/screens/user.dart';
+import 'core/theme/theme.dart';
+import 'presentation/widgets/weekly_progress.dart';
+import 'presentation/widgets/connection_gate.dart';
+import 'presentation/screens/wallet_flow.dart';
+import 'presentation/session/live_entry.dart';
+import 'presentation/session/live_session.dart';
 
 class SabzineApp extends StatefulWidget {
   const SabzineApp({
@@ -142,6 +144,10 @@ class AppRoot extends StatelessWidget {
     final store = DemoScope.of(context);
     // Legacy fixtures may still set staff roles; the shipped client is user-only.
     if (!store.userSignedIn) return const FirstLoginScreen();
+    // One app. The server only decides the onboarding path; the home is always this shell.
+    if (store.serverAuthEnabled && !store.liveReady) {
+      return LiveEntry(store: store);
+    }
     store.selectedRole = AppRole.user;
     if (store.entryStage != EntryStage.login) store.role = AppRole.user;
     return switch (store.entryStage) {
@@ -159,9 +165,49 @@ class PanelShell extends StatefulWidget {
   State<PanelShell> createState() => _PanelShellState();
 }
 
-class _PanelShellState extends State<PanelShell> {
+class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
   int selected = 0;
   bool resumingPlan = false;
+  Timer? _livePoll;
+  bool _refreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _livePoll = Timer.periodic(const Duration(seconds: 8), (_) => _refreshLive());
+  }
+
+  bool _waiting(DemoStore store) =>
+      store.serverAuthEnabled &&
+      store.liveReady &&
+      (!store.hasUserRequest ||
+          !store.userRequest.isPublished ||
+          store.liveOpenQuestions.isNotEmpty);
+
+  Future<void> _refreshLive() async {
+    if (!mounted || _refreshing) return;
+    final store = DemoScope.of(context);
+    if (!_waiting(store) || store.walletPurchaseBusy) return;
+    _refreshing = true;
+    try {
+      await refreshLive(store);
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshLive();
+  }
+
+  @override
+  void dispose() {
+    _livePoll?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();

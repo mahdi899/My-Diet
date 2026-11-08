@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/screens/entry.dart';
-import 'package:sabzine_flutter/screens/expert.dart';
-import 'package:sabzine_flutter/screens/shared.dart';
-import 'package:sabzine_flutter/widgets/ui.dart';
+import 'package:sabzine_flutter/presentation/screens/entry.dart';
+import 'package:sabzine_flutter/presentation/screens/expert.dart';
+import 'package:sabzine_flutter/presentation/screens/shared.dart';
+import 'package:sabzine_flutter/presentation/widgets/ui.dart';
 import 'widget_test.dart' show mobile;
 
 void main() {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
-import 'package:sabzine_flutter/screens/splash.dart';
-import 'package:sabzine_flutter/screens/entry.dart';
+import 'package:sabzine_flutter/presentation/screens/splash.dart';
+import 'package:sabzine_flutter/presentation/screens/entry.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/questionnaire_storage.dart';
 

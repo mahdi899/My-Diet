@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/session_storage.dart';
-import 'package:sabzine_flutter/screens/entry.dart';
-import 'package:sabzine_flutter/screens/onboarding.dart';
-import 'package:sabzine_flutter/screens/wallet_flow.dart';
+import 'package:sabzine_flutter/presentation/screens/entry.dart';
+import 'package:sabzine_flutter/presentation/screens/onboarding.dart';
+import 'package:sabzine_flutter/presentation/screens/wallet_flow.dart';
 import 'widget_test.dart' show mobile;
 
 class MemorySession implements SessionStorage {

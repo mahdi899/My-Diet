@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/widgets/review_carousel.dart';
+import 'package:sabzine_flutter/presentation/widgets/review_carousel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

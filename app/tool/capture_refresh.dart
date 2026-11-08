@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/screens/user.dart';
-import 'package:sabzine_flutter/screens/pricing_admin.dart';
-import 'package:sabzine_flutter/screens/wallet_flow.dart';
+import 'package:sabzine_flutter/presentation/screens/user.dart';
+import 'package:sabzine_flutter/presentation/screens/pricing_admin.dart';
+import 'package:sabzine_flutter/presentation/screens/wallet_flow.dart';
 import '../test/wallet_flow_test.dart' show tapWallet;
 import '../test/ui_refresh_test.dart' show completeProgram;
 

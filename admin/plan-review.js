@@ -78,6 +78,9 @@
 
     // ---- checks ---------------------------------------------------------------------------------
     const emptyDays = () => days.filter(day => !day.meals.length).length;
+    const mealsOf = () => days.flatMap(day => day.meals);
+    /** Meals the AI left without the doctor's own option. Publishing needs all three kinds. */
+    const missingSpecialist = () => mealsOf().filter(meal => !(meal.options || []).some(o => o.kind === 'specialist_alternative')).length;
     const withoutPrimary = () => days.reduce((sum, day) => sum + day.meals.filter(meal => !primaryOf(meal)).length, 0);
     function missing() {
       let count = 0;
@@ -387,8 +390,21 @@
       busy = false; render();
     }
     function approveAll() {
-      for (const day of days) for (const meal of day.meals) for (const option of meal.options || []) option.approved = true;
+      for (const meal of mealsOf()) for (const option of meal.options || []) option.approved = true;
       dirty = true; render();
+    }
+    /** Adopts the AI alternative as the doctor's option, so a reviewed week can actually be published. */
+    function fillSpecialist() {
+      let filled = 0;
+      for (const meal of mealsOf()) {
+        const options = meal.options || [];
+        if (options.some(o => o.kind === 'specialist_alternative')) continue;
+        const source = options.find(o => o.kind === 'ai_alternative') || options.find(o => o.kind === 'primary');
+        if (!source) continue;
+        setOption(meal, { ...structuredClone(source), optionId: crypto.randomUUID(), kind: 'specialist_alternative', approved: true });
+        filled += 1;
+      }
+      if (!filled) say('جایگزینی برای کپی کردن پیدا نشد؛ گزینه را از کاتالوگ بسازید.', true);
     }
 
     function render() {
@@ -417,16 +433,21 @@
       const mk = (text, fn, cls, disabled) => {
         const b = e('button', text, cls); b.type = 'button'; b.disabled = busy || !!disabled; b.onclick = fn; actions.append(b); return b;
       };
+      const empty = emptyDays();
+      const noSpec = missingSpecialist();
       mk('ساخت دوباره با AI', regenerate, 'secondary', published || request.status !== 'in_review');
       mk('تأیید همهٔ گزینه‌ها', approveAll, 'secondary', published);
+      const fill = mk('تکمیل گزینهٔ متخصص', fillSpecialist, 'secondary', published || noSpec === 0);
+      fill.title = 'گزینهٔ متخصص هر وعده را از روی جایگزین هوش مصنوعی می‌سازد؛ بعد باید ذخیره کنید';
       mk('ذخیره تغییرات', save, '', !dirty);
-      const empty = emptyDays();
       mk(published ? 'منتشرشده' : 'انتشار برای کاربر', publish, '', published || dirty || left > 0 || empty > 0 || request.status !== 'in_review');
       root.append(actions);
       if (published) root.append(e('p', 'این نسخه منتشر شده است؛ برای اصلاح، درخواست بازنگری ثبت کنید.', 'pr-meta'));
       else if (dirty) root.append(e('p', 'تغییرات ذخیره‌نشده دارید؛ پیش از انتشار ذخیره کنید.', 'pr-meta'));
       else if (empty > 0) root.append(e('p', `برای ${fa(empty)} روز هنوز وعده‌ای ثبت نشده؛ هر روز حداقل یک وعده لازم است.`, 'pr-meta'));
-      else if (left > 0) root.append(e('p', `${fa(left)} گزینه هنوز ثبت یا تأیید نشده؛ انتشار تا تکمیل همهٔ سه گزینهٔ هر وعده ممکن نیست.`, 'pr-meta'));
+      else if (noSpec > 0) root.append(e('p', `انتشار خاموش است: ${fa(noSpec)} وعده هنوز گزینهٔ متخصص ندارد. «تکمیل گزینهٔ متخصص» آن را از جایگزین هوش مصنوعی می‌سازد؛ بعد ذخیره کنید. هر وعده را جداگانه هم می‌توانید از کاتالوگ عوض کنید.`, 'pr-meta'));
+      else if (left > 0) root.append(e('p', `${fa(left)} گزینه هنوز تأیید نشده. «تأیید همهٔ گزینه‌ها» را بزنید و بعد ذخیره کنید تا انتشار روشن شود.`, 'pr-meta'));
+      else if (request.status !== 'in_review') root.append(e('p', 'سؤال بازی مانده است؛ تا بسته شدنش انتشار ممکن نیست.', 'pr-meta'));
       else root.append(e('p', 'همه چیز کامل است؛ می‌توانید منتشر کنید.', 'pr-meta ok'));
       root.append(dayView(), toast);
     }

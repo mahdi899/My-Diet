@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
-import 'package:sabzine_flutter/widgets/meal_logging.dart';
+import 'package:sabzine_flutter/presentation/widgets/meal_logging.dart';
 import 'nutrition_test.dart' show LogMemory;
 
 void main() {
