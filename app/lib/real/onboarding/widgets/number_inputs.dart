@@ -332,46 +332,51 @@ class _AgeWheelState extends State<AgeWheel> {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
-    alignment: Alignment.center,
-    children: [
-      Container(
-        height: 62,
-        margin: const EdgeInsets.symmetric(horizontal: 60),
-        decoration: BoxDecoration(
-          color: sage,
-          borderRadius: BorderRadius.circular(18),
+  // A wheel needs a bounded height; the onboarding page gives its body unbounded
+  // height (it sits in a scroll view), so the wheel brings its own.
+  Widget build(BuildContext context) => SizedBox(
+    height: 300,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          height: 62,
+          margin: const EdgeInsets.symmetric(horizontal: 60),
+          decoration: BoxDecoration(
+            color: sage,
+            borderRadius: BorderRadius.circular(18),
+          ),
         ),
-      ),
-      ListWheelScrollView.useDelegate(
-        controller: _controller,
-        itemExtent: 62,
-        diameterRatio: 2.2,
-        perspective: 0.004,
-        physics: const FixedExtentScrollPhysics(),
-        onSelectedItemChanged: (i) {
-          Haptics.tap();
-          widget.onChanged(widget.min + i);
-        },
-        childDelegate: ListWheelChildBuilderDelegate(
-          childCount: widget.max - widget.min + 1,
-          builder: (context, i) {
-            final selected = widget.min + i == widget.value;
-            return Center(
-              child: AnimatedDefaultTextStyle(
-                duration: Motion.quick,
-                style: TextStyle(
-                  fontFamily: 'Vazirmatn',
-                  fontSize: selected ? 34 : 22,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                  color: selected ? pine : muted,
-                ),
-                child: Text('${fa(widget.min + i)} سال'),
-              ),
-            );
+        ListWheelScrollView.useDelegate(
+          controller: _controller,
+          itemExtent: 62,
+          diameterRatio: 2.2,
+          perspective: 0.004,
+          physics: const FixedExtentScrollPhysics(),
+          onSelectedItemChanged: (i) {
+            Haptics.tap();
+            widget.onChanged(widget.min + i);
           },
+          childDelegate: ListWheelChildBuilderDelegate(
+            childCount: widget.max - widget.min + 1,
+            builder: (context, i) {
+              final selected = widget.min + i == widget.value;
+              return Center(
+                child: AnimatedDefaultTextStyle(
+                  duration: Motion.quick,
+                  style: TextStyle(
+                    fontFamily: 'Vazirmatn',
+                    fontSize: selected ? 34 : 22,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected ? pine : muted,
+                  ),
+                  child: Text('${fa(widget.min + i)} سال'),
+                ),
+              );
+            },
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }
