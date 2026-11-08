@@ -240,7 +240,7 @@ export function validateSubmission(input: unknown): {
   const pregnancyWeek = pregnant
     ? integer(pick(source, ['pregnancyWeek']), 'هفتهٔ بارداری باید عددی بین ۱ و ۴۲ باشد', 1, 42)
     : null;
-  const prePregnancyWeightKg = pregnant
+  const prePregnancyWeightKg = pregnant || breastfeeding
     ? decimal(
         pick(source, ['prePregnancyWeightKg', 'prePregnancyWeight']),
         'وزن پیش از بارداری باید بین ۲۵ و ۳۰۰ کیلوگرم باشد',
@@ -310,7 +310,7 @@ export function validateSubmission(input: unknown): {
     exercise: asChoice(exercise, pick(source, ['exercise']), 'تعداد ورزش را انتخاب کن'),
     sleep: asChoice(sleep, pick(source, ['sleep']), 'خواب را انتخاب کن'),
     mealPattern: asChoice(mealPattern, pick(source, ['mealPattern']), 'الگوی غذا را انتخاب کن'),
-    water: asChoice(water, pick(source, ['water']), 'مقدار آب را انتخاب کن'),
+    water: pick(source, ['water']) == null ? '' : asChoice(water, pick(source, ['water']), 'مقدار آب را انتخاب کن'),
     preference: asChoice(preference, pick(source, ['preference']), 'سلیقهٔ غذا را انتخاب کن'),
     budget: asChoice(budget, pick(source, ['budget']), 'بودجه را انتخاب کن'),
     cooking: asChoice(cooking, pick(source, ['cooking']), 'زمان آشپزی را انتخاب کن'),

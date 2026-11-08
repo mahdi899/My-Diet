@@ -230,7 +230,7 @@ void main() {
   });
 
   group('OnboardingController', () {
-    test('track first, then questions with insight after weight', () {
+    test('track first, then the questions in order', () {
       final c = make(FakeOnboarding());
       expect(c.current, isA<TrackStep>());
       expect(c.canAdvance, isFalse);
@@ -240,7 +240,7 @@ void main() {
       expect((c.current as QuestionStep).question.key, 'weight');
       c.setAnswer('weight', 70);
       c.next();
-      expect(c.current, isA<InsightStep>());
+      expect((c.current as QuestionStep).question.key, 'target_weight');
       expect(c.progress, lessThan(1));
       c.dispose();
     });
@@ -307,7 +307,7 @@ void main() {
       c.dispose();
     });
 
-    test('gaps-only mode shows just the missing questions then review', () {
+    test('gaps-only mode shows just the missing questions', () {
       final repo = FakeOnboarding();
       final c = make(
         repo,
@@ -324,9 +324,8 @@ void main() {
           ),
         ),
       );
-      expect(c.steps.length, 2);
-      expect((c.steps.first as QuestionStep).question.key, 'conditions');
-      expect(c.steps.last, isA<ReviewStep>());
+      expect(c.steps.length, 1);
+      expect((c.steps.single as QuestionStep).question.key, 'conditions');
       c.dispose();
     });
 

@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/theme.dart';
-import '../../core/motion/motion.dart';
 import 'controller.dart';
 import '../../domain/onboarding/onboarding.dart';
 import '../../domain/onboarding/spec.dart';
-import 'widgets/bmi_gauge.dart';
 import 'widgets/choices.dart';
 import 'widgets/frame.dart';
-import 'widgets/hold_to_promise.dart';
 import 'widgets/number_inputs.dart';
 import 'widgets/sleep_dial.dart';
 import 'widgets/steps.dart';
@@ -31,8 +27,6 @@ class OnboardingFlow extends StatefulWidget {
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
   bool forward = true;
-  bool consent = false;
-  bool promised = false;
 
   OnboardingController get c => widget.controller;
 
@@ -54,8 +48,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Future<void> _next() async {
     forward = true;
-    final step = c.current;
-    if (step is ReviewStep) {
+    if (c.isLast) {
       final profile = await c.submit();
       if (profile != null && mounted) widget.onDone(profile);
       return;
@@ -75,7 +68,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     final step = c.current;
-    final review = step is ReviewStep;
     return PopScope<void>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -84,21 +76,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       child: OnboardingFrame(
         stepKey: step.id,
         forward: forward,
-        progress: review ? 1 : c.progress,
+        progress: c.progress,
         groupTitle: c.groupTitle,
         onBack: c.isFirst && widget.onExit == null ? null : _back,
-        primaryLabel: review
-            ? 'ثبت و ساخت برنامه'
-            : step is InsightStep
-            ? 'بزن بریم'
+        primaryLabel: c.isLast
+            ? 'ثبت پاسخ‌ها'
             : step is QuestionStep &&
                   !step.question.required &&
                   !_answered(step)
             ? 'فعلاً رد شو'
             : 'ادامه',
-        onPrimary: !c.canAdvance || (review && !(consent && promised))
-            ? null
-            : _next,
+        onPrimary: !c.canAdvance ? null : _next,
         busy: c.submitting,
         syncHint: c.submitError ?? c.syncError,
         child: _content(step),
@@ -122,14 +110,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         });
       },
     ),
-    InsightStep() => InsightInterstitial(insight: step.insight),
-    ReviewStep() => _Review(
-      controller: c,
-      consent: consent,
-      promised: promised,
-      onConsent: (v) => setState(() => consent = v),
-      onPromise: () => setState(() => promised = true),
-    ),
     QuestionStep() => _QuestionView(controller: c, question: step.question),
   };
 }
@@ -138,6 +118,18 @@ class _QuestionView extends StatelessWidget {
   const _QuestionView({required this.controller, required this.question});
   final OnboardingController controller;
   final SpecQuestion question;
+
+  /// Same wording as the website. Age stays a wheel; these two titles depend on the path.
+  String get _title {
+    if (question.key == 'target_weight_kg' && controller.track == 'weight_gain') {
+      return 'دوست داری وزنت به چند کیلوگرم برسه؟';
+    }
+    if (question.key == 'pre_pregnancy_weight_kg' &&
+        controller.answer('life_stage') == 'breastfeeding') {
+      return 'وزنت قبل از بارداری چقدر بوده؟';
+    }
+    return question.title;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -237,7 +229,7 @@ class _QuestionView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        QuestionHeader(title: q.title, subtitle: q.subtitle),
+        QuestionHeader(title: _title, subtitle: q.subtitle),
         Expanded(
           child: scrolls
               ? body
@@ -286,106 +278,3 @@ class _DefaultedState extends State<_Defaulted> {
       widget.builder(widget.value ?? widget.fallback);
 }
 
-class _Review extends StatelessWidget {
-  const _Review({
-    required this.controller,
-    required this.consent,
-    required this.promised,
-    required this.onConsent,
-    required this.onPromise,
-  });
-  final OnboardingController controller;
-  final bool consent, promised;
-  final ValueChanged<bool> onConsent;
-  final VoidCallback onPromise;
-
-  double? get _bmi {
-    final h = (controller.answer('height_cm') as num?)?.toDouble();
-    final w = (controller.answer('weight_kg') as num?)?.toDouble();
-    if (h == null || w == null || h <= 0) return null;
-    return w / ((h / 100) * (h / 100));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bmi = _bmi;
-    final name = (controller.answer('name') as String?)?.split(' ').first;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-      children: [
-        Reveal(
-          child: Text(
-            name == null ? 'آماده‌ای؟' : '$name، آماده‌ای؟',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Reveal(
-          index: 1,
-          child: Text(
-            'پاسخ‌هات رو برای دکتر می‌فرستیم. اول هوش مصنوعی یه پیش‌نویس می‌سازه، بعد دکتر بررسی و تأییدش می‌کنه؛ رژیمت بعد از تأیید دکتر شروع می‌شه.',
-            style: TextStyle(color: muted, height: 1.9),
-          ),
-        ),
-        if (bmi != null) ...[
-          const SizedBox(height: 18),
-          Reveal(
-            index: 2,
-            child: Center(child: BmiGauge(bmi: bmi)),
-          ),
-        ],
-        const SizedBox(height: 20),
-        Reveal(
-          index: 3,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFDDE5D4)),
-            ),
-            child: Material(
-              type: MaterialType.transparency,
-              child: CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                value: consent,
-                onChanged: (v) {
-                  Haptics.tap();
-                  onConsent(v ?? false);
-                },
-                title: const Text(
-                  'با ذخیره و پردازش اطلاعات سلامتم برای ساخت برنامهٔ غذایی موافقم',
-                  style: TextStyle(fontSize: 13, height: 1.8),
-                ),
-                subtitle: const Text(
-                  'اطلاعات رمزنگاری می‌شود و فقط دکتر مسئول و مدیر مجاز آن را می‌بیند. هر زمان می‌توانی حذف را درخواست کنی.',
-                  style: TextStyle(fontSize: 11, color: muted),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Reveal(
-          index: 4,
-          child: Center(
-            child: HoldToPromise(
-              label: 'نگه دار تا به خودت قول بدی',
-              onCompleted: onPromise,
-            ),
-          ),
-        ),
-        if (!consent || !promised)
-          const Padding(
-            padding: EdgeInsets.only(top: 14),
-            child: Text(
-              'برای ادامه، رضایت رو تیک بزن و قول رو کامل کن.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: muted, fontSize: 12),
-            ),
-          ),
-      ],
-    );
-  }
-}

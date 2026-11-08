@@ -15,7 +15,7 @@ Future<void> settle(WidgetTester tester, [int ms = 700]) async {
 
 void main() {
   testWidgets(
-    'full flow: track, questions, insight, conditional question, review, submit',
+    'full flow: track, questions, conditional question, submit',
     (tester) async {
       tester.view.physicalSize = const Size(800, 1800);
       tester.view.devicePixelRatio = 1;
@@ -54,9 +54,6 @@ void main() {
       expect(controller.canAdvance, isTrue);
       await tester.tap(find.text('ادامه'));
       await settle(tester);
-      expect(find.text('نکته'), findsOneWidget);
-      await tester.tap(find.text('بزن بریم'));
-      await settle(tester);
 
       expect(find.text('وزن هدف'), findsOneWidget);
       await tester.tap(find.text('ادامه'));
@@ -79,30 +76,7 @@ void main() {
       expect(find.text('انسولین'), findsOneWidget);
       await tester.tap(find.text('خیر'));
       await settle(tester);
-      await tester.tap(find.text('ادامه'));
-      await settle(tester);
-
-      // Review: needs consent AND the held promise.
-      expect(controller.current, isA<ReviewStep>());
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'ثبت و ساخت برنامه'),
-            )
-            .onPressed,
-        isNull,
-      );
-      await tester.tap(find.byType(Checkbox));
-      await settle(tester, 100);
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.text('نگه دار تا به خودت قول بدی')),
-      );
-      for (var i = 0; i < 20; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      await gesture.up();
-      await settle(tester, 300);
-      await tester.tap(find.text('ثبت و ساخت برنامه'));
+      await tester.tap(find.text('ثبت پاسخ‌ها'));
       await settle(tester, 300);
 
       expect(repo.submitted, isTrue);

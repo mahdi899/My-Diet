@@ -277,7 +277,7 @@ export function canonicalToSubmission(track: TrackId, a: CanonicalAnswers): Reco
     exercise: exerciseCode(str(a.exercise_days)),
     sleep: sleepCode(a.sleep_wake),
     mealPattern,
-    water: WATER_MAP[str(a.water)],
+    water: str(a.water) ? WATER_MAP[str(a.water)] : '',
     preference: diet === 'vegan' ? 'vegan' : diet === 'vegetarian' ? 'vegetarian' : 'iranian',
     budget: str(a.budget),
     cooking: prep === 'more' ? 'flexible' : 'under_30',
@@ -286,9 +286,11 @@ export function canonicalToSubmission(track: TrackId, a: CanonicalAnswers): Reco
   if (track === 'weight_loss' || track === 'weight_gain') submission.targetWeightKg = target;
   if (pregnancyTrack && lifeStage === 'pregnant') {
     submission.pregnancyWeek = num(a.pregnancy_week);
-    submission.prePregnancyWeightKg = num(a.pre_pregnancy_weight_kg);
     const babies = str(a.babies);
     submission.babies = babies === 'singleton' ? 'singleton' : babies ? 'multiple' : undefined;
+  }
+  if (pregnancyTrack && (lifeStage === 'pregnant' || lifeStage === 'breastfeeding')) {
+    submission.prePregnancyWeightKg = num(a.pre_pregnancy_weight_kg);
   }
   if (pregnancyTrack && lifeStage === 'breastfeeding') {
     const months = num(a.months_postpartum);

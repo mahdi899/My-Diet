@@ -22,19 +22,6 @@ class QuestionStep extends FlowStep {
   String get id => question.key;
 }
 
-class InsightStep extends FlowStep {
-  const InsightStep(this.insight);
-  final SpecInsight insight;
-  @override
-  String get id => '_insight_${insight.afterKey}';
-}
-
-class ReviewStep extends FlowStep {
-  const ReviewStep();
-  @override
-  String get id => '_review';
-}
-
 /// Drives the whole onboarding: which steps exist, where the person is, what they answered,
 /// and keeping the server draft in step with the screen (retrying quietly when offline).
 class OnboardingController extends ChangeNotifier {
@@ -92,16 +79,12 @@ class OnboardingController extends ChangeNotifier {
           out.add(QuestionStep(q));
         }
       }
-      out.add(const ReviewStep());
       return out;
     }
     out.add(const TrackStep());
     for (final q in questions) {
       out.add(QuestionStep(q));
-      final insight = spec.insightAfter(q.key);
-      if (insight != null) out.add(InsightStep(insight));
     }
-    out.add(const ReviewStep());
     return out;
   }
 
@@ -130,7 +113,7 @@ class OnboardingController extends ChangeNotifier {
   int get questionTotal => steps.whereType<QuestionStep>().length;
   int get questionsDone => steps.take(index).whereType<QuestionStep>().length;
 
-  /// 0..1 across the questions only, so insights never make the ring jump.
+  /// 0..1 across the questions only.
   double get progress =>
       questionTotal == 0 ? 0 : (questionsDone / questionTotal).clamp(0.0, 1.0);
 
@@ -146,7 +129,6 @@ class OnboardingController extends ChangeNotifier {
       QuestionStep() =>
         !s.question.required || spec.isAnswered(s.question, answers),
       TrackStep() => track != null,
-      _ => true,
     };
   }
 

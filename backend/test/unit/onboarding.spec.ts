@@ -79,10 +79,18 @@ describe('onboarding spec', () => {
       assert.deepEqual(missingRequired(track, fill(track)), [], track);
     }
     const loss = activeQuestions('weight_loss', {}).map((question) => question.key);
+    assert.deepEqual(loss.slice(0, 6), ['name', 'age', 'sex', 'height_cm', 'weight_kg', 'activity']);
+    assert.equal(loss.at(-1), 'binge_history');
     assert.equal(loss.includes('pregnancy_week'), false);
     assert.equal(loss.includes('target_weight_kg'), true);
+    assert.equal(loss.includes('water'), false);
+    assert.equal(loss.includes('fav_dishes'), false);
+    const detox = activeQuestions('detox', { exercise_days: '0' }).map((question) => question.key);
+    assert.equal(detox[detox.indexOf('health_focus') + 1], 'water');
+    assert.equal(detox.includes('exercise_duration'), false);
     const preg = activeQuestions('pregnancy', { life_stage: 'pregnant' }).map((question) => question.key);
     assert.equal(preg.includes('target_weight_kg'), false);
+    assert.equal(preg[preg.indexOf('pregnancy_week') + 1], 'pre_pregnancy_weight_kg');
   });
 });
 
