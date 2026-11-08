@@ -10,7 +10,7 @@ const demoDir = existsSync(resolve(root, 'demo')) ? resolve(root, 'demo') : reso
 const mounts = {admin:resolve(root,'admin'),app:resolve(root,'app/build/web'),site:resolve(root,'site'),demo:demoDir};
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.ttf':'font/ttf','.woff2':'font/woff2','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.wasm':'application/wasm'};
 http.createServer(async(req,res)=>{
-  if(req.url.startsWith('/v1/')){
+  if(req.url.startsWith('/health/')||req.url.startsWith('/v1/')){
     const upstream=(apiTarget.protocol==='https:'?https:http).request(new URL(req.url,apiTarget),{
       method:req.method,headers:{...req.headers,host:apiTarget.host},timeout:15000,
     },response=>{res.writeHead(response.statusCode,response.headers);response.pipe(res);});
@@ -28,7 +28,11 @@ http.createServer(async(req,res)=>{
     let body=await readFile(file);
     // Keep the standard root-hosted Flutter build usable under this preview mount.
     if(mount==='app' && file===resolve(mounts.app,'index.html')) {
-      body=Buffer.from(body.toString('utf8').replace('<base href="/">','<base href="/app/">'));
+      let html=body.toString('utf8').replace('<base href="/">','<base href="/app/">');
+      if(!html.includes('preview-sw-unregister')) {
+        html=html.replace('</head>','<script id="preview-sw-unregister">navigator.serviceWorker?.getRegistrations?.().then((rs)=>rs.forEach((r)=>r.unregister()))</script></head>');
+      }
+      body=Buffer.from(html);
     }
     res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(body);
   }catch{res.writeHead(404).end('Not found');}

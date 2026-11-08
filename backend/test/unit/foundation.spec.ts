@@ -50,6 +50,27 @@ describe('loadEnv', () => {
     );
   });
 
+  it('rejects a fixed OTP code in production', () => {
+    assert.throws(
+      () =>
+        loadEnv({
+          ...baseEnv,
+          NODE_ENV: 'production',
+          SMS_PROVIDER: 'kavenegar',
+          KAVENEGAR_API_KEY: 'key',
+          PAYMENT_GATEWAY: 'zarinpal',
+          ZARINPAL_MERCHANT_ID: 'merchant',
+          AI_PROVIDER: 'openai',
+          AI_API_KEY: 'key',
+          JWT_SECRET: 'production-jwt-secret-value',
+          OTP_PEPPER: 'production-otp-pepper-value',
+          FIELD_KEY: 'production-field-key-value',
+          OTP_FIXED_CODE: '123456',
+        }),
+      /OTP_FIXED_CODE/,
+    );
+  });
+
   it('rejects a named production provider that has no credential', () => {
     assert.throws(
       () =>

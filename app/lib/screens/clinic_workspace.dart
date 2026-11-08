@@ -320,7 +320,7 @@ class ClinicHome extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: const Text(
-                                      'سبزینه • پنل تخصصی',
+                                      'رژیم من • پنل تخصصی',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 9,

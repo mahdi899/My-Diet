@@ -168,54 +168,11 @@ class WeeklyStreakCard extends StatelessWidget {
                 )
                 .toList(),
           ),
-          const SizedBox(height: 12),
-          LinearProgressIndicator(
-            value: progress.requiredDays == 0
-                ? 0
-                : (progress.consecutiveQualified / progress.requiredDays)
-                      .clamp(0.0, 1.0),
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(6),
-          ),
           const SizedBox(height: 10),
-          Text(
-            progress.todayRequirements,
-            key: const ValueKey('streak-today'),
-            style: const TextStyle(color: pine, fontSize: 12),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${fa(progress.consecutiveQualified)} از ${fa(progress.requiredDays)} روز پیاپی',
-            key: const ValueKey('streak-count'),
-            style: const TextStyle(fontSize: 12),
-          ),
-          for (final milestone in progress.milestones)
-            Text(
-              'روز ${fa(milestone.day)}: ${formatToman(milestone.amountToman)}',
-              style: const TextStyle(fontSize: 12),
-            ),
           Text(
             progress.resetRule,
             key: const ValueKey('streak-reset'),
-            style: const TextStyle(color: muted, fontSize: 11),
-          ),
-          if (claimed)
-            Text(
-              '${formatToman(s.rewardForWeek(dateKey(week)))} جایزه به کیف پولت اضافه شد.',
-              key: const ValueKey('streak-credited'),
-            ),
-          if (progress.claimState == 'duplicate')
-            const Text(
-              'این پاداش قبلاً ثبت شده است.',
-              key: ValueKey('streak-duplicate'),
-            ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              key: const ValueKey('streak-claim'),
-              onPressed: () => s.claimWeeklyReward(),
-              child: const Text('بررسی پاداش'),
-            ),
+            style: const TextStyle(color: muted, fontSize: 10, height: 1.6),
           ),
           if (s.canReviewCurrentProgram)
             TextButton.icon(

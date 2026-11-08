@@ -199,9 +199,9 @@ void main() {
       final s = ready();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      await t.ensureVisible(find.text('لیست خرید هفته'));
+      await t.tap(find.text('برنامه'));
       await t.pumpAndSettle();
-      await t.tap(find.text('لیست خرید هفته'));
+      await t.tap(find.byTooltip('لیست خرید هفته'));
       await t.pumpAndSettle();
       expect(find.byType(ShoppingScreen), findsOneWidget);
       for (var i = 0; i < 7; i++) {
@@ -243,7 +243,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.text('کپی لیست'));
       await t.pumpAndSettle();
-      expect(copied, contains('لیست خرید سبزینه'));
+      expect(copied, contains('لیست خرید رژیم من'));
       expect(t.takeException(), isNull);
     },
   );

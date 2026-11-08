@@ -23,7 +23,7 @@ const connectionString=`postgres://sabzine:${config.databasePassword}@127.0.0.1:
 const root=new pg.Client({connectionString});await root.connect();
 if (!(await root.query("select 1 from pg_database where datname='sabzine'")).rowCount) await root.query('create database sabzine');
 await root.end();
-Object.assign(process.env,{NODE_ENV:'development',APP_ROLE:'api',DATABASE_URL:connectionString.replace('/postgres','/sabzine'),SMS_PROVIDER:'console',PAYMENT_GATEWAY:'sandbox',AI_PROVIDER:'fake',PUSH_PROVIDER:'console',LOG_LEVEL:'warn',JWT_SECRET:config.jwtSecret,OTP_PEPPER:config.otpPepper,FIELD_KEY:config.fieldKey});
+Object.assign(process.env,{NODE_ENV:'development',APP_ROLE:'api',DATABASE_URL:connectionString.replace('/postgres','/sabzine'),SMS_PROVIDER:'console',PAYMENT_GATEWAY:'sandbox',AI_PROVIDER:'fake',PUSH_PROVIDER:'console',LOG_LEVEL:'warn',JWT_SECRET:config.jwtSecret,OTP_PEPPER:config.otpPepper,OTP_FIXED_CODE:'123456',FIELD_KEY:config.fieldKey});
 const {migrateUp}=await import('./dist/database/migrate.js');await migrateUp(process.env.DATABASE_URL);
 const client=new pg.Client({connectionString:process.env.DATABASE_URL});await client.connect();
 if(firstRun){

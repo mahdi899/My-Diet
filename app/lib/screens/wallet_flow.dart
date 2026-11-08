@@ -738,7 +738,7 @@ class _MockPaymentScreenState extends State<MockPaymentScreen> {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'پرداخت نمونهٔ سبزینه',
+                        'پرداخت نمونهٔ رژیم من',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 17,
@@ -751,7 +751,7 @@ class _MockPaymentScreenState extends State<MockPaymentScreen> {
                 InfoRows({
                   'پکیج انتخابی': 'شارژ کیف پول',
                   'مبلغ پرداختی': formatToman(widget.package.priceToman),
-                  'پذیرنده': 'سبزینه · نسخهٔ آزمایشی',
+                  'پذیرنده': 'رژیم من · نسخهٔ آزمایشی',
                 }),
               ],
             ),

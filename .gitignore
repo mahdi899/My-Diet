@@ -68,3 +68,9 @@ backend/node_modules/
 backend/dist/
 backend/coverage/
 backend/.pgdata/
+
+# Machine-local Android artifacts at the repo root.
+# The Flutter project lives in app/android, which already ignores these.
+/android/.gradle/
+/android/local.properties
+/android/**/GeneratedPluginRegistrant.java

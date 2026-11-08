@@ -1,11 +1,11 @@
 {
-    "name": "sabzine_flutter",
-    "short_name": "sabzine_flutter",
+    "name": "رژیم من",
+    "short_name": "رژیم من",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#EAF1DC",
+    "theme_color": "#205638",
+    "description": "برنامه غذایی شخصی‌سازی‌شده",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

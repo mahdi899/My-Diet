@@ -167,7 +167,7 @@ class CustomerAuth {
     final data = await _post('auth/otp/verify', {
       'phone': phone,
       'code': code,
-      'deviceLabel': 'Sabzine customer app',
+      'deviceLabel': 'رژیم من customer app',
       'platform': 'flutter',
     });
     if (data['totpRequired'] == true) {

@@ -64,7 +64,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
           title: Text(
             s.userSignedIn
                 ? 'سلام ${s.questionnaire.name.split(' ').first} 🌿'
-                : 'به سبزینه خوش اومدی 🌿',
+                : 'به رژیم من خوش اومدی 🌿',
           ),
           actions: [
             const Padding(
@@ -87,18 +87,10 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
             scrollable: false,
             children: [
               EnergyCard(date: date),
-              DailyAdviceCard(date: date),
               if (r != null && r.revisionRequested)
                 RevisionConversationCard(request: r),
               if (r != null && !r.revisionRequested && r.question.isNotEmpty)
                 RequestInformationCard(request: r),
-              if (hasPlan) const WeeklyStreakCard(),
-              if (s.hasActiveShoppingPlan)
-                OutlinedButton.icon(
-                  onPressed: () => pushPage(context, const ShoppingScreen()),
-                  icon: const Icon(Icons.shopping_basket_outlined),
-                  label: const Text('لیست خرید هفته'),
-                ),
               if (hasPlan &&
                   !r!.revisionRequested &&
                   r.status != PlanStatus.ready)
@@ -121,7 +113,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
                   ),
                 ),
                 for (var i = 0; i < meals.length; i++)
-                  ScheduledMealTile(date: date, index: i),
+                  ScheduledMealTile(date: date, index: i, compact: true),
               ] else if (!s.userSignedIn || r == null)
                 Surface(
                   child: Column(
@@ -493,6 +485,7 @@ class _PlanScreenState extends State<PlanScreen> with WidgetsBindingObserver {
               ),
             )
           else ...[
+            const WeeklyStreakCard(),
             Surface(
               color: sage,
               padding: 16,

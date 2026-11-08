@@ -42,6 +42,13 @@ function sameHex(left: string, right: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+function createOtpCode(env: Env): string {
+  if (env.NODE_ENV === 'development' && env.OTP_FIXED_CODE) {
+    return env.OTP_FIXED_CODE;
+  }
+  return randomInt(0, 1_000_000).toString().padStart(6, '0');
+}
+
 @Injectable()
 export class IdentityService {
   async adminLogin(username: string, password: string): Promise<IssuedSession | TotpChallenge> {
@@ -77,7 +84,7 @@ export class IdentityService {
 
   async requestOtp(phoneE164: string, ip: string, existingAccountOnly = false): Promise<{ expiresInSeconds: number; resendAfterSeconds: number }> {
     const challengeId = uuidv7();
-    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const code = createOtpCode(this.env);
     await withTransaction(this.pool, async (client) => {
       // Serialize both budgets, including the first request when no row exists.
       // All callers acquire IP before phone to keep lock ordering consistent.

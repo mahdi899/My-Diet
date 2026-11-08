@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
 import '../data/day.dart';
 import '../theme.dart';
+import 'celebration.dart';
 import 'ui.dart';
 
 const mealLogLabels = {
@@ -10,6 +11,53 @@ const mealLogLabels = {
   'different': 'غذای دیگری خوردم',
   'skipped': 'این وعده را نخوردم',
 };
+
+class MealLogCheckbox extends StatelessWidget {
+  const MealLogCheckbox({super.key, required this.date, required this.index});
+  final DateTime date;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final eaten = store.mealEaten(date, index);
+    final today = dateKey(date) == dateKey(store.today);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 22,
+          height: 22,
+          child: Checkbox(
+            key: ValueKey('meal-log-${dateKey(date)}-$index'),
+            value: eaten,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onChanged:
+                !today || store.savingMeal || store.savingSubstitution
+                ? null
+                : (checked) async {
+                    final next = checked ?? false;
+                    await store.setMealEaten(date, index, next);
+                    if (next && context.mounted) {
+                      showMealCelebration(context);
+                    }
+                  },
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          'خوردم',
+          style: TextStyle(
+            fontSize: 11,
+            color: eaten ? muted : ink,
+            fontWeight: eaten ? FontWeight.normal : FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class MealLogAction extends StatelessWidget {
   const MealLogAction({super.key, required this.date, required this.index});
@@ -60,15 +108,19 @@ class MealLogAction extends StatelessWidget {
   }
 }
 
-Future<void> showMealLog(BuildContext context, DateTime date, int index) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: cream,
-      builder: (_) =>
-          _LogForm(store: DemoScope.of(context), date: date, index: index),
-    );
+Future<void> showMealLog(BuildContext context, DateTime date, int index) async {
+  final store = DemoScope.of(context);
+  final saved = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: cream,
+    builder: (_) => _LogForm(store: store, date: date, index: index),
+  );
+  if (saved == true && context.mounted) {
+    showMealCelebration(context);
+  }
+}
 
 class _LogForm extends StatefulWidget {
   const _LogForm({
@@ -127,8 +179,7 @@ class _LogFormState extends State<_LogForm> {
         unit: unit.text,
       );
       if (!mounted) return;
-      showToast(context, 'ثبت وعده در نسخهٔ نمایشی ذخیره شد.');
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (_) {
       if (mounted) {
         setState(

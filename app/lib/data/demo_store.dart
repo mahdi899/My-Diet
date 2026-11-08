@@ -891,7 +891,7 @@ class DemoStore extends ChangeNotifier {
       : t.patientName;
   String threadTitle(ChatThread t, AppRole role) => role == AppRole.user
       ? (t.support
-            ? 'پشتیبانی سبزینه'
+            ? 'پشتیبانی رژیم من'
             : (hasUserRequest ? userRequest.specialist : experts.first.name))
       : patientName(t);
   bool incoming(ChatMessage m, AppRole role) => role == AppRole.user
@@ -973,11 +973,17 @@ class DemoStore extends ChangeNotifier {
   Meal originalMealOn(DateTime date, int index) => originalMealsOn(date)[index];
   String selectedOptionOn(DateTime date, int index) =>
       _selectedOptions[selectionKey(date, index)] ?? 'original';
-  List<MealAlternative> alternativesOn(DateTime date, int index) =>
-      originalMealOn(
-        date,
-        index,
-      ).alternatives.where((a) => a.available).toList();
+  List<MealAlternative> alternativesOn(DateTime date, int index) {
+    final all = originalMealOn(
+      date,
+      index,
+    ).alternatives.where((a) => a.available).toList();
+    // Customer UI: one specialist-approved swap; AI draft stays for workspace checks.
+    final approved = all
+        .where((a) => a.source == AlternativeSource.specialist)
+        .toList();
+    return approved.isNotEmpty ? approved : all.take(1).toList();
+  }
   bool canSubstituteOn(DateTime date) =>
       originalMealsOn(date).isNotEmpty &&
       dateKey(date).compareTo(dateKey(today)) >= 0;
@@ -2016,7 +2022,7 @@ class DemoStore extends ChangeNotifier {
   String feedback = '';
   final notices = <String>[
     'متخصص بررسی پرونده‌ات را شروع کرده.',
-    'به سبزینه خوش اومدی.',
+    'به رژیم من خوش اومدی.',
   ];
   final messages = <ChatMessage>[
     const ChatMessage(
@@ -2493,7 +2499,7 @@ class DemoStore extends ChangeNotifier {
       ProgramReview(
         id: id,
         authorName: questionnaire.name.trim().isEmpty
-            ? 'کاربر سبزینه'
+            ? 'کاربر رژیم من'
             : questionnaire.name.trim(),
         text: feedback.publicText,
         rating: feedback.rating,

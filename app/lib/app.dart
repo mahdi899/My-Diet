@@ -113,7 +113,7 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
     store: store,
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'سبزینه',
+      title: 'رژیم من',
       navigatorKey: navigatorKey,
       theme: appTheme(),
       locale: const Locale('fa'),
@@ -123,7 +123,14 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
         textDirection: TextDirection.rtl,
         child: ConnectionGate(link: links, child: child!),
       ),
-      home: starting ? const SplashScreen() : const AppRoot(),
+      home: starting
+          ? (widget.splashDuration > Duration.zero
+                ? const SplashScreen()
+                : const Scaffold(
+                    backgroundColor: cream,
+                    body: SizedBox.shrink(),
+                  ))
+          : const AppRoot(),
     ),
   );
 }

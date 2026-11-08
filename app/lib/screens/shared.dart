@@ -354,7 +354,7 @@ class _ChatScreenState extends State<LegacyChatScreen> {
                               ? s.patientName(t)
                               : m.sender == AppRole.expert
                               ? s.experts.first.name
-                              : 'پشتیبانی سبزینه',
+                              : 'پشتیبانی رژیم من',
                           style: const TextStyle(
                             fontSize: 10,
                             color: muted,
