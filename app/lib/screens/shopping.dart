@@ -9,7 +9,7 @@ import '../widgets/ui.dart';
 String shoppingListText(DemoStore store, List<DateTime> dates) {
   final data = store.shoppingList(dates: dates);
   final lines = <String>[
-    'لیست خرید سبزینه',
+    'لیست خرید رژیم من',
     dates.map(persianDate).join(' | '),
     'مقدارها مطابق برنامه و انتخاب‌های فعلی هستند.',
   ];

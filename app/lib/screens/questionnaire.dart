@@ -231,7 +231,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         context,
         widget.editing
             ? 'تغییرات پرسش‌نامه ذخیره شد.'
-            : 'اطلاعاتت ثبت شد؛ به سبزینه خوش اومدی.',
+            : 'اطلاعاتت ثبت شد؛ به رژیم من خوش اومدی.',
       );
     } catch (_) {
       if (mounted) {

@@ -27,7 +27,7 @@ class CustomerSignInPrompt extends StatelessWidget {
           'ورود به حساب',
           onPressed: DemoScope.of(context).openUserLogin,
         ),
-        const Notice('متخصص و مدیر از سامانه وب سبزینه استفاده می‌کنند.'),
+        const Notice('متخصص و مدیر از سامانه وب رژیم من استفاده می‌کنند.'),
       ],
     ),
   );

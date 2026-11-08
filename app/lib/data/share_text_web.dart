@@ -17,7 +17,7 @@ Future<bool> shareShoppingText(String text) async {
   final promise =
       share.callAsFunction(
             _navigator,
-            _ShareData(title: 'لیست خرید سبزینه', text: text),
+            _ShareData(title: 'لیست خرید رژیم من', text: text),
           )
           as JSPromise<JSAny?>;
   await promise.toDart;

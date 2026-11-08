@@ -1,6 +1,5 @@
 import 'meal_logging.dart';
 import 'meal_choices.dart';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../data/demo_store.dart';
 import '../data/day.dart';
@@ -175,43 +174,50 @@ class EnergyCard extends StatelessWidget {
                                     color: Colors.white,
                                   ),
                                 ),
-                                const Text(
-                                  'دریافت‌شده',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: Color(0xFFC4E88F),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Text(
-                          '${fa(s.recordedCount(date))} از ${fa(s.mealsOn(date).length)} وعده ثبت شده',
-                          style: const TextStyle(
+                const SizedBox(height: 10),
+                _EnergyAdviceStrip(date: date),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EnergyAdviceStrip extends StatelessWidget {
+  const _EnergyAdviceStrip({required this.date});
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('daily-advice'),
+    padding: const EdgeInsets.fromLTRB(10, 7, 8, 7),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEAF3E4),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .9),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.wb_sunny_outlined, color: pine, size: 15),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            dailyEncouragement(date),
+            style: const TextStyle(color: pine, fontSize: 10, height: 1.5),
+          ),
+        ),
+      ],
+    ),
+  );
                             color: Colors.white,
                             fontSize: 11,
                           ),
@@ -366,24 +372,15 @@ class _WeightNumber extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      Text(title, style: const TextStyle(fontSize: 11, color: muted)),
-      Text(
-        value,
-        style: const TextStyle(
-          fontSize: 27,
-          fontWeight: FontWeight.bold,
-          color: pine,
-        ),
-      ),
-      Text(unit, style: const TextStyle(fontSize: 10, color: muted)),
-    ],
-  );
-}
-
-class ScheduledMealTile extends StatelessWidget {
-  const ScheduledMealTile({super.key, required this.date, required this.index});
+  const ScheduledMealTile({
+    super.key,
+    required this.date,
+    required this.index,
+    this.compact = false,
+  });
   final DateTime date;
   final int index;
+  final bool compact;
   @override
   Widget build(BuildContext context) {
     final s = DemoScope.of(context),
@@ -396,11 +393,11 @@ class ScheduledMealTile extends StatelessWidget {
         opacity: eaten ? 0.48 : 1,
         child: Surface(
           color: eaten ? const Color(0xFFF1F6E9) : Colors.white,
-          padding: 12,
+          padding: compact ? 10 : 12,
           onTap: eaten ? null : () => showMealDetails(context, date, index),
           child: Row(
             children: [
-              FoodArt(kind: m.kind, size: 60),
+              FoodArt(kind: m.kind, size: compact ? 52 : 60),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -408,24 +405,36 @@ class ScheduledMealTile extends StatelessWidget {
                   children: [
                     Text(
                       '${m.name} · ${m.time}',
-                      style: const TextStyle(color: muted, fontSize: 10),
+                      style: const TextStyle(
+                        color: muted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       m.title,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: compact ? 13 : 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '${fa(m.calories)} کیلوکالری · جزئیات و مقدار',
-                      style: const TextStyle(color: pine, fontSize: 10),
+                    if (!compact) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        '${fa(m.calories)} کیلوکالری · جزئیات و مقدار',
+                        style: const TextStyle(color: pine, fontSize: 10),
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        MealDislikeButton(date: date, index: index),
+                        const Spacer(),
+                        MealLogCheckbox(date: date, index: index),
+                      ],
                     ),
-                    MealAlternativePreviews(date: date, index: index),
-                    MealLogAction(date: date, index: index),
-                    if (s.hasUnknownCalories(date))
+                    if (!compact && s.hasUnknownCalories(date))
                       const Text(
                         'جمع کالری امروز ناقص است؛ بعضی وعده‌ها محاسبه نشده‌اند.',
                         style: TextStyle(fontSize: 10, color: muted),
@@ -535,7 +544,10 @@ void showMealDetails(BuildContext context, DateTime date, int index) {
                         const SizedBox(height: 14),
                         MealRecipeDetails(m),
                         const SizedBox(height: 16),
-                        MealAlternativePreviews(date: date, index: index),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: MealDislikeButton(date: date, index: index),
+                        ),
                         Text(
                           m.details,
                           style: const TextStyle(
@@ -555,53 +567,16 @@ void showMealDetails(BuildContext context, DateTime date, int index) {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 18),
-                  child: MealLogAction(date: date, index: index),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: MealLogCheckbox(date: date, index: index),
+                  ),
                 ),
               ],
             ),
           ),
         );
       },
-    ),
-  );
-}
-
-class DailyAdviceCard extends StatelessWidget {
-  const DailyAdviceCard({super.key, required this.date});
-  final DateTime date;
-  @override
-  Widget build(BuildContext context) => Surface(
-    key: const ValueKey('daily-advice'),
-    color: const Color(0xFFEAF3E4),
-    padding: 16,
-    child: Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .75),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(Icons.wb_sunny_outlined, color: pine, size: 23),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            dailyEncouragement(date),
-            style: const TextStyle(color: pine, fontSize: 12, height: 1.9),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Container(
-          width: 3,
-          height: 42,
-          decoration: BoxDecoration(
-            color: pine.withValues(alpha: .2),
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-      ],
     ),
   );
 }

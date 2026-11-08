@@ -385,16 +385,16 @@
           </div>
 
           <div id="submitAnswersSection" class="hidden max-w-2xl mx-auto px-1 pb-6 text-center">
-            <button
-              id="openPlanModalBtn"
-              type="button"
+              <button
+                id="openPlanModalBtn"
+                type="button"
               class="quiz-green-btn cta-pulse w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-            >
-              <span>ثبت پاسخ‌ها</span>
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
+              >
+                <span>ثبت پاسخ‌ها</span>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
           </div>
         </div>
 
@@ -420,7 +420,7 @@
           <h2 class="ai-prep-title">اطلاعات شما<br>در حال آنالیز است</h2>
           <div class="ai-prep-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="پیشرفت آنالیز"><div id="aiPrepProgressFill" class="ai-prep-progress-fill"></div></div>
           <p class="analysis-wait-hint">صبر کنید</p>
-        </div>
+          </div>
         <div id="aiReadyPhase" class="ai-prep-phase ai-prep-phase--ready hidden">
           <div class="community-hero">
             <p class="community-hero-number" id="communityNumber" aria-live="polite">۱٬۰۰۰</p>
@@ -476,14 +476,14 @@
             انتخاب نوع برنامه
           </h3>
         </div>
-        <button
-          id="closeModalBtn"
-          type="button"
-          title="بستن"
+          <button
+            id="closeModalBtn"
+            type="button"
+            title="بستن"
           class="w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-[#173f2a] flex items-center justify-center transition-colors cursor-pointer"
-        >
-          ✕
-        </button>
+          >
+            ✕
+          </button>
       </div>
 
       <!-- MODAL BODY -->
@@ -510,22 +510,22 @@
               <span id="step2PlanPrice">۱٬۹۹۰٬۰۰۰ تومان</span>
             </p>
             <button id="modalBackToPlansBtn" type="button" class="modal-plan-change hidden">تغییر پلن</button>
-          </div>
+            </div>
           <div id="verificationSuccess" class="hidden" role="status" tabindex="-1"><span class="verification-success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><h2>شماره‌ات تأیید شد</h2><p>شمارهٔ شما تأیید شد؛ در حال نمایش خلاصهٔ انتخاب</p></div>
           <div id="morphingInputWrapper" class="modal-phone-shell input-morph-shell p-4 rounded-2xl">
             <label id="morphInputLabel" for="morphSingleInput" class="text-sm font-extrabold text-white block mb-1">
-              <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
-            </label>
+                <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
+              </label>
             <p id="morphInputSubtitle" class="text-xs text-slate-400 mb-3">
               کد تایید ۶ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.
             </p>
-            <button
-              id="editPhoneInOtpModeBtn"
-              type="button"
+              <button
+                id="editPhoneInOtpModeBtn"
+                type="button"
               class="hidden text-xs text-[#205638] hover:text-[#173f2a] underline cursor-pointer font-semibold mb-3"
-            >
-              ویرایش شماره موبایل
-            </button>
+              >
+                ویرایش شماره موبایل
+              </button>
 
             <!-- THE SINGLE INPUT ELEMENT THAT MORPHS FROM PHONE TO OTP -->
             <div class="relative">
@@ -1411,7 +1411,7 @@
       } else if (currentIndex === state.selectedGoal.questions.length - 1) {
         advanceAfterAnswer(currentIndex, wasAlreadyAllAnswered);
       } else {
-        renderQuizQuestions();
+      renderQuizQuestions();
       }
     }
 

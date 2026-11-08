@@ -15,7 +15,7 @@ class DoctorDetailsScreen extends StatelessWidget {
           if (e == null)
             const EmptyPanel(
               'متخصص هنوز مشخص نشده',
-              'اطلاعات پزشک سبزینه اینجا نمایش داده می‌شود.',
+              'اطلاعات پزشک رژیم من اینجا نمایش داده می‌شود.',
               icon: Icons.person_search_outlined,
             )
           else ...[

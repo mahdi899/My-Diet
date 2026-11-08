@@ -55,7 +55,7 @@ class ConnectionScreen extends StatelessWidget {
                   const SabzineMark(size: 72),
                   const SizedBox(height: 18),
                   const Text(
-                    'سبزینه',
+                    'رژیم من',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,

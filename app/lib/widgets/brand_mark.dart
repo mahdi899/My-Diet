@@ -8,7 +8,7 @@ class SabzineMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     image: true,
-    label: 'نشان سبزینه',
+    label: 'نشان رژیم من',
     child: SizedBox.square(
       dimension: size,
       child: CustomPaint(painter: _MarkPainter()),

@@ -38,10 +38,13 @@ void main() {
       expect(find.text('کالری امروز تو'), findsOneWidget);
       expect(find.text('با تیک «خوردم»'), findsNothing);
       expect(
-        t.getTopLeft(advice).dy - t.getBottomLeft(energy).dy,
-        closeTo(18, 1),
+        find.descendant(of: energy, matching: advice),
+        findsOneWidget,
       );
-      expect(t.widget<Surface>(advice).color, const Color(0xFFEAF3E4));
+      expect(
+        find.ancestor(of: advice, matching: energy),
+        findsOneWidget,
+      );
       expect(find.text('توصیهٔ امروز'), findsNothing);
       await t.pumpWidget(const SizedBox());
       s.dispose();
@@ -110,9 +113,9 @@ void main() {
       expect(find.text(persianDate(DateTime(2026, 10, 30))), findsOneWidget);
       final action = find.descendant(
         of: find.byType(ScheduledMealTile).first,
-        matching: find.widgetWithText(OutlinedButton, 'ثبت وعده'),
+        matching: find.byType(Checkbox),
       );
-      expect(t.widget<OutlinedButton>(action).onPressed, isNull);
+      expect(t.widget<Checkbox>(action).onChanged, isNull);
       await t.pumpWidget(const SizedBox());
       s.dispose();
     },
@@ -130,11 +133,8 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(action);
       await t.pumpAndSettle();
-      await t.ensureVisible(find.text('ذخیره ثبت وعده'));
-      await t.tap(find.text('ذخیره ثبت وعده'));
-      await t.pumpAndSettle();
       expect(s.consumedCalories(s.today), s.mealsOn(s.today).first.calories);
-      expect(find.byType(MealLogAction), findsWidgets);
+      expect(find.byType(MealLogCheckbox), findsWidgets);
       expect(s.eatenCount(s.today), 1);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());

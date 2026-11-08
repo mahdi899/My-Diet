@@ -110,7 +110,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               Icon(Icons.spa_outlined, color: pine),
               SizedBox(width: 8),
-              Text('سبزینه'),
+              Text('رژیم من'),
             ],
           ),
           actions: [

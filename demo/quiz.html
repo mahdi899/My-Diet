@@ -420,7 +420,7 @@
           <h2 class="ai-prep-title">اطلاعات شما<br>در حال آنالیز است</h2>
           <div class="ai-prep-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="پیشرفت آنالیز"><div id="aiPrepProgressFill" class="ai-prep-progress-fill"></div></div>
           <p class="analysis-wait-hint">صبر کنید</p>
-        </div>
+          </div>
         <div id="aiReadyPhase" class="ai-prep-phase ai-prep-phase--ready hidden">
           <div class="community-hero">
             <p class="community-hero-number" id="communityNumber" aria-live="polite">۱٬۰۰۰</p>
@@ -751,7 +751,7 @@
 
     function transitionFromSloganToGoals() {
       const params = new URLSearchParams(window.location.search);
-      window.location.href = `goals.html${params.size ? `?${params}` : ''}`;
+        window.location.href = `goals.html${params.size ? `?${params}` : ''}`;
     }
 
     function goToIntroHome() {

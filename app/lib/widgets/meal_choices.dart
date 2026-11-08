@@ -61,45 +61,33 @@ class MealRecipeDetails extends StatelessWidget {
   );
 }
 
-class MealAlternativePreviews extends StatelessWidget {
-  const MealAlternativePreviews({
+class MealDislikeButton extends StatelessWidget {
+  const MealDislikeButton({
     super.key,
     required this.date,
     required this.index,
   });
   final DateTime date;
   final int index;
+
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    final options = store.alternativesOn(date, index);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final option in options)
-          TextButton(
-            style: TextButton.styleFrom(
-              alignment: AlignmentDirectional.centerStart,
-              padding: EdgeInsets.zero,
-            ),
-            onPressed: () =>
-                showMealOptions(context, date, index, initialOption: option.id),
-            child: Text(
-              '${option.source == AlternativeSource.ai ? "AI" : "متخصص"}: ${option.meal.title}',
-              style: const TextStyle(fontSize: 11),
-            ),
-          ),
-        if (options.length < 2)
-          const Text(
-            'جایگزین‌های تأییدشده کامل نیستند',
-            style: TextStyle(color: muted, fontSize: 11),
-          ),
-        OutlinedButton.icon(
-          onPressed: () => showMealOptions(context, date, index),
-          icon: const Icon(Icons.swap_horiz, size: 18),
-          label: const Text('انتخاب و جزئیات جایگزین'),
-        ),
-      ],
+    if (store.alternativesOn(date, index).isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return TextButton(
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
+      onPressed: () => showMealOptions(context, date, index),
+      child: const Text(
+        'وعده رو دوست نداری؟',
+        style: TextStyle(fontSize: 10, color: pine),
+      ),
     );
   }
 }
@@ -291,8 +279,8 @@ class _MealOptionsState extends State<_MealOptions> {
                               title: Text(option.value.title),
                               subtitle: Text(
                                 option.key == 'original'
-                                    ? 'غذای اصلی${current == option.key ? " · انتخاب فعلی" : ""}'
-                                    : '${alternatives.firstWhere((a) => a.id == option.key).sourceLabel} · تأیید متخصص${current == option.key ? " · انتخاب فعلی" : ""}',
+                                    ? 'وعدهٔ تأییدشده${current == option.key ? " · انتخاب فعلی" : ""}'
+                                    : 'جایگزین تأییدشده${current == option.key ? " · انتخاب فعلی" : ""}',
                               ),
                               onTap: busy
                                   ? null
@@ -302,9 +290,9 @@ class _MealOptionsState extends State<_MealOptions> {
                                     }),
                             ),
                           ),
-                        if (alternatives.length < 2)
+                        if (alternatives.isEmpty)
                           const Notice(
-                            'فقط جایگزین دارای جزئیات کامل و تأیید متخصص قابل انتخاب است.',
+                            'جایگزین تأییدشده‌ای برای این وعده ثبت نشده است.',
                           ),
                         const SizedBox(height: 12),
                         Surface(child: MealRecipeDetails(selected)),

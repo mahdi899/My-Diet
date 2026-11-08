@@ -470,7 +470,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
       appBar: AppBar(
         title: Text(
           widget.support || thread.startsWith('support')
-              ? 'پشتیبانی سبزینه'
+              ? 'پشتیبانی رژیم من'
               : 'گفتگو با متخصص',
         ),
         actions: [

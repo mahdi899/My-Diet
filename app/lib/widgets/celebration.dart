@@ -1,22 +1,18 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../theme.dart';
 
 void showMealCelebration(BuildContext context) {
-  if (MediaQuery.disableAnimationsOf(context)) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(content: Text('آفرین! یک وعدهٔ دیگر ثبت شد 🌿')),
-    );
-    return;
-  }
+  if (MediaQuery.disableAnimationsOf(context)) return;
   final overlay = Overlay.of(context, rootOverlay: true);
   late final OverlayEntry entry;
   entry = OverlayEntry(
-    builder: (_) => MealCelebration(
-      onComplete: () {
-        entry.remove();
-        entry.dispose();
-      },
+    builder: (_) => Positioned.fill(
+      child: MealCelebration(
+        onComplete: () {
+          entry.remove();
+          entry.dispose();
+        },
+      ),
     ),
   );
   overlay.insert(entry);
@@ -55,48 +51,8 @@ class _MealCelebrationState extends State<MealCelebration>
     child: ExcludeSemantics(
       child: AnimatedBuilder(
         animation: animation,
-        builder: (context, _) => Stack(
-          children: [
-            Positioned.fill(
-              child: CustomPaint(painter: _PartyPainter(animation.value)),
-            ),
-            Positioned(
-              top: MediaQuery.paddingOf(context).top + 20,
-              left: 35,
-              right: 35,
-              child: Opacity(
-                opacity:
-                    (animation.value < .75 ? 1.0 : (1 - animation.value) / .25)
-                        .clamp(0.0, 1.0),
-                child: Material(
-                  color: const Color(0xFFE8F5D7),
-                  elevation: 5,
-                  borderRadius: BorderRadius.circular(20),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.celebration_outlined, color: pine),
-                        SizedBox(width: 9),
-                        Flexible(
-                          child: Text(
-                            'آفرین! یک وعدهٔ دیگر ثبت شد',
-                            style: TextStyle(
-                              color: pine,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        builder: (context, _) =>
+            CustomPaint(painter: _PartyPainter(animation.value)),
       ),
     ),
   );

@@ -129,6 +129,8 @@ void main() {
     s.approveActiveUserRequest();
     await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
     await t.pumpAndSettle();
+    await t.tap(find.text('برنامه'));
+    await t.pumpAndSettle();
     final card = find.byType(WeeklyStreakCard);
     await t.ensureVisible(card);
     await t.pumpAndSettle();
