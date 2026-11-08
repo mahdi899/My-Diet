@@ -43,6 +43,10 @@ export const envSchema = z.object({
   CORS_ORIGINS: z.string().default(''),
   JWT_SECRET: z.string().min(16).default('dev-only-jwt-secret-not-for-production'),
   OTP_PEPPER: z.string().min(16).default('dev-only-otp-pepper-not-for-production'),
+  OTP_FIXED_CODE: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^\d{6}$/).optional(),
+  ),
   FIELD_KEY: z.string().min(16).default('dev-only-field-key-not-for-production'),
   AI_FAILOVER_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 });
@@ -89,6 +93,9 @@ export function assertProductionProviders(env: Env): void {
   }
   if (env.OTP_PEPPER.startsWith('dev-only-')) {
     throw new EnvError('OTP_PEPPER must be set in production');
+  }
+  if (env.OTP_FIXED_CODE) {
+    throw new EnvError('OTP_FIXED_CODE is not allowed in production');
   }
   if (env.PUSH_PROVIDER === 'console') {
     throw new EnvError('PUSH_PROVIDER=console is not allowed in production');
