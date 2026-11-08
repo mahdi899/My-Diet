@@ -26,13 +26,27 @@ export interface DraftUsage {
   costMicros: number;
 }
 
+/** What the generation layer learned besides the meals. Stored with the generation for the doctor and the admin. */
+export interface DraftNotes {
+  poolCode: string;
+  promptVersions: Record<string, number | string>;
+  attemptChain: Array<{ provider: string; model: string; outcome: string; costMicros: number; chunk: string | null }>;
+  warnings: Array<{ code: string; message: string; day?: number; mealType?: string }>;
+  critic: { verdict: 'ok' | 'concerns' | 'unavailable'; issues: Array<{ severity: 'info' | 'warn' | 'block'; text: string }> } | null;
+  dayTotals: Array<{ kcal: number; proteinG: number; carbsG: number; fatG: number }>;
+}
+
 export interface PlanDraft {
   days: Array<{ meals: MealDraft[] }>;
   provider?: string;
   usage?: DraftUsage;
+  notes?: DraftNotes;
 }
 
-export type PlanDraftInput = MinimizedModelInput;
+export type PlanDraftInput = MinimizedModelInput & {
+  /** Plan request id, used to attribute ledger rows. Never sent to a model. */
+  requestId?: string;
+};
 
 export interface PlanDraftProvider {
   readonly name: string;

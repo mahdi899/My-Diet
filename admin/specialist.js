@@ -76,9 +76,9 @@
   const queueTable = rows => table(rows, [
     ['پرونده و ویرایش', row=>{const b=element('button','باز کردن پرونده و برنامه','secondary');b.onclick=async()=>{
       const expected=++generation;b.disabled=true;
-      try {const repository=SabzineClinicalRepository.live(session),request=await repository.get(row.id);
+      try {
         if(expected!==generation||!session.active)return;
-        $('content').replaceChildren(SabzineClinical.start({repository,request,session,onBack:load}));$('content').focus();
+        $('content').replaceChildren(SabzinePlanReview.open({session,requestId:row.id,onBack:load}));$('content').focus();
       }catch(error){if(expected===generation)notice(error.message);}finally{b.disabled=false;}
     };return b;}],
     ['جزئیات غذا', row => {
@@ -102,7 +102,7 @@
     ['زمان ثبت', row => date(row.createdAt)],
   ]);
   function showChat(repository,conversationId){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='گفتگو با کاربر';$('content').replaceChildren(SabzineMessaging.chat({repository,session,conversationId}));}
-  function changeView(repository){return SabzineMessaging.changes({repository,session,onChat:showChat,onEditor:(repo,request)=>{SabzineMessaging.reset();generation++;$('content').replaceChildren(SabzineClinical.start({repository:repo,request,session,onBack:()=>showChanges(repository)}));}});}
+  function changeView(repository){return SabzineMessaging.changes({repository,session,onChat:showChat,onEditor:(repo,request)=>{SabzineMessaging.reset();generation++;$('content').replaceChildren(SabzinePlanReview.open({session,requestId:request.id,onBack:()=>showChanges(repository)}));}});}
   function showChanges(repository){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='درخواست‌های تغییر برنامه';$('content').replaceChildren(changeView(repository));}
   async function render(section) {
     if (section === 'dashboard') {

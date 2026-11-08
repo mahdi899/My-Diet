@@ -6,7 +6,7 @@ import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { audit, insertOutbox, toman, withTransaction } from '../common/sql.js';
 import { PG_POOL } from '../database/database.js';
-import { GATEWAY_SET, type GatewaySet } from '../adapters/payment.js';
+import { GATEWAY_SET, isHostedGateway, type GatewaySet } from '../adapters/payment.js';
 import { PlanDraftService } from '../plans/plans.service.js';
 
 const OPEN_STATUSES = ['queued', 'generating', 'in_review', 'awaiting_user', 'response_received'];
@@ -176,7 +176,12 @@ export class MoneyService {
     const name = gatewayName ?? this.env.PAYMENT_GATEWAY;
     const gateway = this.gateways.get(name);
     if (!gateway) throw new ApiError(400, 'unknown_gateway', 'درگاه پرداخت شناخته نشد');
-    if (gateway.callsExternalNetwork) {
+    const hosted = isHostedGateway(gateway) ? gateway : null;
+    if (gateway.callsExternalNetwork && !hosted) {
+      throw new ApiError(503, 'payment_unavailable', 'درگاه پرداخت در دسترس نیست');
+    }
+    const origin = this.env.PUBLIC_API_URL?.replace(/\/+$/, '');
+    if (hosted && !origin) {
       throw new ApiError(503, 'payment_unavailable', 'درگاه پرداخت در دسترس نیست');
     }
     const pkg = await this.pool.query<{ amount_toman: string }>(
@@ -191,13 +196,84 @@ export class MoneyService {
        values ($1, $2, $3, $4, $5, 'pending', $6)`,
       [paymentId, userId, packageCode, amountToman, amountToman * 10, gateway.name],
     );
-    return { paymentId, amountToman, amountRial: amountToman * 10, status: 'pending' as const, gateway: gateway.name };
+    const base = { paymentId, amountToman, amountRial: amountToman * 10, status: 'pending' as const, gateway: gateway.name };
+    if (!hosted) return { ...base, redirectUrl: null as string | null };
+    try {
+      const started = await hosted.start({
+        amountRial: amountToman * 10,
+        callbackUrl: `${origin}/v1/payments/callback/${gateway.name}?paymentId=${paymentId}`,
+        description: 'شارژ کیف پول سبزینه',
+      });
+      await this.pool.query(`update payments set authority = $2 where id = $1`, [paymentId, started.authority]);
+      return { ...base, redirectUrl: started.redirectUrl as string | null };
+    } catch {
+      await this.pool.query(
+        `update payments set status = 'failed', failure_reason = 'gateway_start_failed' where id = $1 and status = 'pending'`,
+        [paymentId],
+      );
+      throw new ApiError(502, 'payment_unavailable', 'اتصال به درگاه پرداخت برقرار نشد؛ کمی بعد دوباره تلاش کن');
+    }
   }
 
   async completeSandbox(paymentId: string): Promise<WalletBalance> {
     if (!this.gateways.get('sandbox')) {
       throw new ApiError(404, 'not_found', 'یافت نشد');
     }
+    return this.credit(paymentId, 'sandbox', null);
+  }
+
+  /**
+   * The browser comes back from the gateway with an authority and a status. Neither is trusted:
+   * the authority must match what we stored, and the money is only credited after a server-side
+   * verify for the exact amount we asked for.
+   */
+  async completeHosted(
+    gatewayName: string,
+    paymentId: string,
+    authority: string | null,
+    status: string | null,
+  ): Promise<'credited' | 'failed' | 'pending'> {
+    const gateway = this.gateways.get(gatewayName);
+    if (!gateway || !isHostedGateway(gateway)) {
+      throw new ApiError(503, 'payment_unavailable', 'درگاه پرداخت در دسترس نیست');
+    }
+    const found = await this.pool.query<{
+      status: string;
+      gateway: string;
+      authority: string | null;
+      amount_rial: string;
+    }>(`select status, gateway, authority, amount_rial from payments where id = $1`, [paymentId]);
+    const payment = found.rows[0];
+    if (!payment || payment.gateway !== gateway.name || !payment.authority || payment.authority !== authority) {
+      throw new ApiError(404, 'not_found', 'پرداخت پیدا نشد');
+    }
+    if (payment.status === 'credited') return 'credited';
+    if (payment.status !== 'pending') return 'failed';
+    if (status !== 'OK') {
+      await this.pool.query(
+        `update payments set status = 'failed', failure_reason = 'user_cancelled' where id = $1 and status = 'pending'`,
+        [paymentId],
+      );
+      return 'failed';
+    }
+    let verified;
+    try {
+      verified = await gateway.verify({ amountRial: toman(payment.amount_rial), authority: payment.authority });
+    } catch {
+      return 'pending'; // transport fault: the person can reopen the link, nothing is lost
+    }
+    if (!verified.ok) {
+      await this.pool.query(
+        `update payments set status = 'failed', failure_reason = $2 where id = $1 and status = 'pending'`,
+        [paymentId, `verify_${verified.code}`],
+      );
+      return 'failed';
+    }
+    await this.credit(paymentId, gateway.name, verified.refId);
+    return 'credited';
+  }
+
+  private async credit(paymentId: string, gatewayName: string, refId: string | null): Promise<WalletBalance> {
     return withTransaction(this.pool, async (client) => {
       const found = await client.query<{
         user_id: string;
@@ -206,7 +282,7 @@ export class MoneyService {
         gateway: string;
       }>(`select user_id, amount_toman, status, gateway from payments where id = $1 for update`, [paymentId]);
       const payment = found.rows[0];
-      if (!payment || payment.gateway !== 'sandbox') throw new ApiError(404, 'not_found', 'پرداخت پیدا نشد');
+      if (!payment || payment.gateway !== gatewayName) throw new ApiError(404, 'not_found', 'پرداخت پیدا نشد');
       if (payment.status === 'credited') return this.balance(client, payment.user_id);
       if (payment.status !== 'pending') throw new ApiError(409, 'payment_closed', 'این پرداخت بسته شده است');
       const amount = toman(payment.amount_toman);
@@ -221,13 +297,12 @@ export class MoneyService {
         [uuidv7(), payment.user_id, amount, paymentId],
       );
       await client.query(
-        `update payments set status = 'credited', credited_at = now() where id = $1`,
-        [paymentId],
+        `update payments set status = 'credited', credited_at = now(), ref_id = $2 where id = $1`,
+        [paymentId, refId],
       );
       return this.balance(client, payment.user_id);
     });
   }
-
   async placeOrder(
     userId: string,
     idempotencyKey: string,
@@ -285,6 +360,14 @@ export class MoneyService {
         [userId],
       );
       if (!submission.rows[0]) throw new ApiError(409, 'questionnaire_required', 'اول پرسشنامه را کامل کن');
+      // Health data is only processed with the person's consent (accounts from before onboarding v2 have no profile row).
+      const consent = await client.query<{ consented_at: Date | null }>(
+        `select consented_at from nutrition_profiles where user_id = $1`,
+        [userId],
+      );
+      if (consent.rows[0] && !consent.rows[0].consented_at) {
+        throw new ApiError(409, 'consent_required', 'برای ادامه باید با پردازش اطلاعات سلامت موافقت کنی');
+      }
       if (parentRequestId) {
         const parent = await client.query(
           `select r.id from plan_requests r

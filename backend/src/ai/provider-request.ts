@@ -1,4 +1,6 @@
 export class GenerationError extends Error {
+  /** What the failed attempts already cost, so the day's spend stays honest. */
+  usage?: { tokens: number; costMicros: number; model: string; provider?: string; attempts?: number };
   constructor(readonly code: string) { super(code); }
 }
 

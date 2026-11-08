@@ -3,6 +3,8 @@ import { AdminModule } from './admin/admin.module.js';
 import { IdentityModule } from './identity/identity.module.js';
 import { MessagingModule } from './messaging/messaging.module.js';
 import { MoneyModule } from './money/money.module.js';
+import { FoodModule } from './food/food.module.js';
+import { OnboardingModule } from './onboarding/onboarding.module.js';
 import { PlansModule } from './plans/plans.module.js';
 import { QuestionnaireModule } from './questionnaire/questionnaire.module.js';
 import { ReportsModule } from './reports/reports.module.js';
@@ -17,6 +19,8 @@ import { StreakModule } from './rewards/streak.module.js';
   imports: [
     IdentityModule,
     QuestionnaireModule,
+    OnboardingModule,
+    FoodModule,
     PlansModule,
     MoneyModule,
     TrackingModule,

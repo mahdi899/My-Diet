@@ -53,6 +53,7 @@ class CustomerAuth {
     String path, {
     String method = 'GET',
     Map<String, dynamic>? body,
+    Map<String, String> headers = const {},
   }) async {
     if (session == null) {
       throw const AuthFailure('ابتدا وارد شو.', expired: true);
@@ -66,6 +67,7 @@ class CustomerAuth {
             ..headers.addAll({
               'Content-Type': 'application/json',
               if (kIsWeb) 'x-sabzine-client': 'web',
+              ...headers,
               'Authorization': 'Bearer ${session!.accessToken}',
             })
             ..body = body == null ? '' : jsonEncode(body),
@@ -83,12 +85,16 @@ class CustomerAuth {
         }
         response = await request();
       }
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      // A handler that returns null (e.g. "no plan yet") sends an empty body.
+      final text = utf8.decode(response.bodyBytes);
+      final data = text.isEmpty ? null : jsonDecode(text);
       if (response.statusCode >= 400) {
         throw AuthFailure(
           data is Map
-              ? data['detail'] as String? ?? 'عملیات انجام نشد.'
+              ? (data['messageFa'] ?? data['detail']) as String? ??
+                    'عملیات انجام نشد.'
               : 'عملیات انجام نشد.',
+          code: data is Map ? data['code'] as String? : null,
           expired: response.statusCode == 401,
           fault: classifyLink(status: response.statusCode),
         );

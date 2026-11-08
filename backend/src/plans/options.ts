@@ -20,9 +20,12 @@ export type MealOption = z.infer<typeof optionSchema>;
 
 export function parseOptions(value: unknown): MealOption[] | undefined {
   if (value === undefined) return undefined;
-  const parsed = z.array(optionSchema).length(3).safeParse(value);
-  if (!parsed.success) throw new ApiError(400, 'validation', 'هر وعده به سه گزینه با مقدار و واحد معتبر نیاز دارد');
-  if (new Set(parsed.data.map(o => o.kind)).size !== 3 || new Set(parsed.data.map(o => o.optionId)).size !== 3) {
+  // A draft may hold fewer than three options (the AI writes two, the doctor adds the third);
+  // publishing still demands all three, approved (see requireApprovedOptions).
+  const parsed = z.array(optionSchema).min(1).max(3).safeParse(value);
+  if (!parsed.success) throw new ApiError(400, 'validation', 'گزینه‌های وعده با مقدار و واحد معتبر لازم است');
+  if (!parsed.data.some(o => o.kind === 'primary')) throw new ApiError(400, 'validation', 'گزینهٔ اصلی وعده لازم است');
+  if (new Set(parsed.data.map(o => o.kind)).size !== parsed.data.length || new Set(parsed.data.map(o => o.optionId)).size !== parsed.data.length) {
     throw new ApiError(400, 'validation', 'شناسه و نوع گزینه‌ها باید یکتا باشد');
   }
   return parsed.data;

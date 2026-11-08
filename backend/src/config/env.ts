@@ -30,7 +30,9 @@ export const envSchema = z.object({
   MELIPAYAMAK_PATTERN_ID: z.preprocess(emptyToUndefined,z.string().regex(/^\d+$/).optional()),
   PAYMENT_GATEWAY: z.enum(['sandbox', 'zarinpal', 'idpay']).default('sandbox'),
   PAYMENT_GATEWAYS: z.string().default(''),
-  AI_PROVIDER: z.enum(['fake', 'openai', 'configured']).default('fake'),
+  AI_PROVIDER: z.enum(['fake', 'openai', 'configured', 'pool']).default('fake'),
+  /** Lets admin-defined AI endpoints point at private hosts. Tests only; never in production. */
+  AI_ALLOW_PRIVATE_ENDPOINTS: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   AI_FAILOVER_PROVIDER: z.enum(['none', 'fake', 'openai']).default('none'),
   PUSH_PROVIDER: z.enum(['console', 'fcm']).default('console'),
   KAVENEGAR_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
@@ -38,6 +40,11 @@ export const envSchema = z.object({
     emptyToUndefined,
     z.string().min(1).optional(),
   ),
+  ZARINPAL_SANDBOX: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
+  /** Test hook: points the Zarinpal adapter at a local fake. Never set in production. */
+  ZARINPAL_BASE_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  /** Public https origin of this API; hosted gateways call back to `${PUBLIC_API_URL}/v1/payments/callback/<gateway>`. */
+  PUBLIC_API_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   IDPAY_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   AI_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   CORS_ORIGINS: z.string().default(''),
@@ -84,6 +91,9 @@ export function assertProductionProviders(env: Env): void {
   }
   if (env.PAYMENT_GATEWAY === 'zarinpal' && !env.ZARINPAL_MERCHANT_ID) {
     throw new EnvError('ZARINPAL_MERCHANT_ID is required');
+  }
+  if (env.AI_ALLOW_PRIVATE_ENDPOINTS) {
+    throw new EnvError('AI_ALLOW_PRIVATE_ENDPOINTS is not allowed in production');
   }
   if (env.AI_PROVIDER === 'openai' && !env.AI_API_KEY) {
     throw new EnvError('AI_API_KEY is required');

@@ -583,7 +583,7 @@
 
   <script src="tracking-config.js?v=1"></script>
   <script src="tracking.js?v=3"></script>
-  <script src="questionnaire-data.js?v=13"></script><script src="questionnaire-settings.js?v=1"></script>
+  <script src="questionnaire-data.js?v=13"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -1725,7 +1725,7 @@
         try {
           if(countAnsweredQuestions()!==state.selectedGoal.questions.length)throw new Error('ابتدا پرسش‌نامه را کامل کنید.');
           if(state.submissionPhone!==normalizedPhone){state.submissionId=crypto.randomUUID();state.submissionPhone=normalizedPhone;}
-          const result=await fetch('/v1/demo/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>({question:q.q,answer:answerLabel(q,state.answers[i])}))}),signal:AbortSignal.timeout(15000)});
+          const result=await fetch('/v1/demo/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>Object.assign({question:q.q,answer:answerLabel(q,state.answers[i])},window.SabzineKeys?window.SabzineKeys.canonical(q,state.answers[i]):{}))}),signal:AbortSignal.timeout(15000)});
           if(!result.ok)throw new Error('ذخیرهٔ اطلاعات انجام نشد؛ دوباره تلاش کنید.');
           const sms=await fetch('/v1/auth/otp/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:normalizedPhone}),signal:AbortSignal.timeout(18000)});
           if(!sms.ok){const problem=await sms.json().catch(()=>({}));throw new Error(problem.detail||'ارسال کد انجام نشد؛ دوباره تلاش کنید.');}

@@ -11,6 +11,9 @@ import 'data/workspace_settings_storage.dart';
 import 'dev_preview.dart';
 import 'data/wallet_state_storage.dart';
 import 'data/session_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'real/home/topup_sheet.dart' show openExternalUrl;
+import 'real/real_app.dart';
 
 String resolveApiBase() {
   const fromEnv = String.fromEnvironment('API_BASE_URL', defaultValue: 'unset');
@@ -23,10 +26,30 @@ String resolveApiBase() {
   return 'http://127.0.0.1:3000';
 }
 
+/// Release builds always run the real app. Demo data is a debug-only convenience
+/// (`--dart-define=USE_DEMO=true`, or a web debug run with no API_BASE_URL).
+const _forceDemo = bool.fromEnvironment('USE_DEMO');
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final apiBase = resolveApiBase();
   if (kDebugMode) debugPrint('API $apiBase');
+  final demo = !kReleaseMode && (_forceDemo || apiBase.isEmpty);
+  if (!demo) {
+    openExternalUrl = (url) async {
+      final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!ok) throw StateError('cannot open $url');
+    };
+    runApp(
+      RealApp(
+        auth: CustomerAuth(
+          baseUrl: apiBase,
+          storage: const SecureAuthStorage(),
+        ),
+      ),
+    );
+    return;
+  }
   final store = DemoStore(
     customerAuth: apiBase.isEmpty
         ? null

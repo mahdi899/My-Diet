@@ -1,0 +1,48 @@
+.pr-root{display:grid;gap:18px}
+.pr-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0}
+.pr-bar h2{margin:0;font-size:22px}
+.pr-card h2{margin-top:0}
+.pr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.pr-stat{background:#f3f7f1;border:1px solid #dce5db;border-radius:14px;padding:12px 14px;display:grid;gap:4px}
+.pr-stat small{color:#52665a}
+.pr-stat strong{font-size:15px;overflow-wrap:anywhere}
+.pr-chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.pr-chip{display:inline-block;padding:5px 12px;border-radius:999px;font-size:13px;background:#e8eee4;color:#244b39}
+.pr-chip.bad{background:#fbe4e1;color:#8f2a22}
+.pr-chip.warn{background:#fff1d6;color:#7a5611}
+.pr-chip.ok{background:#dff1e3;color:#1b6a3a}
+.pr-notes{margin:6px 0 0;padding:0 20px;display:grid;gap:6px}
+.pr-notes li.warn{color:#7a5611}
+.pr-notes li.bad{color:#8f2a22;font-weight:bold}
+.pr-notes li.ok{color:#1b6a3a}
+.pr-error{color:#a02b2b}
+.pr-toast{position:sticky;bottom:12px;margin:0;padding:10px 16px;border-radius:12px;background:#173e32;color:#fff;justify-self:start}
+.pr-toast:empty{display:none}
+.pr-toast.bad{background:#a02b2b}
+.pr-actions{position:sticky;top:0;z-index:2;background:#f5f7f3;padding:10px 0}
+.pr-meta{color:#52665a;font-size:13px;display:block}
+.pr-meta.ok{color:#1b6a3a}
+.pr-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pr-tab{background:#fff;color:#205942;border:1px solid #bdcdbc;padding:9px 16px;min-height:40px}
+.pr-tab.on{background:#205942;color:#fff}
+.pr-total{font-weight:bold;margin:8px 0}
+.pr-total.bad{color:#a02b2b}
+.pr-meal header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+.pr-meal h3{margin:0}
+.pr-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.pr-option{border:1px solid #dce5db;border-radius:14px;padding:14px;display:grid;gap:8px;align-content:start;background:#fbfcfa}
+.pr-option.approved{border-color:#7fb48f;background:#f1f9f2}
+.pr-option.empty{border-style:dashed;background:#fff}
+.pr-kind{color:#8a6a1f;font-weight:bold}
+.pr-approve{display:flex;align-items:center;gap:8px}
+.pr-approve input{width:auto;margin:0}
+.pr-option button{font-size:13px;padding:8px 12px;min-height:38px}
+.pr-picker{max-width:560px}
+.pr-results{display:grid;gap:8px;max-height:240px;overflow:auto;margin-bottom:12px}
+.pr-food{display:grid;gap:2px;text-align:right;color:#173e32}
+.pr-pick{display:grid;grid-template-columns:1fr 90px auto;gap:8px;align-items:center;margin-bottom:8px}
+.pr-pick input{margin:0}
+.pr-sum{font-weight:bold}
+.pr-add-meal{display:flex;gap:10px;align-items:center;margin:14px 0 4px}
+.pr-add-meal select{min-inline-size:140px}
+.pr-meal>header button{margin-inline-start:auto}

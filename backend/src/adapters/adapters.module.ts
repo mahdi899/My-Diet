@@ -1,8 +1,5 @@
 import { Module } from '@nestjs/common';
 import { MelipayamakSmsProvider } from './melipayamak.js';
-import type { Pool } from 'pg';
-import { PG_POOL } from '../database/database.js';
-import { ConfiguredAiProvider } from './configured-ai.js';
 import { ENV, EnvError, type Env } from '../config/env.js';
 import {
   ConsoleSmsProvider,
@@ -17,13 +14,7 @@ import {
   SandboxPaymentGateway,
   UnavailablePaymentGateway,
 } from './payment.js';
-import {
-  FailoverPlanDraftProvider,
-  FakePlanDraftProvider,
-  PLAN_DRAFT_PROVIDER,
-  UnavailablePlanDraftProvider,
-  type PlanDraftProvider,
-} from './plan-draft.js';
+import { ZarinpalPaymentGateway } from './zarinpal.js';
 import {
   ConsolePushProvider,
   PUSH_PROVIDER,
@@ -57,15 +48,6 @@ import {
       useFactory: (gateways: GatewaySet, env: Env) => gateways.require(env.PAYMENT_GATEWAY),
     },
     {
-      provide: PLAN_DRAFT_PROVIDER,
-      inject: [ENV, PG_POOL],
-      useFactory: (env: Env, pool: Pool) => {
-        const primary = draftProvider(env, env.AI_PROVIDER);
-        const fallback = env.AI_FAILOVER_PROVIDER === 'none' ? primary : new FailoverPlanDraftProvider(primary, draftProvider(env, env.AI_FAILOVER_PROVIDER));
-        return new ConfiguredAiProvider(pool,env,fallback);
-      },
-    },
-    {
       provide: PUSH_PROVIDER,
       inject: [ENV],
       useFactory: (env: Env) => {
@@ -75,19 +57,20 @@ import {
       },
     },
   ],
-  exports: [SMS_PROVIDER, PAYMENT_GATEWAY, GATEWAY_SET, PLAN_DRAFT_PROVIDER, PUSH_PROVIDER],
+  exports: [SMS_PROVIDER, PAYMENT_GATEWAY, GATEWAY_SET, PUSH_PROVIDER],
 })
 export class AdaptersModule {}
 
 function gatewayFor(env: Env, name: 'sandbox' | 'zarinpal' | 'idpay') {
   if (name === 'sandbox') return new SandboxPaymentGateway();
+  if (name === 'zarinpal' && env.ZARINPAL_MERCHANT_ID) {
+    return new ZarinpalPaymentGateway({
+      merchantId: env.ZARINPAL_MERCHANT_ID,
+      sandbox: env.ZARINPAL_SANDBOX,
+      baseUrl: env.ZARINPAL_BASE_URL,
+    });
+  }
   if (env.NODE_ENV !== 'production') return new UnavailablePaymentGateway(name);
   throw new EnvError(`${name} adapter is not available in this build`);
 }
 
-function draftProvider(env: Env, name: 'fake' | 'openai' | 'configured'): PlanDraftProvider {
-  if (name === 'fake') return new FakePlanDraftProvider();
-  if (name === 'configured') return new UnavailablePlanDraftProvider();
-  if (env.NODE_ENV !== 'production') return new UnavailablePlanDraftProvider();
-  throw new EnvError('AI provider adapter is not available in this build');
-}

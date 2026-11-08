@@ -1,0 +1,40 @@
+/* AI centre, onboarding data and food catalogue screens. */
+.ai-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.ai-tab{background:transparent;color:var(--muted);border:0;border-bottom:3px solid transparent;border-radius:0;min-height:46px;padding:8px 16px;font-weight:600}
+.ai-tab:hover:not(:disabled){background:var(--soft);box-shadow:none;color:var(--ink)}
+.ai-tab.active{color:var(--green);border-bottom-color:var(--green);background:transparent}
+.ai-tab-body{min-width:0}
+.ai-row{display:flex;align-items:center;gap:16px;padding:16px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ai-row:last-child{border-bottom:0}
+.ai-row>div:first-of-type{flex:1 1 220px;min-width:0}
+.ai-row strong{display:block;overflow-wrap:anywhere}
+.ai-row.is-off{opacity:.55}
+.ai-provider-status{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cell-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ai-rank{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--soft);color:var(--green);font-weight:700;flex:none}
+.ai-health{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.ai-pool-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0 18px;padding:20px 24px 0;border-bottom:1px solid var(--line)}
+.ai-pool-settings .form-submit{grid-column:1/-1;border-top:0;padding-top:0;margin-top:0;margin-bottom:20px}
+.ai-members{min-height:60px}
+.card>.actions{padding:16px 24px;border-top:1px solid var(--line);background:#fcfdf9}
+.ai-test-result{padding:0 24px}
+.ai-test-result:not(:empty){padding:14px 24px 20px}
+.ai-test-result .info-note.warn{background:#fff9ee;border-color:#f0e1c8}
+.ai-prompt{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;font-size:12px;line-height:1.9;max-height:320px;overflow:auto;margin:8px 0 18px}
+.report-stack{display:flex;flex-direction:column;gap:20px}
+.ob-filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.ob-filters select{width:auto;min-width:170px;margin:0}
+.ob-filters .search-field{flex:1 1 220px}
+.ob-pairs{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:6px 18px;margin:8px 0 20px}
+.ob-pairs dt{color:var(--muted);font-size:12px}
+.ob-pairs dd{margin:0;overflow-wrap:anywhere}
+.ob-detail h3{margin-top:18px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.ob-bar{display:grid;grid-template-columns:150px 1fr minmax(120px,auto);gap:14px;align-items:center;padding:10px 24px}
+.ob-bar-track{height:14px;background:var(--soft);border-radius:8px;overflow:hidden}
+.ob-bar-fill{display:block;height:100%;background:linear-gradient(90deg,var(--green),#7aa95c);border-radius:8px}
+.checks{border:1px solid var(--line);border-radius:10px;padding:8px 14px 10px;margin:0 0 20px;display:flex;flex-wrap:wrap;gap:6px 18px}
+.checks legend{font-size:12px;font-weight:600;padding:0 6px;color:#3d5141}
+.check{display:inline-flex;align-items:center;gap:8px;font-weight:400}
+.check input{width:18px;height:18px;min-height:0;margin:0}
+.food-form{display:block}
+@media(max-width:760px){.ai-row{padding:14px 16px}.ob-bar{grid-template-columns:1fr;gap:6px}.ai-pool-settings{padding:16px 16px 0}}

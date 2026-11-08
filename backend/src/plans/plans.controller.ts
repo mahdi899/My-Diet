@@ -108,6 +108,14 @@ export class PlansController {
   }
 
   @Roles('specialist')
+  @Post('specialist/requests/:id/regenerate')
+  @ApiOperation({ summary: 'Ask the AI pool for a fresh draft of the same week', description: 'Requires If-Match lockVersion. Returns immediately with status generating; poll the request until it is back in review. The old draft is kept if the new run produces nothing.' })
+  @ApiResponse({ status: 409, description: 'not_ready, lock_conflict, high_risk or ai_budget_blocked.' })
+  regenerate(@Req() req: Request, @Param('id') id: string) {
+    return this.plans.regenerate(actor(req).id, requiredUuid(id), lockVersion(req));
+  }
+
+  @Roles('specialist')
   @Post('specialist/requests/:id/corrections')
   correct(@Req() req: Request, @Param('id') id: string) {
     return this.plans.correct(actor(req).id, requiredUuid(id));

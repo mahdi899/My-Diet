@@ -170,7 +170,9 @@ async function load() {
     else if (section==='web-analytics') view = await webAnalyticsPage();
     else if (section==='campaign-links') view = await campaignLinksPage();
     else if (section==='articles') view = await articlesPage();
-    else if (section === 'ai') view = await aiPage();
+    else if (section === 'ai') view = await SabzineAi.page();
+    else if (section === 'onboarding') view = await SabzineOnboarding.page();
+    else if (section === 'foods') view = await SabzineFoods.page();
     else if (section === 'notifications') view = await notificationsPage();
     else if (section === 'streaks') view = SabzineStreak.campaignPage();
     else if (section === 'settings') view = settings();
@@ -179,7 +181,6 @@ async function load() {
     else { const path = section === 'specialists' ? 'specialists' : section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
     if (request !== generation || !staffSession.active) return;
     $('content').replaceChildren(view);
-    if (section === 'ai') $('page-actions').append(button('افزودن API جدید', addAiModal, { iconName: 'plus' }));
     if (section === 'notifications') $('page-actions').append(button('اتصالات', firebaseModal, { secondary: true, iconName: 'sliders' }), button('اعلان جدید', notificationModal, { iconName: 'plus' }));
   } catch (error) {
     if (request !== generation || !staffSession.active) return;

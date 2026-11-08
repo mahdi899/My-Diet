@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Pool, PoolClient } from 'pg';
 import {
   PLAN_DRAFT_PROVIDER,
+  type DraftNotes,
   type MealDraft,
   type PlanDraft,
   type PlanDraftProvider,
@@ -12,7 +13,7 @@ import { requiredUuid } from '../common/parse.js';
 import { uuidv7 } from '../common/id.js';
 import { audit, insertOutbox, notify, withTransaction } from '../common/sql.js';
 import { addCivilDays, civilNow, fridayOfWeek, tehranDayStartUtc, tehranToday, weekStartSaturday } from '../common/time.js';
-import { PROMPT_VERSION, manualDraftReason, usageCount } from '../ai/cost.js';
+import { PROMPT_VERSION, usageCount } from '../ai/cost.js';
 import { aiAttempts, aiCostCapHits } from '../metrics/metrics.js';
 import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
@@ -25,6 +26,9 @@ import { bucketSql, type QueueBucket } from './queue.js';
 import { parseCivilDate, versionForDate, type DatedVersion } from './views.js';
 import { parseOptions, requireApprovedOptions, type MealOption } from './options.js';
 import { GenerationError } from '../ai/provider-request.js';
+import { BudgetService } from '../ai/budget.service.js';
+import { loadModelProfile } from '../ai/draft/model-profile.js';
+import { OnboardingService } from '../onboarding/onboarding.service.js';
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MEAL_ALIASES: Record<string, string> = {
@@ -58,22 +62,24 @@ export class PlanDraftService {
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(PLAN_DRAFT_PROVIDER) private readonly provider: PlanDraftProvider,
     @Inject(ENV) private readonly env: Env,
+    @Inject(BudgetService) private readonly budget: BudgetService,
+    @Inject(OnboardingService) private readonly onboarding: OnboardingService,
   ) {}
 
-  async generate(requestId: string): Promise<void> {
+  async generate(requestId: string, options: { regenerate?: boolean } = {}): Promise<void> {
     const lock=await this.pool.connect();
     try {
       // Keep the cap check, provider call and persisted cost in one serial lane.
       const acquired=await lock.query<{locked:boolean}>('select pg_try_advisory_lock(734821901) as locked');
       if(!acquired.rows[0]?.locked)throw new GenerationError('generation_busy');
-      await this.generateClaimed(requestId);
+      await this.generateClaimed(requestId, options.regenerate === true);
     } finally {
       await lock.query('select pg_advisory_unlock(734821901)').catch(()=>undefined);
       lock.release();
     }
   }
 
-  private async generateClaimed(requestId: string): Promise<void> {
+  private async generateClaimed(requestId: string, regenerate = false): Promise<void> {
     const claimed = await withTransaction(this.pool, async (client) => {
       const row = await client.query<{
         status: string;
@@ -96,7 +102,7 @@ export class PlanDraftService {
       const request = row.rows[0];
       if (!request || (request.status !== 'queued' && request.status !== 'generating')) return null;
       const existing = await client.query(`select id from plan_versions where request_id = $1 limit 1`, [requestId]);
-      if ((existing.rowCount ?? 0) > 0) {
+      if (!regenerate && (existing.rowCount ?? 0) > 0) {
         await client.query(
           `update plan_requests set status = 'in_review', updated_at = now() where id = $1 and status <> 'cancelled'`,
           [requestId],
@@ -126,7 +132,7 @@ export class PlanDraftService {
     if (!claimed) return;
 
     const highRisk = claimed.flags.some((flag) => (AI_SKIP_FLAGS as readonly string[]).includes(flag));
-    const blocked = highRisk ? null : await this.manualBlock(requestId);
+    const blocked = highRisk ? null : await this.budget.preflight(claimed.user_id);
     const skipReason = highRisk ? 'high_risk' : blocked?.reason ?? null;
     let draft = emptyDraft();
     let aiStatus: 'drafted' | 'skipped' | 'failed' = skipReason ? 'skipped' : 'drafted';
@@ -138,6 +144,7 @@ export class PlanDraftService {
     let tokens = 0;
     let costMicros = 0;
     let latencyMs = 0;
+    let poolCode: string | null = null;
     const opened = openAnswers(claimed.answers, this.env.FIELD_KEY);
     const minimized = minimizeForModel(opened, requestId, {
       userId: claimed.user_id,
@@ -149,10 +156,16 @@ export class PlanDraftService {
       from meal_logs where user_id=$1 and scheduled_date>=$2::date-7 and scheduled_date<$2::date`,
     [claimed.user_id,tehranToday()])).rows[0];
     minimized.history={recordedMeals:history.recorded,eatenMeals:history.eaten,daysWithRecords:history.days,cutoff:civilNow().toISOString()};
+    let notes: DraftNotes | null = null;
     if (!skipReason) {
       const started = Date.now();
       try {
-        const produced = await this.provider.draft(minimized);
+        await this.onboarding.ensureProfile(claimed.user_id).catch(() => null);
+        const profile = await loadModelProfile(this.pool, claimed.user_id);
+        if (profile) minimized.profile = profile;
+        const produced = await this.provider.draft({ ...minimized, requestId });
+        notes = produced.notes ?? null;
+        poolCode = produced.notes?.poolCode ?? null;
         latencyMs = Date.now() - started;
         rawOutput = encryptText(JSON.stringify(produced), this.env.FIELD_KEY);
         providerName = produced.provider ?? providerName;
@@ -169,6 +182,13 @@ export class PlanDraftService {
         latencyMs = Math.max(0, Date.now() - started);
         aiStatus = 'failed';
         reason = error instanceof GenerationError ? error.code : 'provider_error';
+        if (error instanceof GenerationError && error.usage) {
+          // Calls that were made are paid for even when no plan came out of them.
+          tokens = usageCount(error.usage.tokens);
+          costMicros = usageCount(error.usage.costMicros);
+          model = error.usage.model || model;
+          providerName = error.usage.provider || providerName;
+        }
       }
     }
     const warnings = aiStatus === 'drafted' ? draftWarnings(draft, opened.allergies ?? '', opened.dislikes ?? '') : [];
@@ -184,9 +204,22 @@ export class PlanDraftService {
           values($1,$2,$3,'failed','cancelled_after_generation',$4,$5,$6)`,[uuidv7(),requestId,providerName,costMicros,tokens,model]);
         return;
       }
-      const existing = await client.query(`select id from plan_versions where request_id = $1 limit 1`, [requestId]);
-      if ((existing.rowCount ?? 0) > 0) return;
-      await insertDays(client, requestId, 1, null, draft);
+      const existing = await client.query<{ id: string }>(
+        `select id from plan_versions where request_id = $1 and ($2::boolean = false or status = 'draft') limit 1`,
+        [requestId, regenerate],
+      );
+      if (regenerate) {
+        // A doctor asked for a fresh draft: swap the week in place, and keep the old one when this run produced nothing.
+        const target = existing.rows[0];
+        if (target && aiStatus === 'drafted') {
+          await deleteDays(client, target.id);
+          await insertDayContents(client, target.id, draft, null);
+          await client.query('update plan_versions set lock_version = lock_version + 1 where id = $1', [target.id]);
+        }
+      } else {
+        if ((existing.rowCount ?? 0) > 0) return;
+        await insertDays(client, requestId, 1, null, draft);
+      }
       await client.query(`update ai_execution_claims set status=$2,finished_at=now(),error_code=$3 where request_id=$1`,
         [requestId,aiStatus==='failed'?'failed':'completed',reason]);
       await client.query(
@@ -200,8 +233,9 @@ export class PlanDraftService {
       const generation = await client.query<{id:string}>(
         `insert into ai_generations
            (id, request_id, provider, status, skipped_reason, raw_output, attempt_no, model,
-            prompt_version, schema_version, tokens, latency_ms, cost_micros, warnings)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb) returning id`,
+            prompt_version, schema_version, tokens, latency_ms, cost_micros, warnings,
+            pool_code, attempt_chain, ai_notes)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16::jsonb, $17::jsonb) returning id`,
         [
           uuidv7(),
           requestId,
@@ -217,6 +251,9 @@ export class PlanDraftService {
           latencyMs,
           costMicros,
           JSON.stringify(warnings),
+          poolCode,
+          notes ? JSON.stringify(notes.attemptChain) : null,
+          notes ? JSON.stringify({ ...notes, attemptChain: undefined }) : null,
         ],
       );
       await client.query(`update plan_version_context set generation_id=$2 where version_id in
@@ -244,29 +281,6 @@ export class PlanDraftService {
         await notify(client, claimed.specialist_id, 'draft_ready', { requestId });
       }
     });
-  }
-
-  private async manualBlock(requestId:string): Promise<{ reason: 'kill_switch' | 'cost_cap' | 'cost_unresolved'; spentMicros: number; capMicros: number } | null> {
-    const uncertain=await this.pool.query(`select 1 from ai_execution_claims where request_id<>$1 and
-      (status='started' or error_code in ('provider_outcome_unknown','invalid_draft','provider_response_too_large','provider_error','restriction_conflict','provider_rejected')) limit 1`,[requestId]);
-    if(uncertain.rowCount)return {reason:'cost_unresolved',spentMicros:0,capMicros:0};
-    const controls = await this.pool.query<{ kill_switch: boolean; daily_cost_cap_micros: string | null }>(
-      `select kill_switch, daily_cost_cap_micros from ai_controls where id = true`,
-    );
-    const row = controls.rows[0];
-    const capMicros = row?.daily_cost_cap_micros == null ? null : Number(row.daily_cost_cap_micros);
-    const spent = await this.pool.query<{ spent: string }>(
-      `select coalesce(sum(cost_micros), 0)::text as spent from ai_generations where created_at >= $1`,
-      [tehranDayStartUtc()],
-    );
-    const spentMicros = Number(spent.rows[0]?.spent ?? 0);
-    const reason = manualDraftReason({
-      killSwitch: row?.kill_switch ?? false,
-      spentMicros,
-      capMicros,
-    });
-    if (!reason) return null;
-    return { reason, spentMicros, capMicros: capMicros ?? 0 };
   }
 
   async copyPublishedDraft(client: PoolClient, parentRequestId: string, requestId: string): Promise<void> {
@@ -387,6 +401,43 @@ export class PlanDraftService {
       );
       return { lockVersion: current.rows[0]?.lock_version ?? lock + 1 };
     });
+  }
+
+  /**
+   * Doctor-initiated redraft. Validates synchronously, flips the request to `generating`, then runs the
+   * pipeline in the background; the editor polls the request until it is back in review.
+   */
+  async regenerate(actorId: string, requestId: string, lock: number): Promise<{ status: 'generating' }> {
+    await withTransaction(this.pool, async (client) => {
+      const request = await this.lockRequest(client, actorId, 'specialist', requestId);
+      if (request.status !== 'in_review') throw new ApiError(409, 'not_ready', 'فقط پیش‌نویس در حال بررسی را می‌توان دوباره ساخت');
+      const versions = await client.query<{ id: string; status: string; lock_version: number }>(
+        `select id, status, lock_version from plan_versions where request_id = $1 order by version_number desc`,
+        [requestId],
+      );
+      const draft = versions.rows.find((v) => v.status === 'draft');
+      if (!draft) throw new ApiError(409, 'not_ready', 'پیش‌نویسی برای ساخت دوباره نیست');
+      if (draft.lock_version !== lock) throw new ApiError(409, 'lock_conflict', 'نسخهٔ برنامه تغییر کرده است');
+      const flags = await client.query<{ flags: string[] }>(
+        `select s.risk_flags as flags from plan_requests r join questionnaire_submissions s on s.id = r.submission_id where r.id = $1`,
+        [requestId],
+      );
+      if ((flags.rows[0]?.flags ?? []).some((f) => (AI_SKIP_FLAGS as readonly string[]).includes(f))) {
+        throw new ApiError(409, 'high_risk', 'این پرونده پرخطر است و باید کامل توسط متخصص نوشته شود');
+      }
+      const blocked = await this.budget.preflight(request.user_id);
+      if (blocked) throw new ApiError(409, 'ai_budget_blocked', 'سقف هزینهٔ هوش مصنوعی اجازهٔ ساخت دوباره نمی‌دهد');
+      await client.query(`delete from ai_execution_claims where request_id = $1`, [requestId]);
+      await client.query(`update plan_requests set status = 'generating', updated_at = now() where id = $1`, [requestId]);
+      await client.query(
+        `insert into request_events (id, request_id, actor_id, kind) values ($1, $2, $3, 'draft_regenerate_requested')`,
+        [uuidv7(), requestId, actorId],
+      );
+    });
+    void this.generate(requestId, { regenerate: true }).catch(async () => {
+      await this.pool.query(`update plan_requests set status = 'in_review', updated_at = now() where id = $1 and status = 'generating'`, [requestId]).catch(() => undefined);
+    });
+    return { status: 'generating' };
   }
 
   async publish(actorId: string, role: Role, requestId: string, lock: number, existing?: PoolClient) {
@@ -1014,6 +1065,8 @@ export class PlanDraftService {
     );
     let version: { id:string; versionNumber:number; status: string; lockVersion: number; days: DayInput[] } | null = null;
     let warnings: unknown[] = [];
+    let profile: Awaited<ReturnType<typeof loadModelProfile>> = null;
+    let aiReview: unknown = null;
     if (includeDraft) {
       const draft = await this.pool.query<{ id: string; version_number:number; status: string; lock_version: number }>(
         `select id, version_number, status, lock_version from plan_versions
@@ -1037,6 +1090,10 @@ export class PlanDraftService {
         [requestId],
       );
       warnings = Array.isArray(warningRow.rows[0]?.warnings) ? warningRow.rows[0].warnings : [];
+      [profile, aiReview] = await Promise.all([
+        loadModelProfile(this.pool, request.user_id),
+        this.loadAiReview(requestId),
+      ]);
     }
     return {
       id: request.id,
@@ -1057,7 +1114,52 @@ export class PlanDraftService {
           .map((answer) => ({ body: decryptText(answer.body, this.env.FIELD_KEY), createdAt: answer.created_at.toISOString() })),
       })),
       version,
-      ...(includeDraft ? { warnings } : {}),
+      ...(includeDraft ? { warnings, profile, aiReview, riskFlags: await this.riskFlags(requestId) } : {}),
+    };
+  }
+
+  private async riskFlags(requestId: string): Promise<string[]> {
+    const row = await this.pool.query<{ flags: string[] | null }>(
+      `select s.risk_flags as flags from plan_requests r join questionnaire_submissions s on s.id = r.submission_id where r.id = $1`,
+      [requestId],
+    );
+    return row.rows[0]?.flags ?? [];
+  }
+
+  /** What the doctor needs to judge the draft: who made it, what it cost, and what the checks found. */
+  private async loadAiReview(requestId: string) {
+    const row = await this.pool.query<{
+      id: string; status: string; provider: string; model: string; pool_code: string | null; prompt_version: string;
+      cost_micros: string; tokens: number; skipped_reason: string | null; ai_notes: Record<string, unknown> | null;
+      attempt_chain: unknown; warnings: unknown; created_at: Date; attempt_no: number;
+    }>(
+      `select id, status, provider, model, pool_code, prompt_version, cost_micros::text, tokens, skipped_reason,
+              ai_notes, attempt_chain, warnings, created_at, attempt_no
+       from ai_generations where request_id = $1 order by created_at desc limit 1`,
+      [requestId],
+    );
+    const g = row.rows[0];
+    if (!g) return null;
+    const chain = Array.isArray(g.attempt_chain) ? (g.attempt_chain as Array<Record<string, unknown>>) : [];
+    const notes = g.ai_notes ?? {};
+    return {
+      generationId: g.id,
+      status: g.status,
+      skippedReason: g.skipped_reason,
+      provider: g.provider,
+      model: g.model,
+      poolCode: g.pool_code,
+      promptVersion: g.prompt_version,
+      costMicros: Number(g.cost_micros),
+      tokens: g.tokens,
+      attemptNo: g.attempt_no,
+      createdAt: g.created_at.toISOString(),
+      validatorWarnings: Array.isArray(notes.warnings) ? notes.warnings : [],
+      critic: notes.critic ?? null,
+      dayTotals: Array.isArray(notes.dayTotals) ? notes.dayTotals : [],
+      attempts: chain.map((a) => ({
+        provider: a.provider ?? null, model: a.model ?? null, outcome: a.outcome ?? a.status ?? null, errorCode: a.errorCode ?? a.code ?? null,
+      })),
     };
   }
 }

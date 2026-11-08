@@ -10,6 +10,36 @@ export interface PaymentGateway {
   readonly callsExternalNetwork: boolean;
 }
 
+export interface HostedStart {
+  authority: string;
+  redirectUrl: string;
+}
+
+export interface HostedVerify {
+  ok: boolean;
+  alreadyVerified: boolean;
+  refId: string | null;
+  code: number;
+}
+
+/** A gateway that sends the person to its own page and confirms the payment server-to-server. */
+export interface HostedPaymentGateway extends PaymentGateway {
+  start(input: {
+    amountRial: number;
+    callbackUrl: string;
+    description: string;
+    mobile?: string;
+  }): Promise<HostedStart>;
+  verify(input: { amountRial: number; authority: string }): Promise<HostedVerify>;
+}
+
+export function isHostedGateway(gateway: PaymentGateway): gateway is HostedPaymentGateway {
+  return (
+    typeof (gateway as Partial<HostedPaymentGateway>).start === 'function' &&
+    typeof (gateway as Partial<HostedPaymentGateway>).verify === 'function'
+  );
+}
+
 export class SandboxPaymentGateway implements PaymentGateway {
   readonly name = 'sandbox' as const;
   readonly collectsCardData = false as const;

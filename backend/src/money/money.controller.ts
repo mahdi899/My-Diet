@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { actor, Public, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import {
@@ -105,13 +105,25 @@ export class MoneyController {
 
   @Public()
   @Get('payments/callback/:gateway')
-  callback(@Param('gateway') gateway: string, @Query('paymentId') paymentId?: string) {
-    if (gateway !== 'sandbox') {
-      throw new ApiError(503, 'payment_unavailable', 'درگاه پرداخت در دسترس نیست');
+  async callback(
+    @Param('gateway') gateway: string,
+    @Res() res: Response,
+    @Query('paymentId') paymentId?: string,
+    @Query('Authority') authority?: string,
+    @Query('Status') status?: string,
+  ) {
+    if (gateway === 'sandbox') {
+      res.json(await this.money.completeSandbox(requiredUuid(paymentId)));
+      return;
     }
-    return this.money.completeSandbox(requiredUuid(paymentId));
+    const outcome = await this.money.completeHosted(
+      gateway,
+      requiredUuid(paymentId),
+      typeof authority === 'string' ? authority : null,
+      typeof status === 'string' ? status : null,
+    );
+    res.status(200).type('html').send(paymentResultPage(outcome));
   }
-
   @Public()
   @Post('payments/sandbox/complete')
   complete(@Body() body: unknown) {
@@ -119,4 +131,14 @@ export class MoneyController {
     rejectUnknown(record, ['paymentId']);
     return this.money.completeSandbox(requiredUuid(record.paymentId));
   }
+}
+
+/** What the person sees in the browser after paying. The app learns the outcome by polling the wallet. */
+function paymentResultPage(outcome: 'credited' | 'failed' | 'pending'): string {
+  const message = {
+    credited: ['پرداخت موفق بود', 'کیف پولت شارژ شد. به برنامهٔ سبزینه برگرد.'],
+    failed: ['پرداخت انجام نشد', 'اگه مبلغی کم شده، تا چند ساعت دیگه برمی‌گرده. به برنامه برگرد و دوباره تلاش کن.'],
+    pending: ['در حال بررسی پرداخت', 'تأیید پرداخت کمی طول کشید. به برنامه برگرد؛ نتیجه همونجا نشون داده می‌شه.'],
+  }[outcome];
+  return `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${message[0]}</title><style>body{font-family:system-ui,Tahoma,sans-serif;background:#f7f8f0;color:#233c2d;display:grid;place-items:center;min-height:100vh;margin:0;padding:24px;text-align:center}main{max-width:380px}h1{font-size:22px}p{color:#76836e;line-height:2}a{display:inline-block;margin-top:16px;background:#205638;color:#fff;border-radius:14px;padding:12px 22px;text-decoration:none}</style></head><body><main><h1>${message[0]}</h1><p>${message[1]}</p><a href="sabzine://payment?status=${outcome}">بازگشت به سبزینه</a></main></body></html>`;
 }

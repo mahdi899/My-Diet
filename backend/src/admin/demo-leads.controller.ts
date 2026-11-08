@@ -65,7 +65,12 @@ export class DemoLeadsController {
   const b=body as Record<string,unknown>;
   if(!b||typeof b!=='object'||typeof b.id!=='string'||! /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(b.id)||typeof b.phone!=='string'||!['weight_loss','weight_gain','pregnancy','detox'].includes(String(b.goal))||!Array.isArray(b.answers)||b.answers.length<1||b.answers.length>100)throw new ApiError(400,'validation','اطلاعات پرسش‌نامه کامل نیست');
   const phone=normalizeIranianMobile(b.phone);
-  for(const answer of b.answers)if(!answer||typeof answer.question!=='string'||typeof answer.answer!=='string'||answer.question.length>500||answer.answer.length>2000)throw new ApiError(400,'validation','پاسخ معتبر نیست');
+  for(const answer of b.answers){
+   if(!answer||typeof answer.question!=='string'||typeof answer.answer!=='string'||answer.question.length>500||answer.answer.length>2000)throw new ApiError(400,'validation','پاسخ معتبر نیست');
+   // Canonical identifiers from newer demo builds: optional, small and strictly typed.
+   if(answer.key!==undefined&&(typeof answer.key!=='string'||!/^[a-z0-9_]{1,60}$/.test(answer.key)))throw new ApiError(400,'validation','پاسخ معتبر نیست');
+   if(answer.codes!==undefined&&(!Array.isArray(answer.codes)||answer.codes.length>20||answer.codes.some((c:unknown)=>typeof c!=='string'||!/^[a-z0-9_]{1,60}$/.test(c))))throw new ApiError(400,'validation','پاسخ معتبر نیست');
+  }
   const hash=createHmac('sha256',this.env.FIELD_KEY).update(phone).digest('hex');
   const result=await this.pool.query(`insert into demo_lead_submissions(id,phone_hash,phone_encrypted,goal,answers_encrypted) values($1,$2,$3,$4,$5) on conflict(id) do nothing returning id`,[b.id,hash,encryptText(phone,this.env.FIELD_KEY),b.goal,encryptText(JSON.stringify(b.answers),this.env.FIELD_KEY)]);
   if(!result.rowCount){const existing=await this.pool.query('select 1 from demo_lead_submissions where id=$1 and phone_hash=$2',[b.id,hash]);if(!existing.rowCount)throw new ApiError(409,'conflict','شناسهٔ ثبت تکراری است');}
