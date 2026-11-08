@@ -119,9 +119,9 @@ function dashboard(stats, orders) {
   quick.append(links); lower.append(quick); view.append(lower); return view;
 }
 const genericColumns = {
-  users: [ { label: 'کاربر', render: r => personCell(r.displayName, r.phone) }, { label: 'نقش', render: r => roleNames[r.role] || r.role }, { label: 'وضعیت حساب', render: r => badge(r.status) }, { label: 'شناسه', render: r => shortId(r.id) } ],
+  users: [ { label: 'کاربر', render: r => personCell(r.displayName, r.phone) }, { label: 'نقش', render: r => roleNames[r.role] || r.role }, { label: 'وضعیت حساب', render: r => badge(r.status) }, { label: 'شناسه', render: r => shortId(r.id) }, { label: 'عملیات', render: r => userRowActions(r) } ],
   requests: [ { label: 'درخواست', render: r => shortId(r.id) }, { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'نوع درخواست', render: r => kindNames[r.kind] || r.kind }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'زمان ثبت', render: r => formatDate(r.createdAt), className: 'cell-nowrap' } ],
-  specialists: [ { label: 'پزشک', render: r => personCell(r.displayName, r.credential) }, { label: 'معرفی', key: 'bio', className: 'cell-body' }, { label: 'امتیاز', render: r => r.averageRating == null ? 'هنوز بدون امتیاز' : number(r.averageRating) + ' از ۵' }, { label: 'نظرات', render: r => number(r.reviewCount) } ],
+  specialists: [ { label: 'پزشک', render: r => doctorCell(r) }, { label: 'تلفن', render: r => r.phone || '—', className: 'cell-nowrap' }, { label: 'کد نظام', render: r => r.councilNo || '—' }, { label: 'تحصیلات', render: r => r.education || r.credential || '—' }, { label: 'تاریخ تولد', render: r => formatDate(r.birthDate, false), className: 'cell-nowrap' }, { label: 'امتیاز', render: r => r.averageRating == null ? 'هنوز بدون امتیاز' : number(r.averageRating) + ' از ۵' } ],
   payments: [ { label: 'تراکنش', render: r => shortId(r.id) }, { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'مبلغ', render: r => money(r.amountToman) }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'تاریخ پرداخت', render: r => formatDate(r.createdAt), className: 'cell-nowrap' } ],
   reviews: [ { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'امتیاز', render: r => number(r.rating) + ' از ۵' }, { label: 'نظر', key: 'body', className: 'cell-body' }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'بررسی', render: r => {
     const actions = element('div', null, 'cell-actions');
@@ -133,6 +133,149 @@ const genericColumns = {
   'audit-logs': [ { label: 'عملیات', render: r => auditLabel(r.action) }, { label: 'بخش', render: r => ({ ai_connection: 'هوش مصنوعی', push_campaign: 'اعلان', settings: 'تنظیمات', user: 'کاربر', specialist: 'پزشک' })[r.targetType] || r.targetType }, { label: 'مدیر', render: r => shortId(r.actorId) }, { label: 'شناسه مرتبط', render: r => shortId(r.targetId) }, { label: 'زمان', render: r => formatDate(r.createdAt), className: 'cell-nowrap' } ],
 };
 function auditLabel(action) { return ({ ai_connection_created: 'افزودن سرویس هوش مصنوعی', ai_connection_deleted: 'حذف سرویس هوش مصنوعی', ai_connection_activation: 'تغییر وضعیت سرویس', push_draft_created: 'ساخت پیش‌نویس اعلان', push_queued: 'قرارگیری اعلان در صف', push_deleted: 'حذف اعلان', firebase_configured: 'تنظیم اتصال Firebase', user_status: 'تغییر وضعیت کاربر', wallet_adjusted: 'اصلاح موجودی', price_updated: 'تغییر تعرفه', reward_updated: 'تغییر پاداش' })[action] || action; }
+function iconAction(label, action, iconName, className = '') {
+  const control = button('', action, { iconName, className: ['icon-button', className].filter(Boolean).join(' ') });
+  control.setAttribute('aria-label', label);
+  return control;
+}
+function userRowActions(row) {
+  const actions = element('div', null, 'cell-actions');
+  actions.append(iconAction('ویرایش', () => userOperations(row), 'pencil'));
+  if (row.status !== 'deleted') {
+    actions.append(iconAction('حذف حساب', () => confirmAction('حذف حساب کاربری', 'حساب «' + (row.displayName || row.phone) + '» و همهٔ داده‌های وابسته‌اش برای همیشه از پایگاه داده پاک می‌شود.', 'حذف حساب', async () => {
+      await api('admin/users/' + encodeURIComponent(row.id) + '/delete', 'POST', { confirmation: 'حذف حساب' });
+      notice('حساب حذف شد');
+    }), 'trash', 'danger'));
+  }
+  return actions;
+}
+function doctorCell(row) {
+  const cell = personCell(row.displayName, row.education || row.credential);
+  if (row.portrait) {
+    const photo = element('img');
+    photo.className = 'avatar avatar-soft';
+    photo.alt = '';
+    photo.src = row.portrait;
+    cell.replaceChild(photo, cell.firstChild);
+  }
+  return cell;
+}
+function portraitFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) { resolve(''); return; }
+    if (!/^image\/(?:jpeg|png)$/.test(file.type) || file.size > 5_000_000) { reject(new Error('یک تصویر JPG یا PNG کوچک‌تر از ۵ مگابایت انتخاب کنید')); return; }
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      const scale = Math.min(1, 256 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تصویر خوانده نشد')); };
+    image.src = url;
+  });
+}
+function addSpecialistModal() {
+  openModal('افزودن پزشک', (body, dialog) => {
+    const form = element('form', null, 'specialist-form');
+    const picker = element('label', null, 'portrait-picker');
+    picker.title = 'انتخاب تصویر پروفایل';
+    const portrait = element('input');
+    portrait.type = 'file';
+    portrait.name = 'portrait';
+    portrait.accept = 'image/jpeg,image/png';
+    portrait.required = true;
+    portrait.setAttribute('aria-label', 'تصویر پروفایل');
+    const preview = element('span', null, 'portrait-preview');
+    preview.append(icon('plus'));
+    portrait.onchange = () => {
+      const file = portrait.files[0];
+      if (!file) { preview.replaceChildren(icon('plus')); return; }
+      const photo = element('img');
+      photo.alt = '';
+      photo.src = URL.createObjectURL(file);
+      preview.replaceChildren(photo);
+    };
+    picker.append(portrait, preview);
+    dialog.querySelector('.modal-header').append(picker);
+    const grid = element('div', null, 'form-grid');
+    field(grid, 'firstName', 'نام');
+    field(grid, 'lastName', 'نام خانوادگی');
+    const birth = field(grid, 'birthDate', 'تاریخ تولد', 'date');
+    birth.max = new Date().toISOString().slice(0, 10);
+    field(grid, 'councilNo', 'کد نظام پزشکی');
+    field(grid, 'education', 'تحصیلات');
+    field(grid, 'phone', 'شماره تلفن', 'tel');
+    form.append(grid, formFooter('ثبت', 'check', dialog));
+    onForm(form, async data => {
+      if (!portrait.files[0]) throw new Error('تصویر پروفایل را انتخاب کنید');
+      const photo = await portraitFile(portrait.files[0]);
+      await api('admin/specialists', 'POST', {
+        firstName: data.firstName, lastName: data.lastName, birthDate: data.birthDate,
+        councilNo: data.councilNo, education: data.education, phone: data.phone, portrait: photo,
+      });
+      dialog.close();
+      notice('پزشک ثبت شد');
+      await load();
+    });
+    body.append(form);
+  }, { iconName: 'medical' });
+}
+function userOperations(row) {
+  openModal('ویرایش کاربر', (body, dialog) => {
+    const grid = element('div', null, 'detail-grid');
+    for (const [label, value] of [
+      ['نام', row.displayName || 'بدون نام'],
+      ['شماره تلفن', row.phone || '—'],
+      ['ثبت‌نام از طریق', row.registrationLabel || 'اپلیکیشن'],
+      ['پکیج فعال', row.packageTitle || 'پکیج فعالی ندارد'],
+    ]) {
+      const item = element('div');
+      item.append(element('span', label), element('strong', value));
+      grid.append(item);
+    }
+    body.append(grid);
+    const form = element('form');
+    const days = field(form, 'daysRemaining', 'روزهای مانده از پکیج', 'number', row.daysRemaining == null ? '' : String(row.daysRemaining));
+    days.required = false;
+    days.min = '0';
+    days.max = '3650';
+    days.step = '1';
+    help(days, 'عدد جدید از همین لحظه محاسبه می‌شود. صفر یعنی دسترسی پکیج همین حالا تمام شود.');
+    form.append(formFooter('ذخیره روزهای مانده', 'check'));
+    onForm(form, async data => {
+      const value = Number(data.daysRemaining);
+      if (!Number.isInteger(value) || value < 0 || value > 3650) throw new Error('تعداد روز درست نیست');
+      await api('admin/users/' + encodeURIComponent(row.id) + '/package', 'PUT', { daysRemaining: value });
+      dialog.close();
+      notice('روزهای پکیج ذخیره شد');
+      await load();
+    });
+    body.append(form);
+    if (row.status !== 'deleted' && row.role !== 'admin') {
+      const actions = element('div', null, 'form-submit');
+      const next = row.status === 'suspended' ? 'active' : 'suspended';
+      actions.append(button(next === 'active' ? 'فعال کردن حساب' : 'غیرفعال کردن حساب', async () => {
+        await api('admin/users/' + encodeURIComponent(row.id) + '/status', 'POST', { status: next });
+        dialog.close();
+        notice(next === 'active' ? 'حساب فعال شد' : 'حساب غیرفعال شد');
+        await load();
+      }, { secondary: true, iconName: next === 'active' ? 'check' : 'lock' }));
+      actions.append(button('حذف حساب این شماره', () => {
+        dialog.close();
+        confirmAction('حذف حساب کاربری', 'حساب «' + (row.displayName || row.phone) + '» و همهٔ داده‌های وابسته‌اش برای همیشه از پایگاه داده پاک می‌شود.', 'حذف حساب', async () => {
+          await api('admin/users/' + encodeURIComponent(row.id) + '/delete', 'POST', { confirmation: 'حذف حساب' });
+          notice('حساب حذف شد');
+        });
+      }, { className: 'danger', iconName: 'trash' }));
+      body.append(actions);
+    }
+  }, { iconName: 'users' });
+}
 function tablePage(rows, section) {
   const empty = { users: ['کاربری برای نمایش نیست', 'حساب‌های ثبت‌شدهٔ رژیم من در این بخش قرار می‌گیرند.'], requests: ['درخواست جدیدی ثبت نشده', 'وضعیت درخواست‌های برنامه را از همین بخش دنبال خواهید کرد.'], orders: ['هنوز سفارشی ثبت نشده', 'جزئیات خرید خدمات کاربران پس از ثبت سفارش نمایش داده می‌شود.'], payments: ['پرداختی برای نمایش نیست', 'تراکنش‌های کاربران پس از ثبت در این فهرست نمایش داده می‌شوند.'], reviews: ['همه‌چیز بررسی شده است', 'نظر جدیدی که به بررسی شما نیاز داشته باشد، اینجا نمایش داده می‌شود.'], messages: ['هنوز گفت‌وگویی ندارید', 'گفت‌وگوهای مرتبط با حساب شما در این بخش قرار می‌گیرند.'], tickets: ['تیکتی ثبت نشده است', 'درخواست‌های پشتیبانی کاربران در این بخش نمایش داده می‌شوند.'], specialists: ['پزشک فعالی برای نمایش نیست', 'اطلاعات پزشکان فعال رژیم من در این فهرست نمایش داده می‌شود.'], 'audit-logs': ['هنوز فعالیتی ثبت نشده', 'تغییرات مدیریتی با زمان و شناسه در این بخش ثبت می‌شوند.'] };
   const filters = [...new Set(rows.map(r => r.status).filter(Boolean))].map(value => [value, statusLabels[value] || value]);
@@ -178,10 +321,11 @@ async function load() {
     else if (section === 'settings') view = settings();
     else if (section === 'dashboard') { const [stats, orders] = await Promise.all([api('admin/dashboard'), api('admin/orders')]); view = dashboard(stats, orders); }
     else if (section === 'reviews') { const stack = element('div', null, 'report-stack'); stack.append(SabzineReports.moderationNote(), tablePage(await api('admin/reviews?status=pending'), section)); view = stack; }
-    else { const path = section === 'specialists' ? 'specialists' : section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
+    else { const path = section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
     if (request !== generation || !staffSession.active) return;
     $('content').replaceChildren(view);
     if (section === 'notifications') $('page-actions').append(button('اتصالات', firebaseModal, { secondary: true, iconName: 'sliders' }), button('اعلان جدید', notificationModal, { iconName: 'plus' }));
+    if (section === 'specialists') $('page-actions').append(button('افزودن', addSpecialistModal, { iconName: 'plus' }));
   } catch (error) {
     if (request !== generation || !staffSession.active) return;
     const panel = element('section', null, 'card error-panel'); panel.append(emptyState('ارتباط با سرور برقرار نشد', error.message, 'error', button('تلاش دوباره', () => load(), { secondary: true }))); $('content').replaceChildren(panel);

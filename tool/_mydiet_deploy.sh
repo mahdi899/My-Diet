@@ -32,6 +32,9 @@ if [[ ! -f /tmp/mydiet-src.done ]]; then
     --exclude node_modules \
     --exclude dist \
     backend/ /var/lib/sabzine/migrate-src/
+
+  mkdir -p /opt/sabzine/backend/admin-web
+  rsync -a --delete admin/ /opt/sabzine/backend/admin-web/
   touch /tmp/mydiet-src.done
 fi
 

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
-import { audit, toman, withTransaction } from '../common/sql.js';
+import { audit, toman, withTransaction, type Queryable } from '../common/sql.js';
 import { tehranDayStartUtc, tehranToday } from '../common/time.js';
 import { PG_POOL } from '../database/database.js';
 import { OUTBOX_MAX_ATTEMPTS } from '../jobs/outbox-policy.js';
@@ -61,6 +61,10 @@ export class AdminService {
     credential: string;
     bio: string;
     capacity: number;
+    councilNo?: string;
+    birthDate?: string | null;
+    education?: string;
+    portrait?: string;
   }) {
     const existing = await this.pool.query(`select id from users where phone_e164 = $1`, [input.phoneE164]);
     if ((existing.rowCount ?? 0) > 0) {
@@ -74,10 +78,18 @@ export class AdminService {
         [id, input.phoneE164, input.displayName],
       );
       await client.query(`insert into wallets (user_id) values ($1)`, [id]);
+      if (input.councilNo) {
+        const taken = await client.query(
+          `select user_id from specialist_profiles where medical_council_no = $1`,
+          [input.councilNo],
+        );
+        if ((taken.rowCount ?? 0) > 0) throw new ApiError(409, 'council_taken', 'این شمارهٔ نظام قبلاً ثبت شده است');
+      }
       await client.query(
-        `insert into specialist_profiles (user_id, display_name, credential, bio, capacity)
-         values ($1, $2, $3, $4, $5)`,
-        [id, input.displayName, input.credential, input.bio, input.capacity],
+        `insert into specialist_profiles
+           (user_id, display_name, credential, bio, capacity, medical_council_no, birth_date, education, portrait)
+         values ($1, $2, $3, $4, $5, $6, $7::date, $8, $9)`,
+        [id, input.displayName, input.credential, input.bio, input.capacity, input.councilNo ?? '', input.birthDate ?? null, input.education ?? '', input.portrait ?? ''],
       );
       await client.query(
         `insert into conversations (id, kind, user_id) values ($1, 'support', $2)`,
@@ -515,21 +527,158 @@ export class AdminService {
       role: string;
       status: string;
       display_name: string | null;
-    }>(`select id, phone_e164, role, status, display_name from users order by created_at desc limit 200`);
+      signup_channel: string;
+      profile_source: string | null;
+      campaign_name: string | null;
+      campaign_source: string | null;
+      package_title: string | null;
+      ends_at: Date | null;
+    }>(
+      `select u.id, u.phone_e164, u.role, u.status, u.display_name, u.signup_channel,
+              p.source as profile_source,
+              c.name as campaign_name, c.source as campaign_source,
+              coalesce(s.title_fa, ordered.title_fa) as package_title,
+              a.ends_at
+       from users u
+       left join nutrition_profiles p on p.user_id = u.id
+       left join demo_campaign_links c on c.slug = u.signup_channel
+       left join lateral (
+         select sv.title_fa
+         from orders o
+         join services sv on sv.code = o.service_code
+         where o.user_id = u.id and o.status = 'paid'
+         order by o.created_at desc
+         limit 1
+       ) ordered on true
+       left join user_service_access a on a.user_id = u.id
+       left join services s on s.code = a.service_code
+       order by u.created_at desc
+       limit 200`,
+    );
     return rows.rows.map((row) => ({
       id: row.id,
       phone: row.phone_e164,
       role: row.role,
       status: row.status,
       displayName: row.display_name,
+      registrationLabel: registrationLabel(row),
+      packageTitle: row.package_title,
+      daysRemaining: row.ends_at == null ? null : remainingDays(row.ends_at),
     }));
   }
 
   async setStatus(actorId: string, userId: string, status: 'active' | 'suspended') {
-    const result = await this.pool.query(`update users set status = $2 where id = $1`, [userId, status]);
-    if (result.rowCount === 0) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
+    const current = await this.pool.query<{ role: string; status: string }>(
+      `select role, status from users where id = $1`,
+      [userId],
+    );
+    const user = current.rows[0];
+    if (!user) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
+    if (user.role === 'admin') throw new ApiError(403, 'forbidden', 'وضعیت حساب مدیریت از اینجا عوض نمی‌شود');
+    if (user.status === 'deleted') throw new ApiError(409, 'account_deleted', 'این حساب حذف شده است');
+    await this.pool.query(`update users set status = $2 where id = $1`, [userId, status]);
     await audit(this.pool, actorId, 'user_status', 'user', userId, { status });
     return { id: userId, status };
+  }
+
+  async deleteUser(actorId: string, userId: string) {
+    if (actorId === userId) throw new ApiError(403, 'forbidden', 'حذف حساب خودتان از این فهرست ممکن نیست');
+    return withTransaction(this.pool, async (client) => {
+      const current = await client.query<{ role: string }>(
+        `select role from users where id = $1 for update`,
+        [userId],
+      );
+      const user = current.rows[0];
+      if (!user) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
+      if (user.role === 'admin') throw new ApiError(403, 'forbidden', 'حساب مدیریت از اینجا حذف نمی‌شود');
+      await audit(client, actorId, 'user_delete', 'user', userId, { purged: true });
+      await purgeUser(client, userId);
+      return { deleted: true };
+    });
+  }
+
+  async setPackageDays(actorId: string, userId: string, daysRemaining: number) {
+    if (!Number.isSafeInteger(daysRemaining) || daysRemaining < 0 || daysRemaining > 3650) {
+      throw new ApiError(400, 'validation', 'تعداد روز درست نیست');
+    }
+    return withTransaction(this.pool, async (client) => {
+      const user = await client.query<{ status: string }>(`select status from users where id = $1 for update`, [userId]);
+      if (!user.rows[0]) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
+      if (user.rows[0].status === 'deleted') throw new ApiError(409, 'account_deleted', 'این حساب حذف شده است');
+      const service = await client.query<{ code: string; title_fa: string }>(
+        `select code, title_fa from (
+           select s.code, s.title_fa, 0 as rank
+           from user_service_access a
+           join services s on s.code = a.service_code
+           where a.user_id = $1
+           union all
+           select s.code, s.title_fa, 1 as rank
+           from orders o
+           join services s on s.code = o.service_code
+           where o.user_id = $1 and o.status = 'paid'
+           union all
+           select code, title_fa, 2 as rank from services where code = 'new_plan'
+         ) choices
+         order by rank
+         limit 1`,
+        [userId],
+      );
+      const chosen = service.rows[0];
+      if (!chosen) throw new ApiError(409, 'conflict', 'خدمتی برای این پکیج ثبت نشده است');
+      await client.query(
+        `insert into user_service_access (user_id, service_code, ends_at)
+         values ($1, $2, now() + make_interval(days => $3))
+         on conflict (user_id) do update
+           set service_code = excluded.service_code, ends_at = excluded.ends_at, updated_at = now()`,
+        [userId, chosen.code, daysRemaining],
+      );
+      await audit(client, actorId, 'user_package_days', 'user', userId, { daysRemaining, serviceCode: chosen.code });
+      return { id: userId, packageTitle: chosen.title_fa, daysRemaining };
+    });
+  }
+
+  async adminSpecialists() {
+    const rows = await this.pool.query<{
+      user_id: string;
+      display_name: string;
+      phone_e164: string;
+      credential: string;
+      bio: string;
+      education: string;
+      medical_council_no: string;
+      birth_date: Date | null;
+      portrait: string;
+      average: string | null;
+      reviews: number;
+    }>(
+      `select sp.user_id, sp.display_name, u.phone_e164, sp.credential, sp.bio, sp.education,
+              sp.medical_council_no, sp.birth_date, sp.portrait,
+              (select round(avg(pr.rating)::numeric, 2)
+               from program_reviews pr
+               join plan_requests r on r.id = pr.request_id
+               where r.assigned_specialist_id = sp.user_id and pr.status = 'approved') as average,
+              (select count(*)::int
+               from program_reviews pr
+               join plan_requests r on r.id = pr.request_id
+               where r.assigned_specialist_id = sp.user_id and pr.status = 'approved') as reviews
+       from specialist_profiles sp
+       join users u on u.id = sp.user_id
+       where u.status <> 'deleted'
+       order by sp.display_name`,
+    );
+    return rows.rows.map((row) => ({
+      id: row.user_id,
+      displayName: row.display_name,
+      phone: row.phone_e164,
+      credential: row.credential,
+      bio: row.bio,
+      education: row.education || row.credential,
+      councilNo: row.medical_council_no,
+      birthDate: row.birth_date ? row.birth_date.toISOString().slice(0, 10) : null,
+      portrait: row.portrait || null,
+      averageRating: row.average == null ? null : Number(row.average),
+      reviewCount: row.reviews,
+    }));
   }
 
   async publicSpecialists() {
@@ -737,5 +886,128 @@ export class AdminService {
       cashToman: toman(wallet.cash_toman),
       promoToman: toman(wallet.promo_toman),
     };
+  }
+}
+
+const channelNames: Record<string, string> = {
+  telegram: 'تلگرام',
+  instagram: 'اینستاگرام',
+  whatsapp: 'واتساپ',
+  rubika: 'روبیکا',
+  eitaa: 'ایتا',
+  website: 'وب‌سایت',
+  app: 'اپلیکیشن',
+};
+
+function registrationLabel(row: {
+  signup_channel: string;
+  profile_source: string | null;
+  campaign_name: string | null;
+  campaign_source: string | null;
+}) {
+  if (row.campaign_name) {
+    const source = channelNames[row.campaign_source ?? ''] ?? row.campaign_source;
+    return source ? `${row.campaign_name} · ${source}` : row.campaign_name;
+  }
+  if (row.profile_source === 'demo' || row.signup_channel === 'demo') return 'دموی وب';
+  return 'اپلیکیشن';
+}
+
+function remainingDays(endsAt: Date) {
+  return Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / 86_400_000));
+}
+
+type ForeignKey = {
+  child: string;
+  parent: string;
+  childCols: string[];
+  parentCols: string[];
+  nullable: boolean;
+};
+
+function ident(name: string) {
+  if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error('unsafe identifier');
+  return `"${name}"`;
+}
+
+function pgTextArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => String(item));
+  return [];
+}
+
+async function purgeUser(client: Queryable, userId: string) {
+  const keys = await client.query<{
+    child: string;
+    parent: string;
+    child_cols: string[];
+    parent_cols: string[];
+    nullable: boolean;
+  }>(
+    `select child.relname as child, parent.relname as parent,
+            array_agg(att.attname order by ck.ord) as child_cols,
+            array_agg(patt.attname order by ck.ord) as parent_cols,
+            bool_and(not att.attnotnull) as nullable
+     from pg_constraint c
+     join pg_class child on child.oid = c.conrelid
+     join pg_class parent on parent.oid = c.confrelid
+     join pg_namespace n on n.oid = child.relnamespace
+     join lateral unnest(c.conkey) with ordinality as ck(attnum, ord) on true
+     join pg_attribute att on att.attrelid = child.oid and att.attnum = ck.attnum
+     join lateral unnest(c.confkey) with ordinality as pk(attnum, ord) on pk.ord = ck.ord
+     join pg_attribute patt on patt.attrelid = parent.oid and patt.attnum = pk.attnum
+     where c.contype = 'f' and n.nspname = 'public' and parent.relnamespace = n.oid
+     group by c.oid, child.relname, parent.relname`,
+  );
+  const foreignKeys: ForeignKey[] = keys.rows.map((row) => ({
+    child: row.child,
+    parent: row.parent,
+    childCols: pgTextArray(row.child_cols),
+    parentCols: pgTextArray(row.parent_cols),
+    nullable: row.nullable === true || String(row.nullable) === 't',
+  }));
+  const triggers = await client.query<{ name: string }>(
+    `select distinct c.relname as name
+     from pg_trigger t
+     join pg_class c on c.oid = t.tgrelid
+     join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and not t.tgisinternal and c.relkind = 'r'`,
+  );
+  for (const table of triggers.rows) {
+    await client.query(`alter table public.${ident(table.name)} disable trigger user`);
+  }
+  const stack: string[] = [];
+  const remove = async (table: string, whereSql: string) => {
+    if (stack.includes(table) || stack.length > 32) return;
+    stack.push(table);
+    for (const key of foreignKeys.filter((item) => item.parent === table)) {
+      const match = `(${key.childCols.map(ident).join(', ')}) in (select ${key.parentCols.map(ident).join(', ')} from ${ident(table)} where ${whereSql})`;
+      if (key.child === table) {
+        if (key.nullable) {
+          const sets = key.childCols.map((column) => `${ident(column)} = null`).join(', ');
+          await client.query(`update ${ident(table)} set ${sets} where ${match}`, [userId]);
+        }
+        continue;
+      }
+      if (key.nullable) {
+        const sets = key.child === 'journey_installs' && key.childCols.includes('linked_user_id')
+          ? 'linked_user_id = null, linked_at = null'
+          : key.childCols.map((column) => `${ident(column)} = null`).join(', ');
+        await client.query(`update ${ident(key.child)} set ${sets} where ${match}`, [userId]);
+        continue;
+      }
+      await remove(key.child, match);
+    }
+    await client.query(`delete from ${ident(table)} where ${whereSql}`, [userId]);
+    stack.pop();
+  };
+  try {
+    await remove('users', 'id = $1');
+    for (const table of triggers.rows) {
+      await client.query(`alter table public.${ident(table.name)} enable trigger user`);
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    console.error('user purge failed', error);
+    throw new ApiError(409, 'delete_blocked', 'حذف این کاربر به‌خاطر وابستگی داده‌ها انجام نشد');
   }
 }

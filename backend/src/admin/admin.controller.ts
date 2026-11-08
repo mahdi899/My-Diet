@@ -45,18 +45,50 @@ export class AdminController {
     private readonly maintenance: MaintenanceService,
   ) {}
 
+  @Get('specialists')
+  specialists() {
+    return this.admin.adminSpecialists();
+  }
+
   @Post('specialists')
   create(@Req() req: Request, @Body() body: unknown) {
     const record = bodyRecord(body);
-    rejectUnknown(record, ['phone', 'displayName', 'credential', 'bio', 'capacity']);
+    rejectUnknown(record, ['phone', 'displayName', 'firstName', 'lastName', 'birthDate', 'councilNo', 'education', 'portrait', 'credential', 'bio', 'capacity']);
     const capacity = record.capacity == null ? 20 : requiredInt(record.capacity);
     if (capacity < 0 || capacity > 500) throw new ApiError(400, 'validation', 'ظرفیت درست نیست');
+    const firstName = optionalString(record, 'firstName', 40);
+    const lastName = optionalString(record, 'lastName', 40);
+    const displayName = firstName
+      ? `${firstName} ${lastName ?? ''}`.trim()
+      : requiredString(record, 'displayName', 80);
+    if (displayName.length < 2 || displayName.length > 80) {
+      throw new ApiError(400, 'validation', 'نام پزشک درست نیست');
+    }
+    const education = optionalString(record, 'education', 120) ?? optionalString(record, 'credential', 120) ?? '';
+    const councilNo = record.councilNo == null ? '' : normalizeCouncilNo(requiredString(record, 'councilNo', 20));
+    if (record.councilNo != null && !councilNo) throw new ApiError(400, 'validation', 'کد نظام پزشکی درست نیست');
+    let birthDate: string | null = null;
+    if (record.birthDate != null && record.birthDate !== '') {
+      birthDate = parseCivilDate(requiredString(record, 'birthDate', 10));
+      const today = new Date().toISOString().slice(0, 10);
+      if (!birthDate || birthDate < '1920-01-01' || birthDate > today) {
+        throw new ApiError(400, 'validation', 'تاریخ تولد درست نیست');
+      }
+    }
+    const portrait = optionalString(record, 'portrait', 180_000) ?? '';
+    if (portrait && !/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(portrait)) {
+      throw new ApiError(400, 'validation', 'تصویر پروفایل درست نیست');
+    }
     return this.admin.createSpecialist(actor(req).id, {
       phoneE164: normalizeIranianMobile(requiredString(record, 'phone', 32)),
-      displayName: requiredString(record, 'displayName', 80),
-      credential: optionalString(record, 'credential', 120) ?? '',
+      displayName,
+      credential: education,
       bio: optionalString(record, 'bio', 500) ?? '',
       capacity,
+      councilNo: councilNo || undefined,
+      birthDate,
+      education,
+      portrait,
     });
   }
 
@@ -248,6 +280,23 @@ export class AdminController {
       throw new ApiError(400, 'validation', 'وضعیت حساب درست نیست');
     }
     return this.admin.setStatus(actor(req).id, requiredUuid(id), status);
+  }
+
+  @Post('users/:id/delete')
+  deleteUser(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['confirmation']);
+    if (requiredString(record, 'confirmation', 40) !== 'حذف حساب') {
+      throw new ApiError(400, 'validation', 'برای حذف حساب عبارت تأیید لازم است');
+    }
+    return this.admin.deleteUser(actor(req).id, requiredUuid(id));
+  }
+
+  @Put('users/:id/package')
+  packageDays(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['daysRemaining']);
+    return this.admin.setPackageDays(actor(req).id, requiredUuid(id), requiredInt(record.daysRemaining));
   }
 
   @Post('specialists/:id/verification')

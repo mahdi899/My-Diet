@@ -211,7 +211,7 @@
   </style>
   <link rel="stylesheet" href="matching.css?v=21">
   <link rel="stylesheet" href="plans.css?v=6">
-  <link rel="stylesheet" href="verification.css?v=7">
+  <link rel="stylesheet" href="verification.css?v=10">
 </head>
 <body class="selection:bg-[#205638] selection:text-white">
 
@@ -527,8 +527,8 @@
               ویرایش شماره موبایل
             </button>
 
-            <!-- THE SINGLE INPUT ELEMENT THAT MORPHS FROM PHONE TO OTP -->
-            <div class="relative">
+            <!-- THE SINGLE INPUT ELEMENT THAT MORPHS FROM PHONE TO OTP, THEN INTO A CHECK -->
+            <div class="otp-morph" id="otpMorph">
               <input
                 id="morphSingleInput" aria-describedby="morphInputSubtitle morphErrorText" autocomplete="tel-national"
                 type="tel"
@@ -538,6 +538,11 @@
                 placeholder="09123456789"
                 class="w-full px-4 py-3.5 rounded-xl bg-slate-900 border-2 border-emerald-400/50 focus:border-emerald-400 text-white font-mono text-lg sm:text-xl text-center tracking-wider focus:outline-none transition-all shadow-inner"
               />
+              <span class="otp-morph-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path pathLength="1" d="M5 12.5 9.5 17 19 7.5"/>
+                </svg>
+              </span>
             </div>
 
             <!-- Demo OTP Code Hint Banner (Shown when morphed into OTP mode) -->
@@ -1589,9 +1594,49 @@
       setMorphInputMode('phone');
     }
 
+    function resetOtpFieldMorph() {
+      const morph = document.getElementById('otpMorph');
+      const inputEl = document.getElementById('morphSingleInput');
+      if (!morph || !inputEl) return;
+      morph.style.transition = 'none';
+      morph.classList.remove('is-success');
+      morph.style.width = '';
+      void morph.offsetWidth;
+      morph.style.transition = '';
+      morph.removeAttribute('role');
+      morph.removeAttribute('aria-label');
+      inputEl.readOnly = false;
+      inputEl.removeAttribute('aria-hidden');
+      const verifyButton = document.getElementById('morphConfirmBtn');
+      if (verifyButton) verifyButton.disabled = false;
+    }
+
+    function collapseOtpField() {
+      const morph = document.getElementById('otpMorph');
+      const inputEl = document.getElementById('morphSingleInput');
+      const verifyButton = document.getElementById('morphConfirmBtn');
+      if (verifyButton) verifyButton.disabled = true;
+      inputEl.blur();
+      inputEl.readOnly = true;
+      inputEl.setAttribute('aria-hidden', 'true');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduceMotion) {
+        const startWidth = Math.round(morph.getBoundingClientRect().width);
+        morph.style.transition = 'none';
+        morph.style.width = startWidth + 'px';
+        void morph.offsetWidth;
+        morph.style.transition = '';
+      }
+      morph.classList.add('is-success');
+      morph.style.width = '74px';
+      morph.setAttribute('role', 'status');
+      morph.setAttribute('aria-label', 'شماره تأیید شد');
+    }
+
     function setMorphInputMode(mode) {
       if (state.verificationBusy) return;
       state.inputMode = mode;
+      resetOtpFieldMorph();
       document.getElementById('twoStepModalCard').dataset.verification = mode;
       document.getElementById('verificationSuccess').classList.add('hidden');
       document.getElementById('morphingInputWrapper').classList.remove('hidden');
@@ -1720,13 +1765,12 @@
           if(!saved.ok)throw new Error('تأیید شماره ذخیره نشد؛ دوباره تلاش کنید.');
         }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;state.verificationBusy=false;document.getElementById('morphConfirmBtnText').textContent='تأیید و ادامه';}
         // Success is displayed only after both server verification requests succeed.
+        // The field collapses into a green circle and a white check draws inside it.
         state.inputMode = 'success';
         document.getElementById('twoStepModalCard').dataset.verification = 'success';
-        document.getElementById('morphingInputWrapper').classList.add('hidden');
-        const success = document.getElementById('verificationSuccess');
-        success.classList.remove('hidden');
-        success.focus();
-        await new Promise(resolve => setTimeout(resolve, 1100));
+        collapseOtpField();
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        await new Promise(resolve => setTimeout(resolve, reduceMotion ? 500 : 1500));
         if (state.inputMode !== 'success' || document.getElementById('twoStepModalBackdrop').classList.contains('hidden')) return;
         closePlanSelectionModal();
         populateAndShowPaymentPage();
