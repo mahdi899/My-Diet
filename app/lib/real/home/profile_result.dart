@@ -47,11 +47,16 @@ class _ProfileResultScreenState extends State<ProfileResultScreen>
       if (n != _ticked) {
         _ticked = n;
         Haptics.tap();
-        setState(() {});
       }
+      // Rebuild every frame so the ring moves smoothly.
+      setState(() {});
     });
     _c.addStatusListener((s) {
-      if (s == AnimationStatus.completed) Haptics.success();
+      if (s != AnimationStatus.completed) return;
+      Haptics.success();
+      // The status flips to "completed" after the last value notification, so without this
+      // rebuild the screen stays on the 100% progress view forever.
+      if (mounted) setState(() {});
     });
   }
 
