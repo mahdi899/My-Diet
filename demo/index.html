@@ -212,7 +212,6 @@
   <link rel="stylesheet" href="matching.css?v=21">
   <link rel="stylesheet" href="plans.css?v=6">
   <link rel="stylesheet" href="verification.css?v=7">
-  <link rel="stylesheet" href="welcome.css?v=1">
 </head>
 <body class="selection:bg-[#205638] selection:text-white">
 
@@ -274,31 +273,40 @@
     <section id="page1Container" class="min-h-[78vh] flex flex-col justify-center items-center">
 
       <!-- STAGE 1A: SLOGAN + LET'S GO BUTTON -->
-      <div id="sloganStage" class="welcome">
-        <div class="welcome-top"><a href="/" class="welcome-brand"><img src="assets/logo.png" alt="" width="36" height="36">رژیم من</a><span>یک شروع تازه، برای خودت</span></div>
-        <div class="welcome-hero">
-          <div class="welcome-copy">
-            <p class="welcome-eyebrow"><span></span>برنامهٔ غذایی، به سبک زندگی تو</p>
-            <h1 id="sloganHeading" class="hero-title"></h1>
-            <p class="welcome-description">از هدف تو شروع می‌کنیم؛ با شناخت عادت‌ها و سلیقه‌ات، مسیر تغذیه‌ای می‌سازیم که به زندگی تو بیاید.</p>
-            <div id="letsGoBtnWrapper">
-              <button id="letsGoBtn" type="button"><span>رژیم خودمو بسازم</span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 12H4m7-7-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              <p class="welcome-hint">قدم اول: انتخاب هدفی که برات مهمه</p>
-            </div>
-            <div class="welcome-tags" aria-label="ویژگی‌های برنامه"><span>متناسب با هدف تو</span><span>همراهی متخصص</span><span>انتخاب‌های متنوع</span></div>
+      <div id="sloganStage" class="w-full max-w-2xl mx-auto text-center transition-all duration-500">
+        <h1 id="sloganHeading" class="hero-title relative z-10 text-3xl sm:text-5xl font-black leading-snug tracking-tight text-white min-h-[4.2rem] mb-6 py-2 flex flex-wrap items-center justify-center gap-x-2.5 sm:gap-x-3.5 gap-y-1"></h1>
+
+        <div id="heroFeatureStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mb-5">
+          <div class="hero-feature-card">
+            <img class="hero-feature-photo" src="assets/intro-specialist.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">نظارت متخصص</span>
           </div>
-          <div class="welcome-visual">
-            <div class="welcome-photo"><img src="assets/hero.jpg" width="1400" height="933" fetchpriority="high" alt="بشقاب رنگارنگ سبزیجات تازه، نخود و آووکادو"></div>
-            <div class="welcome-note"><span class="welcome-note-icon" aria-hidden="true">✓</span><div><strong>حال خوب، از بشقاب تو شروع می‌شه</strong><span>خوش‌طعم، متنوع و متناسب با تو</span></div></div>
-            <span class="welcome-photo-label">غذای واقعی · انتخاب آگاهانه</span>
+          <div class="hero-feature-card">
+            <img class="hero-feature-photo" src="assets/intro-ai.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">رژیم هوشمند</span>
+          </div>
+          <div class="hero-feature-card">
+            <img class="hero-feature-photo" src="assets/intro-support.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">پشتیبانی همراه</span>
+          </div>
+          <div class="hero-feature-card">
+            <img class="hero-feature-photo" src="assets/intro-plans.jpg" alt="" width="840" height="560" decoding="async" />
+            <span class="hero-feature-text">پلن‌های متنوع</span>
           </div>
         </div>
-        <ol class="welcome-steps" aria-label="مراحل ساخت برنامه"><li><span>۰۱</span><div><strong>هدفت رو انتخاب کن</strong><p>شروع مسیر، با خواستهٔ تو</p></div></li><li><span>۰۲</span><div><strong>از خودت برامون بگو</strong><p>عادت‌ها، سلیقه و سبک زندگی</p></div></li><li><span>۰۳</span><div><strong>برنامهٔ مناسب رو انتخاب کن</strong><p>یک قدم نزدیک‌تر به حال بهتر</p></div></li></ol>
-        <div class="welcome-benefits-heading"><h2>توی این مسیر، تنها نیستی</h2><p>ترکیبی از شناخت، تخصص و همراهی</p></div>
-        <div id="heroFeatureStrip">
-<article class="welcome-feature"><img src="assets/intro-specialist.jpg" alt="" width="840" height="560" loading="lazy"><div><h3>نگاه تخصصی</h3><p>همراهی متخصص در مسیر تغذیهٔ تو</p></div></article><article class="welcome-feature"><img src="assets/intro-ai.jpg" alt="" width="840" height="560" loading="lazy"><div><h3>برنامهٔ هوشمند</h3><p>بر پایهٔ پاسخ‌ها و نیازهای شخصی تو</p></div></article><article class="welcome-feature"><img src="assets/intro-support.jpg" alt="" width="840" height="560" loading="lazy"><div><h3>پشتیبانی همراه</h3><p>برای قدم‌های بعدی مسیرت</p></div></article><article class="welcome-feature"><img src="assets/intro-plans.jpg" alt="" width="840" height="560" loading="lazy"><div><h3>انتخاب با توست</h3><p>پلن‌های متنوع برای نیازهای متفاوت</p></div></article>
+
+        <div id="letsGoBtnWrapper" class="w-full flex flex-col items-center gap-3">
+          <button
+            id="letsGoBtn"
+            type="button"
+            class="group relative inline-flex w-full items-center justify-center gap-3 px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-black text-lg sm:text-xl tracking-tight hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+          >
+            <span>بزن بریم</span>
+            <svg class="w-6 h-6 transform group-hover:-translate-x-1.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+          </button>
         </div>
-        <p class="welcome-footer">رژیم من <span> / </span> شروع یک رابطهٔ بهتر با غذا</p>
       </div>
 
       <!-- STAGE 1B: GOAL SELECTION (Shown after clicking "بزن بریم" in the same page) -->
