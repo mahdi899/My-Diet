@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'meal_logging.dart';
 import 'meal_choices.dart';
 import 'package:flutter/material.dart';
@@ -174,6 +176,21 @@ class EnergyCard extends StatelessWidget {
                                     color: Colors.white,
                                   ),
                                 ),
+                                const Text(
+                                  'دریافت‌شده',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 10),
                 _EnergyAdviceStrip(date: date),
               ],
@@ -218,21 +235,6 @@ class _EnergyAdviceStrip extends StatelessWidget {
       ],
     ),
   );
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class WeightJourneyCard extends StatelessWidget {
@@ -372,6 +374,21 @@ class _WeightNumber extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
+      Text(title, style: const TextStyle(fontSize: 11, color: muted)),
+      Text(
+        value,
+        style: const TextStyle(
+          fontSize: 27,
+          fontWeight: FontWeight.bold,
+          color: pine,
+        ),
+      ),
+      Text(unit, style: const TextStyle(fontSize: 10, color: muted)),
+    ],
+  );
+}
+
+class ScheduledMealTile extends StatelessWidget {
   const ScheduledMealTile({
     super.key,
     required this.date,
