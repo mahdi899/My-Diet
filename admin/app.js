@@ -283,11 +283,23 @@ function addSpecialistModal() {
     username.maxLength = 32;
     username.placeholder = 'doctor.name';
     help(username, 'برای ورود به پنل پزشک. ۳ تا ۳۲ نویسهٔ انگلیسی.');
-    const password = field(credentials, 'password', 'رمز عبور', 'password');
+    const passwordLabel = element('label', 'رمز عبور');
+    const passwordShell = element('div', null, 'password-field');
+    const password = element('input');
+    password.type = 'password';
+    password.name = 'panelPassword';
+    password.id = 'specialist-panel-password';
+    passwordLabel.htmlFor = password.id;
+    password.setAttribute('aria-label', 'رمز عبور');
+    password.required = true;
     password.dir = 'ltr';
     password.autocomplete = 'new-password';
+    password.spellcheck = false;
     password.minLength = 8;
     password.maxLength = 256;
+    passwordShell.append(password);
+    passwordLabel.append(passwordShell);
+    credentials.append(passwordLabel);
     help(password, 'حداقل ۸ نویسه. پزشک با همین نام کاربری و رمز، یا با شماره و کد پیامکی وارد می‌شود.');
     const profileSection = element('section', null, 'specialist-form-section');
     profileSection.append(element('h3', 'اطلاعات فردی و حرفه‌ای'), element('p', 'مشخصات پزشک را مطابق مدارک وارد کنید.'), grid);
@@ -301,12 +313,13 @@ function addSpecialistModal() {
       if (!/^\d{6}$/.test(councilNo)) throw new Error('کد نظام پزشکی باید دقیقاً ۶ رقم باشد');
       if (!/^09\d{9}$/.test(mobile)) throw new Error('شماره تلفن باید ۱۱ رقم و با ۰۹ شروع شود');
       if (!/^[A-Za-z][A-Za-z0-9._-]{2,31}$/.test(data.username.trim())) throw new Error('نام کاربری باید ۳ تا ۳۲ نویسهٔ انگلیسی باشد و با حرف شروع شود');
-      if (data.password.length < 8) throw new Error('رمز عبور باید حداقل ۸ نویسه باشد');
+      const panelPassword = data.panelPassword ?? '';
+      if (panelPassword.length < 8) throw new Error('رمز عبور باید حداقل ۸ نویسه باشد');
       if (!birth.value) throw new Error('تاریخ تولد را از تقویم شمسی انتخاب کنید');
       await api('admin/specialists', 'POST', {
         firstName: data.firstName, lastName: data.lastName, birthDate: data.birthDate,
         councilNo, education: data.education, phone: mobile, portrait: prepared,
-        username: data.username.trim().toLowerCase(), password: data.password,
+        username: data.username.trim().toLowerCase(), password: panelPassword,
       });
       dialog.close();
       notice('پزشک ثبت شد');
