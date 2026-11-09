@@ -48,9 +48,26 @@ $('password-toggle').onclick = () => {
   const input = $('login-password'), visible = input.type === 'password'; input.type = visible ? 'text' : 'password';
   $('password-toggle').setAttribute('aria-pressed', String(visible)); $('password-toggle').setAttribute('aria-label', visible ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'); $('password-toggle').replaceChildren(icon(visible ? 'eye-off' : 'eye'));
 };
-$('logout').onclick = async () => { $('logout').disabled = true; try { await api('auth/logout', 'POST'); signedOut(); notice('از حساب خارج شدید'); } catch (e) { notice(e.message, 'error'); } finally { $('logout').disabled = false; } };
+async function logoutAccount(trigger) {
+  trigger.disabled = true;
+  try { await api('auth/logout', 'POST'); signedOut(); notice('از حساب خارج شدید'); }
+  catch (e) { notice(e.message, 'error'); }
+  finally { trigger.disabled = false; }
+}
+function setAccountMenu(open) {
+  $('account-menu').hidden = !open;
+  $('account-toggle').setAttribute('aria-expanded', String(open));
+}
+$('logout').onclick = () => logoutAccount($('logout'));
+$('logout-menu').onclick = () => logoutAccount($('logout-menu'));
+$('account-toggle').onclick = event => { event.stopPropagation(); setAccountMenu($('account-menu').hidden); };
+document.addEventListener('click', event => {
+  if (!$('account-menu') || $('account-menu').hidden) return;
+  if (!$('account-toggle').parentElement.contains(event.target)) setAccountMenu(false);
+});
+document.addEventListener('keydown', event => { if (event.key === 'Escape') setAccountMenu(false); });
 
-function sectionFromHash() { const hash = location.hash.slice(1); return Object.hasOwn(pageMeta, hash) ? hash : 'dashboard'; }
+function sectionFromHash() { const hash = location.hash.slice(1) === 'orders' ? 'payments' : location.hash.slice(1); return Object.hasOwn(pageMeta, hash) ? hash : 'dashboard'; }
 function navigate(section) { if (!pageMeta[section]) return; if (location.hash === '#' + section) { current = section; void load(); } else location.hash = section; }
 window.addEventListener('hashchange', () => { if (staffSession.active && location.hash !== '#main') { current = sectionFromHash(); setMenu(false); void load(); } });
 let lastGroup, group;
@@ -86,14 +103,13 @@ $('today').dateTime = new Date().toISOString();
 
 function money(value) { const span = element('span', number(value), 'money'); span.append(element('small', 'تومان')); return span; }
 const serviceNames = { new_plan: 'برنامه جدید', ai_revision: 'بازنگری هوش مصنوعی', specialist_revision: 'بازنگری پزشک' };
-const roleNames = { user: 'کاربر', specialist: 'پزشک', admin: 'مدیر' };
 const kindNames = { ...serviceNames, care: 'گفت‌وگوی درمانی', support: 'پشتیبانی' };
-const orderColumns = [
-  { label: 'کاربر', render: row => personCell(row.user, 'سفارش ' + row.id.slice(0, 8)) },
-  { label: 'خدمت', render: row => serviceNames[row.serviceCode] || row.serviceCode },
+const paymentColumns = [
+  { label: 'کاربر', render: row => personCell(row.user, 'پرداخت ' + row.id.slice(0, 8)) },
+  { label: 'پکیج', render: row => row.packageCode },
   { label: 'مبلغ', render: row => money(row.amountToman) },
   { label: 'وضعیت', render: row => badge(row.status) },
-  { label: 'زمان ثبت', className: 'cell-nowrap', render: row => formatDate(row.createdAt) },
+  { label: 'زمان پرداخت', className: 'cell-nowrap', render: row => formatDate(row.createdAt) },
 ];
 function dashboard(stats, orders) {
   const view = element('div', null, 'dashboard-page');
@@ -102,7 +118,7 @@ function dashboard(stats, orders) {
   const cards = element('div', null, 'metrics-grid');
   for (const item of [
     { label: 'کاربران', value: stats.users, note: number(stats.newUsers) + ' عضو جدید در ۷ روز اخیر', icon: 'users', tone: 'green' },
-    { label: 'درآمد ۳۰ روز اخیر', value: stats.revenueToman, unit: 'تومان', note: number(stats.paidOrders) + ' سفارش پرداخت‌شده · سهم نقدی', icon: 'wallet', tone: 'amber' },
+    { label: 'درآمد ۳۰ روز اخیر', value: stats.revenueToman, unit: 'تومان', note: number(stats.paidOrders) + ' خرید پکیج', icon: 'wallet', tone: 'amber' },
     { label: 'پیام‌های خوانده‌نشده', value: stats.unreadMessages, note: 'پیام‌های پشتیبانی در انتظار بررسی', icon: 'message', tone: 'blue' },
     { label: 'درخواست‌های امروز AI', value: stats.aiToday, note: 'تلاش‌های ثبت‌شده امروز · وقت تهران', icon: 'sparkles', tone: 'rose' },
   ]) {
@@ -111,18 +127,17 @@ function dashboard(stats, orders) {
   }
   view.append(cards);
   const lower = element('div', null, 'dashboard-lower');
-  lower.append(listPanel(orders.slice(0, 5), { title: 'آخرین سفارش‌ها', description: 'پنج سفارش اخیر کاربران', columns: orderColumns, compact: true, pageSize: 5, iconName: 'bag', emptyTitle: 'هنوز سفارشی ثبت نشده', emptyDescription: 'با ثبت اولین سفارش، جزئیات آن را اینجا خواهید دید.', action: button('همه سفارش‌ها', () => navigate('orders'), { secondary: true, iconName: 'arrow-left' }) }));
+  lower.append(listPanel(orders.slice(0, 5), { title: 'آخرین پرداخت‌ها', description: 'پنج خرید اخیر پکیج', columns: paymentColumns, compact: true, pageSize: 5, iconName: 'wallet', emptyTitle: 'هنوز پرداختی ثبت نشده', emptyDescription: 'با خرید اولین پکیج، جزئیات آن را اینجا خواهید دید.', action: button('همه پرداخت‌ها', () => navigate('payments'), { secondary: true, iconName: 'arrow-left' }) }));
   const quick = element('section', null, 'card quick-panel'), links = element('div', null, 'quick-links'); quick.append(sectionHead('دسترسی سریع', 'از کجا شروع می‌کنید؟'));
-  for (const [key, description] of [['users', 'حساب‌ها و اطلاعات کاربران'], ['orders', 'خریدها و جزئیات خدمات'], ['messages', 'گفت‌وگو با کاربران'], ['tickets', 'درخواست‌های پشتیبانی']]) {
+  for (const [key, description] of [['users', 'حساب‌ها و اطلاعات کاربران'], ['payments', 'خرید پکیج‌ها'], ['messages', 'گفت‌وگو با کاربران'], ['tickets', 'درخواست‌های پشتیبانی']]) {
     const link = element('a', null, 'quick-link'), text = element('div'); link.href = '#' + key; text.append(element('strong', sections[key]), element('small', description)); link.append(iconTile(pageMeta[key].icon), text, icon('chevron-left')); links.append(link);
   }
   quick.append(links); lower.append(quick); view.append(lower); return view;
 }
 const genericColumns = {
-  users: [ { label: 'کاربر', render: r => personCell(r.displayName, r.phone) }, { label: 'نقش', render: r => roleNames[r.role] || r.role }, { label: 'وضعیت حساب', render: r => badge(r.status) }, { label: 'شناسه', render: r => shortId(r.id) }, { label: 'عملیات', render: r => userRowActions(r) } ],
+  users: [ { label: 'کاربر', render: r => personCell(r.displayName, r.phone) }, { label: 'وضعیت حساب', render: r => badge(r.status) }, { label: 'شناسه', render: r => shortId(r.id) }, { label: 'عملیات', render: r => userRowActions(r) } ],
   requests: [ { label: 'درخواست', render: r => shortId(r.id) }, { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'نوع درخواست', render: r => kindNames[r.kind] || r.kind }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'زمان ثبت', render: r => formatDate(r.createdAt), className: 'cell-nowrap' } ],
-  specialists: [ { label: 'پزشک', render: r => doctorCell(r) }, { label: 'تلفن', render: r => r.phone || '—', className: 'cell-nowrap' }, { label: 'کد نظام', render: r => r.councilNo || '—' }, { label: 'تحصیلات', render: r => r.education || r.credential || '—' }, { label: 'تاریخ تولد', render: r => formatDate(r.birthDate, false), className: 'cell-nowrap' }, { label: 'امتیاز', render: r => r.averageRating == null ? 'هنوز بدون امتیاز' : number(r.averageRating) + ' از ۵' } ],
-  payments: [ { label: 'تراکنش', render: r => shortId(r.id) }, { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'مبلغ', render: r => money(r.amountToman) }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'تاریخ پرداخت', render: r => formatDate(r.createdAt), className: 'cell-nowrap' } ],
+  specialists: [ { label: 'پزشک', render: r => doctorCell(r) }, { label: 'تلفن', render: r => r.phone || '—', className: 'cell-nowrap' }, { label: 'نام کاربری', render: r => r.username || '—', className: 'cell-nowrap' }, { label: 'کد نظام', render: r => r.councilNo || '—' }, { label: 'تحصیلات', render: r => r.education || r.credential || '—' }, { label: 'تاریخ تولد', render: r => formatDate(r.birthDate, false), className: 'cell-nowrap' }, { label: 'امتیاز', render: r => r.averageRating == null ? 'هنوز بدون امتیاز' : number(r.averageRating) + ' از ۵' } ],
   reviews: [ { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'امتیاز', render: r => number(r.rating) + ' از ۵' }, { label: 'نظر', key: 'body', className: 'cell-body' }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'بررسی', render: r => {
     const actions = element('div', null, 'cell-actions');
     for (const [status, text, name] of [['approved', 'تأیید', 'check'], ['rejected', 'رد', 'close']]) actions.append(button(text, async () => { await api('admin/reviews/' + encodeURIComponent(r.id), 'POST', { status }); await load(); notice('نظر بررسی شد'); }, { secondary: true, iconName: name, className: status === 'rejected' ? 'danger' : '' }));
@@ -145,6 +160,7 @@ function userRowActions(row) {
     actions.append(iconAction('حذف حساب', () => confirmAction('حذف حساب کاربری', 'حساب «' + (row.displayName || row.phone) + '» و همهٔ داده‌های وابسته‌اش برای همیشه از پایگاه داده پاک می‌شود.', 'حذف حساب', async () => {
       await api('admin/users/' + encodeURIComponent(row.id) + '/delete', 'POST', { confirmation: 'حذف حساب' });
       notice('حساب حذف شد');
+      await load();
     }), 'trash', 'danger'));
   }
   return actions;
@@ -159,6 +175,9 @@ function doctorCell(row) {
     cell.replaceChild(photo, cell.firstChild);
   }
   return cell;
+}
+function latinDigits(value) {
+  return String(value).replace(/[۰-۹٠-٩]/g, c => String(c.charCodeAt(0) - (c <= '٩' ? 0x660 : 0x6f0))).replace(/\D/g, '');
 }
 function portraitFile(file) {
   return new Promise((resolve, reject) => {
@@ -192,31 +211,92 @@ function addSpecialistModal() {
     portrait.setAttribute('aria-label', 'تصویر پروفایل');
     const preview = element('span', null, 'portrait-preview');
     preview.append(icon('plus'));
+    const ring = element('span', null, 'portrait-ring');
+    ring.hidden = true;
+    ring.innerHTML = '<svg viewBox="0 0 36 36" aria-hidden="true"><circle class="track" cx="18" cy="18" r="15.5" pathLength="100"></circle><circle class="bar" cx="18" cy="18" r="15.5" pathLength="100"></circle></svg>';
+    let prepared = null;
+    let uploadTimer = null;
+    const setProgress = value => ring.style.setProperty('--p', String(100 - value));
     portrait.onchange = () => {
       const file = portrait.files[0];
-      if (!file) { preview.replaceChildren(icon('plus')); return; }
-      const photo = element('img');
-      photo.alt = '';
-      photo.src = URL.createObjectURL(file);
-      preview.replaceChildren(photo);
+      clearInterval(uploadTimer);
+      picker.classList.remove('is-ready', 'is-failed');
+      prepared = null;
+      if (!file) { ring.hidden = true; preview.replaceChildren(icon('plus')); return; }
+      ring.hidden = false;
+      setProgress(4);
+      let shown = 4;
+      let finished = false;
+      let failed = false;
+      uploadTimer = setInterval(() => {
+        const cap = finished ? 100 : 86;
+        shown = Math.min(cap, shown + Math.max(1.4, (cap - shown) * 0.22));
+        setProgress(shown);
+        if (finished && shown >= 99) {
+          clearInterval(uploadTimer);
+          setProgress(100);
+          picker.classList.add(failed ? 'is-failed' : 'is-ready');
+        }
+      }, 40);
+      portraitFile(file).then(photo => {
+        prepared = photo;
+        const image = element('img');
+        image.alt = '';
+        image.src = photo;
+        preview.replaceChildren(image);
+        finished = true;
+      }).catch(error => {
+        failed = true;
+        finished = true;
+        preview.replaceChildren(icon('plus'));
+        notice(error.message, 'error');
+      });
     };
-    picker.append(portrait, preview);
+    picker.append(portrait, preview, ring);
     dialog.querySelector('.modal-header').append(picker);
     const grid = element('div', null, 'form-grid');
     field(grid, 'firstName', 'نام');
     field(grid, 'lastName', 'نام خانوادگی');
-    const birth = field(grid, 'birthDate', 'تاریخ تولد', 'date');
-    birth.max = new Date().toISOString().slice(0, 10);
-    field(grid, 'councilNo', 'کد نظام پزشکی');
+    const birth = SabzineJalali.jalaliField(grid, 'birthDate', 'تاریخ تولد');
+    const council = field(grid, 'councilNo', 'کد نظام پزشکی');
+    council.inputMode = 'numeric';
+    council.maxLength = 6;
+    council.dir = 'ltr';
+    council.placeholder = '۱۲۳۴۵۶';
+    help(council, 'دقیقاً ۶ رقم.');
     field(grid, 'education', 'تحصیلات');
-    field(grid, 'phone', 'شماره تلفن', 'tel');
+    const phone = field(grid, 'phone', 'شماره تلفن', 'tel');
+    phone.inputMode = 'numeric';
+    phone.maxLength = 11;
+    phone.dir = 'ltr';
+    phone.placeholder = '۰۹۱۲۳۴۵۶۷۸۹';
+    help(phone, 'دقیقاً ۱۱ رقم و با ۰۹.');
+    const username = field(grid, 'username', 'نام کاربری');
+    username.dir = 'ltr';
+    username.autocomplete = 'off';
+    username.maxLength = 32;
+    username.placeholder = 'doctor.name';
+    help(username, 'برای ورود به پنل پزشک. ۳ تا ۳۲ نویسهٔ انگلیسی.');
+    const password = field(grid, 'password', 'رمز عبور', 'password');
+    password.dir = 'ltr';
+    password.autocomplete = 'new-password';
+    password.minLength = 8;
+    password.maxLength = 256;
+    help(password, 'حداقل ۸ نویسه. پزشک با همین نام کاربری و رمز، یا با شماره و کد پیامکی وارد می‌شود.');
     form.append(grid, formFooter('ثبت', 'check', dialog));
     onForm(form, async data => {
-      if (!portrait.files[0]) throw new Error('تصویر پروفایل را انتخاب کنید');
-      const photo = await portraitFile(portrait.files[0]);
+      if (!prepared) throw new Error('تصویر پروفایل را انتخاب کنید و صبر کنید تا بارگذاری کامل شود');
+      const councilNo = latinDigits(data.councilNo);
+      const mobile = latinDigits(data.phone);
+      if (!/^\d{6}$/.test(councilNo)) throw new Error('کد نظام پزشکی باید دقیقاً ۶ رقم باشد');
+      if (!/^09\d{9}$/.test(mobile)) throw new Error('شماره تلفن باید ۱۱ رقم و با ۰۹ شروع شود');
+      if (!/^[A-Za-z][A-Za-z0-9._-]{2,31}$/.test(data.username.trim())) throw new Error('نام کاربری باید ۳ تا ۳۲ نویسهٔ انگلیسی باشد و با حرف شروع شود');
+      if (data.password.length < 8) throw new Error('رمز عبور باید حداقل ۸ نویسه باشد');
+      if (!birth.value) throw new Error('تاریخ تولد را از تقویم شمسی انتخاب کنید');
       await api('admin/specialists', 'POST', {
         firstName: data.firstName, lastName: data.lastName, birthDate: data.birthDate,
-        councilNo: data.councilNo, education: data.education, phone: data.phone, portrait: photo,
+        councilNo, education: data.education, phone: mobile, portrait: prepared,
+        username: data.username.trim().toLowerCase(), password: data.password,
       });
       dialog.close();
       notice('پزشک ثبت شد');
@@ -226,19 +306,39 @@ function addSpecialistModal() {
   }, { iconName: 'medical' });
 }
 function userOperations(row) {
-  openModal('ویرایش کاربر', (body, dialog) => {
+  openModal('ویرایش کاربر', async (body, dialog) => {
+    body.append(skeleton());
+    const detail = await api('admin/users/' + encodeURIComponent(row.id));
+    const intake = detail.intake ?? {};
     const grid = element('div', null, 'detail-grid');
     for (const [label, value] of [
-      ['نام', row.displayName || 'بدون نام'],
-      ['شماره تلفن', row.phone || '—'],
-      ['ثبت‌نام از طریق', row.registrationLabel || 'اپلیکیشن'],
+      ['نام', detail.displayName || row.displayName || 'بدون نام'],
+      ['شماره تلفن', detail.phone || row.phone || '—'],
+      ['هدف انتخاب‌شده', intake.trackLabel || '—'],
+      ['ثبت‌نام از طریق', intake.source === 'demo' ? 'آنبوردینگ وب' : (row.registrationLabel || 'اپلیکیشن')],
+      ['وضعیت حساب', statusLabels[detail.status] || detail.status],
       ['پکیج فعال', row.packageTitle || 'پکیج فعالی ندارد'],
     ]) {
       const item = element('div');
-      item.append(element('span', label), element('strong', value));
+      const val = element('strong', value);
+      if (label === 'شماره تلفن') val.classList.add('ltr');
+      item.append(element('small', label), val);
       grid.append(item);
     }
-    body.append(grid);
+    const panel = element('div', null, 'report-stack');
+    panel.append(grid);
+    if (intake.answers?.length) {
+      const answersCard = element('section', null, 'card');
+      answersCard.append(sectionHead('پاسخ‌های پرسش‌نامه', 'اطلاعاتی که کاربر در دمو یا اپ ثبت کرده است.'));
+      const list = element('dl', null, 'ob-pairs');
+      for (const item of intake.answers) {
+        list.append(element('dt', item.question), element('dd', item.answer));
+      }
+      answersCard.append(list);
+      panel.append(answersCard);
+    } else {
+      panel.append(infoNote('هنوز پاسخ پرسش‌نامه‌ای برای این حساب در دسترس نیست.'));
+    }
     const form = element('form');
     const days = field(form, 'daysRemaining', 'روزهای مانده از پکیج', 'number', row.daysRemaining == null ? '' : String(row.daysRemaining));
     days.required = false;
@@ -255,31 +355,40 @@ function userOperations(row) {
       notice('روزهای پکیج ذخیره شد');
       await load();
     });
-    body.append(form);
+    panel.append(form);
     if (row.status !== 'deleted' && row.role !== 'admin') {
       const actions = element('div', null, 'form-submit');
-      const next = row.status === 'suspended' ? 'active' : 'suspended';
-      actions.append(button(next === 'active' ? 'فعال کردن حساب' : 'غیرفعال کردن حساب', async () => {
-        await api('admin/users/' + encodeURIComponent(row.id) + '/status', 'POST', { status: next });
-        dialog.close();
-        notice(next === 'active' ? 'حساب فعال شد' : 'حساب غیرفعال شد');
-        await load();
-      }, { secondary: true, iconName: next === 'active' ? 'check' : 'lock' }));
+      const statusChoices = [
+        ['active', 'فعال', 'check'],
+        ['pending', 'در انتظار', 'clock'],
+        ['suspended', 'غیرفعال', 'lock'],
+      ];
+      for (const [status, label, iconName] of statusChoices) {
+        if (status === detail.status) continue;
+        actions.append(button('تنظیم وضعیت: ' + label, async () => {
+          await api('admin/users/' + encodeURIComponent(row.id) + '/status', 'POST', { status });
+          dialog.close();
+          notice('وضعیت حساب به «' + label + '» تغییر کرد');
+          await load();
+        }, { secondary: true, iconName }));
+      }
       actions.append(button('حذف حساب این شماره', () => {
         dialog.close();
-        confirmAction('حذف حساب کاربری', 'حساب «' + (row.displayName || row.phone) + '» و همهٔ داده‌های وابسته‌اش برای همیشه از پایگاه داده پاک می‌شود.', 'حذف حساب', async () => {
+        confirmAction('حذف حساب کاربری', 'حساب «' + (detail.displayName || row.displayName || row.phone) + '» و همهٔ داده‌های وابسته‌اش برای همیشه از پایگاه داده پاک می‌شود.', 'حذف حساب', async () => {
           await api('admin/users/' + encodeURIComponent(row.id) + '/delete', 'POST', { confirmation: 'حذف حساب' });
           notice('حساب حذف شد');
+          await load();
         });
       }, { className: 'danger', iconName: 'trash' }));
-      body.append(actions);
+      panel.append(actions);
     }
-  }, { iconName: 'users' });
+    body.replaceChildren(panel);
+  }, { iconName: 'users', modalClass: 'modal-wide' });
 }
 function tablePage(rows, section) {
-  const empty = { users: ['کاربری برای نمایش نیست', 'حساب‌های ثبت‌شدهٔ رژیم من در این بخش قرار می‌گیرند.'], requests: ['درخواست جدیدی ثبت نشده', 'وضعیت درخواست‌های برنامه را از همین بخش دنبال خواهید کرد.'], orders: ['هنوز سفارشی ثبت نشده', 'جزئیات خرید خدمات کاربران پس از ثبت سفارش نمایش داده می‌شود.'], payments: ['پرداختی برای نمایش نیست', 'تراکنش‌های کاربران پس از ثبت در این فهرست نمایش داده می‌شوند.'], reviews: ['همه‌چیز بررسی شده است', 'نظر جدیدی که به بررسی شما نیاز داشته باشد، اینجا نمایش داده می‌شود.'], messages: ['هنوز گفت‌وگویی ندارید', 'گفت‌وگوهای مرتبط با حساب شما در این بخش قرار می‌گیرند.'], tickets: ['تیکتی ثبت نشده است', 'درخواست‌های پشتیبانی کاربران در این بخش نمایش داده می‌شوند.'], specialists: ['پزشک فعالی برای نمایش نیست', 'اطلاعات پزشکان فعال رژیم من در این فهرست نمایش داده می‌شود.'], 'audit-logs': ['هنوز فعالیتی ثبت نشده', 'تغییرات مدیریتی با زمان و شناسه در این بخش ثبت می‌شوند.'] };
+  const empty = { users: ['کاربری برای نمایش نیست', 'حساب‌های ثبت‌شدهٔ رژیم من در این بخش قرار می‌گیرند.'], requests: ['درخواست جدیدی ثبت نشده', 'وضعیت درخواست‌های برنامه را از همین بخش دنبال خواهید کرد.'], payments: ['پرداختی برای نمایش نیست', 'خرید پکیج‌ها پس از ثبت در این فهرست نمایش داده می‌شوند. تغییر برنامه بعد از خرید، پرداخت جداگانه ندارد.'], reviews: ['همه‌چیز بررسی شده است', 'نظر جدیدی که به بررسی شما نیاز داشته باشد، اینجا نمایش داده می‌شود.'], messages: ['هنوز گفت‌وگویی ندارید', 'گفت‌وگوهای مرتبط با حساب شما در این بخش قرار می‌گیرند.'], tickets: ['تیکتی ثبت نشده است', 'درخواست‌های پشتیبانی کاربران در این بخش نمایش داده می‌شوند.'], specialists: ['پزشک فعالی برای نمایش نیست', 'اطلاعات پزشکان فعال رژیم من در این فهرست نمایش داده می‌شود.'], 'audit-logs': ['هنوز فعالیتی ثبت نشده', 'تغییرات مدیریتی با زمان و شناسه در این بخش ثبت می‌شوند.'] };
   const filters = [...new Set(rows.map(r => r.status).filter(Boolean))].map(value => [value, statusLabels[value] || value]);
-  return listPanel(rows, { title: sections[section], description: number(rows.length) + ' مورد در فهرست', columns: section === 'orders' ? orderColumns : genericColumns[section], iconName: pageMeta[section].icon, filters, emptyTitle: empty[section][0], emptyDescription: empty[section][1] });
+  return listPanel(rows, { title: sections[section], description: number(rows.length) + ' مورد در فهرست', columns: section === 'payments' ? paymentColumns : genericColumns[section], iconName: pageMeta[section].icon, filters, emptyTitle: empty[section][0], emptyDescription: empty[section][1] });
 }
 function settings() {
   const layout = element('div', null, 'settings-layout');
@@ -306,7 +415,7 @@ async function load() {
   try {
     let view;
     if(section==='reasons') view=SabzineMessaging.reasonsConfig();
-    else if (section==='questionnaire') view=await demoQuestionnairePage();
+    else if (section==='questionnaire') view=await onboardingQuestionnairePage();
     else if (section==='user-reports') view=SabzineReports.userReports();
     else if (section==='specialist-reports') view=SabzineReports.specialistReports();
     else if (section==='journeys') view = SabzineJourneys.journeyPage();
@@ -319,8 +428,8 @@ async function load() {
     else if (section === 'notifications') view = await notificationsPage();
     else if (section === 'streaks') view = SabzineStreak.campaignPage();
     else if (section === 'settings') view = settings();
-    else if (section === 'dashboard') { const [stats, orders] = await Promise.all([api('admin/dashboard'), api('admin/orders')]); view = dashboard(stats, orders); }
-    else if (section === 'reviews') { const stack = element('div', null, 'report-stack'); stack.append(SabzineReports.moderationNote(), tablePage(await api('admin/reviews?status=pending'), section)); view = stack; }
+    else if (section === 'dashboard') { const [stats, payments] = await Promise.all([api('admin/dashboard'), api('admin/payments')]); view = dashboard(stats, payments); }
+    else if (section === 'reviews') { view = tablePage(await api('admin/reviews?status=pending'), section); }
     else { const path = section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
     if (request !== generation || !staffSession.active) return;
     $('content').replaceChildren(view);

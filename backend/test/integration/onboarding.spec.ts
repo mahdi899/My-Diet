@@ -9,6 +9,7 @@ import type { Pool } from 'pg';
 import request from 'supertest';
 import { installGracefulStop } from '../helpers/postgres-stop.js';
 import { loginAdmin } from '../helpers/admin-login.js';
+import { loginAdmin } from '../helpers/admin-login.js';
 import { uuidv7 } from '../../src/common/id.js';
 import { normalizeIranianMobile } from '../../src/common/phone.js';
 import { activeQuestions, missingRequired, type AnswerValue, type CanonicalAnswers, type SpecQuestion } from '../../src/onboarding/spec.js';
@@ -153,7 +154,7 @@ describe('onboarding', { concurrency: 1, timeout: 240_000 }, () => {
         answer: demoLabel(question, demoOnly[question.key]!),
       }))
       .filter((row) => row.answer !== '');
-    const saved = await request(api.getHttpServer()).post('/v1/demo/submissions').send({
+    const saved = await request(api.getHttpServer()).post('/v1/onboarding/submissions').send({
       id: uuidv7().replace(/^(.{14})7/, '$14'), phone, goal: 'weight_loss', answers: rows,
     });
     assert.equal(saved.status, 201, JSON.stringify(saved.body));
@@ -208,6 +209,59 @@ describe('onboarding', { concurrency: 1, timeout: 240_000 }, () => {
     assert.equal(free.rowCount, 0);
   });
 
+  it('shows demo registration in admin user detail and hard-deletes from the list', async () => {
+    const adminPhone = '09125550999';
+    const adminId = uuidv7();
+    await pool.query(
+      `insert into users (id, phone_e164, role, status) values ($1, $2, 'admin', 'active')`,
+      [adminId, normalizeIranianMobile(adminPhone)],
+    );
+    const admin = await loginAdmin(api, pool, adminPhone);
+
+    const phone = '09125550188';
+    const demoOnly = answerAll('weight_loss', (question) => question.demo === 'all' || (Array.isArray(question.demo) && question.demo.includes('weight_loss')));
+    const rows = activeQuestions('weight_loss', demoOnly)
+      .filter((question) => demoOnly[question.key] != null)
+      .map((question) => ({
+        question: question.demoTitles?.[0] ?? question.title,
+        answer: demoLabel(question, demoOnly[question.key]!),
+      }))
+      .filter((row) => row.answer !== '');
+    const saved = await request(api.getHttpServer()).post('/v1/onboarding/submissions').send({
+      id: uuidv7().replace(/^(.{14})7/, '$14'), phone, goal: 'weight_loss', answers: rows,
+    });
+    assert.equal(saved.status, 201, JSON.stringify(saved.body));
+
+    await login(phone);
+    const userId = (await pool.query<{ id: string }>(
+      `select id from users where phone_e164 = $1`,
+      [normalizeIranianMobile(phone)],
+    )).rows[0]!.id;
+    const status = await pool.query<{ status: string }>(`select status from users where id = $1`, [userId]);
+    assert.equal(status.rows[0]!.status, 'pending');
+
+    const detail = await request(api.getHttpServer())
+      .get(`/v1/admin/users/${userId}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    assert.equal(detail.status, 200, JSON.stringify(detail.body));
+    assert.equal(detail.body.intake.trackId, 'weight_loss');
+    assert.ok(detail.body.intake.answers.length > 5);
+    assert.ok(detail.body.intake.answers.some((row: { question: string }) => row.question.includes('اسم')));
+
+    const removed = await request(api.getHttpServer())
+      .post(`/v1/admin/users/${userId}/delete`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ confirmation: 'حذف حساب' });
+    assert.equal(removed.status, 201, JSON.stringify(removed.body));
+
+    const list = await request(api.getHttpServer())
+      .get('/v1/admin/users')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    assert.ok(!list.body.some((row: { id: string }) => row.id === userId));
+    const gone = await pool.query(`select 1 from users where id = $1`, [userId]);
+    assert.equal(gone.rowCount, 0);
+  });
+
   it('runs the full flow for a user without a demo lead and rejects tampered answers', async () => {
     const token = await login('09125550102');
     const auth = { Authorization: `Bearer ${token}` };
@@ -239,7 +293,10 @@ describe('onboarding', { concurrency: 1, timeout: 240_000 }, () => {
 
   it('lets an admin filter, read and audit profiles', async () => {
     const adminId = uuidv7();
-    await pool.query(`insert into users (id, phone_e164, role) values ($1,'+989180000099','admin')`, [adminId]);
+    await pool.query(
+      `insert into users (id, phone_e164, role, status) values ($1,'+989180000099','admin','active')`,
+      [adminId],
+    );
     const session = await loginAdmin(api, pool, '09180000099');
     const auth = { Authorization: `Bearer ${session.accessToken}` };
     const list = await request(api.getHttpServer()).get('/v1/admin/onboarding/profiles?track=weight_loss&limit=1').set(auth);
@@ -257,7 +314,7 @@ describe('onboarding', { concurrency: 1, timeout: 240_000 }, () => {
     assert.equal(audited.rowCount, 1);
     const funnel = await request(api.getHttpServer()).get('/v1/admin/onboarding/funnel').set(auth);
     assert.equal(funnel.body.stages.profiles, 2);
-    assert.equal(funnel.body.stages.demoClaimed, 1);
+    assert.equal(funnel.body.stages.onboardingClaimed, 1);
     assert.equal((await request(api.getHttpServer()).post('/v1/admin/onboarding/funnel/refresh').set(auth)).status, 201);
     const noAuth = await request(api.getHttpServer()).get('/v1/admin/onboarding/profiles');
     assert.equal(noAuth.status, 401);

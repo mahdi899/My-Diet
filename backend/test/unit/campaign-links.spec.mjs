@@ -8,7 +8,7 @@ test('campaign input rejects unsafe suffixes and arbitrary redirect destinations
   for (const slug of ['../demo', 'bad?x=1', 'https://evil.test', '-bad', 'bad--name', 'x'.repeat(65)])
     assert.throws(() => campaignInput({name:'test',slug,source:'telegram'}));
   assert.throws(() => campaignInput({name:'test',slug:'valid',source:'telegram',destination:'https://evil.test'}));
-  assert.equal(campaignDestination('telegram','summer'), '/demo/?utm_source=telegram&utm_medium=campaign&utm_campaign=summer');
+  assert.equal(campaignDestination('telegram','summer'), '/onboarding/?utm_source=telegram&utm_medium=campaign&utm_campaign=summer');
 });
 
 test('active links redirect with attribution, disabled links stop redirecting and neither is cached', async () => {

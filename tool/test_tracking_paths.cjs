@@ -2,7 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
-const source=fs.readFileSync(require('node:path').join(__dirname,'../demo/tracking.js'),'utf8');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../onboarding/tracking.js'),'utf8');
 let sequence=0;
 function load(path,storage=new Map()) {
   const events=[],listeners={};
@@ -21,22 +21,22 @@ function load(path,storage=new Map()) {
 }
 test('navigation shares a path, restarting and separate tabs get independent paths',()=>{
   const storage=new Map();
-  const intro=load('/demo/',storage),goals=load('/demo/goals.html',storage),quiz=load('/demo/quiz.html',storage);
+  const intro=load('/onboarding/',storage),goals=load('/onboarding/goals.html',storage),quiz=load('/onboarding/quiz.html',storage);
   assert.equal(intro.id,goals.id);assert.equal(goals.id,quiz.id);
-  assert.notEqual(load('/demo/quiz.html',storage).id,quiz.id,'reload resets answers and starts a new path');
-  assert.notEqual(load('/demo/quiz.html').id,quiz.id,'new tab isolates path');
-  const restart=load('/demo/goals.html',storage);
+  assert.notEqual(load('/onboarding/quiz.html',storage).id,quiz.id,'reload resets answers and starts a new path');
+  assert.notEqual(load('/onboarding/quiz.html').id,quiz.id,'new tab isolates path');
+  const restart=load('/onboarding/goals.html',storage);
   assert.notEqual(restart.id,quiz.id);
-  assert.equal(load('/demo/quiz.html',storage).id,restart.id);
+  assert.equal(load('/onboarding/quiz.html',storage).id,restart.id);
   intro.listeners.pageshow({persisted:true});
   assert.notEqual(JSON.parse(storage.get('mydiet.analytics.journey')).id,quiz.id);
   quiz.listeners.pageshow({persisted:true});
   assert.equal(JSON.parse(storage.get('mydiet.analytics.journey')).id,quiz.id,'restoring quiz preserves its original path');
-  assert.notEqual(load('/demo/quiz.html?goal=detox',storage).id,quiz.id,'direct goal change starts a new path');
+  assert.notEqual(load('/onboarding/quiz.html?goal=detox',storage).id,quiz.id,'direct goal change starts a new path');
 });
 test('privacy filter preserves only the anonymous journey and allowed fields',()=>{
-  const {id,context}=load('/demo/quiz.html');
-  const result=context.mydietBeforeSend('event',{url:'/demo/quiz.html?phone=private',data:{journey:id,phone:'private',answer:'private',step:'question:detox:24'}});
+  const {id,context}=load('/onboarding/quiz.html');
+  const result=context.mydietBeforeSend('event',{url:'/onboarding/quiz.html?phone=private',data:{journey:id,phone:'private',answer:'private',step:'question:detox:24'}});
   assert.equal(result.data.journey,id);assert.equal(result.data.phone,undefined);
-  assert.equal(result.data.answer,undefined);assert.equal(result.url,'/demo/quiz.html');
+  assert.equal(result.data.answer,undefined);assert.equal(result.url,'/onboarding/quiz.html');
 });

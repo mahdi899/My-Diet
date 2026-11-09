@@ -6,7 +6,7 @@
 |---|---|
 | `app/` | اپ Flutter |
 | `site/` | سایت |
-| `demo/` | فرم ثبت‌نام وب |
+| `onboarding/` | فرم ثبت‌نام وب |
 | `admin/` | پنل ادمین |
 | `backend/` | API و worker |
 | `references/` | طرح، سند، تصویر |

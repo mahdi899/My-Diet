@@ -9,27 +9,44 @@ import { encryptText } from '../common/field-crypto.js';
 import { normalizeIranianMobile } from '../common/phone.js';
 import { PG_POOL } from '../database/database.js';
 import { ENV, type Env } from '../config/env.js';
+import { OnboardingService } from '../onboarding/onboarding.service.js';
 import { plainText } from '../publishing/content.js';
 
-const demoGoals = ['weight_loss', 'weight_gain', 'pregnancy', 'detox'];
+const onboardingGoals = ['weight_loss', 'weight_gain', 'pregnancy', 'detox'];
 
 @Controller('v1')
-export class DemoQuestionnaireController {
+export class OnboardingQuestionnaireController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   @Public()
-  @Get('public/demo-questionnaire')
+  @Get('public/onboarding-questionnaire')
   @Header('Cache-Control', 'no-store')
   async list() {
     const { rows } = await this.pool.query('select goal, document from demo_questionnaire_settings');
     return Object.fromEntries(rows.map(row => [row.goal, row.document]));
   }
 
+  /** Atomic member counter for the demo “community” hero; one increment per call. */
+  @Public()
+  @Post('public/onboarding/community-join')
+  @Header('Cache-Control', 'no-store')
+  async communityJoin() {
+    const { rows } = await this.pool.query<{ count: string }>(
+      `insert into app_settings (key, value) values ('demo.community_join_counter', '1621'::jsonb)
+       on conflict (key) do update set
+         value = to_jsonb((app_settings.value #>> '{}')::bigint + 1),
+         version = app_settings.version + 1,
+         updated_at = now()
+       returning (value #>> '{}')::bigint as count`,
+    );
+    return { count: Number(rows[0]?.count ?? 1622) };
+  }
+
   @Roles('admin')
-  @Put('admin/demo-questionnaire/:goal')
+  @Put('admin/onboarding-questionnaire/:goal')
   async save(@Param('goal') goal: string, @Body() body: { title?: unknown; questions?: unknown }) {
     const invalid = () => new ApiError(400, 'validation', 'تنظیمات هدف یا سؤال‌ها معتبر نیست');
-    if (!demoGoals.includes(goal) || !Array.isArray(body?.questions) || !body.questions.length || body.questions.length > 100) throw invalid();
+    if (!onboardingGoals.includes(goal) || !Array.isArray(body?.questions) || !body.questions.length || body.questions.length > 100) throw invalid();
     const used = new Set<number>();
     const questions = body.questions.map(raw => {
       if (!raw || !Number.isInteger(raw.id) || raw.id < 1 || raw.id > 10000 || used.has(raw.id)) throw invalid();
@@ -46,9 +63,9 @@ export class DemoQuestionnaireController {
   }
 }
 
-@Controller('v1/demo/submissions')
-export class DemoLeadsController {
- constructor(@Inject(PG_POOL) private readonly pool:Pool,@Inject(ENV) private readonly env:Env){}
+@Controller('v1/onboarding/submissions')
+export class OnboardingSubmissionsController {
+ constructor(@Inject(PG_POOL) private readonly pool:Pool,@Inject(ENV) private readonly env:Env,private readonly onboarding:OnboardingService){}
  @Roles('user')
  @Post(':id/verify')
  async verify(@Param('id') id:string,@Req() request:Request){
@@ -57,6 +74,7 @@ export class DemoLeadsController {
   const hash=createHmac('sha256',this.env.FIELD_KEY).update(user.rows[0].phone_e164).digest('hex');
   const result=await this.pool.query('update demo_lead_submissions set phone_verified=true where id=$1 and phone_hash=$2 returning id',[requiredUuid(id),hash]);
   if(!result.rowCount)throw new ApiError(404,'not_found','اطلاعات ثبت‌شده پیدا نشد');
+  await this.onboarding.importVerifiedDemo(actor(request).id);
   return {verified:true};
  }
  @Public()

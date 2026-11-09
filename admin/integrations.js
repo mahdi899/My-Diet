@@ -1,6 +1,6 @@
 let fieldSequence = 0;
-function openModal(title, build, { iconName = 'sliders', danger = false } = {}) {
-  const dialog = element('dialog', null, 'modal' + (danger ? ' modal-danger' : ''));
+function openModal(title, build, { iconName = 'sliders', danger = false, modalClass = '' } = {}) {
+  const dialog = element('dialog', null, 'modal' + (danger ? ' modal-danger' : '') + (modalClass ? ' ' + modalClass : ''));
   const titleId = 'modal-title-' + (++fieldSequence), heading = element('h2', title); heading.id = titleId; dialog.setAttribute('aria-labelledby', titleId);
   const head = element('header', null, 'modal-header'), titleWrap = element('div', null, 'modal-title'), body = element('div', null, 'modal-body');
   const close = button('', () => dialog.close(), { iconName: 'close', className: 'icon-button' }); close.setAttribute('aria-label', 'بستن');

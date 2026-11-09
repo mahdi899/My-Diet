@@ -1,7 +1,7 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
-export function hashPassword(password: string): string {
-  if (password.length < 12 || password.length > 256) throw new Error('Password must contain 12–256 characters');
+export function hashPassword(password: string, minimum = 12): string {
+  if (password.length < minimum || password.length > 256) throw new Error('Password must contain 12–256 characters');
   const salt = randomBytes(16).toString('hex');
   return `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
 }

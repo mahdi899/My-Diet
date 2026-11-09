@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, it } from 'node:test';
 import { assessSafety, bmr, mealSlots, planEnergy } from '../../src/nutrition/engine.js';
-import { canonicalToSubmission, legacyToCanonical, profilePreferences } from '../../src/onboarding/mapper.js';
+import { adminAnswerRows, canonicalToSubmission, legacyToCanonical, profilePreferences } from '../../src/onboarding/mapper.js';
 import { deriveProfile, factsOf, trackOfStored } from '../../src/onboarding/profile.js';
 import {
   DISH_PICKER,
@@ -195,13 +195,13 @@ describe('nutrition engine', () => {
 });
 
 describe('demo keys file', () => {
-  const source = readFileSync(new URL('../../../demo/onboarding-keys.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../../../onboarding/onboarding-keys.js', import.meta.url), 'utf8');
   const sandbox: { window?: unknown; SabzineKeys?: { canonical(q: unknown, a: unknown): { key?: string; codes?: string[] } } } = {};
   sandbox.window = sandbox;
   runInNewContext(source, sandbox);
   const keys = sandbox.SabzineKeys!;
 
-  it('knows every question the demo can ask (regenerate with tool/build_demo_keys.mjs when the spec changes)', () => {
+  it('knows every question the demo can ask (regenerate with tool/build_onboarding_keys.mjs when the spec changes)', () => {
     for (const question of SPEC_QUESTIONS) {
       for (const title of question.demoTitles ?? []) {
         assert.equal(keys.canonical({ q: title }, undefined).key, question.key, `${question.key}: ${title}`);
@@ -228,5 +228,11 @@ describe('demo keys file', () => {
       { question: 'جنسیتت چیه؟', answer: 'زن', codes: ['nonsense'] },
     ]);
     assert.equal(answers.sex, 'female');
+  });
+
+  it('formats canonical answers for admin display', () => {
+    const rows = adminAnswerRows('weight_loss', { name: 'نگار', sex: 'female', age: 30 });
+    assert.ok(rows.some((row) => row.question.includes('اسم') && row.answer === 'نگار'));
+    assert.ok(rows.some((row) => row.answer === 'زن'));
   });
 });

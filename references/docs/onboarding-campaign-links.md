@@ -1,6 +1,6 @@
 # Demo campaign links
 
-Admin: `/admin/#campaign-links`. Create a name, source and unique English suffix; copy `/go/<suffix>` into the advertisement. Each request checks the database and redirects temporarily to the fixed `/demo/` destination with `utm_source`, `utm_medium=campaign`, and `utm_campaign=<suffix>`. Existing demo navigation preserves these parameters and Umami reports them in **کانال‌های ورودی**.
+Admin: `/admin/#campaign-links`. Create a name, source and unique English suffix; copy `/go/<suffix>` into the advertisement. Each request checks the database and redirects temporarily to the fixed `/onboarding/` destination with `utm_source`, `utm_medium=campaign`, and `utm_campaign=<suffix>`. Existing demo navigation preserves these parameters and Umami reports them in **کانال‌های ورودی**.
 
 Disabling returns HTTP 410 without a redirect. Unknown suffixes also return 410. The API and Nginx prohibit caching these responses; no permanent redirects are used. Already-open pages and the public demo URL remain accessible. Shared/copied final demo URLs are not revocable campaign links.
 

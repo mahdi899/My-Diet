@@ -25,6 +25,20 @@ export class IdentityController {
     if ('totpRequired' in issued) return issued;
     return this.present(req,res,issued);
   }
+
+  @Public()
+  @Post('specialist/login')
+  async specialistLogin(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['username', 'password']);
+    const password = record.password;
+    if (typeof password !== 'string' || !password || password.length > 256) {
+      throw new ApiError(401, 'unauthorized', 'نام کاربری یا رمز عبور نادرست است');
+    }
+    const issued = await this.identity.specialistLogin(requiredString(record, 'username', 80), password);
+    if ('totpRequired' in issued) return issued;
+    return this.present(req, res, issued);
+  }
   constructor(
     private readonly identity: IdentityService,
     @Inject(ENV) private readonly env: Env,

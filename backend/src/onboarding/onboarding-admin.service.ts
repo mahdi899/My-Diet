@@ -188,7 +188,7 @@ export class OnboardingAdminService {
   /** Funnel from demo lead to a published plan, plus the daily materialised series. */
   async funnel() {
     const one = async (sql: string) => Number((await this.pool.query<{ n: string }>(sql)).rows[0]?.n ?? 0);
-    const [demoLeads, demoVerified, demoClaimed, drafts, profiles, consented, doctorOnly, requests, published] =
+    const [onboardingLeads, onboardingVerified, onboardingClaimed, drafts, profiles, consented, doctorOnly, requests, published] =
       await Promise.all([
         one(`select count(*) n from demo_lead_submissions`),
         one(`select count(*) n from demo_lead_submissions where phone_verified`),
@@ -205,7 +205,7 @@ export class OnboardingAdminService {
        from mv_onboarding_daily order by day desc, track limit 120`,
     );
     return {
-      stages: { demoLeads, demoVerified, demoClaimed, drafts, profiles, consented, doctorOnly, requests, published },
+      stages: { onboardingLeads, onboardingVerified, onboardingClaimed, drafts, profiles, consented, doctorOnly, requests, published },
       daily: daily.rows,
     };
   }
@@ -215,7 +215,7 @@ export class OnboardingAdminService {
     return { ok: true };
   }
 
-  async demoLeads(cursor?: string, limit = 30) {
+  async onboardingLeads(cursor?: string, limit = 30) {
     const parsed = decodeCursor(cursor);
     const values: unknown[] = [];
     let where = '';

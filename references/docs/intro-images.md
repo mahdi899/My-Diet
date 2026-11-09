@@ -2,7 +2,7 @@
 
 Generated with the built-in image_gen tool on November 5, 2026. Synthetic editorial images; not photographs of actual staff or clients.
 
-Saved assets: demo/assets/intro-specialist.jpg, demo/assets/intro-ai.jpg, demo/assets/intro-support.jpg, demo/assets/intro-plans.jpg.
+Saved assets: onboarding/assets/intro-specialist.jpg, onboarding/assets/intro-ai.jpg, onboarding/assets/intro-support.jpg, onboarding/assets/intro-plans.jpg.
 
 Shared prompt:
 Use case: photorealistic-natural. Create a landscape 3:2 editorial photograph for an Iranian nutrition service feature card. Consistent series: warm ivory and muted sage green palette, natural window light, contemporary Tehran interiors, real skin texture, subtle film grain, candid professional photography, no glossy stock-photo look, no text, logos, watermarks or graphics. Chest-up subject centered, comfortable crop margins. 

@@ -588,6 +588,7 @@
 
   <script src="tracking-config.js?v=1"></script>
   <script src="tracking.js?v=3"></script>
+  <script src="community-counter.js?v=1"></script>
   <script src="questionnaire-data.js?v=12"></script><script src="onboarding-keys.js?v=1"></script>
   <script>
     // =========================================================
@@ -670,7 +671,7 @@
       list.innerHTML = people.map((person) => `
         <button type="button" class="specialist-card${person.id === selectedId ? ' is-selected' : ''}" aria-pressed="${person.id === selectedId}" data-specialist-id="${person.id}">
           <span class="specialist-portrait-group">
-            <img class="specialist-portrait" src="assets/doctor-demo-${['amir','reza','parsa'].includes(person.id) ? 'male' : 'female'}.jpg" alt="پرتره نمونه برای نمایش دمو" width="640" height="800" />
+            <img class="specialist-portrait" src="assets/doctor-onboarding-${['amir','reza','parsa'].includes(person.id) ? 'male' : 'female'}.jpg" alt="پرتره نمونه برای نمایش دمو" width="640" height="800" />
             <span class="specialist-rating" aria-label="امتیاز ۴٫۸ از ۵">
               <span class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="is-partial"></i></span>
               <span class="star-score">۴٫۸</span>
@@ -1733,7 +1734,7 @@
         try {
           if(countAnsweredQuestions()!==state.selectedGoal.questions.length)throw new Error('ابتدا پرسش‌نامه را کامل کنید.');
           if(state.submissionPhone!==normalizedPhone){state.submissionId=crypto.randomUUID();state.submissionPhone=normalizedPhone;}
-          const result=await fetch('/v1/demo/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>Object.assign({question:q.q,answer:answerLabel(q,state.answers[i])},window.SabzineKeys?window.SabzineKeys.canonical(q,state.answers[i]):{}))}),signal:AbortSignal.timeout(15000)});
+          const result=await fetch('/v1/onboarding/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>Object.assign({question:q.q,answer:answerLabel(q,state.answers[i])},window.SabzineKeys?window.SabzineKeys.canonical(q,state.answers[i]):{}))}),signal:AbortSignal.timeout(15000)});
           if(!result.ok)throw new Error('ذخیرهٔ اطلاعات انجام نشد؛ دوباره تلاش کنید.');
           const sms=await fetch('/v1/auth/otp/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:normalizedPhone}),signal:AbortSignal.timeout(18000)});
           if(!sms.ok){const problem=await sms.json().catch(()=>({}));throw new Error(problem.detail||'ارسال کد انجام نشد؛ دوباره تلاش کنید.');}
@@ -1761,7 +1762,7 @@
             const session=await response.json();if(!response.ok||!session.accessToken||session.role!=='user')throw new Error(session.detail||'کد تأیید معتبر نیست.');
             state.smsSession={phone:state.userPhone,token:session.accessToken};
           }
-          const saved=await fetch('/v1/demo/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
+          const saved=await fetch('/v1/onboarding/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
           if(!saved.ok)throw new Error('تأیید شماره ذخیره نشد؛ دوباره تلاش کنید.');
         }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;state.verificationBusy=false;document.getElementById('morphConfirmBtnText').textContent='تأیید و ادامه';}
         // Success is displayed only after both server verification requests succeed.
@@ -1859,17 +1860,11 @@
       if (el) el.classList.add('hidden');
     }
 
-    function showAiReadyPhase() {
+    async function showAiReadyPhase() {
       clearInterval(matchingTicker);
       const counter = document.getElementById('communityNumber');
-      counter.textContent = (1000).toLocaleString('fa-IR');
-      const began = performance.now();
       clearInterval(communityTicker);
-      communityTicker = setInterval(() => {
-        const t = Math.min(1, (performance.now() - began) / 1400);
-        counter.textContent = Math.round(1000 + 622 * (1 - Math.pow(1 - t, 3))).toLocaleString('fa-IR');
-        if (t === 1) clearInterval(communityTicker);
-      }, 40);
+      communityTicker = await window.SabzineCommunityCounter.start(counter);
       state.aiPreparingTimer = null;
       document.getElementById('aiPreparingPhase').classList.add('hidden');
       const ready = document.getElementById('aiReadyPhase');

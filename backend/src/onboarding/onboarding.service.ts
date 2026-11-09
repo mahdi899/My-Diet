@@ -9,7 +9,7 @@ import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
 import { QuestionnaireService } from '../questionnaire/questionnaire.service.js';
 import { validateSubmission, type StoredAnswers } from '../questionnaire/schema.js';
-import { canonicalToSubmission, legacyToCanonical, profilePreferences, type LegacyAnswer } from './mapper.js';
+import { canonicalToSubmission, demoDisplayName, legacyToCanonical, profilePreferences, type LegacyAnswer } from './mapper.js';
 import { deriveProfile, factsOf, trackOfStored, type DerivedProfile } from './profile.js';
 import {
   ONBOARDING_SPEC_VERSION,
@@ -444,6 +444,11 @@ export class OnboardingService {
     return this.profileRow(userId);
   }
 
+  /** Attaches the newest demo registration after the phone is verified on the demo site. */
+  async importVerifiedDemo(userId: string): Promise<boolean> {
+    return this.claimDemoLead(userId);
+  }
+
   /** Imports the newest unclaimed demo lead of this verified phone into a draft, and submits it when complete. */
   private async claimDemoLead(userId: string): Promise<boolean> {
     const user = await this.pool.query<{ phone_e164: string }>(`select phone_e164 from users where id = $1`, [userId]);
@@ -467,6 +472,18 @@ export class OnboardingService {
         items = [];
       }
       const { track, answers } = legacyToCanonical(row.goal, items);
+      const typedName = typeof answers.name === 'string' ? answers.name.trim() : '';
+      const displayName = typedName || demoDisplayName(items);
+      if (displayName) {
+        await client.query(
+          `update users set display_name = $2 where id = $1 and display_name is null`,
+          [userId, displayName],
+        );
+      }
+      await client.query(
+        `update users set signup_channel = 'demo' where id = $1 and signup_channel = 'app'`,
+        [userId],
+      );
       await client.query(
         `insert into onboarding_drafts (user_id, spec_version, track, answers, step_key, progress, source)
          values ($1, $2, $3, $4::jsonb, null, 0, 'demo')

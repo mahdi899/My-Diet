@@ -315,14 +315,8 @@ function questionnairePage() {
   draw();
   return root;
 }
-function moderationNote() {
-  const card = element('section', null, 'card');
-  card.append(element('h2', 'بررسی نظرها'), element('p', 'فاز ۹ · این فهرست صف زندهٔ نظرهای در انتظار است، نه نمونهٔ آماری. تأیید یا رد شناسهٔ نظر را حذف نمی‌کند و فقط وضعیت را عوض می‌کند.'));
-  return card;
-}
-
 var SabzineReports = {
   windows, retentionEvents, cohorts, foodEvents, feedbackFixture, specialists,
   retentionReport, rankFoods, feedbackSummary, leaderboard, summarizeSpecialist,
-  addReason, updateReason, createQuestionnaire, userReports, specialistReports, questionnairePage, moderationNote,
+  addReason, updateReason, createQuestionnaire, userReports, specialistReports, questionnairePage,
 };

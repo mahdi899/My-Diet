@@ -56,8 +56,8 @@ snippet='''
     location /insights/ { return 404; }
 '''
 text=site.read_text()
-if 'location = /v1/public/demo-questionnaire' not in text:
-    text=text.replace('    location / {', '''    location = /v1/public/demo-questionnaire {
+if 'location = /v1/public/onboarding-questionnaire' not in text:
+    text=text.replace('    location / {', '''    location = /v1/public/onboarding-questionnaire {
         limit_except GET HEAD { deny all; }
         proxy_pass http://127.0.0.1:3003;
     }
@@ -71,6 +71,38 @@ if 'location ~ ^/v1/public/articles' not in text:
     }
     location / {''',1)
     site.write_text(text)
+if 'location ^~ /demo/' not in text:
+    text=text.replace('    location / {', '''    location = /demo { return 301 /onboarding/; }
+    location ^~ /demo/ {
+        rewrite ^/demo/(.*)$ /onboarding/$1 permanent;
+    }
+    location / {''',1)
+    site.write_text(text)
+if 'location = /v1/demo/submissions' not in text:
+    text=text.replace('    location /v1/ {', '''    location = /v1/demo/submissions {
+        limit_except POST { deny all; }
+        rewrite ^ /v1/onboarding/submissions break;
+        proxy_pass http://127.0.0.1:3003;
+        add_header Cache-Control "private, no-store" always;
+    }
+    location ~ ^/v1/demo/submissions/ {
+        limit_except POST { deny all; }
+        rewrite ^/v1/demo/submissions/(.*)$ /v1/onboarding/submissions/$1 break;
+        proxy_pass http://127.0.0.1:3003;
+        add_header Cache-Control "private, no-store" always;
+    }
+    location = /v1/public/demo-questionnaire {
+        limit_except GET HEAD { deny all; }
+        rewrite ^ /v1/public/onboarding-questionnaire break;
+        proxy_pass http://127.0.0.1:3003;
+    }
+    location = /v1/public/demo/community-join {
+        limit_except POST { deny all; }
+        rewrite ^ /v1/public/onboarding/community-join break;
+        proxy_pass http://127.0.0.1:3003;
+    }
+    location /v1/ {''',1)
+    site.write_text(text)
 if 'location ^~ /go/' not in text:
     text=text.replace('    location / {', '''    location ^~ /go/ {
         limit_except GET HEAD { deny all; }
@@ -83,8 +115,8 @@ if 'location ^~ /go/' not in text:
     location / {''',1)
     site.write_text(text)
 text=text.replace('(admin/login|refresh|logout|totp)$','(admin/login|refresh|logout|totp|otp/request|otp/verify)$')
-if 'location ~ ^/v1/demo/submissions/' not in text:
-    text=text.replace('    location /v1/ {', '''    location ~ ^/v1/demo/submissions/[a-fA-F0-9-]+/verify$ {
+if 'location ~ ^/v1/onboarding/submissions/' not in text:
+    text=text.replace('    location /v1/ {', '''    location ~ ^/v1/onboarding/submissions/[a-fA-F0-9-]+/verify$ {
         limit_except POST { deny all; }
         proxy_pass http://127.0.0.1:3003;
         add_header Cache-Control "private, no-store" always;
@@ -94,8 +126,8 @@ if 'location ~ ^/v1/demo/submissions/' not in text:
 text=text.replace('proxy_set_header X-Forwarded-Proto https;\n        proxy_set_header X-Forwarded-For $mydiet_analytics_ip;', 'proxy_set_header X-Forwarded-Proto https;')
 text=text.replace('proxy_set_header X-Forwarded-Proto https;', 'proxy_set_header X-Forwarded-Proto https;\n        proxy_set_header X-Forwarded-For $mydiet_analytics_ip;')
 site.write_text(text)
-if 'location = /v1/demo/submissions' not in text:
-    text=text.replace('    location /v1/ {', '''    location = /v1/demo/submissions {
+if 'location = /v1/onboarding/submissions' not in text:
+    text=text.replace('    location /v1/ {', '''    location = /v1/onboarding/submissions {
         limit_except POST { deny all; }
         limit_req zone=demo_leads burst=10 nodelay;
         client_max_body_size 128k;

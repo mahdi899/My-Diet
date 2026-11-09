@@ -388,7 +388,7 @@ describe('phase 15 product', { concurrency: 1, timeout: 180_000 }, () => {
       .get(`/v1/admin/users/${userId}`)
       .set('Authorization', `Bearer ${adminToken}`);
     assert.equal(detail.body.displayName, 'نگار تازه');
-    assert.equal(detail.body.phone, undefined);
+    assert.ok(detail.body.phone);
     const adminRequests = await request(api.getHttpServer())
       .get('/v1/admin/requests')
       .set('Authorization', `Bearer ${adminToken}`);

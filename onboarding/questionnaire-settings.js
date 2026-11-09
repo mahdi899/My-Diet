@@ -1,6 +1,6 @@
 async function loadDemoQuestionnaire(goals) {
   try {
-    const response = await fetch('/v1/public/demo-questionnaire', {
+    const response = await fetch('/v1/public/onboarding-questionnaire', {
       cache: 'no-store',
       signal: AbortSignal.timeout(3500),
     });

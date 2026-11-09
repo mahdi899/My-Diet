@@ -11,18 +11,18 @@ chmod 600 /root/.ssh/authorized_keys
 cd /opt/sabzine
 if [[ ! -f /tmp/mydiet-src.done ]]; then
   tar -xzf /tmp/mydiet-src.tar.gz -C /opt/sabzine
-  test -f /opt/sabzine/demo/quiz.html
+  test -f /opt/sabzine/onboarding/quiz.html
   test -f /opt/sabzine/backend/package.json
 
   # Marketing site (keep server-specific demo tracking config)
   rsync -a --delete \
-    --exclude 'demo/' \
+    --exclude 'onboarding/' \
     "sabzine site/" /var/www/my-diet/
 
-  mkdir -p /var/www/my-diet/demo
+  mkdir -p /var/www/my-diet/onboarding
   rsync -a --delete \
     --exclude 'tracking-config.js' \
-    demo/ /var/www/my-diet/demo/
+    onboarding/ /var/www/my-diet/onboarding/
 
   chown -R www-data:www-data /var/www/my-diet
   find /var/www/my-diet -type f -exec chmod 644 {} +

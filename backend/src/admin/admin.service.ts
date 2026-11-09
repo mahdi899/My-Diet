@@ -4,7 +4,9 @@ import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
 import { audit, toman, withTransaction, type Queryable } from '../common/sql.js';
 import { tehranDayStartUtc, tehranToday } from '../common/time.js';
+import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
+import { loadUserIntake, rememberDemoIdentities } from './user-intake.js';
 import { OUTBOX_MAX_ATTEMPTS } from '../jobs/outbox-policy.js';
 import { debitFits, signedAdjustment } from './adjustment.js';
 import {
@@ -14,7 +16,10 @@ import {
 
 @Injectable()
 export class AdminService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
 
   async aiExecutions() {
     return (await this.pool.query(`select request_id as "requestId",status,started_at as "startedAt",
@@ -39,8 +44,8 @@ export class AdminService {
     const result = await this.pool.query(`select
       (select count(*)::int from users where role='user' and status <> 'deleted') as users,
       (select count(*)::int from users where role='user' and status <> 'deleted' and created_at >= $1::timestamptz - interval '7 days') as new_users,
-      (select coalesce(sum(cash_toman),0)::text from orders where status='paid' and created_at >= now()-interval '30 days') as revenue,
-      (select count(*)::int from orders where status='paid' and created_at >= now()-interval '30 days') as paid_orders,
+      (select coalesce(sum(amount_toman),0)::text from payments where status='credited' and created_at >= now()-interval '30 days') as revenue,
+      (select count(*)::int from payments where status='credited' and created_at >= now()-interval '30 days') as paid_orders,
       (select count(*)::int from ai_generations where created_at >= $1::timestamptz and created_at < $1::timestamptz + interval '1 day') as ai_today,
       (select count(*)::int from messages m join conversations c on c.id=m.conversation_id
        left join conversation_participants cp on cp.conversation_id=c.id and cp.user_id=$2
@@ -65,6 +70,8 @@ export class AdminService {
     birthDate?: string | null;
     education?: string;
     portrait?: string;
+    username?: string;
+    passwordHash?: string;
   }) {
     const existing = await this.pool.query(`select id from users where phone_e164 = $1`, [input.phoneE164]);
     if ((existing.rowCount ?? 0) > 0) {
@@ -74,7 +81,7 @@ export class AdminService {
     const conversationId = uuidv7();
     await withTransaction(this.pool, async (client) => {
       await client.query(
-        `insert into users (id, phone_e164, role, display_name) values ($1, $2, 'specialist', $3)`,
+        `insert into users (id, phone_e164, role, display_name, status) values ($1, $2, 'specialist', $3, 'active')`,
         [id, input.phoneE164, input.displayName],
       );
       await client.query(`insert into wallets (user_id) values ($1)`, [id]);
@@ -91,6 +98,19 @@ export class AdminService {
          values ($1, $2, $3, $4, $5, $6, $7::date, $8, $9)`,
         [id, input.displayName, input.credential, input.bio, input.capacity, input.councilNo ?? '', input.birthDate ?? null, input.education ?? '', input.portrait ?? ''],
       );
+      if (input.username && input.passwordHash) {
+        const takenName = await client.query(
+          `select 1 from admin_credentials where lower(username) = $1
+           union all
+           select 1 from specialist_credentials where username = $1`,
+          [input.username],
+        );
+        if ((takenName.rowCount ?? 0) > 0) throw new ApiError(409, 'username_taken', 'این نام کاربری قبلاً ثبت شده است');
+        await client.query(
+          `insert into specialist_credentials (user_id, username, password_hash) values ($1, $2, $3)`,
+          [id, input.username, input.passwordHash],
+        );
+      }
       await client.query(
         `insert into conversations (id, kind, user_id) values ($1, 'support', $2)`,
         [conversationId, id],
@@ -356,20 +376,24 @@ export class AdminService {
   async payments() {
     const rows = await this.pool.query<{
       id: string;
-      user_id: string;
+      user_name: string;
+      package_code: string;
       amount_toman: string;
-      amount_rial: string;
       status: string;
       created_at: Date;
     }>(
-      `select id, user_id, amount_toman, amount_rial, status, created_at
-       from payments order by created_at desc limit 100`,
+      `select p.id, coalesce(nullif(u.display_name, ''), u.phone_e164) as user_name,
+              p.package_code, p.amount_toman, p.status, p.created_at
+       from payments p
+       join users u on u.id = p.user_id
+       order by p.created_at desc, p.id desc
+       limit 100`,
     );
     return rows.rows.map((row) => ({
       id: row.id,
-      userId: row.user_id,
+      user: row.user_name,
+      packageCode: row.package_code,
       amountToman: toman(row.amount_toman),
-      amountRial: toman(row.amount_rial),
       status: row.status,
       createdAt: row.created_at.toISOString(),
     }));
@@ -449,22 +473,33 @@ export class AdminService {
   async userDetail(userId: string) {
     const rows = await this.pool.query<{
       id: string;
+      phone_e164: string;
       role: string;
       display_name: string | null;
       status: string;
       created_at: Date;
     }>(
-      `select id, role, display_name, status, created_at from users where id = $1`,
+      `select id, phone_e164, role, display_name, status, created_at from users where id = $1`,
       [userId],
     );
     const user = rows.rows[0];
     if (!user) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
+    const intake = await loadUserIntake(this.pool, this.env, userId);
     return {
       id: user.id,
+      phone: user.phone_e164,
       role: user.role,
-      displayName: user.display_name,
+      displayName: intake?.displayName ?? user.display_name,
       status: user.status,
       createdAt: user.created_at.toISOString(),
+      intake: intake
+        ? {
+            trackId: intake.trackId,
+            trackLabel: intake.trackLabel,
+            source: intake.source,
+            answers: intake.answers,
+          }
+        : null,
     };
   }
 
@@ -552,22 +587,32 @@ export class AdminService {
        ) ordered on true
        left join user_service_access a on a.user_id = u.id
        left join services s on s.code = a.service_code
+       where u.role = 'user' and u.status <> 'deleted'
        order by u.created_at desc
        limit 200`,
     );
-    return rows.rows.map((row) => ({
-      id: row.id,
-      phone: row.phone_e164,
-      role: row.role,
-      status: row.status,
-      displayName: row.display_name,
-      registrationLabel: registrationLabel(row),
-      packageTitle: row.package_title,
-      daysRemaining: row.ends_at == null ? null : remainingDays(row.ends_at),
-    }));
+    const identities = await rememberDemoIdentities(
+      this.pool,
+      this.env,
+      rows.rows.map((row) => ({ id: row.id, phone: row.phone_e164, displayName: row.display_name })),
+    );
+    return rows.rows.map((row) => {
+      const identity = identities.get(row.id);
+      const label = registrationLabel(row);
+      return {
+        id: row.id,
+        phone: row.phone_e164,
+        role: row.role,
+        status: row.status,
+        displayName: identity?.displayName ?? row.display_name,
+        registrationLabel: identity?.fromDemo && label === 'اپلیکیشن' ? 'آنبوردینگ وب' : label,
+        packageTitle: row.package_title,
+        daysRemaining: row.ends_at == null ? null : remainingDays(row.ends_at),
+      };
+    });
   }
 
-  async setStatus(actorId: string, userId: string, status: 'active' | 'suspended') {
+  async setStatus(actorId: string, userId: string, status: 'active' | 'suspended' | 'pending') {
     const current = await this.pool.query<{ role: string; status: string }>(
       `select role, status from users where id = $1`,
       [userId],
@@ -625,6 +670,7 @@ export class AdminService {
       );
       const chosen = service.rows[0];
       if (!chosen) throw new ApiError(409, 'conflict', 'خدمتی برای این پکیج ثبت نشده است');
+      await client.query(`update users set status = 'active' where id = $1 and role = 'user'`, [userId]);
       await client.query(
         `insert into user_service_access (user_id, service_code, ends_at)
          values ($1, $2, now() + make_interval(days => $3))
@@ -648,11 +694,12 @@ export class AdminService {
       medical_council_no: string;
       birth_date: Date | null;
       portrait: string;
+      username: string | null;
       average: string | null;
       reviews: number;
     }>(
       `select sp.user_id, sp.display_name, u.phone_e164, sp.credential, sp.bio, sp.education,
-              sp.medical_council_no, sp.birth_date, sp.portrait,
+              sp.medical_council_no, sp.birth_date, sp.portrait, sc.username,
               (select round(avg(pr.rating)::numeric, 2)
                from program_reviews pr
                join plan_requests r on r.id = pr.request_id
@@ -663,6 +710,7 @@ export class AdminService {
                where r.assigned_specialist_id = sp.user_id and pr.status = 'approved') as reviews
        from specialist_profiles sp
        join users u on u.id = sp.user_id
+       left join specialist_credentials sc on sc.user_id = sp.user_id
        where u.status <> 'deleted'
        order by sp.display_name`,
     );
@@ -676,6 +724,7 @@ export class AdminService {
       councilNo: row.medical_council_no,
       birthDate: row.birth_date ? row.birth_date.toISOString().slice(0, 10) : null,
       portrait: row.portrait || null,
+      username: row.username,
       averageRating: row.average == null ? null : Number(row.average),
       reviewCount: row.reviews,
     }));
@@ -909,7 +958,7 @@ function registrationLabel(row: {
     const source = channelNames[row.campaign_source ?? ''] ?? row.campaign_source;
     return source ? `${row.campaign_name} · ${source}` : row.campaign_name;
   }
-  if (row.profile_source === 'demo' || row.signup_channel === 'demo') return 'دموی وب';
+  if (row.profile_source === 'demo' || row.signup_channel === 'demo') return 'آنبوردینگ وب';
   return 'اپلیکیشن';
 }
 
@@ -980,6 +1029,7 @@ async function purgeUser(client: Queryable, userId: string) {
     if (stack.includes(table) || stack.length > 32) return;
     stack.push(table);
     for (const key of foreignKeys.filter((item) => item.parent === table)) {
+      if (!key.childCols.length || !key.parentCols.length) continue;
       const match = `(${key.childCols.map(ident).join(', ')}) in (select ${key.parentCols.map(ident).join(', ')} from ${ident(table)} where ${whereSql})`;
       if (key.child === table) {
         if (key.nullable) {
@@ -1001,6 +1051,24 @@ async function purgeUser(client: Queryable, userId: string) {
     stack.pop();
   };
   try {
+    await client.query(
+      `delete from refresh_tokens where session_id in (select id from sessions where user_id = $1)`,
+      [userId],
+    );
+    await client.query(`delete from sessions where user_id = $1`, [userId]);
+    await client.query(`delete from wallet_ledger where user_id = $1`, [userId]);
+    await client.query(`delete from wallets where user_id = $1`, [userId]);
+    await client.query(
+      `update demo_lead_submissions set claimed_user_id = null, claimed_at = null where claimed_user_id = $1`,
+      [userId],
+    );
+    await client.query(`delete from conversation_participants where user_id = $1`, [userId]);
+    await client.query(
+      `delete from messages where conversation_id in (select id from conversations where user_id = $1)`,
+      [userId],
+    );
+    await client.query(`delete from conversations where user_id = $1`, [userId]);
+    await client.query(`delete from onboarding_drafts where user_id = $1`, [userId]);
     await remove('users', 'id = $1');
     for (const table of triggers.rows) {
       await client.query(`alter table public.${ident(table.name)} enable trigger user`);

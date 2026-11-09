@@ -3,11 +3,11 @@ const { resolve, dirname } = require('node:path');
 
 const root = resolve(__dirname, '..');
 const desktopHtml = resolve(root, '..', '..', 'sabzine.html');
-const demoDir = existsSync(resolve(root, 'demo'))
-  ? resolve(root, 'demo')
+const onboardingDir = existsSync(resolve(root, 'onboarding'))
+  ? resolve(root, 'onboarding')
   : resolve(root, '..', 'demo');
 const siteAssets = resolve(root, 'site', 'assets');
-const assetsDir = resolve(demoDir, 'assets');
+const assetsDir = resolve(onboardingDir, 'assets');
 
 if (!existsSync(desktopHtml)) {
   console.error('Missing source:', desktopHtml);
@@ -130,5 +130,5 @@ html = html.replace(
   'body class="selection:bg-[#205638] selection:text-white"',
 );
 
-writeFileSync(resolve(demoDir, 'index.html'), html, 'utf8');
-console.log('Built', resolve(demoDir, 'index.html'));
+writeFileSync(resolve(onboardingDir, 'index.html'), html, 'utf8');
+console.log('Built', resolve(onboardingDir, 'index.html'));
