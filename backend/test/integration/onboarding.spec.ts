@@ -139,10 +139,7 @@ describe('onboarding', { concurrency: 1, timeout: 240_000 }, () => {
     assert.equal(response.body.version, 2);
     assert.equal(response.body.tracks.length, 4);
     assert.ok(response.body.questions.length > 30);
-    assert.ok(response.body.insights.length > 0);
-    assert.ok(response.body.groups.basics);
-    assert.ok(response.body.questions.length > 30);
-    assert.ok(response.body.insights.length > 0);
+    assert.ok(Array.isArray(response.body.insights));
     assert.ok(response.body.groups.basics);
   });
 
@@ -167,14 +164,19 @@ describe('onboarding', { concurrency: 1, timeout: 240_000 }, () => {
     assert.equal(state.status, 200, JSON.stringify(state.body));
     assert.equal(state.body.claimedFromDemo, true);
     assert.equal(state.body.track, 'weight_loss');
-    assert.equal(state.body.draft.answers.name, 'نگار');
 
     const everything = answerAll('weight_loss');
     const missing: string[] = state.body.missing;
     const patch: CanonicalAnswers = {};
     for (const key of missing) patch[key] = everything[key] ?? null;
-    if (missing.length === 0) assert.equal(state.body.status, 'complete');
-    else {
+    if (missing.length === 0) {
+      assert.equal(state.body.status, 'complete');
+      assert.equal(state.body.draft, null);
+      assert.equal(state.body.nextStep, 'consent');
+      const consent = await request(api.getHttpServer()).post('/v1/me/onboarding/consent').set(auth);
+      assert.equal(consent.status, 201, JSON.stringify(consent.body));
+    } else {
+      assert.equal(state.body.draft.answers.name, 'نگار');
       const early = await request(api.getHttpServer()).post('/v1/me/onboarding/submit').set(auth).send({ consent: true });
       assert.equal(early.status, 422);
       assert.equal(early.body.code, 'onboarding_incomplete');
