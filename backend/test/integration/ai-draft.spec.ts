@@ -1,3 +1,4 @@
+import { HttpException } from '@nestjs/common';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -6,6 +7,12 @@ import { encryptText } from '../../src/common/field-crypto.js';
 import { uuidv7 } from '../../src/common/id.js';
 import { bootApp, type Booted } from '../helpers/boot.js';
 import { completeOnboarding } from '../helpers/onboarding.js';
+
+function hasApiErrorCode(error: unknown, code: string): boolean {
+  if (!(error instanceof HttpException)) return false;
+  const response = error.getResponse();
+  return typeof response === 'object' && response !== null && 'code' in response && response.code === code;
+}
 
 type Mode = 'good' | 'server_error' | 'bad_slug_once' | 'unsafe_slug';
 
@@ -259,7 +266,7 @@ describe('AI plan drafting through pools', { concurrency: 1, timeout: 300_000 },
 
     const firstUid = before.version!.days[0]!.meals[0]!.mealUid;
     const lock = before.version!.lockVersion;
-    await assert.rejects(plans.regenerate(specialistId, requestId, lock + 5), (e: any) => e.getResponse().code === 'lock_conflict');
+    await assert.rejects(plans.regenerate(specialistId, requestId, lock + 5), (error: unknown) => hasApiErrorCode(error, 'lock_conflict'));
     assert.deepEqual(await plans.regenerate(specialistId, requestId, lock), { status: 'generating' });
     for (let i = 0; i < 100; i += 1) {
       const status = (await app.pool.query<{ status: string }>('select status from plan_requests where id = $1', [requestId])).rows[0]!.status;
@@ -275,7 +282,7 @@ describe('AI plan drafting through pools', { concurrency: 1, timeout: 300_000 },
     assert.equal((await app.pool.query('select count(*)::int as n from ai_generations where request_id = $1', [requestId])).rows[0].n, 2);
 
     await app.pool.query('update ai_controls set kill_switch = true where id = true');
-    await assert.rejects(plans.regenerate(specialistId, requestId, lock + 1), (e: any) => e.getResponse().code === 'ai_budget_blocked');
+    await assert.rejects(plans.regenerate(specialistId, requestId, lock + 1), (error: unknown) => hasApiErrorCode(error, 'ai_budget_blocked'));
     await app.pool.query('update ai_controls set kill_switch = false where id = true');
   });
 
@@ -293,7 +300,7 @@ describe('AI plan drafting through pools', { concurrency: 1, timeout: 300_000 },
 
     const draft = await plans.staffRequest(specialistId, 'specialist', requestId, null);
     // The AI wrote two options per meal, so publishing is refused until the doctor adds and approves the third.
-    await assert.rejects(plans.publish(specialistId, 'specialist', requestId, draft.version!.lockVersion), (e: any) => e.getResponse().code === 'options_required');
+    await assert.rejects(plans.publish(specialistId, 'specialist', requestId, draft.version!.lockVersion), (error: unknown) => hasApiErrorCode(error, 'options_required'));
 
     const dish = (await foods.list({ q: 'قیمه', limit: 1 })).items[0] ?? (await foods.list({ limit: 1 })).items[0]!;
     const composed = await foods.compose({ kind: 'specialist_alternative', items: [{ slug: dish.slug, servings: 1.5 }] });

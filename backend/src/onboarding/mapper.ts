@@ -82,7 +82,7 @@ function toNumber(text: string): number | null {
     latinDigits(text)
       .replace(/[٫,/]/g, '.')
       .replace(/[٬،\s]/g, '')
-      .replace(/[^\d.\-]/g, ''),
+      .replace(/[^\d.-]/g, ''),
   );
   return Number.isFinite(parsed) && text.trim() !== '' ? parsed : null;
 }
