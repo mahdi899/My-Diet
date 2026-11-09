@@ -3,7 +3,7 @@
 The demo uses self-hosted Umami on the same server. `/insights/script.js` and
 `/insights/api/send` proxy only the tracker and collection endpoint. The Umami
 administration endpoints are not exposed to the Internet. The public website ID
-is in `demo/tracking-config.js`; credentials stay under `/etc/sabzine` on the server.
+is in `onboarding/tracking-config.js`; credentials stay under `/etc/sabzine` on the server.
 
 The existing admin panel has a **رهگیری سایت دمو** page at
 `/admin/#web-analytics`. Its authenticated API is `GET /v1/admin/web-analytics?days=7`.
@@ -43,7 +43,7 @@ the backend, `node --test test/unit/analytics-exits.spec.mjs` from `backend/`.
 The SQL test needs `ANALYTICS_TEST_DATABASE_URL` (or `DATABASE_URL`) and uses only
 query-local fixtures; it does not insert events into the analytics database.
 
-`POST /v1/demo/submissions` stores completed questionnaire snapshots in the main
+`POST /v1/onboarding/submissions` stores completed questionnaire snapshots in the main
 database, separately from Umami. A normalized phone is indexed by keyed HMAC;
 phone and all answer snapshots are encrypted with the server's FIELD_KEY.
 Submission UUIDs make retries idempotent; no public lookup exists. The existing
@@ -56,7 +56,7 @@ network failures may reduce counts. DNT, GPC, and the localStorage preference
 `mydiet.analytics.disabled=1` disable tracking.
 
 Campaign example:
-`https://my-diet.ir/demo/?utm_source=telegram&utm_medium=channel&utm_campaign=launch`
+`https://my-diet.ir/onboarding/?utm_source=telegram&utm_medium=channel&utm_campaign=launch`
 
 The server's admin API uses staging mode with unavailable external SMS/payment/AI
 providers, strong secrets, HTTPS-only refresh cookies and an Nginx route allowlist.

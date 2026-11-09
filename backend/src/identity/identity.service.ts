@@ -76,6 +76,32 @@ export class IdentityService {
     if (!outcome) throw new ApiError(401,'unauthorized','نام کاربری یا رمز عبور نادرست است یا ورود موقتاً مسدود شده است');
     return outcome;
   }
+
+  async specialistLogin(username: string, password: string): Promise<IssuedSession | TotpChallenge> {
+    const outcome = await withTransaction(this.pool, async (client) => {
+      const result = await client.query<{user_id: string; password_hash: string; failed_attempts: number; locked_until: Date | null; status: string}>(
+        `select c.*, u.status from specialist_credentials c join users u on u.id=c.user_id
+         where c.username=$1 and u.role='specialist' for update of c`, [username.toLowerCase().trim()]);
+      const row = result.rows[0];
+      const valid = verifyPassword(password, row?.password_hash ?? '00000000000000000000000000000000:' + '00'.repeat(64));
+      if (!row || !valid || row.status !== 'active' || (row.locked_until && row.locked_until > new Date())) {
+        if (row) await client.query(`update specialist_credentials set failed_attempts=failed_attempts+1,
+          locked_until=case when failed_attempts>=4 then now()+interval '15 minutes' else locked_until end where user_id=$1`, [row.user_id]);
+        return null;
+      }
+      await client.query('update specialist_credentials set failed_attempts=0, locked_until=null where user_id=$1', [row.user_id]);
+      const totp = await client.query('select 1 from staff_totp where user_id=$1 and confirmed_at is not null', [row.user_id]);
+      if (totp.rowCount) {
+        const token = randomBytes(32).toString('base64url');
+        await client.query(`insert into totp_challenges (id,user_id,token_hash,device_label,platform,expires_at)
+          values ($1,$2,$3,'Specialist website','web',now()+interval '5 minutes')`, [uuidv7(),row.user_id,hashToken(token)]);
+        return {totpRequired: true as const, totpToken: token};
+      }
+      return this.issue(client,row.user_id,'specialist','Specialist website','web');
+    });
+    if (!outcome) throw new ApiError(401,'unauthorized','نام کاربری یا رمز عبور نادرست است یا ورود موقتاً مسدود شده است');
+    return outcome;
+  }
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(ENV) private readonly env: Env,
@@ -229,7 +255,7 @@ export class IdentityService {
         const userId = uuidv7();
         const conversationId = uuidv7();
         await client.query(
-          `insert into users (id, phone_e164, role) values ($1, $2, 'user')`,
+          `insert into users (id, phone_e164, role, status) values ($1, $2, 'user', 'pending')`,
           [userId, phoneE164],
         );
         await client.query(`insert into wallets (user_id) values ($1)`, [userId]);
@@ -241,7 +267,7 @@ export class IdentityService {
           `insert into conversation_participants (conversation_id, user_id) values ($1, $2)`,
           [conversationId, userId],
         );
-        user = { id: userId, role: 'user', status: 'active' };
+        user = { id: userId, role: 'user', status: 'pending' };
       }
       if (user.role === 'admin') {
         return { error: new ApiError(403, 'admin_web_only', 'برای ورود مدیر از نام کاربری و رمز عبور پنل وب استفاده کنید') };
@@ -249,7 +275,7 @@ export class IdentityService {
       if (user.status === 'deleted') {
         return { error: new ApiError(403, 'account_deleted', 'این حساب حذف شده است') };
       }
-      if (user.status !== 'active') {
+      if (user.status === 'suspended') {
         return { error: new ApiError(403, 'suspended', 'این حساب غیرفعال است') };
       }
       const totp = await client.query<{ secret_encrypted: string }>(

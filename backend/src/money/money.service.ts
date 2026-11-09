@@ -303,6 +303,18 @@ export class MoneyService {
       return this.balance(client, payment.user_id);
     });
   }
+  /** A credited package, or an access window set by staff, includes later program changes. */
+  private async packageIncludesChanges(client: PoolClient, userId: string): Promise<boolean> {
+    const covered = await client.query(
+      `select 1 from payments where user_id = $1 and status = 'credited'
+       union all
+       select 1 from user_service_access where user_id = $1 and ends_at > now()
+       limit 1`,
+      [userId],
+    );
+    return (covered.rowCount ?? 0) > 0;
+  }
+
   async placeOrder(
     userId: string,
     idempotencyKey: string,
@@ -379,20 +391,22 @@ export class MoneyService {
           throw new ApiError(404, 'not_found', 'برنامهٔ فعلی پیدا نشد');
         }
       }
+      const covered = serviceCode !== 'new_plan' && await this.packageIncludesChanges(client, userId);
       const priceRow = await client.query<{ amount_toman: string }>(
         `select amount_toman from service_prices
          where service_code = $1 and effective_from <= now()
          order by effective_from desc limit 1`,
         [serviceCode],
       );
-      const price = toman(priceRow.rows[0]?.amount_toman ?? 0);
-      if (price !== expectedPriceToman) {
+      const listPrice = toman(priceRow.rows[0]?.amount_toman ?? 0);
+      const price = covered ? 0 : listPrice;
+      if (!covered && price !== expectedPriceToman) {
         throw new ApiError(409, 'price_changed', 'قیمت تغییر کرده است');
       }
       const wallet = await this.balance(client, userId);
-      const promoToman = Math.min(wallet.promoToman, price);
-      const cashToman = price - promoToman;
-      if (wallet.cashToman < cashToman) {
+      const promoToman = covered ? 0 : Math.min(wallet.promoToman, price);
+      const cashToman = covered ? 0 : price - promoToman;
+      if (!covered && wallet.cashToman < cashToman) {
         throw new ApiError(409, 'insufficient_balance', 'موجودی کیف پول کافی نیست');
       }
 
@@ -403,6 +417,7 @@ export class MoneyService {
          values ($1, $2, $3, $4, $5, $6, 'paid', $7)`,
         [orderId, userId, serviceCode, price, cashToman, promoToman, idempotencyKey],
       );
+      await client.query(`update users set status = 'active' where id = $1 and role = 'user'`, [userId]);
       await client.query(
         `update wallets
          set cash_toman = cash_toman - $2, promo_toman = promo_toman - $3, version = version + 1

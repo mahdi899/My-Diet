@@ -8,8 +8,10 @@
 <section id="login"><div class="brand">رژیم من <small>سامانه متخصص</small></div><h1>ورود به فضای کاری</h1><p>برای رسیدگی به پرونده‌ها با شماره حساب متخصص وارد شوید.</p>
 <p id="login-state" class="login-state" role="status" aria-live="polite">در حال بررسی نشست…</p>
 <form id="phone-form"><label>شماره تلفن<input name="phone" inputmode="tel" autocomplete="tel" required dir="ltr" maxlength="13" placeholder="۰۹۱۲۳۴۵۶۷۸۹"></label><button>دریافت کد ورود</button></form>
+<form id="password-form" hidden><label>نام کاربری<input name="username" autocomplete="username" required dir="ltr" maxlength="32" placeholder="doctor.name"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" required dir="ltr" maxlength="256"></label><button>ورود به سامانه</button></form>
 <form id="code-form" hidden><label>کد ورود<input name="code" inputmode="numeric" autocomplete="one-time-code" required dir="ltr" maxlength="6"></label><button>ورود به سامانه</button><button id="change-phone" class="secondary" type="button">تغییر شماره</button></form>
 <form id="totp-form" hidden><label>کد ورود دومرحله‌ای<input name="code" inputmode="numeric" autocomplete="one-time-code" required dir="ltr" maxlength="6"></label><button>تأیید و ورود</button></form>
+<button id="login-method" class="secondary" type="button">ورود با نام کاربری و رمز</button>
 <div class="login-links"><a href="index.html">ورود مدیر</a></div></section>
 <div id="panel" hidden><aside><div class="brand">رژیم من<small>فضای کاری متخصص</small></div><nav id="nav" aria-label="بخش‌های پنل متخصص"></nav><button id="logout" class="secondary">خروج از حساب</button></aside>
 <main><header><div><p>رسیدگی دقیق، همراهی پیوسته</p><h1 id="title">داشبورد</h1></div><span id="today" class="workspace-date"></span><button id="refresh" class="secondary">به‌روزرسانی</button></header><div id="content" tabindex="-1"></div></main></div>

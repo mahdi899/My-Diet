@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { normalizeCouncilNo, verificationAfterCouncilChange } from '../../src/admin/profile.js';
+import { councilNoExact, normalizeCouncilNo, normalizeLoginName, verificationAfterCouncilChange } from '../../src/admin/profile.js';
 
 describe('specialist council number', () => {
   it('folds Persian digits and resets verification only when the number changes', () => {
@@ -13,5 +13,11 @@ describe('specialist council number', () => {
     assert.equal(verificationAfterCouncilChange('12345', '12345', 'verified'), 'verified');
     assert.equal(verificationAfterCouncilChange('12345', '67890', 'verified'), 'pending');
     assert.equal(verificationAfterCouncilChange('12345', '', 'rejected'), 'pending');
+    assert.equal(councilNoExact('۱۲۳۴۵۶'), '123456');
+    assert.equal(councilNoExact('12345'), null);
+    assert.equal(councilNoExact('1234567'), null);
+    assert.equal(normalizeLoginName('Doctor.One'), 'doctor.one');
+    assert.equal(normalizeLoginName('ab'), null);
+    assert.equal(normalizeLoginName('1doctor'), null);
   });
 });

@@ -162,7 +162,7 @@ Photorealistic wide 2:1 landscape diptych editorial photograph for an Iranian we
 
 ### ۴.۳ تصاویر پرتره متخصصین و پزشکان منتخب (Doctor Portraits - نسبت ۴:۵)
 
-#### 009. دکتر سارا محمدی - متخصص تغذیه و کاهش وزن (doctor-demo-female.jpg)
+#### 009. دکتر سارا محمدی - متخصص تغذیه و کاهش وزن (doctor-onboarding-female.jpg)
 - **محل استفاده:** کارت تطبیق متخصص، لیست پزشکان، مشاوره آنلاین
 - **نسبت تصویر:** 4:5 (Vertical Portrait)
 - **پرامپت نانو بنانا:**
@@ -170,7 +170,7 @@ Photorealistic wide 2:1 landscape diptych editorial photograph for an Iranian we
 Photorealistic natural editorial portrait of a professional Iranian female clinical nutritionist around 38 years old. She has kind, intelligent brown eyes, warm engaging smile, and wears a neatly draped sand-beige linen scarf and a modern tailored white medical coat over a sage-green blouse. Chest-up portrait, perfectly centered composition, generous headroom. Clean background featuring a softly blurred, bright nutrition clinic interior in Tehran with a small indoor succulent and wooden bookshelves. Gentle diffused morning daylight from the side, natural skin pores without airbrushing, confident, approachable and highly credible medical demeanor, 4K resolution --ar 4:5
 ```
 
-#### 010. دکتر امیر حسینی - متخصص متابولیسم و رژیم درمانی (doctor-demo-male.jpg)
+#### 010. دکتر امیر حسینی - متخصص متابولیسم و رژیم درمانی (doctor-onboarding-male.jpg)
 - **محل استفاده:** کارت تطبیق پزشک، پروفایل متخصصین
 - **نسبت تصویر:** 4:5 (Vertical Portrait)
 - **پرامپت نانو بنانا:**
@@ -1454,7 +1454,7 @@ Artisan culinary dessert photography of Azerbaijani Carrot Halva. Translucent, b
 
 ### ۳. مدیریت ساختار فایل‌ها و ذخیره‌سازی در پروژه
 تصاویر تولید شده را با نام‌های منظم در پوشه‌های مربوطه قرار دهید:
-- `demo/assets/`: تصاویر کوییز و دمو (`intro-*.jpg`, `goal-*.jpg`, `doctor-demo-*.jpg`)
+- `demo/assets/`: تصاویر کوییز و دمو (`intro-*.jpg`, `goal-*.jpg`, `doctor-onboarding-*.jpg`)
 - `site/assets/`: تصاویر وب‌سایت (`salad.jpg`, `breakfast.jpg`, `vegetables.jpg`, `bowl.jpg`)
 - `app/assets/foods/`: تصاویر کاتالوگ ۲۰۰تایی غذاهای ایرانی برای لود سریع در کش اپلیکیشن فلاتر
 

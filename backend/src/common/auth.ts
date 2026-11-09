@@ -73,7 +73,10 @@ export class SessionGuard implements CanActivate {
     if (row.status === 'deleted') {
       throw new ApiError(403, 'account_deleted', 'این حساب حذف شده است');
     }
-    if (row.status !== 'active') {
+    if (row.status === 'suspended') {
+      throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');
+    }
+    if (row.role !== 'user' && row.status !== 'active') {
       throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');
     }
     if (row.role === 'specialist' && row.specialist_active !== true) {

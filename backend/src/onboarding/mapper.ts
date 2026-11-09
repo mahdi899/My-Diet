@@ -1,5 +1,6 @@
 import {
   SPEC_QUESTIONS,
+  SPEC_TRACKS,
   questionByKey,
   type AnswerValue,
   type CanonicalAnswers,
@@ -82,7 +83,7 @@ function toNumber(text: string): number | null {
     latinDigits(text)
       .replace(/[٫,/]/g, '.')
       .replace(/[٬،\s]/g, '')
-      .replace(/[^\d.\-]/g, ''),
+      .replace(/[^\d.-]/g, ''),
   );
   return Number.isFinite(parsed) && text.trim() !== '' ? parsed : null;
 }
@@ -128,6 +129,28 @@ function applyLegacy(question: SpecQuestion, raw: string, out: CanonicalAnswers,
       return;
     }
   }
+}
+
+/** The name typed on the demo form, even when the question wording is not in the spec. */
+export function demoDisplayName(items: LegacyAnswer[]): string | null {
+  for (const item of items) {
+    const answer = item.answer?.trim();
+    if (!answer || EMPTY_MARKERS.includes(answer)) continue;
+    if (item.key === 'name' || norm(item.question).includes('اسم')) return answer.slice(0, 80);
+  }
+  return null;
+}
+
+/** Question and answer text exactly as the demo site stored them. */
+export function demoRawRows(items: LegacyAnswer[]): Array<{ question: string; answer: string }> {
+  const rows: Array<{ question: string; answer: string }> = [];
+  for (const item of items) {
+    const question = item.question?.trim();
+    const answer = item.answer?.trim();
+    if (!question || !answer || EMPTY_MARKERS.includes(answer)) continue;
+    rows.push({ question, answer });
+  }
+  return rows;
 }
 
 export function legacyToCanonical(
@@ -313,4 +336,42 @@ export function profilePreferences(track: TrackId, a: CanonicalAnswers): Record<
   const sleep = a.sleep_wake;
   if (sleep && typeof sleep === 'object' && !Array.isArray(sleep)) out.sleep_wake = sleep;
   return out;
+}
+
+function formatAnswerValue(question: SpecQuestion, value: AnswerValue): string {
+  if (value == null || value === '') return '—';
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const sleep = value as { sleep?: number; wake?: number };
+    if (sleep.sleep != null && sleep.wake != null) return `خواب ${sleep.sleep} — بیداری ${sleep.wake}`;
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    const options = question.options ?? [];
+    return value
+      .map((code) => options.find((option) => option.code === code)?.label ?? String(code))
+      .filter(Boolean)
+      .join('، ');
+  }
+  if (question.options?.length) {
+    return question.options.find((option) => option.code === value)?.label ?? String(value);
+  }
+  return String(value);
+}
+
+export function trackTitle(track: string | null | undefined): string {
+  if (!track) return '—';
+  return SPEC_TRACKS.find((row) => row.id === track)?.title ?? track;
+}
+
+export function adminAnswerRows(
+  track: string | null,
+  answers: CanonicalAnswers,
+): Array<{ question: string; answer: string }> {
+  const rows: Array<{ question: string; answer: string }> = [];
+  for (const question of SPEC_QUESTIONS) {
+    const value = answers[question.key];
+    if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) continue;
+    rows.push({ question: question.title, answer: formatAnswerValue(question, value) });
+  }
+  return rows;
 }

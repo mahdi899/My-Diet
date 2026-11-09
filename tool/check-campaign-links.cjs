@@ -14,7 +14,7 @@ let id;
     assert.match(id,/^[a-f0-9-]{36}$/);
     assert.equal((await api('','POST',{name:'QA duplicate',slug,source:'telegram'})).status,409);
     const open=()=>fetch(origin+'/go/'+slug,{redirect:'manual'});
-    const first=await open();assert.equal(first.status,302);assert.match(first.headers.get('location'),/\/demo\/\?utm_source=telegram&utm_medium=campaign&utm_campaign=qa-/);assert.match(first.headers.get('cache-control'),/no-store/);
+    const first=await open();assert.equal(first.status,302);assert.match(first.headers.get('location'),/\/onboarding\/\?utm_source=telegram&utm_medium=campaign&utm_campaign=qa-/);assert.match(first.headers.get('cache-control'),/no-store/);
     assert.equal((await api('/'+id,'PATCH',{active:false})).status,200);
     for(let i=0;i<3;i++){const stopped=await open();assert.equal(stopped.status,410);assert.equal(stopped.headers.get('location'),null);assert.match(stopped.headers.get('cache-control'),/no-store/);}
     assert.equal((await api('/'+id,'PATCH',{active:true})).status,200);assert.equal((await open()).status,302);

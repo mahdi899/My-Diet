@@ -296,7 +296,8 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
         if (mounted) setState(() => processing = false);
       }
     }
-    if (!s.canAfford(offer.priceToman)) {
+    final includedChange = s.serverAuthEnabled && (offer.id == 'ai-change' || offer.id == 'expert-change');
+    if (!includedChange && !s.canAfford(offer.priceToman)) {
       charge();
       return;
     }

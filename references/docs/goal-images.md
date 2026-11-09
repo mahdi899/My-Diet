@@ -2,7 +2,7 @@
 
 Created with the built-in image_gen tool on November 5, 2026. Synthetic editorial scenes, not actual clients or evidence of outcomes. Paired scenes retain the same person's body size; no before/after weight transformation.
 
-Assets: demo/assets/goal-loss.jpg, demo/assets/goal-gain.jpg, demo/assets/goal-maternal.jpg, demo/assets/goal-wellness.jpg.
+Assets: onboarding/assets/goal-loss.jpg, onboarding/assets/goal-gain.jpg, onboarding/assets/goal-maternal.jpg, onboarding/assets/goal-wellness.jpg.
 
 Shared prompt:
 Use case: photorealistic-natural. Asset: wide 2:1 landscape diptych editorial photograph for an Iranian nutrition app goal-selection card. Two equal photographic panels separated only by a fine cream vertical seam, no text, no labels, no graphics or watermark. Both panels depict the SAME adult person, SAME body size, weight and proportions, in two everyday contexts, NOT a weight transformation or before-and-after claim. Natural Iranian appearance, modest contemporary clothing, real skin texture, authentic Tehran home/neighborhood, warm daylight, ivory, sage and oak palette. Professional documentary photography, candid understated expression, no stock-photo grin, no beauty retouching. Clearly composed waist-up subjects and readable action, generous headroom. All imagery respectful and body-neutral, no body-checking, scales, measuring tape, pinching fat, shame or exaggerated physiques. 

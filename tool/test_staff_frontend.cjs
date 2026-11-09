@@ -39,7 +39,7 @@ async function main() {
       if(path==='specialist/profile')return reply({displayName:'متخصص آزمایشی',credential:'متخصص تغذیه',councilNo:'12345',verificationStatus:'verified',bio:'اطلاعات آزمایشی برای بررسی رابط'});
       if(path==='conversations')return reply([]);
       if(path==='admin/dashboard')return reply({users:12,newUsers:2,revenueToman:500000,paidOrders:1,unreadMessages:0,aiToday:2});
-      if(path==='admin/orders')return reply([]);
+      if(path==='admin/payments')return reply([]);
       return reply([]);
     });
     await page.goto(base+'specialist.html');

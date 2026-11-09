@@ -1,12 +1,12 @@
-.demo-goal-grid {
+.onboarding-goal-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   max-width: 760px;
   margin-inline: auto;
 }
-.demo-goal-grid[hidden] { display: none; }
-.demo-goal-grid .demo-goal-card {
+.onboarding-goal-grid[hidden] { display: none; }
+.onboarding-goal-grid .onboarding-goal-card {
   aspect-ratio: 2.2;
   min-height: 110px;
   justify-content: center;
@@ -20,7 +20,7 @@
   text-align: center;
   text-shadow: 0 1px 4px #13251a;
 }
-.demo-goal-grid .demo-goal-card:focus-visible {
+.onboarding-goal-grid .onboarding-goal-card:focus-visible {
   outline: 3px solid #205638;
   outline-offset: 4px;
 }

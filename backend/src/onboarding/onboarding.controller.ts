@@ -84,8 +84,8 @@ export class OnboardingAdminController {
   }
 
   @Roles('admin')
-  @Get('demo-leads')
-  demoLeads(@Query('cursor') cursor?: string, @Query('limit') limit?: string) {
-    return this.admin.demoLeads(cursor, limit ? Number(limit) : undefined);
+  @Get('onboarding-leads')
+  onboardingLeads(@Query('cursor') cursor?: string, @Query('limit') limit?: string) {
+    return this.admin.onboardingLeads(cursor, limit ? Number(limit) : undefined);
   }
 }

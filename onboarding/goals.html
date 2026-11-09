@@ -211,7 +211,7 @@
   </style>
   <link rel="stylesheet" href="matching.css?v=21">
   <link rel="stylesheet" href="plans.css?v=6">
-  <link rel="stylesheet" href="verification.css?v=7">
+  <link rel="stylesheet" href="verification.css?v=10">
 </head>
 <body class="selection:bg-[#205638] selection:text-white">
 
@@ -273,7 +273,7 @@
     <section id="page1Container" class="min-h-[78vh] flex flex-col justify-center items-center">
 
       <!-- STAGE 1A: SLOGAN + LET'S GO BUTTON -->
-      <div id="sloganStage" class="w-full max-w-2xl mx-auto text-center transition-all duration-500">
+      <div id="sloganStage" class="hidden w-full max-w-2xl mx-auto text-center transition-all duration-500">
         <h1 id="sloganHeading" class="hero-title relative z-10 text-3xl sm:text-5xl font-black leading-snug tracking-tight text-white min-h-[4.2rem] mb-6 py-2 flex flex-wrap items-center justify-center gap-x-2.5 sm:gap-x-3.5 gap-y-1"></h1>
 
         <div id="heroFeatureStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mb-5">
@@ -310,7 +310,7 @@
       </div>
 
       <!-- STAGE 1B: GOAL SELECTION (Shown after clicking "بزن بریم" in the same page) -->
-      <div id="goalSelectionStage" class="hidden w-full max-w-3xl mx-auto">
+      <div id="goalSelectionStage" class="w-full max-w-3xl mx-auto">
         <div class="text-center mb-6">
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">هدفت چیه؟</h2>
         </div>
@@ -385,16 +385,16 @@
           </div>
 
           <div id="submitAnswersSection" class="hidden max-w-2xl mx-auto px-1 pb-6 text-center">
-              <button
-                id="openPlanModalBtn"
-                type="button"
+            <button
+              id="openPlanModalBtn"
+              type="button"
               class="quiz-green-btn cta-pulse w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-              >
-                <span>ثبت پاسخ‌ها</span>
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
+            >
+              <span>ثبت پاسخ‌ها</span>
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -476,14 +476,14 @@
             انتخاب نوع برنامه
           </h3>
         </div>
-          <button
-            id="closeModalBtn"
-            type="button"
-            title="بستن"
+        <button
+          id="closeModalBtn"
+          type="button"
+          title="بستن"
           class="w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-[#173f2a] flex items-center justify-center transition-colors cursor-pointer"
-          >
-            ✕
-          </button>
+        >
+          ✕
+        </button>
       </div>
 
       <!-- MODAL BODY -->
@@ -510,25 +510,25 @@
               <span id="step2PlanPrice">۱٬۹۹۰٬۰۰۰ تومان</span>
             </p>
             <button id="modalBackToPlansBtn" type="button" class="modal-plan-change hidden">تغییر پلن</button>
-            </div>
+          </div>
           <div id="verificationSuccess" class="hidden" role="status" tabindex="-1"><span class="verification-success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><h2>شماره‌ات تأیید شد</h2><p>شمارهٔ شما تأیید شد؛ در حال نمایش خلاصهٔ انتخاب</p></div>
           <div id="morphingInputWrapper" class="modal-phone-shell input-morph-shell p-4 rounded-2xl">
             <label id="morphInputLabel" for="morphSingleInput" class="text-sm font-extrabold text-white block mb-1">
-                <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
-              </label>
+              <span id="morphInputLabelText">شماره تلفن همراهت رو وارد کن:</span>
+            </label>
             <p id="morphInputSubtitle" class="text-xs text-slate-400 mb-3">
               کد تایید ۶ رقمی برای فعال‌سازی برنامه به این شماره پیامک میشه.
             </p>
-              <button
-                id="editPhoneInOtpModeBtn"
-                type="button"
+            <button
+              id="editPhoneInOtpModeBtn"
+              type="button"
               class="hidden text-xs text-[#205638] hover:text-[#173f2a] underline cursor-pointer font-semibold mb-3"
-              >
-                ویرایش شماره موبایل
-              </button>
+            >
+              ویرایش شماره موبایل
+            </button>
 
-            <!-- THE SINGLE INPUT ELEMENT THAT MORPHS FROM PHONE TO OTP -->
-            <div class="relative">
+            <!-- THE SINGLE INPUT ELEMENT THAT MORPHS FROM PHONE TO OTP, THEN INTO A CHECK -->
+            <div class="otp-morph" id="otpMorph">
               <input
                 id="morphSingleInput" aria-describedby="morphInputSubtitle morphErrorText" autocomplete="tel-national"
                 type="tel"
@@ -538,6 +538,11 @@
                 placeholder="09123456789"
                 class="w-full px-4 py-3.5 rounded-xl bg-slate-900 border-2 border-emerald-400/50 focus:border-emerald-400 text-white font-mono text-lg sm:text-xl text-center tracking-wider focus:outline-none transition-all shadow-inner"
               />
+              <span class="otp-morph-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path pathLength="1" d="M5 12.5 9.5 17 19 7.5"/>
+                </svg>
+              </span>
             </div>
 
             <!-- Demo OTP Code Hint Banner (Shown when morphed into OTP mode) -->
@@ -583,7 +588,8 @@
 
   <script src="tracking-config.js?v=1"></script>
   <script src="tracking.js?v=3"></script>
-  <script src="questionnaire-data.js?v=12"></script><script src="onboarding-keys.js?v=1"></script>
+  <script src="community-counter.js?v=1"></script>
+  <script src="questionnaire-data.js?v=12"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -665,7 +671,7 @@
       list.innerHTML = people.map((person) => `
         <button type="button" class="specialist-card${person.id === selectedId ? ' is-selected' : ''}" aria-pressed="${person.id === selectedId}" data-specialist-id="${person.id}">
           <span class="specialist-portrait-group">
-            <img class="specialist-portrait" src="assets/doctor-demo-${['amir','reza','parsa'].includes(person.id) ? 'male' : 'female'}.jpg" alt="پرتره نمونه برای نمایش دمو" width="640" height="800" />
+            <img class="specialist-portrait" src="assets/doctor-onboarding-${['amir','reza','parsa'].includes(person.id) ? 'male' : 'female'}.jpg" alt="پرتره نمونه برای نمایش دمو" width="640" height="800" />
             <span class="specialist-rating" aria-label="امتیاز ۴٫۸ از ۵">
               <span class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="is-partial"></i></span>
               <span class="star-score">۴٫۸</span>
@@ -751,7 +757,7 @@
 
     function transitionFromSloganToGoals() {
       const params = new URLSearchParams(window.location.search);
-      window.location.href = `goals.html${params.size ? `?${params}` : ''}`;
+        window.location.href = `goals.html${params.size ? `?${params}` : ''}`;
     }
 
     function goToIntroHome() {
@@ -1411,7 +1417,7 @@
       } else if (currentIndex === state.selectedGoal.questions.length - 1) {
         advanceAfterAnswer(currentIndex, wasAlreadyAllAnswered);
       } else {
-      renderQuizQuestions();
+        renderQuizQuestions();
       }
     }
 
@@ -1589,9 +1595,49 @@
       setMorphInputMode('phone');
     }
 
+    function resetOtpFieldMorph() {
+      const morph = document.getElementById('otpMorph');
+      const inputEl = document.getElementById('morphSingleInput');
+      if (!morph || !inputEl) return;
+      morph.style.transition = 'none';
+      morph.classList.remove('is-success');
+      morph.style.width = '';
+      void morph.offsetWidth;
+      morph.style.transition = '';
+      morph.removeAttribute('role');
+      morph.removeAttribute('aria-label');
+      inputEl.readOnly = false;
+      inputEl.removeAttribute('aria-hidden');
+      const verifyButton = document.getElementById('morphConfirmBtn');
+      if (verifyButton) verifyButton.disabled = false;
+    }
+
+    function collapseOtpField() {
+      const morph = document.getElementById('otpMorph');
+      const inputEl = document.getElementById('morphSingleInput');
+      const verifyButton = document.getElementById('morphConfirmBtn');
+      if (verifyButton) verifyButton.disabled = true;
+      inputEl.blur();
+      inputEl.readOnly = true;
+      inputEl.setAttribute('aria-hidden', 'true');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduceMotion) {
+        const startWidth = Math.round(morph.getBoundingClientRect().width);
+        morph.style.transition = 'none';
+        morph.style.width = startWidth + 'px';
+        void morph.offsetWidth;
+        morph.style.transition = '';
+      }
+      morph.classList.add('is-success');
+      morph.style.width = '74px';
+      morph.setAttribute('role', 'status');
+      morph.setAttribute('aria-label', 'شماره تأیید شد');
+    }
+
     function setMorphInputMode(mode) {
       if (state.verificationBusy) return;
       state.inputMode = mode;
+      resetOtpFieldMorph();
       document.getElementById('twoStepModalCard').dataset.verification = mode;
       document.getElementById('verificationSuccess').classList.add('hidden');
       document.getElementById('morphingInputWrapper').classList.remove('hidden');
@@ -1688,7 +1734,7 @@
         try {
           if(countAnsweredQuestions()!==state.selectedGoal.questions.length)throw new Error('ابتدا پرسش‌نامه را کامل کنید.');
           if(state.submissionPhone!==normalizedPhone){state.submissionId=crypto.randomUUID();state.submissionPhone=normalizedPhone;}
-          const result=await fetch('/v1/demo/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>Object.assign({question:q.q,answer:answerLabel(q,state.answers[i])},window.SabzineKeys?window.SabzineKeys.canonical(q,state.answers[i]):{}))}),signal:AbortSignal.timeout(15000)});
+          const result=await fetch('/v1/onboarding/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>Object.assign({question:q.q,answer:answerLabel(q,state.answers[i])},window.SabzineKeys?window.SabzineKeys.canonical(q,state.answers[i]):{}))}),signal:AbortSignal.timeout(15000)});
           if(!result.ok)throw new Error('ذخیرهٔ اطلاعات انجام نشد؛ دوباره تلاش کنید.');
           const sms=await fetch('/v1/auth/otp/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:normalizedPhone}),signal:AbortSignal.timeout(18000)});
           if(!sms.ok){const problem=await sms.json().catch(()=>({}));throw new Error(problem.detail||'ارسال کد انجام نشد؛ دوباره تلاش کنید.');}
@@ -1716,17 +1762,16 @@
             const session=await response.json();if(!response.ok||!session.accessToken||session.role!=='user')throw new Error(session.detail||'کد تأیید معتبر نیست.');
             state.smsSession={phone:state.userPhone,token:session.accessToken};
           }
-          const saved=await fetch('/v1/demo/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
+          const saved=await fetch('/v1/onboarding/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
           if(!saved.ok)throw new Error('تأیید شماره ذخیره نشد؛ دوباره تلاش کنید.');
         }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;state.verificationBusy=false;document.getElementById('morphConfirmBtnText').textContent='تأیید و ادامه';}
         // Success is displayed only after both server verification requests succeed.
+        // The field collapses into a green circle and a white check draws inside it.
         state.inputMode = 'success';
         document.getElementById('twoStepModalCard').dataset.verification = 'success';
-        document.getElementById('morphingInputWrapper').classList.add('hidden');
-        const success = document.getElementById('verificationSuccess');
-        success.classList.remove('hidden');
-        success.focus();
-        await new Promise(resolve => setTimeout(resolve, 1100));
+        collapseOtpField();
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        await new Promise(resolve => setTimeout(resolve, reduceMotion ? 500 : 1500));
         if (state.inputMode !== 'success' || document.getElementById('twoStepModalBackdrop').classList.contains('hidden')) return;
         closePlanSelectionModal();
         populateAndShowPaymentPage();
@@ -1815,17 +1860,11 @@
       if (el) el.classList.add('hidden');
     }
 
-    function showAiReadyPhase() {
+    async function showAiReadyPhase() {
       clearInterval(matchingTicker);
       const counter = document.getElementById('communityNumber');
-      counter.textContent = (1000).toLocaleString('fa-IR');
-      const began = performance.now();
       clearInterval(communityTicker);
-      communityTicker = setInterval(() => {
-        const t = Math.min(1, (performance.now() - began) / 1400);
-        counter.textContent = Math.round(1000 + 622 * (1 - Math.pow(1 - t, 3))).toLocaleString('fa-IR');
-        if (t === 1) clearInterval(communityTicker);
-      }, 40);
+      communityTicker = await window.SabzineCommunityCounter.start(counter);
       state.aiPreparingTimer = null;
       document.getElementById('aiPreparingPhase').classList.add('hidden');
       const ready = document.getElementById('aiReadyPhase');
@@ -1880,12 +1919,15 @@
     // =========================================================
     // INITIALIZATION & EVENT LISTENERS
     // =========================================================
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadDemoQuestionnaire(GOALS_DATA);
       renderGoalCards();
       setupQuizScrollEnforcement();
 
       const currentFile = window.location.pathname.split('/').pop() || 'index.html';
       if (currentFile === 'goals.html') {
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        window.scrollTo(0, 0);
         document.getElementById('sloganStage').classList.add('hidden');
         document.getElementById('goalSelectionStage').classList.remove('hidden');
       } else if (currentFile === 'quiz.html') {

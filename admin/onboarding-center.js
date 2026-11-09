@@ -2,7 +2,7 @@
 const SabzineOnboarding = (() => {
   const trackNames = { weight_loss: 'کاهش وزن', weight_gain: 'افزایش وزن', pregnancy: 'بارداری و شیردهی', detox: 'پاکسازی و تعادل' };
   const tierNames = { ai_ok: 'مناسب پیش‌نویس AI', doctor_only: 'فقط پزشک' };
-  const sourceNames = { app: 'اپلیکیشن', demo: 'دموی وب' };
+  const sourceNames = { app: 'اپلیکیشن', demo: 'آنبوردینگ وب' };
   const dietNames = { omnivore: 'همه‌چیزخوار', vegetarian: 'گیاه‌خوار', vegan: 'وگان' };
   const flagNames = { diabetes: 'دیابت', pregnancy: 'بارداری', eating_disorder: 'اختلال خوردن', kidney: 'کلیه', thyroid: 'تیروئید', underweight: 'کم‌وزنی', minor: 'زیر ۱۸ سال', rapid_loss: 'کاهش وزن سریع', heart: 'قلب' };
   const label = (map, key) => map[key] || key;
@@ -71,7 +71,7 @@ const SabzineOnboarding = (() => {
     const s = data.stages;
     const view = element('div', null, 'report-stack');
     // [label, value, index of the stage the rate is measured against]. Open drafts are people still filling in the form, so they are not a step between demo and profile.
-    const stages = [['سرنخ دمو', s.demoLeads, null], ['تلفن تأییدشده', s.demoVerified, 0], ['ورود به اپ', s.demoClaimed, 1], ['در حال تکمیل (پیش‌نویس باز)', s.drafts, null], ['پروفایل کامل', s.profiles, null], ['رضایت‌نامه', s.consented, 4], ['درخواست برنامه', s.requests, 5], ['برنامهٔ منتشرشده', s.published, 6]];
+    const stages = [['سرنخ آنبوردینگ وب', s.onboardingLeads, null], ['تلفن تأییدشده', s.onboardingVerified, 0], ['ورود به اپ', s.onboardingClaimed, 1], ['در حال تکمیل (پیش‌نویس باز)', s.drafts, null], ['پروفایل کامل', s.profiles, null], ['رضایت‌نامه', s.consented, 4], ['درخواست برنامه', s.requests, 5], ['برنامهٔ منتشرشده', s.published, 6]];
     const max = Math.max(1, ...stages.map(x => x[1]));
     const card = element('section', null, 'card'); card.append(sectionHead('قیف از دموی وب تا برنامهٔ تأییدشده', 'هر مرحله شمارش یکتا از دیتابیس است.', button('تازه‌سازی نمودار روزانه', async () => { await api('admin/onboarding/funnel/refresh', 'POST'); notice('به‌روز شد'); await load(); }, { secondary: true, iconName: 'history' })));
     stages.forEach(([name, value, from]) => {
@@ -88,7 +88,7 @@ const SabzineOnboarding = (() => {
   }
 
   async function leadsTab() {
-    const data = await api('admin/onboarding/demo-leads?limit=100');
+    const data = await api('admin/onboarding/onboarding-leads?limit=100');
     return listPanel(data.items, { title: 'سرنخ‌های دموی وب', description: 'کاربرانی که در دمو پرسش‌نامه را پر کرده‌اند. با ورود با همان شماره، پاسخ‌ها خودکار به اپ منتقل می‌شود.', pageSize: 12, iconName: 'users', emptyTitle: 'هنوز سرنخی ثبت نشده', columns: [
       { label: 'تلفن', render: r => element('span', r.phone, 'ltr') }, { label: 'هدف', render: r => label(trackNames, r.goal) }, { label: 'تأیید تلفن', render: r => r.phoneVerified ? badge('verified', 'تأییدشده') : badge('pending', 'تأییدنشده') },
       { label: 'انتقال به اپ', render: r => r.claimedUserId ? badge('completed', 'وارد اپ شد') : badge('pending', 'منتظر ورود') }, { label: 'زمان ثبت', render: r => formatDate(r.createdAt), className: 'cell-nowrap' },

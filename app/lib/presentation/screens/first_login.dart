@@ -34,7 +34,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'مرورگر باز نشد. برای ثبت‌نام به my-diet.ir/demo/ برو.',
+            'مرورگر باز نشد. برای ثبت‌نام به my-diet.ir/onboarding/ برو.',
           ),
         ),
       );

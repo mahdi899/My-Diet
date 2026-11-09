@@ -53,14 +53,17 @@ export class PrivacyService {
     };
   }
 
-  async deleteAccount(userId: string) {
+  async deleteAccount(userId: string, actorId = userId) {
     await withTransaction(this.pool, async (client) => {
-      const user = await client.query<{ status: string }>(
-        `select status from users where id = $1 for update`,
+      const user = await client.query<{ status: string; role: string }>(
+        `select status, role from users where id = $1 for update`,
         [userId],
       );
       if (!user.rows[0] || user.rows[0].status === 'deleted') {
         throw new ApiError(409, 'account_deleted', 'این حساب حذف شده است');
+      }
+      if (user.rows[0].role === 'admin') {
+        throw new ApiError(403, 'forbidden', 'حساب مدیریت از اینجا حذف نمی‌شود');
       }
       await client.query(`select set_config('sabzine.anonymize', 'on', true)`);
       await client.query(
@@ -105,7 +108,7 @@ export class PrivacyService {
         [userId],
       );
       await client.query(`update devices set revoked_at = now() where user_id = $1 and revoked_at is null`, [userId]);
-      await audit(client, userId, 'account_delete', 'user', userId, { ledgerRetained: true });
+      await audit(client, actorId, 'account_delete', 'user', userId, { ledgerRetained: true });
     });
     return { deleted: true, ledgerRetained: true };
   }

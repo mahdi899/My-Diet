@@ -19,7 +19,7 @@ export function campaignInput(value: unknown) {
   return { name, slug, source };
 }
 export function campaignDestination(source: string, slug: string) {
-  return '/demo/?' + new URLSearchParams({ utm_source: source, utm_medium: 'campaign', utm_campaign: slug });
+  return '/onboarding/?' + new URLSearchParams({ utm_source: source, utm_medium: 'campaign', utm_campaign: slug });
 }
 
 @Controller('v1/admin/campaign-links')

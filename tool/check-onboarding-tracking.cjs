@@ -15,7 +15,7 @@ const credentials=JSON.parse(fs.readFileSync('backend/.env.local-admin.json','ut
     });
     const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
     page.on('response',r=>{if(r.url().includes('/insights/api/send'))responses.push(r.status());});
-    await page.goto('https://my-diet.ir/demo/?utm_source=tracking_qa&utm_medium=test&utm_campaign=smoke&phone=PRIVATE_MARKER');
+    await page.goto('https://my-diet.ir/onboarding/?utm_source=tracking_qa&utm_medium=test&utm_campaign=smoke&phone=PRIVATE_MARKER');
     await page.waitForFunction(()=>!!window.umami&&!!window.demoTracking);
     await page.locator('#letsGoBtn').click();await page.waitForURL('**/goals.html*');
     await page.locator('#goalsGrid .goal-card').first().click();await page.waitForURL('**/quiz.html*');

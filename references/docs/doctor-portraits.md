@@ -2,7 +2,7 @@
 
 Created with built-in image_gen. Fictional people, not photographs of the named clinicians. Replace with verified clinician photos for production. Both variants are shared demo placeholders across the goal-specific lists.
 
-Files: `demo/assets/doctor-demo-female.jpg`, `demo/assets/doctor-demo-male.jpg`.
+Files: `onboarding/assets/doctor-onboarding-female.jpg`, `onboarding/assets/doctor-onboarding-male.jpg`.
 
 Shared prompt: Photorealistic natural editorial portrait for a nutrition app demo. Head and shoulders, centered face, generous headroom, calm approachable expression, authentic skin texture, warm ivory background with softly blurred sage clinic interior, soft daylight, 4:5 portrait, understated professional photography. No text, symbols, badges, stethoscope, watermark or logos. Fictional person.
 

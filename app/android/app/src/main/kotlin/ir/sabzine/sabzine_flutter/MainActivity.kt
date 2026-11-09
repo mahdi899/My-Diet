@@ -15,7 +15,7 @@ class MainActivity : FlutterActivity() {
                     return@setMethodCallHandler
                 }
                 try {
-                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://my-diet.ir/demo/")))
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://my-diet.ir/onboarding/")))
                     result.success(null)
                 } catch (error: android.content.ActivityNotFoundException) {
                     result.error("no_browser", "No browser available", null)

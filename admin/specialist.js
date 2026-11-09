@@ -14,7 +14,8 @@
   const notice = text => { $('message').textContent = text || ''; };
   function signedOut(message = '') {
     SabzineMessaging.reset();messagingDemo=null; SabzineClinical.reset(); generation++; session.clear(); $('panel').hidden = true; $('login').hidden = false;
-    $('phone-form').hidden = false; $('code-form').hidden = true; $('totp-form').hidden = true;
+    $('phone-form').hidden = false; $('password-form').hidden = true; $('code-form').hidden = true; $('totp-form').hidden = true;
+    $('login-method').hidden = false; $('login-method').textContent = 'ورود با نام کاربری و رمز';
     $('content').replaceChildren(); $('login-state').textContent = message;
   }
   function signedIn(data) {
@@ -33,7 +34,8 @@
   }
   function complete(data) {
     if (data.totpRequired) {
-      challenge = data.totpToken; $('code-form').hidden = true; $('totp-form').hidden = false;
+      challenge = data.totpToken; $('code-form').hidden = true; $('phone-form').hidden = true; $('password-form').hidden = true;
+      $('login-method').hidden = true; $('totp-form').hidden = false;
       $('totp-form').querySelector('input').focus();
     } else signedIn(data);
   }
@@ -41,8 +43,22 @@
     const value = digits(data.phone).trim();
     if (!/^09\d{9}$/.test(value)) throw new Error('شماره تلفن ۱۱ رقمی با ۰۹ وارد کنید.');
     await session.login('auth/otp/request', { phone: value }); phone = value;
-    $('phone-form').hidden = true; $('code-form').hidden = false; $('code-form').querySelector('input').focus();
+    $('phone-form').hidden = true; $('password-form').hidden = true; $('login-method').hidden = true;
+    $('code-form').hidden = false; $('code-form').querySelector('input').focus();
   }); };
+  $('password-form').onsubmit = event => { event.preventDefault(); submit(event.target, async data => {
+    const username = data.username.trim().toLowerCase();
+    if (!/^[a-z][a-z0-9._-]{2,31}$/.test(username)) throw new Error('نام کاربری درست نیست.');
+    if (data.password.length < 8) throw new Error('رمز عبور درست نیست.');
+    complete(await session.login('auth/specialist/login', { username, password: data.password }));
+  }); };
+  $('login-method').onclick = () => {
+    const password = !$('password-form').hidden;
+    $('password-form').hidden = password;
+    $('phone-form').hidden = !password;
+    $('code-form').hidden = true;
+    $('login-method').textContent = password ? 'ورود با نام کاربری و رمز' : 'ورود با شماره تلفن و کد';
+  };
   $('code-form').onsubmit = event => { event.preventDefault(); submit(event.target, async data => {
     const code = digits(data.code).trim();
     if (!/^\d{6}$/.test(code)) throw new Error('کد شش‌رقمی را وارد کنید.');
@@ -53,7 +69,10 @@
     if (!/^\d{6}$/.test(code)) throw new Error('کد شش‌رقمی را وارد کنید.');
     signedIn(await session.login('auth/totp', { code, totpToken:challenge }));
   }); };
-  $('change-phone').onclick = () => { $('code-form').reset(); $('code-form').hidden = true; $('phone-form').hidden = false; };
+  $('change-phone').onclick = () => {
+    $('code-form').reset(); $('code-form').hidden = true; $('phone-form').hidden = false; $('password-form').hidden = true;
+    $('login-method').hidden = false; $('login-method').textContent = 'ورود با نام کاربری و رمز';
+  };
   $('logout').onclick = async () => {
     $('logout').disabled = true;
     try { await session.logout(); signedOut('از حساب خارج شدید.'); }

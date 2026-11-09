@@ -29,6 +29,18 @@ export function normalizeCouncilNo(raw: string): string | null {
   return digits;
 }
 
+/** Medical council number on the admin form: exactly six digits. */
+export function councilNoExact(raw: string): string | null {
+  const value = normalizeCouncilNo(raw);
+  return value && value.length === 6 ? value : null;
+}
+
+/** Specialist sign-in name: 3–32 latin letters, digits, dot, underscore or hyphen. */
+export function normalizeLoginName(raw: string): string | null {
+  const value = raw.trim().toLowerCase();
+  return /^[a-z][a-z0-9._-]{2,31}$/.test(value) ? value : null;
+}
+
 /** A different council number clears verification. The same number leaves it. */
 export function verificationAfterCouncilChange(
   currentCouncil: string,

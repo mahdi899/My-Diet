@@ -1,10 +1,10 @@
-async function demoQuestionnairePage() {
-  const response = await fetch('/v1/public/demo-questionnaire', {cache:'no-store'});
+async function onboardingQuestionnairePage() {
+  const response = await fetch('/v1/public/onboarding-questionnaire', {cache:'no-store'});
   if (!response.ok) throw new Error('دریافت تنظیمات پرسش‌نامه ممکن نشد.');
   const saved = await response.json();
   const goals = window.SABZINE_QUESTIONNAIRE.goals;
   const root = element('section');
-  const grid = element('div', null, 'demo-goal-grid');
+  const grid = element('div', null, 'onboarding-goal-grid');
   const editor = element('section', null, 'card report-stack');
   const form = element('form', null, 'report-stack');
   const heading = element('h2');
@@ -20,8 +20,8 @@ async function demoQuestionnairePage() {
     activeCard.focus();
   }, {secondary:true});
   for (const goal of goals) {
-    const card = button(saved[goal.id]?.title ?? goal.title, () => changeGoal(goal, card), {className:'demo-goal-card'});
-    card.style.backgroundImage = 'linear-gradient(rgb(12 23 17 / 53%), rgb(12 23 17 / 53%)), url("/demo/' + goal.image + '")';
+    const card = button(saved[goal.id]?.title ?? goal.title, () => changeGoal(goal, card), {className:'onboarding-goal-card'});
+    card.style.backgroundImage = 'linear-gradient(rgb(12 23 17 / 53%), rgb(12 23 17 / 53%)), url("/onboarding/' + goal.image + '")';
     grid.append(card);
   }
   function render() {
@@ -84,11 +84,11 @@ async function demoQuestionnairePage() {
     render();
     list.lastElementChild.querySelector('textarea').focus();
   }, {iconName:'plus',secondary:true});
-  form.append(list, add, formFooter('ذخیره و اعمال در دمو'));
+  form.append(list, add, formFooter('ذخیره و اعمال در آنبوردینگ وب'));
   onForm(form, async () => {
     back.disabled = true;
     try {
-      const document = await api('admin/demo-questionnaire/' + activeGoal, 'PUT', current);
+      const document = await api('admin/onboarding-questionnaire/' + activeGoal, 'PUT', current);
       heading.textContent = document.title;
       activeCard.textContent = document.title;
       notice('تنظیمات پرسش‌نامه ذخیره شد');

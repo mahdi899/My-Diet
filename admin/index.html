@@ -7,12 +7,12 @@
   <title>رژیم من | پنل مدیریت</title>
   <link rel="icon" href="/admin/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/admin/fonts/Vazirmatn-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="/admin/style.css">
+  <link rel="stylesheet" href="/admin/style.css?v=jalali-nav-1">
   <script src="/admin/staff-session.js" defer></script>
   <script src="/admin/workspace-ui.js" defer></script>
   <link rel="stylesheet" href="/admin/phase-shell.css">
-  <script src="/admin/ui.js?v=magazine-1" defer></script>
-  <script src="/admin/integrations.js?v=4" defer></script>
+  <script src="/admin/ui.js?v=payments-1" defer></script>
+  <script src="/admin/integrations.js?v=user-modal-1" defer></script>
   <link rel="stylesheet" href="/admin/ai-center.css?v=1">
   <script src="/admin/ai-center.js?v=1" defer></script>
   <script src="/admin/onboarding-center.js?v=1" defer></script>
@@ -20,11 +20,11 @@
   <link rel="stylesheet" href="/admin/web-analytics.css">
   <script src="/admin/web-analytics.js?v=4" defer></script><script src="/admin/campaign-links.js?v=1" defer></script>
   <script src="/admin/articles.js?v=1" defer></script>
-  <script src="/demo/questionnaire-data.js?v=12" defer></script>
-  <link rel="stylesheet" href="/admin/demo-questionnaire.css?v=2">
-  <script src="/admin/demo-questionnaire.js?v=2" defer></script>
+  <script src="/onboarding/questionnaire-data.js?v=12" defer></script>
+  <link rel="stylesheet" href="/admin/onboarding-questionnaire.css?v=2">
+  <script src="/admin/onboarding-questionnaire.js?v=2" defer></script>
   
-<link rel="stylesheet" href="/admin/messaging.css"><script src="/admin/messaging-repository.js" defer></script><script src="/admin/messaging-workspace.js" defer></script><script src="/admin/streak-campaign.js" defer></script><script src="/admin/admin-reports.js" defer></script><script src="/admin/journey-analytics.js?v=2" defer></script><script src="/admin/connection-gate.js?v=4" defer></script><script src="/admin/app.js?v=demo-questionnaire-1" defer></script></head>
+<link rel="stylesheet" href="/admin/messaging.css"><script src="/admin/messaging-repository.js" defer></script><script src="/admin/messaging-workspace.js" defer></script><script src="/admin/streak-campaign.js" defer></script><script src="/admin/admin-reports.js?v=reviews-card-removed-1" defer></script><script src="/admin/journey-analytics.js?v=2" defer></script><script src="/admin/connection-gate.js?v=4" defer></script><script src="/admin/jalali.js?v=2" defer></script><script src="/admin/app.js?v=payments-1" defer></script></head>
 <body>
   <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
   <section id="login" class="login-layout" aria-label="ورود به پنل مدیریت">
@@ -63,7 +63,7 @@
       <div class="sidebar-bottom"><div class="profile"><span class="avatar">م</span><div><strong>مدیر سیستم</strong><small>حساب مدیریت رژیم من</small></div></div><button id="logout" class="logout-button"><span data-icon="logout"></span> خروج از حساب</button></div>
     </aside>
     <div class="workspace">
-      <div class="topbar"><div class="topbar-location"><button id="menu-toggle" class="icon-button" aria-label="باز کردن منو" aria-controls="sidebar" aria-expanded="false"><span data-icon="menu"></span></button><span class="topbar-home" data-icon="grid"></span><span>فضای مدیریت</span><span class="breadcrumb-divider">/</span><strong id="breadcrumb">داشبورد</strong></div><div class="topbar-meta"><span class="today"><span data-icon="calendar"></span><time id="today"></time></span><span class="topbar-avatar" aria-label="مدیر سیستم">م</span></div></div>
+      <div class="topbar"><div class="topbar-location"><button id="menu-toggle" class="icon-button" aria-label="باز کردن منو" aria-controls="sidebar" aria-expanded="false"><span data-icon="menu"></span></button><span class="topbar-home" data-icon="grid"></span><span>فضای مدیریت</span><span class="breadcrumb-divider">/</span><strong id="breadcrumb">داشبورد</strong></div><div class="topbar-meta"><span class="today"><span data-icon="calendar"></span><time id="today"></time></span><div class="account-menu"><button type="button" id="account-toggle" class="topbar-avatar" aria-label="حساب مدیر" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu">م</button><div id="account-menu" class="account-dropdown" hidden><button type="button" id="logout-menu"><span data-icon="logout"></span> خروج از حساب</button></div></div></div></div>
       <main id="main" tabindex="-1"><header class="page-heading"><div><div class="page-eyebrow" id="page-eyebrow">نمای کلی</div><h1 id="title" tabindex="-1">داشبورد</h1><p id="page-description"></p></div><div id="page-actions" class="actions"></div></header><div id="content" aria-live="polite"></div><footer class="workspace-footer"><span>رژیم من · همراه مسیر سلامت</span><span>پنل مدیریت</span></footer></main>
     </div>
   </div>

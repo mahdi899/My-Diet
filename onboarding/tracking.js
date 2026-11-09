@@ -59,7 +59,7 @@
       if(key==='activeMs'&&Number.isFinite(value))data[key]=Math.max(0,Math.min(30000,value));
     }
     let referrer='';try{const ref=new URL(payload.referrer);referrer=ref.origin===location.origin?ref.origin+ref.pathname:ref.origin;}catch{}
-    return {...payload,url:url.pathname+(safe.size?'?'+safe:''),referrer,title:'My Diet Demo',data};
+    return {...payload,url:url.pathname+(safe.size?'?'+safe:''),referrer,title:'My Diet Onboarding',data};
   };
   for(const type of ['pointerdown','keydown','touchstart','scroll'])addEventListener(type,()=>{lastActivity=performance.now();},{passive:true});
   const heartbeat=()=>{if(!document.hidden&&performance.now()-lastActivity<60000)event('active_heartbeat');};
