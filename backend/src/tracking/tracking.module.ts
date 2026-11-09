@@ -9,6 +9,6 @@ import { MealActivityService } from './meal-activity.service.js';
   imports: [PlansModule, MoneyModule],
   controllers: [TrackingController, PublicReviewsController],
   providers: [TrackingService,MealActivityService],
-  exports: [TrackingService],
+  exports: [TrackingService, MealActivityService],
 })
 export class TrackingModule {}

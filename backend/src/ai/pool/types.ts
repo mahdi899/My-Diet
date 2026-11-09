@@ -13,9 +13,44 @@ export type AttemptOutcome =
 /** After these the provider may have run and billed the call, so the same member is never retried. */
 export const UNCERTAIN_OUTCOMES: readonly AttemptOutcome[] = ['timeout', 'outcome_unknown'];
 
+/** One part of a multimodal message. Images travel as data URLs or https URLs (OpenAI-compatible shape). */
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
+export interface ToolSpec {
+  type: 'function';
+  function: { name: string; description: string; parameters: Record<string, unknown> };
+}
+
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  /** `arguments` is the raw JSON text the model produced; callers validate it. */
+  function: { name: string; arguments: string };
+}
+
+export type ToolChoice = 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
+
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  /** Plain text for every existing caller; parts for vision; null only on an assistant message that carries tool calls. */
+  content: string | ContentPart[] | null;
+  /** Assistant turns that asked for tools. */
+  tool_calls?: ToolCall[];
+  /** Tool turns answer one call. */
+  tool_call_id?: string;
+}
+
+/** Text of a message, ignoring image parts. */
+export function messageText(message: ChatMessage): string {
+  if (message.content == null) return '';
+  if (typeof message.content === 'string') return message.content;
+  return message.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n');
+}
+
+export function imageCount(message: ChatMessage): number {
+  return Array.isArray(message.content) ? message.content.filter((part) => part.type === 'image_url').length : 0;
 }
 
 export interface CompletionParams {
@@ -25,6 +60,8 @@ export interface CompletionParams {
   timeoutMs: number;
   /** Ask the provider for a JSON object response. */
   json: boolean;
+  tools?: ToolSpec[];
+  toolChoice?: ToolChoice;
 }
 
 export interface ProviderConfig {
@@ -39,6 +76,9 @@ export interface ProviderConfig {
 
 export interface Completion {
   content: string;
+  /** Tools the model asked for; empty for plain answers. */
+  toolCalls?: ToolCall[];
+  finishReason?: string | null;
   /** The model that actually answered (OpenRouter may route). */
   model: string;
   tokensIn: number;
@@ -56,6 +96,17 @@ export class ProviderCallError extends Error {
     readonly retryAfterMs: number | null = null,
   ) {
     super(code);
+  }
+}
+
+/** A stream that broke after the provider had accepted the call. Text already sent to the caller is in `partialText`. */
+export class StreamBrokenError extends ProviderCallError {
+  constructor(
+    code: string,
+    latencyMs: number,
+    readonly partialText: string,
+  ) {
+    super('outcome_unknown', code, latencyMs);
   }
 }
 

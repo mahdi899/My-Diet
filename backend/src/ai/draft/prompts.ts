@@ -4,8 +4,9 @@ import { ApiError } from '../../common/errors.js';
 import { uuidv7 } from '../../common/id.js';
 import { audit, withTransaction } from '../../common/sql.js';
 import { PG_POOL } from '../../database/database.js';
+import { COACH_MEMORY_PROMPT, COACH_SYSTEM_PROMPT, COACH_VISION_PROMPT } from '../../coach/prompts.js';
 
-export type PromptKey = 'plan_draft' | 'plan_critic';
+export type PromptKey = 'plan_draft' | 'plan_critic' | 'coach_system' | 'coach_vision' | 'coach_memory';
 
 export interface PromptTemplate {
   key: PromptKey;
@@ -21,6 +22,9 @@ export interface PromptTemplate {
 export const REQUIRED_PLACEHOLDERS: Record<PromptKey, string[]> = {
   plan_draft: ['{{profile}}', '{{catalog}}', '{{days}}', '{{schema}}'],
   plan_critic: ['{{profile}}', '{{plan}}', '{{schema}}'],
+  coach_system: [],
+  coach_vision: [],
+  coach_memory: [],
 };
 
 const DRAFT_SYSTEM = `You are the drafting assistant of Sabzine, an Iranian clinical-nutrition service. A registered dietitian will review and edit your draft before the client ever sees it. You write a 7-day meal plan for an Iranian household.
@@ -99,6 +103,24 @@ export const DEFAULT_PROMPTS: Record<PromptKey, Omit<PromptTemplate, 'version' |
     userTemplate: CRITIC_USER,
     notes: 'نسخهٔ پایه: مرور بالینی و فرهنگی برای پزشک.',
   },
+  coach_system: {
+    key: 'coach_system',
+    systemPrompt: COACH_SYSTEM_PROMPT,
+    userTemplate: '',
+    notes: 'شخصیت و قواعد مربی تغذیه؛ بخش ایمنی همیشه در کد اضافه می‌شود.',
+  },
+  coach_vision: {
+    key: 'coach_vision',
+    systemPrompt: COACH_VISION_PROMPT,
+    userTemplate: '',
+    notes: 'تحلیل عکس غذا (خروجی JSON).',
+  },
+  coach_memory: {
+    key: 'coach_memory',
+    systemPrompt: COACH_MEMORY_PROMPT,
+    userTemplate: '',
+    notes: 'استخراج حافظه و خلاصهٔ گفتگو (خروجی JSON).',
+  },
 };
 
 export function renderTemplate(template: string, values: Record<string, string>): string {
@@ -169,8 +191,8 @@ export class PromptStore implements OnModuleInit {
   }
 
   private checkKey(key: string): PromptKey {
-    if (key !== 'plan_draft' && key !== 'plan_critic') throw new ApiError(400, 'validation', 'کلید پرامپت معتبر نیست');
-    return key;
+    if (!Object.hasOwn(DEFAULT_PROMPTS, key)) throw new ApiError(400, 'validation', 'کلید پرامپت معتبر نیست');
+    return key as PromptKey;
   }
 
   /** New drafts never overwrite old versions, so any generation can be traced to its exact text. */

@@ -9,6 +9,15 @@ abstract final class Motion {
   static const page = Duration(milliseconds: 420);
   static const curve = Curves.easeOutCubic;
   static const spring = Curves.easeOutBack;
+  static const emphasized = Cubic(0.2, 0.0, 0.0, 1.0);
+
+  /// True when the user asked the OS to reduce motion.
+  static bool reduced(BuildContext context) =>
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+  /// [d], or zero when motion is reduced.
+  static Duration of(BuildContext context, Duration d) =>
+      reduced(context) ? Duration.zero : d;
 }
 
 /// Light taps for choices, a firmer one for commitments.
@@ -16,6 +25,7 @@ abstract final class Haptics {
   static void tap() => HapticFeedback.selectionClick();
   static void confirm() => HapticFeedback.mediumImpact();
   static void success() => HapticFeedback.heavyImpact();
+  static void tick() => HapticFeedback.lightImpact();
 }
 
 /// Fades and lifts its child into place; use `index` to stagger a list.

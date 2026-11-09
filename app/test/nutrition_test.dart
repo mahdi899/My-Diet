@@ -6,6 +6,7 @@ import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/data/nutrition_log_storage.dart';
 import 'package:sabzine_flutter/presentation/screens/questionnaire.dart';
+import 'package:sabzine_flutter/presentation/widgets/kit/pill_button.dart';
 import 'widget_test.dart'
     show MemoryStorage, validAnswers, mobile, next, choose;
 
@@ -156,46 +157,46 @@ void main() {
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      expect(find.text(persianDate(date, year: true)), findsOneWidget);
-      final meal = find.text(s.mealsOn(date).first.title);
-      await t.ensureVisible(meal);
+      await t.tap(find.byKey(const ValueKey('tab-plan')));
       await t.pumpAndSettle();
-      await t.tap(meal);
+      expect(find.text(s.mealsOn(date).first.title), findsWidgets);
+      final done = find.widgetWithText(PillButton, 'انجام شد');
+      await t.ensureVisible(done.first);
       await t.pumpAndSettle();
-      expect(find.text('چه مقدار بخورم؟'), findsOneWidget);
-      expect(
-        find.text(s.mealsOn(date).first.amount.split('\n').first),
-        findsOneWidget,
-      );
-      final done = find.byType(Checkbox).last;
-      await t.ensureVisible(done);
-      await t.tap(done);
+      await t.tap(done.first);
       await t.pumpAndSettle();
       expect(s.consumedCalories(date), s.mealsOn(date).first.calories);
-      await t.tap(find.byTooltip('بستن جزئیات غذا'));
-      await t.pumpAndSettle();
       expect(s.mealEaten(date, 0), true);
-      final full = find.text('برنامهٔ کامل');
-      await t.ensureVisible(full);
-      await t.pumpAndSettle();
-      await t.tap(full);
-      await t.pumpAndSettle();
-      expect(find.text(s.mealsOn(date).first.title), findsOneWidget);
-      expect(find.text('برنامهٔ غذایی من'), findsOneWidget);
-      final nextTab = find.byKey(const ValueKey('plan-day-3'));
-      if (nextTab.evaluate().isEmpty) {
-        await t.scrollUntilVisible(
-          nextTab,
-          -100,
-          scrollable: find.byType(Scrollable).last,
+      expect(find.widgetWithText(PillButton, 'ثبت شد'), findsWidgets);
+      final vertical = find.byType(ListView).first;
+      final position = t
+          .state<ScrollableState>(
+            find.descendant(of: vertical, matching: find.byType(Scrollable)).first,
+          )
+          .position;
+      final nextDay = find.byKey(const ValueKey('plan-day-3'));
+      for (var i = 0; i < 12 && nextDay.evaluate().isEmpty; i++) {
+        position.jumpTo(
+          (position.pixels - 200).clamp(0, position.maxScrollExtent),
         );
+        await t.pump();
       }
-      await t.ensureVisible(nextTab);
-      await t.tap(nextTab);
+      for (var i = 0; i < 12; i++) {
+        final dy = t.getCenter(nextDay).dy;
+        if (dy > 140 && dy < 520) break;
+        position.jumpTo(
+          (position.pixels + (dy >= 520 ? 140 : -140)).clamp(
+            0,
+            position.maxScrollExtent,
+          ),
+        );
+        await t.pump();
+      }
+      await t.tap(nextDay);
       await t.pumpAndSettle();
       expect(
         find.text(s.mealsOn(DateTime(2026, 10, 27)).first.title),
-        findsOneWidget,
+        findsWidgets,
       );
       expect(s.eatenCount(DateTime(2026, 10, 27)), 0);
       expect(t.takeException(), isNull);

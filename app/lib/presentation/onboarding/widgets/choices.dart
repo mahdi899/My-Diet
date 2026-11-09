@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/theme.dart';
 import '../../../core/motion/motion.dart';
 import '../../../domain/onboarding/spec.dart';
+import 'decor_photo.dart';
 
-/// A big tappable answer. Selection scales it slightly, fills the border and shows a check.
+/// A big tappable answer. The photo is decoration; [label] is the answer.
 class OptionCard extends StatelessWidget {
   const OptionCard({
     super.key,
@@ -13,95 +13,24 @@ class OptionCard extends StatelessWidget {
     this.icon,
     this.multi = false,
     this.caption,
+    this.photoKey,
   });
   final String label;
   final String? caption;
+  final String? photoKey;
   final bool selected, multi;
   final IconData? icon;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => AnimatedScale(
-    scale: selected ? 1.015 : 1,
-    duration: Motion.quick,
-    curve: Motion.spring,
-    child: Semantics(
-      button: true,
-      selected: selected,
-      child: Material(
-        color: selected ? sage : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(
-            color: selected ? pine : const Color(0xFFDDE5D4),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () {
-            Haptics.tap();
-            onTap();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-            child: Row(
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, color: selected ? pine : muted),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: selected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: ink,
-                        ),
-                      ),
-                      if (caption != null)
-                        Text(
-                          caption!,
-                          style: const TextStyle(color: muted, fontSize: 12),
-                        ),
-                    ],
-                  ),
-                ),
-                AnimatedContainer(
-                  duration: Motion.quick,
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: multi ? BoxShape.rectangle : BoxShape.circle,
-                    borderRadius: multi ? BorderRadius.circular(7) : null,
-                    color: selected ? pine : Colors.transparent,
-                    border: Border.all(
-                      color: selected ? pine : const Color(0xFFB7C9A1),
-                      width: 1.6,
-                    ),
-                  ),
-                  child: AnimatedOpacity(
-                    opacity: selected ? 1 : 0,
-                    duration: Motion.quick,
-                    child: const Icon(
-                      Icons.check,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => PhotoOptionCard(
+    label: label,
+    subtitle: caption,
+    photoKey: photoKey ?? label,
+    selected: selected,
+    onTap: onTap,
+    icon: icon,
+    multi: multi,
   );
 }
 
@@ -128,6 +57,7 @@ class SingleChoice extends StatelessWidget {
         index: i,
         child: OptionCard(
           label: o.label,
+          photoKey: o.code,
           selected: value == o.code,
           onTap: () => onChanged(o.code),
         ),
@@ -179,6 +109,7 @@ class MultiChoice extends StatelessWidget {
             index: i,
             child: OptionCard(
               label: question.options[i].label,
+              photoKey: question.options[i].code,
               multi: true,
               selected: value.contains(question.options[i].code),
               onTap: () => _toggle(question.options[i]),
@@ -197,6 +128,7 @@ class MultiChoice extends StatelessWidget {
                     initialValue: followUpValue,
                     onChanged: onFollowUp,
                     maxLength: 200,
+                    scrollPadding: const EdgeInsets.only(bottom: 140),
                     decoration: InputDecoration(hintText: follow.placeholder),
                   ),
                 )

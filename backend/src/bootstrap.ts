@@ -17,7 +17,11 @@ export async function createApp(): Promise<{
   const env = loadEnv();
   const app = await NestFactory.create(AppModule.forRoot(), {
     bufferLogs: true,
+    bodyParser: false,
   });
+  // Photo messages are JSON base64, same ceiling as care-media uploads (~1.5MB decoded).
+  app.use(express.json({ limit: '3mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '1mb' }));
   app.useLogger(app.get(Logger));
   // The container is exposed only to the local Nginx proxy, which overwrites XFF.
   app.getHttpAdapter().getInstance().set('trust proxy',1);

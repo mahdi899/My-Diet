@@ -27,7 +27,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(80, 40);
   Win32Window::Size size(390, 844);
-  if (!window.Create(L"Sabzine - Flutter App", origin, size)) {
+  if (!window.Create(L"\u0631\u0698\u06CC\u0645 \u0645\u0646", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

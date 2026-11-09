@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'legacy_staff_harness.dart';
+import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/form_config.dart';
 import 'package:sabzine_flutter/data/workspace_settings_storage.dart';
@@ -219,7 +220,9 @@ void main() {
       expect(s.questionnaire.name, userName);
       s.loginDemoUser();
       await t.pumpAndSettle();
-      await t.tap(find.byType(NavigationDestination).at(3));
+      await t.tap(find.byKey(const ValueKey('tab-coach')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('coach-avatar')));
       await t.pumpAndSettle();
       await tapVisible(t, find.text('مشخصات دکتر'));
       expect(find.text('خیابان تازه، ساختمان مطب'), findsOneWidget);
@@ -261,11 +264,16 @@ void main() {
       await tapVisible(t, find.text('ذخیره و اعمال پرسش‌نامه'));
       expect(s.formConfiguration.label('name'), 'نام کامل شما');
       final added = s.formConfiguration.questions.last;
-      t.state<NavigatorState>(find.byType(Navigator).first).pop();
-      await t.pumpAndSettle();
+      await t.pumpWidget(const SizedBox());
+      await t.pump();
       s.loginDemoUser();
+      await t.pumpWidget(
+        SabzineApp(store: s, splashDuration: Duration.zero),
+      );
       await t.pumpAndSettle();
-      await t.tap(find.byType(NavigationDestination).at(3));
+      await t.tap(find.byKey(const ValueKey('tab-coach')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('coach-avatar')));
       await t.pumpAndSettle();
       await tapVisible(t, find.text('اطلاعات فردی'));
       expect(find.text('نام کامل شما'), findsOneWidget);

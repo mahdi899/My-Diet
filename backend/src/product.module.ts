@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AdminModule } from './admin/admin.module.js';
 import { IdentityModule } from './identity/identity.module.js';
 import { MessagingModule } from './messaging/messaging.module.js';
+import { CoachModule } from './coach/coach.module.js';
 import { MoneyModule } from './money/money.module.js';
 import { FoodModule } from './food/food.module.js';
 import { OnboardingModule } from './onboarding/onboarding.module.js';
@@ -28,6 +29,7 @@ import { StreakModule } from './rewards/streak.module.js';
     WeeklyFeedbackModule,
     StreakModule,
     MessagingModule,
+    CoachModule,
     RealtimeModule,
     PrivacyModule,
     ReportsModule,

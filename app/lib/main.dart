@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'app.dart';
+import 'core/photos/food_photo_resolver.dart';
 import 'domain/commerce/commerce.dart';
 import 'data/customer_auth.dart';
 import 'data/secure_auth_storage.dart';
@@ -30,6 +31,8 @@ const _forceDemo = bool.fromEnvironment('USE_DEMO');
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Warm the bundled photo index so FoodImage resolves instantly.
+  FoodPhotoResolver.load().ignore();
   openExternalUrl = (uri) =>
       launchUrl(uri, mode: LaunchMode.externalApplication);
   final apiBase = resolveApiBase();

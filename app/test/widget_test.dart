@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/presentation/screens/splash.dart';
 import 'package:sabzine_flutter/presentation/screens/entry.dart';
+import 'package:sabzine_flutter/presentation/screens/first_login.dart';
+import 'package:sabzine_flutter/presentation/screens/onboarding.dart';
+import 'package:sabzine_flutter/features/plan/plan_tab.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/questionnaire_storage.dart';
 
@@ -170,12 +173,13 @@ void main() {
     final store = DemoStore();
     await tester.pumpWidget(SabzineApp(store: store));
     expect(find.byType(SplashScreen), findsOneWidget);
-    expect(find.byType(Text), findsNothing);
+    expect(find.text('رژیم من'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(EntryScreen), findsNothing);
     await tester.pump(const Duration(milliseconds: 1400));
     await tester.pumpAndSettle();
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(FirstLoginScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-tab-bar')), findsNothing);
     expect(store.userSignedIn, false);
     expect(find.byType(LoginScreen), findsNothing);
     expect(find.byType(SplashScreen), findsNothing);
@@ -192,11 +196,10 @@ void main() {
       SabzineApp(store: store, splashDuration: Duration.zero),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(FirstLoginScreen), findsOneWidget);
     expect(find.byType(LoginScreen), findsNothing);
+    expect(find.byKey(const ValueKey('shell-tab-bar')), findsNothing);
     expect(store.userSignedIn, false);
-    await tester.tap(find.byType(NavigationDestination).at(3));
-    await tester.pumpAndSettle();
     expect(find.text('تعویض پنل نمایشی'), findsNothing);
     expect(find.text('ورود به عنوان متخصص'), findsNothing);
     expect(find.text('ورود به عنوان مدیر'), findsNothing);
@@ -212,19 +215,16 @@ void main() {
       final store = DemoStore(storage: MemoryStorage());
       await store.saveQuestionnaire(validAnswers(), onboarding: true);
       final count = store.requests.length;
+      store.login(AppRole.user);
+      store.startPlanAcquisition();
       await tester.pumpWidget(
         SabzineApp(store: store, splashDuration: Duration.zero),
       );
       await tester.pumpAndSettle();
-      final request = find.byKey(const ValueKey('get-food-plan'));
-      await tester.ensureVisible(request);
-      await tester.tap(request);
-      await tester.pumpAndSettle();
-      expect(find.byType(LoginScreen), findsOneWidget);
-      await tester.tap(find.text('ورود مستقیم با حساب نمایشی'));
-      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingScreen), findsNothing);
       expect(find.text('تعرفه برنامه‌ها'), findsOneWidget);
       expect(store.userSignedIn, true);
+      expect(store.questionnaireComplete, isTrue);
       expect(store.requests.length, count);
       await tester.pumpWidget(const SizedBox());
       store.dispose();
@@ -316,7 +316,9 @@ void main() {
         SabzineApp(store: store, splashDuration: Duration.zero),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(NavigationDestination).at(3));
+      await tester.tap(find.byKey(const ValueKey('tab-coach')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('coach-avatar')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('اطلاعات فردی'));
       await tester.pumpAndSettle();
@@ -360,11 +362,17 @@ void main() {
     for (final role in [AppRole.user]) {
       store.login(role);
       await tester.pumpAndSettle();
-      for (var i = 0; i < 4; i++) {
-        await tester.tap(find.byType(NavigationDestination).at(i));
+      for (final key in const ['tab-home', 'tab-plan']) {
+        await tester.tap(find.byKey(ValueKey(key)));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: '$role / $i');
+        expect(tester.takeException(), isNull, reason: '$role / $key');
       }
+      await tester.tap(find.byKey(const ValueKey('tab-coach')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: '$role / coach');
+      await tester.tap(find.byKey(const ValueKey('coach-close')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: '$role / close');
     }
     await tester.pumpWidget(const SizedBox());
     store.dispose();
@@ -383,23 +391,25 @@ void main() {
         SabzineApp(store: store, splashDuration: Duration.zero),
       );
       await tester.pumpAndSettle();
-      expect(find.text('وزن فعلی'), findsOneWidget);
-      expect(find.text('۸۱'), findsOneWidget);
+      expect(find.textContaining('۸۱ کیلو'), findsWidgets);
       expect(find.text('اطلاعات فردی'), findsNothing);
-      expect(find.text('وضعیت برنامه'), findsOneWidget);
+      expect(find.text('وضعیت برنامه'), findsNothing);
       expect(find.text('برنامهٔ امروز'), findsNothing);
       expect(find.text(store.userRequest.draft.first.title), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('tab-plan')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('plan-waiting')), findsOneWidget);
+      expect(find.text(store.userRequest.draft.first.title), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('tab-home')));
+      await tester.pumpAndSettle();
       store.addWeight(79.5);
       await tester.pumpAndSettle();
-      expect(find.text('۷۹٫۵'), findsOneWidget);
+      expect(find.textContaining('۷۹٫۵ کیلو'), findsWidgets);
       store.approveActiveUserRequest();
       await tester.pumpAndSettle();
-      expect(find.text('وضعیت برنامه'), findsNothing);
-      expect(find.text('برنامهٔ امروز'), findsOneWidget);
-      for (final meal in store.mealsOn(store.today)) {
-        expect(find.text(meal.title), findsOneWidget);
-      }
+      expect(find.byKey(const ValueKey('plan-waiting')), findsNothing);
       final original = store.mealsOn(store.today).first.title;
+      expect(find.text(original), findsWidgets);
       store.editMeal(
         store.userRequestId!,
         0,
@@ -411,18 +421,13 @@ void main() {
       );
       store.requestRevision('غذای ساده‌تر', '');
       await tester.pumpAndSettle();
-      expect(find.text(original), findsOneWidget);
+      expect(find.text(original), findsWidgets);
       expect(find.text('ویرایش منتشرنشده'), findsNothing);
-      final full = find.text('برنامهٔ کامل');
-      await tester.scrollUntilVisible(
-        full,
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await tester.tap(find.byKey(const ValueKey('tab-plan')));
       await tester.pumpAndSettle();
-      await tester.tap(full);
-      await tester.pumpAndSettle();
-      expect(find.text('برنامهٔ غذایی من'), findsOneWidget);
+      expect(find.byType(PlanTab), findsOneWidget);
+      expect(find.text(original), findsWidgets);
+      expect(find.text('ویرایش منتشرنشده'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       store.dispose();

@@ -7,8 +7,13 @@ import 'presentation/screens/entry.dart';
 import 'presentation/screens/first_login.dart';
 import 'presentation/screens/splash.dart';
 import 'presentation/screens/onboarding.dart';
-import 'presentation/screens/user.dart';
 import 'core/theme/theme.dart';
+import 'features/coach/coach_launcher.dart';
+import 'features/home/home_tab.dart';
+import 'features/plan/plan_tab.dart';
+import 'features/shell/shell_bar.dart';
+import 'features/shell/shell_tab.dart';
+import 'core/motion/motion_kit.dart';
 import 'presentation/widgets/weekly_progress.dart';
 import 'presentation/widgets/connection_gate.dart';
 import 'presentation/screens/wallet_flow.dart';
@@ -36,6 +41,7 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
   late final LinkMonitor links = widget.link ?? LinkMonitor();
   late bool starting;
   final navigatorKey = GlobalKey<NavigatorState>();
+  final shellTab = ShellTab();
   Timer? sessionTimer;
   bool wasSignedIn = false;
 
@@ -107,32 +113,36 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
       store.customerAuth?.dispose();
       store.dispose();
     }
+    shellTab.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => DemoScope(
     store: store,
-    child: MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'رژیم من',
-      navigatorKey: navigatorKey,
-      theme: appTheme(),
-      locale: const Locale('fa'),
-      supportedLocales: const [Locale('fa'), Locale('en')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      builder: (context, child) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: ConnectionGate(link: links, child: child!),
+    child: ShellTabScope(
+      tab: shellTab,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'رژیم من',
+        navigatorKey: navigatorKey,
+        theme: appTheme(),
+        locale: const Locale('fa'),
+        supportedLocales: const [Locale('fa'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        builder: (context, child) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: ConnectionGate(link: links, child: child!),
+        ),
+        home: starting
+            ? (widget.splashDuration > Duration.zero
+                  ? const SplashScreen()
+                  : const Scaffold(
+                      backgroundColor: cream,
+                      body: SizedBox.shrink(),
+                    ))
+            : const AppRoot(),
       ),
-      home: starting
-          ? (widget.splashDuration > Duration.zero
-                ? const SplashScreen()
-                : const Scaffold(
-                    backgroundColor: cream,
-                    body: SizedBox.shrink(),
-                  ))
-          : const AppRoot(),
     ),
   );
 }
@@ -166,7 +176,8 @@ class PanelShell extends StatefulWidget {
 }
 
 class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
-  int selected = 0;
+  int _local = 1;
+  ShellTab? _tabs;
   bool resumingPlan = false;
   Timer? _livePoll;
   bool _refreshing = false;
@@ -175,7 +186,10 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _livePoll = Timer.periodic(const Duration(seconds: 8), (_) => _refreshLive());
+    _livePoll = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => _refreshLive(),
+    );
   }
 
   bool _waiting(DemoStore store) =>
@@ -202,15 +216,50 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) _refreshLive();
   }
 
+  int get _index => _tabs?.index ?? _local;
+
+  void _bind(ShellTab? tabs) {
+    if (identical(_tabs, tabs)) return;
+    _tabs?.removeListener(_onTab);
+    _tabs = tabs;
+    _tabs?.addListener(_onTab);
+  }
+
+  void _onTab() {
+    if (mounted) setState(() {});
+  }
+
+  void _show(int index) {
+    if (index == 2 && !DemoScope.of(context).userSignedIn) {
+      DemoScope.of(context).openUserLogin();
+      return;
+    }
+    final tabs = _tabs;
+    if (tabs != null) {
+      tabs.show(index);
+    } else {
+      setState(() => _local = index);
+    }
+  }
+
+  Future<void> _openCoach() async {
+    await openCoach(context);
+    if (!mounted) return;
+    _show(1);
+  }
+
   @override
   void dispose() {
+    _tabs?.removeListener(_onTab);
     _livePoll?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _bind(ShellTabScope.maybeOf(context));
     final store = DemoScope.of(context);
     if (!resumingPlan &&
         widget.role == AppRole.user &&
@@ -226,66 +275,57 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
     }
   }
 
-  void select(int i) {
-    final store = DemoScope.of(context);
-    if ((i == 1 || i == 2) && !store.userSignedIn) {
-      store.openUserLogin();
-      return;
-    }
-    setState(() => selected = i);
-  }
-
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    final page = switch (selected) {
-      0 => UserHome(onPlan: () => select(1)),
-      1 => const PlanScreen(embedded: true),
-      2 => const TrackingScreen(),
-      _ => const ProfileScreen(),
-    };
+    final selected = _index;
+    final page = selected == 2
+        ? const PlanTab()
+        : HomeTab(onOpenPlan: () => _show(2));
+    final gated = !store.userSignedIn && selected == 2
+        ? const CustomerSignInPrompt()
+        : WeeklyRewardGate(child: page);
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            if (store.sessionError != null)
-              MaterialBanner(
-                content: Text(store.sessionError!),
-                actions: [
-                  TextButton(
-                    onPressed: store.refreshServerSession,
-                    child: const Text('تلاش دوباره'),
+            Column(
+              children: [
+                if (store.sessionError != null)
+                  MaterialBanner(
+                    content: Text(store.sessionError!),
+                    actions: [
+                      TextButton(
+                        onPressed: store.refreshServerSession,
+                        child: const Text('تلاش دوباره'),
+                      ),
+                    ],
                   ),
-                ],
+                Expanded(
+                  child: SharedAxisSwitcher(
+                    index: selected,
+                    child: KeyedSubtree(
+                      key: ValueKey('shell-page-$selected'),
+                      child: gated,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 10 + MediaQuery.paddingOf(context).bottom,
+              child: ShellTabBar(
+                selected: selected,
+                onCoach: () => unawaited(_openCoach()),
+                onHome: () => _show(1),
+                onPlan: () => _show(2),
               ),
-            Expanded(
-              child: !store.userSignedIn && selected != 0 && selected != 3
-                  ? const CustomerSignInPrompt()
-                  : WeeklyRewardGate(child: page),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selected,
-        onDestinationSelected: select,
-        height: 76,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'خانه'),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            label: 'برنامه',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'پیگیری',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            label: 'پروفایل',
-          ),
-        ],
       ),
     );
   }

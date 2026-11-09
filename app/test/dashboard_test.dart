@@ -5,8 +5,9 @@ import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/core/theme/theme.dart';
+import 'package:sabzine_flutter/presentation/widgets/kit/pill_button.dart';
+import 'package:sabzine_flutter/presentation/widgets/kit/pressable_scale.dart';
 import 'package:sabzine_flutter/presentation/widgets/nutrition.dart';
-import 'package:sabzine_flutter/presentation/widgets/meal_logging.dart';
 import 'widget_test.dart' show mobile;
 
 void main() {
@@ -24,26 +25,14 @@ void main() {
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      final energy = find.byKey(const ValueKey('daily-energy-card')),
-          advice = find.byKey(const ValueKey('daily-advice'));
-      expect(t.getSize(energy).height, lessThan(260));
-      expect(find.text(persianDate(s.today, year: true)), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('daily-calorie-target')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const ValueKey('consumed-calories')), findsOneWidget);
+      final ring = find.byKey(const ValueKey('home-calorie-ring'));
+      expect(ring, findsOneWidget);
+      expect(t.getSize(ring).height, lessThan(260));
+      expect(t.getSize(ring).height, greaterThan(80));
+      expect(find.text('کالری'), findsOneWidget);
       expect(find.text('هدف روزانه'), findsNothing);
-      expect(find.text('کالری امروز تو'), findsOneWidget);
+      expect(find.text('کالری امروز تو'), findsNothing);
       expect(find.text('با تیک «خوردم»'), findsNothing);
-      expect(
-        find.descendant(of: energy, matching: advice),
-        findsOneWidget,
-      );
-      expect(
-        find.ancestor(of: advice, matching: energy),
-        findsOneWidget,
-      );
       expect(find.text('توصیهٔ امروز'), findsNothing);
       await t.pumpWidget(const SizedBox());
       s.dispose();
@@ -92,29 +81,54 @@ void main() {
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      await t.tap(find.byType(NavigationDestination).at(1));
+      await t.tap(find.byKey(const ValueKey('tab-plan')));
       await t.pumpAndSettle();
       expect(find.text('همین هفته'), findsNothing);
-      final list = t.widget<ListView>(find.byType(ListView));
+      final strip = t.widget<ListView>(
+        find.byKey(const ValueKey('plan-day-strip')),
+      );
       expect(
-        (list.childrenDelegate as SliverChildBuilderDelegate)
+        (strip.childrenDelegate as SliverChildBuilderDelegate)
             .estimatedChildCount,
         13,
       );
       final yesterday = find.byKey(const ValueKey('plan-day-4'));
-      expect(t.widget<InkWell>(yesterday).onTap, isNull);
+      await t.ensureVisible(yesterday);
+      await t.pumpAndSettle();
+      expect(
+        t
+            .widget<PressableScale>(
+              find.ancestor(
+                of: yesterday,
+                matching: find.byType(PressableScale),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
       final tomorrow = find.byKey(const ValueKey('plan-day-6'));
-      expect(t.widget<InkWell>(tomorrow).onTap, isNotNull);
       await t.ensureVisible(tomorrow);
       await t.pumpAndSettle();
+      expect(
+        t
+            .widget<PressableScale>(
+              find.ancestor(
+                of: tomorrow,
+                matching: find.byType(PressableScale),
+              ),
+            )
+            .onTap,
+        isNotNull,
+      );
       await t.tap(tomorrow);
       await t.pumpAndSettle();
       expect(find.text(persianDate(DateTime(2026, 10, 30))), findsOneWidget);
-      final action = find.descendant(
-        of: find.byType(ScheduledMealTile).first,
-        matching: find.byType(Checkbox),
+      expect(
+        t
+            .widget<PillButton>(find.widgetWithText(PillButton, 'انجام شد').first)
+            .onPressed,
+        isNull,
       );
-      expect(t.widget<Checkbox>(action).onChanged, isNull);
       await t.pumpWidget(const SizedBox());
       s.dispose();
     },
@@ -127,13 +141,15 @@ void main() {
       s.approveActiveUserRequest();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      final action = find.byKey(const ValueKey('meal-log-2026-10-26-0'));
-      await t.ensureVisible(action);
+      await t.tap(find.byKey(const ValueKey('tab-plan')));
       await t.pumpAndSettle();
-      await t.tap(action);
+      final action = find.widgetWithText(PillButton, 'انجام شد');
+      await t.ensureVisible(action.first);
+      await t.pumpAndSettle();
+      await t.tap(action.first);
       await t.pumpAndSettle();
       expect(s.consumedCalories(s.today), s.mealsOn(s.today).first.calories);
-      expect(find.byType(MealLogCheckbox), findsWidgets);
+      expect(find.widgetWithText(PillButton, 'ثبت شد'), findsWidgets);
       expect(s.eatenCount(s.today), 1);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
