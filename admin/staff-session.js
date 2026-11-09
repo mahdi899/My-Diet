@@ -17,7 +17,10 @@
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new StaffError(data.detail || data.message || 'دریافت اطلاعات انجام نشد.', response.status);
+        if (!response.ok) {
+          const text = data.messageFa || data.detail || data.message;
+          throw new StaffError(text || 'دریافت اطلاعات انجام نشد.', response.status);
+        }
         return data;
       } catch (error) {
         if (error instanceof StaffError) throw error;

@@ -200,6 +200,7 @@ function portraitFile(file) {
 }
 function addSpecialistModal() {
   openModal('افزودن پزشک', (body, dialog) => {
+    dialog.classList.add('specialist-create-modal');
     const form = element('form', null, 'specialist-form');
     const picker = element('label', null, 'portrait-picker');
     picker.title = 'انتخاب تصویر پروفایل';
@@ -236,6 +237,7 @@ function addSpecialistModal() {
           clearInterval(uploadTimer);
           setProgress(100);
           picker.classList.add(failed ? 'is-failed' : 'is-ready');
+          if (!failed) ring.hidden = true;
         }
       }, 40);
       portraitFile(file).then(photo => {
@@ -253,7 +255,10 @@ function addSpecialistModal() {
       });
     };
     picker.append(portrait, preview, ring);
-    dialog.querySelector('.modal-header').append(picker);
+    const photoSection = element('section', null, 'specialist-photo-section');
+    const photoCopy = element('div');
+    photoCopy.append(element('h3', 'تصویر پروفایل'), element('p', 'برای انتخاب یا تغییر عکس کلیک کنید. فرمت JPG یا PNG.'));
+    photoSection.append(picker, photoCopy);
     const grid = element('div', null, 'form-grid');
     field(grid, 'firstName', 'نام');
     field(grid, 'lastName', 'نام خانوادگی');
@@ -271,19 +276,36 @@ function addSpecialistModal() {
     phone.dir = 'ltr';
     phone.placeholder = '۰۹۱۲۳۴۵۶۷۸۹';
     help(phone, 'دقیقاً ۱۱ رقم و با ۰۹.');
-    const username = field(grid, 'username', 'نام کاربری');
+    const credentials = element('div', null, 'form-grid');
+    const username = field(credentials, 'username', 'نام کاربری');
     username.dir = 'ltr';
     username.autocomplete = 'off';
     username.maxLength = 32;
     username.placeholder = 'doctor.name';
     help(username, 'برای ورود به پنل پزشک. ۳ تا ۳۲ نویسهٔ انگلیسی.');
-    const password = field(grid, 'password', 'رمز عبور', 'password');
+    const passwordLabel = element('label', 'رمز عبور');
+    const passwordShell = element('div', null, 'password-field');
+    const password = element('input');
+    password.type = 'password';
+    password.name = 'panelPassword';
+    password.id = 'specialist-panel-password';
+    passwordLabel.htmlFor = password.id;
+    password.setAttribute('aria-label', 'رمز عبور');
+    password.required = true;
     password.dir = 'ltr';
     password.autocomplete = 'new-password';
+    password.spellcheck = false;
     password.minLength = 8;
     password.maxLength = 256;
+    passwordShell.append(password);
+    passwordLabel.append(passwordShell);
+    credentials.append(passwordLabel);
     help(password, 'حداقل ۸ نویسه. پزشک با همین نام کاربری و رمز، یا با شماره و کد پیامکی وارد می‌شود.');
-    form.append(grid, formFooter('ثبت', 'check', dialog));
+    const profileSection = element('section', null, 'specialist-form-section');
+    profileSection.append(element('h3', 'اطلاعات فردی و حرفه‌ای'), element('p', 'مشخصات پزشک را مطابق مدارک وارد کنید.'), grid);
+    const loginSection = element('section', null, 'specialist-form-section');
+    loginSection.append(element('h3', 'دسترسی به پنل پزشک'), credentials);
+    form.append(profileSection, photoSection, loginSection, formFooter('ایجاد حساب پزشک', 'check', dialog));
     onForm(form, async data => {
       if (!prepared) throw new Error('تصویر پروفایل را انتخاب کنید و صبر کنید تا بارگذاری کامل شود');
       const councilNo = latinDigits(data.councilNo);
@@ -291,12 +313,13 @@ function addSpecialistModal() {
       if (!/^\d{6}$/.test(councilNo)) throw new Error('کد نظام پزشکی باید دقیقاً ۶ رقم باشد');
       if (!/^09\d{9}$/.test(mobile)) throw new Error('شماره تلفن باید ۱۱ رقم و با ۰۹ شروع شود');
       if (!/^[A-Za-z][A-Za-z0-9._-]{2,31}$/.test(data.username.trim())) throw new Error('نام کاربری باید ۳ تا ۳۲ نویسهٔ انگلیسی باشد و با حرف شروع شود');
-      if (data.password.length < 8) throw new Error('رمز عبور باید حداقل ۸ نویسه باشد');
+      const panelPassword = data.panelPassword ?? '';
+      if (panelPassword.length < 8) throw new Error('رمز عبور باید حداقل ۸ نویسه باشد');
       if (!birth.value) throw new Error('تاریخ تولد را از تقویم شمسی انتخاب کنید');
       await api('admin/specialists', 'POST', {
         firstName: data.firstName, lastName: data.lastName, birthDate: data.birthDate,
         councilNo, education: data.education, phone: mobile, portrait: prepared,
-        username: data.username.trim().toLowerCase(), password: data.password,
+        username: data.username.trim().toLowerCase(), password: panelPassword,
       });
       dialog.close();
       notice('پزشک ثبت شد');
@@ -307,6 +330,7 @@ function addSpecialistModal() {
 }
 function userOperations(row) {
   openModal('ویرایش کاربر', async (body, dialog) => {
+    dialog.classList.add('user-detail-modal');
     body.append(skeleton());
     const detail = await api('admin/users/' + encodeURIComponent(row.id));
     const intake = detail.intake ?? {};
@@ -326,7 +350,9 @@ function userOperations(row) {
       grid.append(item);
     }
     const panel = element('div', null, 'report-stack');
-    panel.append(grid);
+    const identity = element('div', null, 'user-detail-identity');
+    identity.append(personCell(detail.displayName || row.displayName || 'کاربر', detail.phone || row.phone), badge(detail.status));
+    panel.append(identity, grid);
     if (intake.answers?.length) {
       const answersCard = element('section', null, 'card');
       answersCard.append(sectionHead('پاسخ‌های پرسش‌نامه', 'اطلاعاتی که کاربر در دمو یا اپ ثبت کرده است.'));
@@ -340,6 +366,8 @@ function userOperations(row) {
       panel.append(infoNote('هنوز پاسخ پرسش‌نامه‌ای برای این حساب در دسترس نیست.'));
     }
     const form = element('form');
+    form.classList.add('user-package-form');
+    form.append(sectionHead('مدیریت پکیج', row.packageTitle || 'پکیج فعالی ندارد'));
     const days = field(form, 'daysRemaining', 'روزهای مانده از پکیج', 'number', row.daysRemaining == null ? '' : String(row.daysRemaining));
     days.required = false;
     days.min = '0';
@@ -357,7 +385,7 @@ function userOperations(row) {
     });
     panel.append(form);
     if (row.status !== 'deleted' && row.role !== 'admin') {
-      const actions = element('div', null, 'form-submit');
+      const actions = element('div', null, 'form-submit user-account-actions');
       const statusChoices = [
         ['active', 'فعال', 'check'],
         ['pending', 'در انتظار', 'clock'],
@@ -388,7 +416,9 @@ function userOperations(row) {
 function tablePage(rows, section) {
   const empty = { users: ['کاربری برای نمایش نیست', 'حساب‌های ثبت‌شدهٔ رژیم من در این بخش قرار می‌گیرند.'], requests: ['درخواست جدیدی ثبت نشده', 'وضعیت درخواست‌های برنامه را از همین بخش دنبال خواهید کرد.'], payments: ['پرداختی برای نمایش نیست', 'خرید پکیج‌ها پس از ثبت در این فهرست نمایش داده می‌شوند. تغییر برنامه بعد از خرید، پرداخت جداگانه ندارد.'], reviews: ['همه‌چیز بررسی شده است', 'نظر جدیدی که به بررسی شما نیاز داشته باشد، اینجا نمایش داده می‌شود.'], messages: ['هنوز گفت‌وگویی ندارید', 'گفت‌وگوهای مرتبط با حساب شما در این بخش قرار می‌گیرند.'], tickets: ['تیکتی ثبت نشده است', 'درخواست‌های پشتیبانی کاربران در این بخش نمایش داده می‌شوند.'], specialists: ['پزشک فعالی برای نمایش نیست', 'اطلاعات پزشکان فعال رژیم من در این فهرست نمایش داده می‌شود.'], 'audit-logs': ['هنوز فعالیتی ثبت نشده', 'تغییرات مدیریتی با زمان و شناسه در این بخش ثبت می‌شوند.'] };
   const filters = [...new Set(rows.map(r => r.status).filter(Boolean))].map(value => [value, statusLabels[value] || value]);
-  return listPanel(rows, { title: sections[section], description: number(rows.length) + ' مورد در فهرست', columns: section === 'payments' ? paymentColumns : genericColumns[section], iconName: pageMeta[section].icon, filters, emptyTitle: empty[section][0], emptyDescription: empty[section][1] });
+  const panel = listPanel(rows, { title: sections[section], description: number(rows.length) + ' مورد در فهرست', columns: section === 'payments' ? paymentColumns : genericColumns[section], iconName: pageMeta[section].icon, filters, emptyTitle: empty[section][0], emptyDescription: empty[section][1] });
+  if (section === 'users') panel.classList.add('users-table-panel');
+  return panel;
 }
 function settings() {
   const layout = element('div', null, 'settings-layout');
