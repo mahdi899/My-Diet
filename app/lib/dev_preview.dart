@@ -3,6 +3,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'core/theme/theme.dart';
+import 'presentation/screens/kit_gallery.dart';
 
 /// Optional debug-only capture of the running Flutter frame, not a mockup.
 /// Normal runs do not create a file or skip the entry screen.
@@ -16,6 +19,10 @@ class DevPreview extends StatefulWidget {
 class _DevPreviewState extends State<DevPreview> {
   final boundaryKey = GlobalKey();
   static const capturePath = String.fromEnvironment('PREVIEW_SCREENSHOT');
+
+  /// --dart-define=KIT_GALLERY=true boots straight into the design-kit
+  /// gallery (debug only). From code, use openKitGallery(context).
+  static const kitGallery = bool.fromEnvironment('KIT_GALLERY');
 
   @override
   void initState() {
@@ -43,6 +50,18 @@ class _DevPreviewState extends State<DevPreview> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      RepaintBoundary(key: boundaryKey, child: widget.child);
+  Widget build(BuildContext context) => RepaintBoundary(
+    key: boundaryKey,
+    child: kDebugMode && _DevPreviewState.kitGallery
+        ? MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'رژیم من',
+            theme: appTheme(),
+            locale: const Locale('fa'),
+            supportedLocales: const [Locale('fa'), Locale('en')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: const KitGalleryScreen(),
+          )
+        : widget.child,
+  );
 }

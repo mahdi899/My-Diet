@@ -221,6 +221,33 @@ export class FoodService implements OnModuleInit {
     return rows.map(viewOf);
   }
 
+  /** Active catalogue rows matching Persian words (prefix per word, then substring), allergens already removed. */
+  async search(text: string, options: { limit?: number; excludeAllergens?: string[]; mealType?: (typeof MEALS)[number] } = {}): Promise<FoodView[]> {
+    const limit = Math.min(Math.max(options.limit ?? 6, 1), 20);
+    const clean = text.normalize('NFKC').replace(/ي/g, 'ی').replace(/ك/g, 'ک').trim().slice(0, 80);
+    if (!clean) return [];
+    const values: unknown[] = [];
+    const push = (value: unknown) => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+    const where = ['active'];
+    if (options.excludeAllergens?.length) where.push(`not (allergens && ${push(options.excludeAllergens)}::text[])`);
+    if (options.mealType) where.push(`${push(options.mealType)} = any(meal_types)`);
+    const prefix = prefixQuery(clean);
+    const like = push(`%${clean.replace(/[\\%_]/g, '\\$&')}%`);
+    const match = prefix
+      ? `(to_tsvector('simple', name_fa) @@ to_tsquery('simple', ${push(prefix)}) or name_fa ilike ${like})`
+      : `name_fa ilike ${like}`;
+    const exact = push(clean);
+    const { rows } = await this.pool.query<FoodRow>(
+      `select ${COLUMNS} from food_catalog where ${where.join(' and ')} and ${match}
+       order by (name_fa = ${exact}) desc, length(name_fa), slug limit ${limit}`,
+      values,
+    );
+    return rows.map(viewOf);
+  }
+
   // ------------------------------------------------------------------ admin
 
   async list(filter: { q?: string; category?: string; active?: string; cursor?: string; limit?: number }) {

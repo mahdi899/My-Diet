@@ -5,6 +5,7 @@ import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/data/share_text_native.dart';
+import 'package:sabzine_flutter/features/plan/plan_shopping_page.dart';
 import 'package:sabzine_flutter/presentation/screens/shopping.dart';
 import 'nutrition_test.dart' show LogMemory;
 
@@ -199,51 +200,27 @@ void main() {
       final s = ready();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      await t.tap(find.text('برنامه'));
+      await t.tap(find.byKey(const ValueKey('tab-plan')));
       await t.pumpAndSettle();
-      await t.tap(find.byTooltip('لیست خرید هفته'));
-      await t.pumpAndSettle();
-      expect(find.byType(ShoppingScreen), findsOneWidget);
-      for (var i = 0; i < 7; i++) {
-        if (i != 1) {
-          await t.tap(find.byKey(ValueKey('shopping-day-$i')));
-          await t.pumpAndSettle();
-        }
+      final list = find.byType(ListView).first;
+      for (var i = 0; i < 8 && find.text('لیست خرید').evaluate().isEmpty; i++) {
+        await t.drag(list, const Offset(0, -450));
+        await t.pump();
       }
-      final check = find.byType(Checkbox).first;
-      await t.ensureVisible(check);
       await t.pumpAndSettle();
-      await t.tap(check);
-      await t.pumpAndSettle();
-      expect(t.widget<Checkbox>(check).value, true);
-      expect(t.takeException(), isNull);
-      await t.drag(find.byType(SingleChildScrollView), const Offset(0, 1500));
-      await t.pumpAndSettle();
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('../../references/screenshots/phase4/shopping-demo.png'),
+      expect(find.text('لیست خرید'), findsOneWidget);
+      await Scrollable.ensureVisible(
+        t.element(find.text('لیست خرید')),
+        alignment: 0.15,
       );
-      String? copied;
-      t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (call) async {
-          if (call.method == 'Clipboard.setData') {
-            copied = (call.arguments as Map)['text'] as String;
-          }
-          return null;
-        },
-      );
-      addTearDown(
-        () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          null,
-        ),
-      );
-      await t.ensureVisible(find.text('کپی لیست'));
       await t.pumpAndSettle();
-      await t.tap(find.text('کپی لیست'));
+      await t.tap(find.text('لیست خرید'));
       await t.pumpAndSettle();
-      expect(copied, contains('لیست خرید رژیم من'));
+      expect(find.byType(PlanShoppingPage), findsOneWidget);
+      final row = s.shoppingList().rows.first;
+      await t.tap(find.text(row.ingredient.name).first);
+      await t.pumpAndSettle();
+      expect(s.shoppingMark(row)?.status, 'have');
       expect(t.takeException(), isNull);
     },
   );

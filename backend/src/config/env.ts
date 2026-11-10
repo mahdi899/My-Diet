@@ -56,6 +56,15 @@ export const envSchema = z.object({
   ),
   FIELD_KEY: z.string().min(16).default('dev-only-field-key-not-for-production'),
   AI_FAILOVER_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** AI nutrition coach limits. The model and endpoint (base URL / relay) are chosen per provider in the admin AI center. */
+  COACH_DAILY_TURNS: z.coerce.number().int().min(1).max(1000).default(60),
+  COACH_DAILY_PHOTOS: z.coerce.number().int().min(0).max(200).default(10),
+  COACH_RATE_PER_MINUTE: z.coerce.number().int().min(1).max(120).default(12),
+  COACH_MAX_MESSAGE_CHARS: z.coerce.number().int().min(100).max(8000).default(1500),
+  COACH_HISTORY_MESSAGES: z.coerce.number().int().min(2).max(60).default(14),
+  COACH_MAX_TOOL_ROUNDS: z.coerce.number().int().min(1).max(8).default(4),
+  COACH_PROACTIVE_ENABLED: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
+  COACH_PROACTIVE_DAILY_MAX: z.coerce.number().int().min(0).max(10).default(3),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1386,7 +1386,22 @@ class DemoStore extends ChangeNotifier {
 
   /// Doctor-side daily target from the nutrition profile. Meal sums are only the fallback.
   int? liveTargetKcal;
+
+  /// Latest `GET /v1/me/coach/today`, used so the ring matches the coach log.
+  String? coachDay;
+  int? coachConsumedKcal;
+  int? coachTargetKcal;
+  int? coachProtein;
+  int? coachCarbs;
+  int? coachFat;
+  int? coachWaterGlasses;
+
   int calorieTarget(DateTime date) {
+    if (coachDay == dateKey(date) &&
+        coachTargetKcal != null &&
+        coachTargetKcal! > 0) {
+      return coachTargetKcal!;
+    }
     final target = liveTargetKcal;
     if (target != null &&
         hasUserRequest &&
@@ -1397,11 +1412,104 @@ class DemoStore extends ChangeNotifier {
     return mealsOn(date).fold(0, (n, m) => n + m.calories);
   }
 
-  int consumedCalories(DateTime date) => _mealCalories.entries
-      .where(
-        (e) => e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
-      )
-      .fold(0, (n, e) => n + e.value);
+  int consumedCalories(DateTime date) {
+    if (coachDay == dateKey(date) && coachConsumedKcal != null) {
+      return coachConsumedKcal!;
+    }
+    return _mealCalories.entries
+        .where(
+          (e) =>
+              e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
+        )
+        .fold(0, (n, e) => n + e.value);
+  }
+
+  /// Copies a coach `today` payload into the ring, water and plan checkmarks.
+  bool applyCoachToday(Map<String, dynamic> today) {
+    final date = today['date'];
+    if (date is! String || date.isEmpty) return false;
+    coachDay = date;
+    final calories = today['calories'];
+    if (calories is Map) {
+      final consumed = calories['consumed'];
+      final target = calories['target'];
+      if (consumed is num) coachConsumedKcal = consumed.round();
+      if (target is num && target > 0) {
+        coachTargetKcal = target.round();
+        liveTargetKcal = target.round();
+      }
+    }
+    final macros = today['macros'];
+    if (macros is Map) {
+      coachProtein = _coachMacro(macros['proteinG']);
+      coachCarbs = _coachMacro(macros['carbsG']);
+      coachFat = _coachMacro(macros['fatG']);
+    }
+    final water = today['water'];
+    if (water is Map && water['ml'] is num) {
+      coachWaterGlasses = ((water['ml'] as num) / 250).round();
+    }
+    _mirrorCoachPlan(date, today['planMeals']);
+    final weight = today['weight'];
+    if (weight is Map && weight['latestKg'] is num) {
+      final kg = (weight['latestKg'] as num).toDouble();
+      final stamp = weight['latestDate'];
+      if (kg > 0 &&
+          (stamp == null || stamp == date) &&
+          (latestWeight - kg).abs() >= 0.05) {
+        addWeight(kg);
+        return true;
+      }
+    }
+    update();
+    return true;
+  }
+
+  int? _coachMacro(Object? value) {
+    if (value is Map && value['consumed'] is num) {
+      return (value['consumed'] as num).round();
+    }
+    return null;
+  }
+
+  void _mirrorCoachPlan(String date, Object? raw) {
+    if (raw is! List) return;
+    DateTime day;
+    try {
+      day = DateTime.parse(date);
+    } catch (_) {
+      return;
+    }
+    final prefix = '${dateKey(day)}|';
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final uid = item['mealUid']?.toString() ?? '';
+      final state = item['state']?.toString() ?? 'unrecorded';
+      if (uid.isEmpty || state == 'unrecorded' || state == 'skipped') continue;
+      String? slot;
+      for (final entry in serverMealUids.entries) {
+        if (entry.value == uid && entry.key.startsWith(prefix)) {
+          slot = entry.key;
+          break;
+        }
+      }
+      if (slot == null) continue;
+      final index = int.tryParse(slot.split('|').last);
+      if (index == null) continue;
+      final dayMeals = mealsOn(day);
+      if (index < 0 || index >= dayMeals.length) continue;
+      final planned = item['plannedKcal'];
+      final kcal = planned is num ? planned.round() : dayMeals[index].calories;
+      final key = mealLogKey(day, index);
+      _mealCalories[key] = kcal;
+      completedMeals.add(key);
+      _consumptionDetails[key] = {
+        'mode': state == 'different' ? 'different' : 'according',
+        'title': item['title'] ?? dayMeals[index].title,
+        'calories': kcal,
+      };
+    }
+  }
   bool mealEaten(DateTime date, int index) {
     final record = consumedMealOn(date, index);
     if (record != null) return record['mode'] != 'skipped';
@@ -2360,6 +2468,13 @@ class DemoStore extends ChangeNotifier {
     userRequestIds.clear();
     liveReady = false;
     liveTargetKcal = null;
+    coachDay = null;
+    coachConsumedKcal = null;
+    coachTargetKcal = null;
+    coachProtein = null;
+    coachCarbs = null;
+    coachFat = null;
+    coachWaterGlasses = null;
     serverMealUids.clear();
     reportEaten = null;
     liveServices = null;

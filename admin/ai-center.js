@@ -14,7 +14,8 @@ const SabzineAi = (() => {
   const kindNames = { openrouter: 'OpenRouter', openai_compatible: 'سازگار با OpenAI' };
   const strategyNames = { priority: 'به ترتیب اولویت', cost_first: 'ارزان‌ترین اول', weighted: 'وزنی (پخش بار)' };
   const reasonNames = { high_risk: 'پرونده پرخطر', kill_switch: 'کلید توقف اضطراری', cost_cap: 'سقف هزینهٔ روزانه', monthly_cap: 'سقف هزینهٔ ماهانه', user_quota: 'سهمیهٔ روزانهٔ کاربر', invalid_draft: 'خروجی مدل قابل‌استفاده نبود', budget_blocked: 'سقف هزینهٔ درخواست' };
-const poolTitles = { plan_draft: 'پیش‌نویس برنامهٔ غذایی', plan_critic: 'بازبینی فرهنگی و بالینی' };
+const poolTitles = { plan_draft: 'پیش‌نویس برنامهٔ غذایی', plan_critic: 'بازبینی فرهنگی و بالینی', nutrition_coach: 'مربی تغذیه (گفتگو)', nutrition_vision: 'مربی تغذیه (عکس غذا)', coach_memory: 'مربی تغذیه (حافظه)' };
+const promptTitles = { plan_draft: 'پرامپت پیش‌نویس برنامه', plan_critic: 'پرامپت بازبین', coach_system: 'پرامپت مربی تغذیه (گفتگو)', coach_vision: 'پرامپت تحلیل عکس غذا', coach_memory: 'پرامپت حافظهٔ مربی' };
   const outcomeNames = { ok: 'موفق', rate_limited: 'محدودیت نرخ', auth_failed: 'کلید/اعتبار', rejected: 'رد شد', timeout: 'مهلت تمام شد', invalid_json: 'JSON نامعتبر', invalid_plan: 'برنامهٔ نامعتبر', outcome_unknown: 'نامشخص', budget_blocked: 'سقف هزینه' };
 
   const row = (...nodes) => { const r = element('div', null, 'ai-row'); r.append(...nodes.filter(Boolean)); return r; };
@@ -260,11 +261,11 @@ const poolTitles = { plan_draft: 'پیش‌نویس برنامهٔ غذایی', 
   async function promptsTab() {
     const result = await api('admin/ai/prompts');
     const view = element('div', null, 'report-stack');
-    for (const key of ['plan_draft', 'plan_critic']) {
+    for (const key of Object.keys(promptTitles)) {
       const versions = result.items.filter(item => item.key === key);
       const active = versions.find(item => item.status === 'active');
       const card = element('section', null, 'card');
-      card.append(sectionHead(key === 'plan_draft' ? 'پرامپت پیش‌نویس برنامه' : 'پرامپت بازبین', 'فعال: نسخهٔ ' + (active ? number(active.version) : '—'), button('نسخهٔ جدید', () => promptModal(key, active), { iconName: 'plus' })));
+      card.append(sectionHead(promptTitles[key], 'فعال: نسخهٔ ' + (active ? number(active.version) : '—'), button('نسخهٔ جدید', () => promptModal(key, active), { iconName: 'plus' })));
       for (const version of versions) {
         const info = element('div'); info.append(element('strong', 'نسخهٔ ' + number(version.version)), element('small', `${formatDate(version.createdAt)}${version.notes ? ' · ' + version.notes : ''}`));
         const actions = element('div', null, 'cell-actions');

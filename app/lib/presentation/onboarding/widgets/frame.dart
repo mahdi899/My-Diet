@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
+import '../../widgets/kit/pill_button.dart';
 
 /// Circular progress that eases to its value, with the percent in the middle.
 class ProgressRing extends StatelessWidget {
@@ -27,7 +28,7 @@ class ProgressRing extends StatelessWidget {
             style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: pine,
+              color: AppColors.emeraldDeep,
             ),
           ),
         ],
@@ -47,13 +48,13 @@ class _RingPainter extends CustomPainter {
     final base = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
-      ..color = const Color(0xFFDDE7CF);
+      ..color = AppColors.mint;
     final arc = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round
       ..shader = const SweepGradient(
-        colors: [Color(0xFF7C9C58), pine],
+        colors: [AppColors.lime, AppColors.emerald],
         transform: GradientRotation(-math.pi / 2),
       ).createShader(rect);
     canvas.drawArc(deflated, 0, math.pi * 2, false, base);
@@ -90,103 +91,124 @@ class OnboardingFrame extends StatelessWidget {
   final Widget? secondary;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: 'قبلی',
-                  onPressed: onBack,
-                  icon: Icon(
-                    Icons.arrow_forward_rounded,
-                    color: onBack == null ? Colors.transparent : ink,
-                  ),
-                ),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: Motion.base,
-                    child: Text(
-                      groupTitle ?? '',
-                      key: ValueKey(groupTitle),
-                      style: const TextStyle(
-                        color: muted,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+  Widget build(BuildContext context) {
+    final inset = MediaQuery.viewInsetsOf(context).bottom;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final sign = (rtl ? -1.0 : 1.0) * (forward ? 1.0 : -1.0);
+    return DecoratedBox(
+      decoration: const BoxDecoration(gradient: AppGradients.warmBackground),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: true,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'قبلی',
+                      onPressed: onBack,
+                      icon: Icon(
+                        Icons.arrow_forward_rounded,
+                        color: onBack == null
+                            ? Colors.transparent
+                            : AppColors.ink,
                       ),
                     ),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: Motion.of(context, Motion.base),
+                        child: Text(
+                          groupTitle ?? '',
+                          key: ValueKey(groupTitle),
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    ProgressRing(value: progress),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0, 1),
+                    minHeight: 7,
+                    backgroundColor: AppColors.mint,
+                    color: AppColors.emerald,
                   ),
                 ),
-                ProgressRing(value: progress),
-              ],
-            ),
-          ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: Motion.page,
-              switchInCurve: Motion.curve,
-              switchOutCurve: Curves.easeIn,
-              transitionBuilder: (child, animation) {
-                final entering = child.key == ValueKey(stepKey);
-                final from = Offset(forward ? -0.12 : 0.12, 0);
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween(
-                      begin: entering ? from : -from,
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+              ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: Motion.of(context, Motion.page),
+                  switchInCurve: Motion.emphasized,
+                  switchOutCurve: Curves.easeIn,
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.topCenter,
+                    children: [...previous, ?current],
                   ),
-                );
-              },
-              child: KeyedSubtree(key: ValueKey(stepKey), child: child),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (syncHint != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      syncHint!,
-                      style: const TextStyle(color: amber, fontSize: 11),
-                    ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: busy ? null : onPrimary,
-                    child: AnimatedSwitcher(
-                      duration: Motion.quick,
-                      child: busy
-                          ? const SizedBox(
-                              key: ValueKey('busy'),
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(primaryLabel, key: ValueKey(primaryLabel)),
-                    ),
-                  ),
+                  transitionBuilder: (child, animation) {
+                    final entering = child.key == ValueKey(stepKey);
+                    final from = Offset(
+                      entering ? 0.12 * sign : -0.12 * sign,
+                      0,
+                    );
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween(
+                          begin: from,
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(key: ValueKey(stepKey), child: child),
                 ),
-                ?secondary,
-              ],
-            ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, 4, 20, 16 + inset),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (syncHint != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          syncHint!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.danger,
+                            fontSize: 12.5,
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                    PillButton(
+                      label: primaryLabel,
+                      onPressed: busy ? null : onPrimary,
+                      loading: busy,
+                    ),
+                    ?secondary,
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Headline + helper line used at the top of a question.

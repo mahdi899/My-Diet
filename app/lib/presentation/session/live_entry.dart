@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/demo_store.dart';
 import '../../core/theme/theme.dart';
 import '../../core/network/api_client.dart';
+import '../widgets/brand_mark.dart';
 import '../onboarding/consent_screen.dart';
 import '../onboarding/profile_result.dart';
 import '../onboarding/controller.dart';
@@ -89,15 +90,31 @@ class _LiveEntryState extends State<LiveEntry> {
   Widget build(BuildContext context) {
     return switch (stage) {
       _Stage.loading => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: AppColors.bg,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SabzineMark(size: 84),
+              SizedBox(height: 14),
+              Text(
+                'یک لحظه',
+                style: TextStyle(color: AppColors.muted, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
       ),
       _Stage.error => Scaffold(
+        backgroundColor: AppColors.bg,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(28),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const SabzineMark(size: 64),
+                const SizedBox(height: 16),
                 Text(error ?? '', textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton(

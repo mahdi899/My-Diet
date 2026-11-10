@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/presentation/screens/entry.dart';
+import 'package:sabzine_flutter/presentation/screens/first_login.dart';
 import 'package:sabzine_flutter/presentation/screens/expert.dart';
 import 'package:sabzine_flutter/presentation/screens/shared.dart';
 import 'package:sabzine_flutter/presentation/widgets/ui.dart';
@@ -20,14 +21,14 @@ void main() {
       await t.pumpAndSettle();
       expect(find.byType(ExpertHome), findsNothing);
       expect(find.text('ورود به عنوان متخصص'), findsNothing);
-      expect(
-        find.widgetWithText(NavigationDestination, 'خانه'),
-        findsOneWidget,
-      );
+      expect(find.text('ورود به عنوان مدیر'), findsNothing);
+      expect(find.byType(FirstLoginScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('shell-tab-bar')), findsNothing);
       store.showRoleSelection();
       await t.pumpAndSettle();
       expect(find.byType(EntryScreen), findsNothing);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(ExpertHome), findsNothing);
+      expect(find.byType(FirstLoginScreen), findsOneWidget);
       await t.pumpWidget(const SizedBox());
       store.dispose();
     },
@@ -41,15 +42,12 @@ void main() {
         SabzineApp(store: store, splashDuration: Duration.zero),
       );
       await t.pumpAndSettle();
-      await t.tap(find.byTooltip('پیام‌ها'));
-      await t.pumpAndSettle();
-      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(FirstLoginScreen), findsOneWidget);
+      expect(find.byType(PanelShell), findsNothing);
       expect(find.byType(MessagesScreen), findsNothing);
-      await t.tap(find.byTooltip('بازگشت به داشبورد'));
-      await t.pumpAndSettle();
-      await t.tap(find.byType(NavigationDestination).at(2));
-      await t.pumpAndSettle();
-      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(LoginScreen), findsNothing);
+      expect(find.text('صندوق پیام‌ها'), findsNothing);
+      expect(store.userSignedIn, false);
       await t.pumpWidget(const SizedBox());
       store.dispose();
     },

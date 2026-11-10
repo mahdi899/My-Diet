@@ -74,3 +74,6 @@ backend/.pgdata/
 /android/.gradle/
 /android/local.properties
 /android/**/GeneratedPluginRegistrant.java
+
+# Raw photo originals (kept out of the Flutter asset bundle)
+/app/_originals_photo/

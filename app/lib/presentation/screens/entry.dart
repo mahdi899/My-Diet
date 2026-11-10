@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../data/demo_store.dart';
 import '../../core/theme/theme.dart';
+import '../widgets/auth_canvas.dart';
+import '../widgets/kit/pill_button.dart';
 import '../widgets/ui.dart';
 
 /// Compatibility widget; the customer application no longer has role selection.
@@ -110,48 +112,58 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope<void>(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop && !busy) back();
-    },
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text('ورود ${widget.role.label}'),
-        leading: IconButton(
-          tooltip: widget.role == AppRole.user
-              ? 'بازگشت به داشبورد'
-              : 'بازگشت به آنبوردینگ',
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: busy ? null : back,
-        ),
-      ),
-      body: SafeArea(
-        child: PageBody(
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final server = store.serverAuthEnabled;
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && !busy) back();
+      },
+      child: AuthCanvas(
+        onBack: busy ? null : back,
+        backTooltip: widget.role == AppRole.user
+            ? 'بازگشت به داشبورد'
+            : 'بازگشت به آنبوردینگ',
+        title: codeStep ? 'کد ورود رو وارد کن' : 'شماره‌ات رو وارد کن',
+        subtitle: codeStep
+            ? (server
+                  ? 'کد ارسال‌شده به شماره‌ات را وارد کن.'
+                  : 'کد نمونه: ۱۲۳۴۵۶')
+            : 'شماره تلفن همراه خودت را وارد کن.',
+        footer: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 24),
-            const Icon(Icons.spa_outlined, size: 64, color: pine),
-            Text(
-              codeStep ? 'کد ورود رو وارد کن' : 'شماره‌ات رو وارد کن',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            Text(
-              codeStep
-                  ? (DemoScope.of(context).serverAuthEnabled
-                        ? 'کد ارسال‌شده به شماره‌ات را وارد کن.'
-                        : 'کد نمونه: ۱۲۳۴۵۶')
-                  : 'شماره تلفن همراه خودت را وارد کن.',
-              style: const TextStyle(color: muted),
-            ),
-            Form(
-              key: form,
-              child: TextFormField(
+            if (!server) ...[
+              PillButton(
+                label: 'ورود مستقیم با حساب نمایشی',
+                variant: PillVariant.outline,
+                icon: Icons.play_circle_outline,
+                onPressed: busy ? null : () => finish(demo: true),
+              ),
+              const SizedBox(height: 8),
+              const Notice(
+                'حالت نمایشی: پیامکی ارسال نمی‌شود و نشست فقط روی همین دستگاه ذخیره می‌شود.',
+              ),
+            ] else
+              const Notice(
+                'ورود به سرور متصل است. برنامه غذایی، کیف پول و پیام‌ها در این فاز همچنان پیش‌نمایش هستند.',
+              ),
+          ],
+        ),
+        child: Form(
+          key: form,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
                 key: ValueKey(codeStep),
                 controller: codeStep ? code : phone,
                 enabled: !busy,
                 keyboardType: TextInputType.phone,
                 textDirection: TextDirection.ltr,
                 textAlign: TextAlign.center,
+                scrollPadding: const EdgeInsets.only(bottom: 140),
                 decoration: InputDecoration(
                   labelText: codeStep ? 'کد تأیید' : 'شماره تلفن',
                   hintText: codeStep ? '123456' : '09120000000',
@@ -168,38 +180,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       : 'شمارهٔ ۱۱ رقمی با ۰۹ وارد کن.';
                 },
               ),
-            ),
-            if (error != null)
-              Semantics(
-                liveRegion: true,
-                child: Notice(error!, icon: Icons.error_outline),
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Semantics(
+                  liveRegion: true,
+                  child: Notice(error!, icon: Icons.error_outline),
+                ),
+              ],
+              const SizedBox(height: 16),
+              PillButton(
+                label: busy
+                    ? 'در حال بررسی…'
+                    : codeStep
+                    ? 'ورود'
+                    : server
+                    ? 'دریافت کد'
+                    : 'دریافت کد نمونه',
+                loading: busy,
+                onPressed: busy ? null : sendCode,
               ),
-            PrimaryButton(
-              busy
-                  ? 'در حال بررسی…'
-                  : codeStep
-                  ? 'ورود'
-                  : DemoScope.of(context).serverAuthEnabled
-                  ? 'دریافت کد'
-                  : 'دریافت کد نمونه',
-              onPressed: busy ? null : sendCode,
-            ),
-            if (!DemoScope.of(context).serverAuthEnabled) ...[
-              OutlinedButton.icon(
-                onPressed: busy ? null : () => finish(demo: true),
-                icon: const Icon(Icons.play_circle_outline),
-                label: const Text('ورود مستقیم با حساب نمایشی'),
-              ),
-              const Notice(
-                'حالت نمایشی: پیامکی ارسال نمی‌شود و نشست فقط روی همین دستگاه ذخیره می‌شود.',
-              ),
-            ] else
-              const Notice(
-                'ورود به سرور متصل است. برنامه غذایی، کیف پول و پیام‌ها در این فاز همچنان پیش‌نمایش هستند.',
-              ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

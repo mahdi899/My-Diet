@@ -3,6 +3,7 @@ import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
 import '../../../domain/onboarding/spec.dart';
+import 'decor_photo.dart';
 import 'frame.dart';
 
 IconData insightIcon(String name) => switch (name) {
@@ -99,83 +100,13 @@ class TrackPicker extends StatelessWidget {
             final selected = value == t.id;
             return Reveal(
               index: i,
-              child: AnimatedContainer(
-                duration: Motion.quick,
-                decoration: BoxDecoration(
-                  color: selected ? sage : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: selected ? pine : const Color(0xFFDDE5D4),
-                    width: selected ? 2 : 1,
-                  ),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () {
-                    Haptics.confirm();
-                    onChanged(t.id);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 26,
-                          backgroundColor: selected ? pine : sage,
-                          child: Icon(
-                            trackIcon(t.id),
-                            color: selected ? Colors.white : pine,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    t.title,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFF1D6),
-                                      borderRadius: BorderRadius.circular(99),
-                                    ),
-                                    child: Text(
-                                      t.badge,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: amber,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                t.description,
-                                style: const TextStyle(
-                                  color: muted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              child: _TrackCard(
+                track: t,
+                selected: selected,
+                onTap: () {
+                  Haptics.confirm();
+                  onChanged(t.id);
+                },
               ),
             );
           },
@@ -183,6 +114,98 @@ class TrackPicker extends StatelessWidget {
       ),
     ],
   );
+}
+
+class _TrackCard extends StatelessWidget {
+  const _TrackCard({
+    required this.track,
+    required this.selected,
+    required this.onTap,
+  });
+  final SpecTrack track;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: track.title,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: reduce ? Duration.zero : Motion.quick,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.mint : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: selected ? AppColors.emerald : AppColors.line,
+              width: selected ? 1.8 : 1,
+            ),
+            boxShadow: selected ? AppShadows.soft : const <BoxShadow>[],
+          ),
+          child: Row(
+            children: [
+              DecorPhoto(
+                label: track.title,
+                id: track.id,
+                lifestyle: true,
+                icon: trackIcon(track.id),
+                width: 64,
+                height: 64,
+                radius: 18,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            track.title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF1D6),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            track.badge,
+                            style: const TextStyle(fontSize: 10, color: amber),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      track.description,
+                      style: const TextStyle(color: muted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Free text (name, dislikes).
@@ -221,6 +244,7 @@ class _TextStepFieldState extends State<TextStepField> {
       maxLength: 120,
       maxLines: widget.question.key == 'dislikes' ? 3 : 1,
       textInputAction: TextInputAction.done,
+      scrollPadding: const EdgeInsets.only(bottom: 140),
       onChanged: widget.onChanged,
       decoration: InputDecoration(hintText: widget.question.placeholder),
     ),
@@ -310,6 +334,14 @@ class _DishChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            DecorPhoto(
+              label: label,
+              width: 28,
+              height: 28,
+              radius: 14,
+              icon: Icons.restaurant_rounded,
+            ),
+            const SizedBox(width: 8),
             AnimatedSize(
               duration: Motion.quick,
               child: selected

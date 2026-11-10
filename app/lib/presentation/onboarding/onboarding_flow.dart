@@ -5,8 +5,10 @@ import '../../domain/onboarding/spec.dart';
 import 'widgets/choices.dart';
 import 'widgets/frame.dart';
 import 'widgets/number_inputs.dart';
+import 'widgets/plan_theater.dart';
 import 'widgets/sleep_dial.dart';
 import 'widgets/steps.dart';
+import '../../core/theme/tokens.dart';
 
 /// The spec-driven questionnaire. It renders whatever the server's spec says, so adding or
 /// reordering a question never needs an app release.
@@ -68,7 +70,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     final step = c.current;
-    return PopScope<void>(
+    final flow = PopScope<void>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
@@ -91,6 +93,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         syncHint: c.submitError ?? c.syncError,
         child: _content(step),
       ),
+    );
+    if (!c.submitting) return flow;
+    // Theater is only a cover while submit() runs. It does not delay the
+    // call, and it leaves as soon as submitting flips back (including errors).
+    return Stack(
+      children: [
+        flow,
+        const Positioned.fill(
+          child: ColoredBox(color: AppColors.bg, child: PlanBuildTheater()),
+        ),
+      ],
     );
   }
 
@@ -121,7 +134,8 @@ class _QuestionView extends StatelessWidget {
 
   /// Same wording as the website. Age stays a wheel; these two titles depend on the path.
   String get _title {
-    if (question.key == 'target_weight_kg' && controller.track == 'weight_gain') {
+    if (question.key == 'target_weight_kg' &&
+        controller.track == 'weight_gain') {
       return 'دوست داری وزنت به چند کیلوگرم برسه؟';
     }
     if (question.key == 'pre_pregnancy_weight_kg' &&
@@ -233,7 +247,14 @@ class _QuestionView extends StatelessWidget {
         Expanded(
           child: scrolls
               ? body
-              : Center(child: SingleChildScrollView(child: body)),
+              : Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
+                    ),
+                    child: body,
+                  ),
+                ),
         ),
       ],
     );
@@ -277,4 +298,3 @@ class _DefaultedState extends State<_Defaulted> {
   Widget build(BuildContext context) =>
       widget.builder(widget.value ?? widget.fallback);
 }
-

@@ -19,7 +19,11 @@ Future<void> startWallet(WidgetTester t, DemoStore s) async {
   s.login(AppRole.user);
   await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
   await t.pumpAndSettle();
-  await tapWallet(t, find.byKey(const ValueKey('get-food-plan')));
+  await t.tap(find.byKey(const ValueKey('tab-coach')));
+  await t.pumpAndSettle();
+  await t.tap(find.byKey(const ValueKey('coach-avatar')));
+  await t.pumpAndSettle();
+  await tapWallet(t, find.text('کیف پول و تعرفه‌ها'));
 }
 
 PrimaryButton primary(WidgetTester t, String label) =>

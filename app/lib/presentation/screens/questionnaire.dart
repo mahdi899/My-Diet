@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../data/demo_store.dart';
+import '../../core/motion/motion_kit.dart';
 import '../../core/theme/theme.dart';
+import '../onboarding/widgets/decor_photo.dart';
+import '../onboarding/widgets/plan_theater.dart';
+import '../widgets/kit/pill_button.dart';
 import '../widgets/ui.dart';
 import '../widgets/extra_questions.dart';
 
@@ -120,6 +124,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
+      scrollPadding: const EdgeInsets.only(bottom: 140),
       validator: (v) {
         if (optional && (v ?? '').trim().isEmpty) return null;
         if ((v ?? '').trim().isEmpty) return 'این قسمت رو تکمیل کن.';
@@ -155,13 +160,20 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
             style: const TextStyle(color: muted, fontSize: 12),
           ),
         const SizedBox(height: 10),
-        for (final c in choices)
-          ChoiceCard(
-            config.choice(id, c.$1),
-            subtitle: c.$2,
-            icon: c.$3,
-            selected: selected == c.$1,
-            onTap: () => setState(() => choose(c.$1)),
+        for (var i = 0; i < choices.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Reveal(
+              index: i,
+              child: PhotoOptionCard(
+                label: config.choice(id, choices[i].$1),
+                subtitle: choices[i].$2,
+                photoKey: choices[i].$1,
+                icon: choices[i].$3,
+                selected: selected == choices[i].$1,
+                onTap: () => setState(() => choose(choices[i].$1)),
+              ),
+            ),
           ),
       ],
     );
@@ -411,94 +423,99 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
           ], (v) => q.previousDiet = v),
         ],
       ),
-      2 => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            store.formConfiguration.label('health'),
-            style: TextStyle(fontSize: 12, color: muted, height: 1.9),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final item in [
-                'موردی ندارم',
-                'دیابت',
-                'فشار خون',
-                'اختلال تیروئید',
-                'بیماری کلیه',
-                'بیماری کبد',
-                'مشکل گوارشی',
-                'سابقهٔ اختلال خوردن',
-                'حساسیت غذایی دارم',
-                'دارو مصرف می‌کنم',
-                'شرایط دیگر',
-                if (q.pregnant) 'دیابت بارداری تشخیص‌داده‌شده',
-                if (q.pregnant) 'بارداری پرخطر با نظر پزشک',
-              ])
-                FilterChip(
-                  label: Text(
-                    store.formConfiguration.choice('health', item),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  selected: q.health.contains(item),
-                  onSelected: (v) => setState(() {
-                    if (item == 'موردی ندارم') {
-                      q.health
-                        ..clear()
-                        ..add(item);
-                      q.healthDetails = '';
-                      q.medicines = '';
-                      q.allergies = '';
-                    } else {
-                      q.health.remove('موردی ندارم');
-                      if (v) {
-                        q.health.add(item);
-                      } else {
-                        q.health.remove(item);
-                      }
-                      if (!q.health.contains('حساسیت غذایی دارم')) {
-                        q.allergies = '';
-                      }
-                      if (!q.health.contains('دارو مصرف می‌کنم')) {
-                        q.medicines = '';
-                      }
-                      if (q.health.isEmpty) {
-                        q.health.add('موردی ندارم');
+      2 => () {
+        final items = [
+          'موردی ندارم',
+          'دیابت',
+          'فشار خون',
+          'اختلال تیروئید',
+          'بیماری کلیه',
+          'بیماری کبد',
+          'مشکل گوارشی',
+          'سابقهٔ اختلال خوردن',
+          'حساسیت غذایی دارم',
+          'دارو مصرف می‌کنم',
+          'شرایط دیگر',
+          if (q.pregnant) 'دیابت بارداری تشخیص‌داده‌شده',
+          if (q.pregnant) 'بارداری پرخطر با نظر پزشک',
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              store.formConfiguration.label('health'),
+              style: const TextStyle(fontSize: 12, color: muted, height: 1.9),
+            ),
+            const SizedBox(height: 12),
+            for (var i = 0; i < items.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Reveal(
+                  index: i,
+                  child: PhotoOptionCard(
+                    label: store.formConfiguration.choice('health', items[i]),
+                    photoKey: items[i],
+                    compact: true,
+                    multi: true,
+                    selected: q.health.contains(items[i]),
+                    onTap: () => setState(() {
+                      final item = items[i];
+                      final v = !q.health.contains(item);
+                      if (item == 'موردی ندارم') {
+                        q.health
+                          ..clear()
+                          ..add(item);
                         q.healthDetails = '';
+                        q.medicines = '';
+                        q.allergies = '';
+                      } else {
+                        q.health.remove('موردی ندارم');
+                        if (v) {
+                          q.health.add(item);
+                        } else {
+                          q.health.remove(item);
+                        }
+                        if (!q.health.contains('حساسیت غذایی دارم')) {
+                          q.allergies = '';
+                        }
+                        if (!q.health.contains('دارو مصرف می‌کنم')) {
+                          q.medicines = '';
+                        }
+                        if (q.health.isEmpty) {
+                          q.health.add('موردی ندارم');
+                          q.healthDetails = '';
+                        }
                       }
-                    }
-                  }),
+                    }),
+                  ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          if (q.health.isNotEmpty && !q.health.contains('موردی ندارم'))
-            field(
-              'توضیح شرایط و محدودیت‌های پزشک',
-              q.healthDetails,
-              (v) => q.healthDetails = v,
+              ),
+            const SizedBox(height: 12),
+            if (q.health.isNotEmpty && !q.health.contains('موردی ندارم'))
+              field(
+                'توضیح شرایط و محدودیت‌های پزشک',
+                q.healthDetails,
+                (v) => q.healthDetails = v,
+              ),
+            if (q.health.contains('حساسیت غذایی دارم'))
+              field(
+                'نام مادهٔ حساسیت‌زا و نوع واکنش',
+                q.allergies,
+                (v) => q.allergies = v,
+              ),
+            if (q.health.contains('دارو مصرف می‌کنم'))
+              field(
+                'نام داروها و مکمل‌ها و مقدار مصرف',
+                q.medicines,
+                (v) => q.medicines = v,
+              ),
+            const Notice(
+              'این اطلاعات در پرونده برای بررسی متخصص نمایش داده می‌شوند. فرم، تشخیص پزشکی انجام نمی‌دهد.',
+              icon: Icons.medical_information_outlined,
             ),
-          if (q.health.contains('حساسیت غذایی دارم'))
-            field(
-              'نام مادهٔ حساسیت‌زا و نوع واکنش',
-              q.allergies,
-              (v) => q.allergies = v,
-            ),
-          if (q.health.contains('دارو مصرف می‌کنم'))
-            field(
-              'نام داروها و مکمل‌ها و مقدار مصرف',
-              q.medicines,
-              (v) => q.medicines = v,
-            ),
-          const Notice(
-            'این اطلاعات در پرونده برای بررسی متخصص نمایش داده می‌شوند. فرم، تشخیص پزشکی انجام نمی‌دهد.',
-            icon: Icons.medical_information_outlined,
-          ),
-        ],
-      ),
+          ],
+        );
+      }(),
       3 => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -610,13 +627,25 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         ],
       ),
     };
+    final actionLabel = saving
+        ? 'در حال ذخیره…'
+        : step == 5
+        ? (widget.onboarding
+              ? 'ثبت اطلاعات و ادامه'
+              : widget.editing
+              ? 'ذخیرهٔ تغییرات'
+              : 'ثبت اطلاعات')
+        : 'ادامه';
     return PopScope<void>(
       canPop: !saving && !widget.onboarding && step == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) back();
       },
       child: Scaffold(
+        backgroundColor: AppColors.bg,
+        resizeToAvoidBottomInset: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
           title: Text(widget.editing ? 'اطلاعات فردی' : 'کمی از خودت بگو'),
           leading: IconButton(
             tooltip: 'بازگشت',
@@ -626,27 +655,22 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         ),
         bottomNavigationBar: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
             child: Row(
               children: [
                 if (step > 0) ...[
-                  OutlinedButton(
+                  PillButton(
+                    label: 'قبلی',
+                    variant: PillVariant.outline,
+                    expanded: false,
                     onPressed: saving ? null : () => moveTo(step - 1),
-                    child: const Text('قبلی'),
                   ),
                   const SizedBox(width: 12),
                 ],
                 Expanded(
-                  child: PrimaryButton(
-                    saving
-                        ? 'در حال ذخیره…'
-                        : step == 5
-                        ? (widget.onboarding
-                              ? 'ثبت اطلاعات و ادامه'
-                              : widget.editing
-                              ? 'ذخیرهٔ تغییرات'
-                              : 'ثبت اطلاعات')
-                        : 'ادامه',
+                  child: PillButton(
+                    label: actionLabel,
+                    loading: saving,
                     onPressed: saving ? null : () => next(store),
                   ),
                 ),
@@ -654,51 +678,62 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
             ),
           ),
         ),
-        body: PageBody(
-          controller: scroll,
+        body: Stack(
           children: [
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
+            PageBody(
+              controller: scroll,
               children: [
                 Text(
                   'مرحلهٔ ${fa(step + 1)} از ۶',
                   style: const TextStyle(color: muted, fontSize: 12),
                 ),
-                Tag(widget.editing ? 'اصلاح اطلاعات قبلی' : 'مسیر مخصوص تو'),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: (step + 1) / 6,
+                    minHeight: 8,
+                    backgroundColor: AppColors.mint,
+                    color: AppColors.emerald,
+                  ),
+                ),
+                Form(
+                  key: form,
+                  child: SharedAxisSwitcher(
+                    index: step,
+                    child: KeyedSubtree(
+                      key: ValueKey(step),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Heading(
+                            store.formConfiguration.sections[step],
+                            subtitle: widget.editing
+                                ? 'جواب‌های قبلی آمادهٔ ویرایش هستند.'
+                                : 'یک گزینه را انتخاب کن.',
+                          ),
+                          content,
+                          if (step < 5)
+                            for (final question
+                                in store.formConfiguration.extraQuestions(step))
+                              ExtraQuestionField(
+                                key: ValueKey(question.id),
+                                question: question,
+                                answers: q.extraAnswers,
+                              ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: (step + 1) / 6,
-                minHeight: 6,
-                backgroundColor: sage,
+            if (saving)
+              const Positioned.fill(
+                child: ColoredBox(
+                  color: AppColors.bg,
+                  child: PlanBuildTheater(),
+                ),
               ),
-            ),
-            Heading(
-              store.formConfiguration.sections[step],
-              subtitle: widget.editing
-                  ? 'جواب‌های قبلی آمادهٔ ویرایش هستند.'
-                  : 'تا جای ممکن فقط گزینهٔ مناسب خودت رو انتخاب کن.',
-            ),
-            Form(
-              key: form,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  content,
-                  if (step < 5)
-                    for (final question
-                        in store.formConfiguration.extraQuestions(step))
-                      ExtraQuestionField(
-                        key: ValueKey(question.id),
-                        question: question,
-                        answers: q.extraAnswers,
-                      ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

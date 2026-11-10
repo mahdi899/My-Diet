@@ -4,8 +4,8 @@ import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/presentation/screens/pricing_admin.dart';
-import 'package:sabzine_flutter/presentation/widgets/weekly_progress.dart';
 import 'package:sabzine_flutter/presentation/screens/shared.dart';
+import 'package:sabzine_flutter/presentation/widgets/kit/pill_button.dart';
 import 'widget_test.dart' show mobile;
 import 'panels_test.dart' show SettingsMemory;
 
@@ -129,36 +129,30 @@ void main() {
     s.approveActiveUserRequest();
     await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
     await t.pumpAndSettle();
-    await t.tap(find.text('برنامه'));
+    await t.tap(find.byKey(const ValueKey('tab-plan')));
     await t.pumpAndSettle();
-    final card = find.byType(WeeklyStreakCard);
-    await t.ensureVisible(card);
-    await t.pumpAndSettle();
-    for (final day in persianWeekDays) {
-      expect(
-        find.descendant(of: card, matching: find.text(day)),
-        findsOneWidget,
-      );
-    }
+    final strip = t.widget<ListView>(
+      find.byKey(const ValueKey('plan-day-strip')),
+    );
+    expect(
+      (strip.childrenDelegate as SliverChildBuilderDelegate).estimatedChildCount,
+      13,
+    );
+    expect(find.text(persianWeekDays[weekDayIndex(s.today)]), findsWidgets);
+    expect(find.byKey(const ValueKey('streak-chip')), findsOneWidget);
     expect(find.text('استریک این هفته'), findsNothing);
     expect(find.textContaining('هفتهٔ متوالی'), findsNothing);
     expect(find.textContaining('روز برنامه تکمیل شده'), findsNothing);
     expect(find.text('هدف روزانه'), findsNothing);
     expect(find.text('با تیک «خوردم»'), findsNothing);
-    final todayProgress = find.byKey(
-      ValueKey('day-progress-${dateKey(s.today)}'),
-    );
-    expect(t.widget<DayMealProgress>(todayProgress).progress, 0);
-    await s.setMealEaten(s.today, 0, true);
-    await s.setMealEaten(s.today, 1, true);
+    expect(s.eatenCount(s.today), 0);
+    final done = find.widgetWithText(PillButton, 'انجام شد');
+    await t.ensureVisible(done.first);
     await t.pumpAndSettle();
-    expect(t.widget<DayMealProgress>(todayProgress).progress, .5);
-    await s.setMealEaten(s.today, 2, true);
+    await t.tap(done.first);
     await t.pumpAndSettle();
-    expect(t.widget<DayMealProgress>(todayProgress).progress, .75);
-    await s.setMealEaten(s.today, 3, true);
-    await t.pumpAndSettle();
-    expect(t.widget<DayMealProgress>(todayProgress).progress, 1);
+    expect(s.mealEaten(s.today, 0), isTrue);
+    expect(find.widgetWithText(PillButton, 'ثبت شد'), findsWidgets);
 
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox());
@@ -171,25 +165,20 @@ void main() {
       final s = DemoStore()..loginDemoUser();
       await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
       await t.pumpAndSettle();
-      await t.tap(find.byTooltip('پیام‌ها'));
+      await t.tap(find.byKey(const ValueKey('tab-coach')));
       await t.pumpAndSettle();
-      expect(find.byType(MessagesScreen), findsOneWidget);
-      expect(find.byType(ChatScreen), findsNothing);
-      Navigator.of(t.element(find.byType(MessagesScreen))).pop();
-      await t.pumpAndSettle();
-      final contact = find.byTooltip('پیام به متخصص');
-      await Scrollable.ensureVisible(t.element(contact), alignment: .5);
-      await t.pumpAndSettle();
-      await t.tap(contact);
-      await t.pumpAndSettle();
-      expect(find.byType(ChatScreen), findsOneWidget);
-      Navigator.of(t.element(find.byType(ChatScreen))).pop();
-      await t.pumpAndSettle();
-      await t.tap(find.byType(NavigationDestination).at(3));
+      await t.tap(find.byKey(const ValueKey('coach-avatar')));
       await t.pumpAndSettle();
       expect(find.text('اطلاعات فردی'), findsOneWidget);
       expect(find.text('ویرایش پرسش‌نامه'), findsNothing);
       expect(find.text('درباره برنامه'), findsOneWidget);
+      final messages = find.text('گفت‌وگو با متخصص انسانی');
+      await t.ensureVisible(messages);
+      await t.pumpAndSettle();
+      await t.tap(messages);
+      await t.pumpAndSettle();
+      expect(find.byType(MessagesScreen), findsOneWidget);
+      expect(find.byType(ChatScreen), findsNothing);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
       s.dispose();
@@ -204,19 +193,17 @@ void main() {
     s.approveActiveUserRequest();
     await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
     await t.pumpAndSettle();
-    await t.tap(find.byType(NavigationDestination).at(2));
-    await t.pumpAndSettle();
-    expect(find.text('درصد تکمیل برنامهٔ روزانه'), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-tab-bar')), findsOneWidget);
     expect(find.text('حال امروزت چطوره؟'), findsNothing);
     expect(find.text('برنامه چطور پیش رفت؟'), findsNothing);
-    final weight = find.text('تغییر وزن');
+    final weight = find.text('ثبت وزن');
     await t.ensureVisible(weight);
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
     await t.tap(weight);
     await t.pumpAndSettle();
-    await t.enterText(find.byType(TextFormField), '۷۰.۵');
-    await t.tap(find.widgetWithText(FilledButton, 'ثبت'));
+    await t.enterText(find.byType(TextField), '۷۰.۵');
+    await t.tap(find.widgetWithText(PillButton, 'ثبت'));
     await t.pumpAndSettle();
     expect(s.latestWeight, 70.5);
     expect(t.takeException(), isNull);

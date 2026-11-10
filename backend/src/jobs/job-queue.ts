@@ -14,4 +14,6 @@ export interface JobQueue {
     name: string,
     handler: (jobs: ReadonlyArray<{ data: object }>) => Promise<void>,
   ): Promise<string>;
+  /** Recurring cron. `tz` is an IANA zone; omitted means the database zone. */
+  schedule(name: string, cron: string, data?: object, options?: { tz?: string }): Promise<void>;
 }
