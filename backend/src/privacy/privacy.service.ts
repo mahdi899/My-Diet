@@ -96,6 +96,7 @@ export class PrivacyService {
       );
       await client.query(`update program_reviews set body = '' where user_id = $1`, [userId]);
       await client.query(`delete from weight_entries where user_id = $1`, [userId]);
+      await client.query('delete from user_personal_details where user_id = $1', [userId]);
       await client.query(
         `update users
          set status = 'deleted', display_name = null, phone_e164 = $2, deleted_at = now()

@@ -447,6 +447,25 @@ export class IdentityService {
     return outcome.session;
   }
 
+  async personalDetails(userId: string) {
+    const { rows } = await this.pool.query<{ details_encrypted: string }>(
+      'select details_encrypted from user_personal_details where user_id = $1', [userId],
+    );
+    return { details: rows[0] ? JSON.parse(decryptText(rows[0].details_encrypted, this.env.FIELD_KEY)) : null };
+  }
+
+  async savePersonalDetails(userId: string, details: { name: string; age: number; height: number; weight: number; contactPhone: string; photo: string | null }) {
+    const encrypted = encryptText(JSON.stringify(details), this.env.FIELD_KEY);
+    await withTransaction(this.pool, async (client) => {
+      await client.query('update users set display_name = $2 where id = $1', [userId, details.name]);
+      await client.query(
+        'insert into user_personal_details(user_id, details_encrypted) values ($1, $2) on conflict (user_id) do update set details_encrypted = excluded.details_encrypted',
+        [userId, encrypted],
+      );
+    });
+    return { details };
+  }
+
   async profile(userId: string, role: Role) {
     const rows = await this.pool.query<{ display_name: string | null }>(
       `select display_name from users where id = $1`,

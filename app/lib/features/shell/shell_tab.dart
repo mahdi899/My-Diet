@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Which shell tab is showing. خانه is 1, برنامه is 2.
-/// The coach is a route, not a tab index.
+/// مربی is 0 and appears between خانه and برنامه.
 class ShellTab extends ChangeNotifier {
   int index = 1;
 
