@@ -7,13 +7,13 @@ import '../../../data/demo_store.dart';
 import '../../../data/wallet_catalog.dart';
 import '../../../presentation/screens/doctor.dart';
 import '../../../presentation/screens/messaging.dart';
-import '../../../presentation/screens/questionnaire.dart';
 import '../../../presentation/screens/shared.dart';
 import '../../../presentation/screens/wallet_flow.dart';
 import '../../../presentation/screens/weekly_feedback.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../../../presentation/widgets/ui.dart';
 import '../../plan/goal_math.dart';
+import 'personal_details.dart';
 
 void showCoachProfileSheet(BuildContext context) {
   unawaited(
@@ -32,44 +32,41 @@ class CoachProfileSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    final height = MediaQuery.sizeOf(context).height;
-    return SizedBox(
-      height: height,
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.86,
-        minChildSize: 0.45,
-        maxChildSize: 0.94,
-        builder: (context, scroll) {
-          return DecoratedBox(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.sheet,
-              boxShadow: AppShadows.lifted,
-            ),
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.line,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.86,
+      minChildSize: 0.45,
+      maxChildSize: 0.94,
+      builder: (context, scroll) {
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadius.sheet,
+            boxShadow: AppShadows.lifted,
+          ),
+          child: ListView(
+            controller: scroll,
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(99),
                   ),
                 ),
-                const SizedBox(height: 16),
-                if (!store.userSignedIn)
-                  const _GuestBlock()
-                else
-                  _SignedIn(store: store),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+              const SizedBox(height: 16),
+              if (!store.userSignedIn)
+                const _GuestBlock()
+              else
+                _SignedIn(store: store),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -143,8 +140,12 @@ class _SignedIn extends StatelessWidget {
               MenuRow(
                 'اطلاعات فردی',
                 Icons.person_outline,
-                onTap: () =>
-                    _open(context, const QuestionnaireScreen(editing: true)),
+                onTap: () => _open(context, PersonalDetails(store: store)),
+              ),
+              MenuRow(
+                'تغییر هدف',
+                Icons.flag_outlined,
+                onTap: () => _open(context, ChangeGoal(store: store)),
               ),
               MenuRow(
                 'کیف پول و تعرفه‌ها',

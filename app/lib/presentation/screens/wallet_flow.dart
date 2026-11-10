@@ -147,6 +147,51 @@ class WalletDebugPanel extends StatefulWidget {
 class _WalletDebugPanelState extends State<WalletDebugPanel> {
   final controller = TextEditingController(), form = GlobalKey<FormState>();
   bool initialized = false;
+  bool toppingUp = false;
+
+  Future<void> sandboxTopup(DemoStore store) async {
+    setState(() => toppingUp = true);
+    try {
+      final commerce = ensureLiveServices(store).commerce;
+      if (!(await commerce.gateways()).contains('sandbox')) {
+        throw const ApiException(
+          'شارژ تستی فقط به سرور توسعه با درگاه آزمایشی متصل است.',
+        );
+      }
+      final packages = (await commerce.catalog()).topups;
+      if (packages.isEmpty)
+        throw const ApiException('بستهٔ شارژ آزمایشی موجود نیست.');
+      final package = packages.reduce(
+        (a, b) => a.amountToman >= b.amountToman ? a : b,
+      );
+      final payment = await commerce.startTopup(
+        package.code,
+        gateway: 'sandbox',
+      );
+      if (payment.gateway != 'sandbox')
+        throw const ApiException('درگاه آزمایشی در دسترس نیست.');
+      store.walletBalance = (await commerce.completeSandbox(
+        payment.paymentId,
+      )).total;
+      store.update();
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('موجودی آزمایشی اضافه شد.')),
+        );
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is ApiException ? error.message : 'شارژ آزمایشی انجام نشد.',
+            ),
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => toppingUp = false);
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -179,69 +224,85 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
           style: TextStyle(fontSize: 10, color: muted),
         ),
         leading: const Icon(Icons.tune, size: 21, color: amber),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Form(
-              key: form,
-              child: Column(
-                children: [
-                  TextFormField(
-                    key: const ValueKey('wallet-debug-balance'),
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'موجودی دلخواه / تومان',
+        children: s.serverAuthEnabled
+            ? [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: OutlinedButton(
+                    onPressed: toppingUp ? null : () => sandboxTopup(s),
+                    child: Text(
+                      toppingUp
+                          ? 'در حال افزایش موجودی…'
+                          : 'افزایش موجودی تستی',
                     ),
-                    validator: (v) {
-                      final n = int.tryParse(
-                        latinDigits(v ?? '').replaceAll(',', '').trim(),
-                      );
-                      return n == null || n < 0
-                          ? 'یک عدد صحیح صفر یا بیشتر وارد کن.'
-                          : null;
-                    },
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            if (form.currentState!.validate()) {
-                              s.setDebugWalletBalance(
-                                int.parse(
-                                  latinDigits(
-                                    controller.text,
-                                  ).replaceAll(',', '').trim(),
-                                ),
-                              );
-                              FocusScope.of(context).unfocus();
-                            }
-                          },
-                          child: const Text('اعمال موجودی'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            s.resetWalletDebug();
-                            form.currentState!.reset();
-                            controller.text = formatMoneyNumber(
-                              kInitialWalletBalance,
+                ),
+              ]
+            : [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Form(
+                    key: form,
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          key: const ValueKey('wallet-debug-balance'),
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'موجودی دلخواه / تومان',
+                          ),
+                          validator: (v) {
+                            final n = int.tryParse(
+                              latinDigits(
+                                v ?? '',
+                              ).replaceAll(RegExp('[,٬]'), '').trim(),
                             );
+                            return n == null || n < 0
+                                ? 'یک عدد صحیح صفر یا بیشتر وارد کن.'
+                                : null;
                           },
-                          child: const Text('ریست پیش‌فرض'),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  if (form.currentState!.validate()) {
+                                    s.setDebugWalletBalance(
+                                      int.parse(
+                                        latinDigits(
+                                          controller.text,
+                                        ).replaceAll(RegExp('[,٬]'), '').trim(),
+                                      ),
+                                    );
+                                    FocusScope.of(context).unfocus();
+                                  }
+                                },
+                                child: const Text('اعمال موجودی'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  s.resetWalletDebug();
+                                  form.currentState!.reset();
+                                  controller.text = formatMoneyNumber(
+                                    kInitialWalletBalance,
+                                  );
+                                },
+                                child: const Text('ریست پیش‌فرض'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                ),
+              ],
       ),
     );
   }
@@ -296,7 +357,9 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
         if (mounted) setState(() => processing = false);
       }
     }
-    final includedChange = s.serverAuthEnabled && (offer.id == 'ai-change' || offer.id == 'expert-change');
+    final includedChange =
+        s.serverAuthEnabled &&
+        (offer.id == 'ai-change' || offer.id == 'expert-change');
     if (!includedChange && !s.canAfford(offer.priceToman)) {
       charge();
       return;
