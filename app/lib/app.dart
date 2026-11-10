@@ -8,7 +8,8 @@ import 'presentation/screens/first_login.dart';
 import 'presentation/screens/splash.dart';
 import 'presentation/screens/onboarding.dart';
 import 'core/theme/theme.dart';
-import 'features/coach/coach_launcher.dart';
+import 'features/coach/application/coach_controller.dart';
+import 'features/coach/presentation/coach_page.dart';
 import 'features/home/home_tab.dart';
 import 'features/plan/plan_tab.dart';
 import 'features/shell/shell_bar.dart';
@@ -242,10 +243,14 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _openCoach() async {
-    await openCoach(context);
-    if (!mounted) return;
-    _show(1);
+  static const _tabOrder = [1, 0, 2];
+
+  void _swipe(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity == 0) return;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final next = _tabOrder.indexOf(_index) + ((velocity > 0) == rtl ? 1 : -1);
+    if (next >= 0 && next < _tabOrder.length) _show(_tabOrder[next]);
   }
 
   @override
@@ -279,52 +284,64 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     final selected = _index;
-    final page = selected == 2
-        ? const PlanTab()
-        : HomeTab(onOpenPlan: () => _show(2));
+    final page = switch (selected) {
+      0 => Padding(
+        padding: const EdgeInsets.only(bottom: 86),
+        child: CoachPage(
+          repository: createCoachRepository(store),
+          onClose: () => _show(1),
+        ),
+      ),
+      2 => const PlanTab(),
+      _ => HomeTab(onOpenPlan: () => _show(2)),
+    };
     final gated = !store.userSignedIn && selected == 2
         ? const CustomerSignInPrompt()
         : WeeklyRewardGate(child: page);
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                if (store.sessionError != null)
-                  MaterialBanner(
-                    content: Text(store.sessionError!),
-                    actions: [
-                      TextButton(
-                        onPressed: store.refreshServerSession,
-                        child: const Text('تلاش دوباره'),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragEnd: _swipe,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  if (store.sessionError != null)
+                    MaterialBanner(
+                      content: Text(store.sessionError!),
+                      actions: [
+                        TextButton(
+                          onPressed: store.refreshServerSession,
+                          child: const Text('تلاش دوباره'),
+                        ),
+                      ],
+                    ),
+                  Expanded(
+                    child: SharedAxisSwitcher(
+                      index: _tabOrder.indexOf(selected),
+                      child: KeyedSubtree(
+                        key: ValueKey('shell-page-$selected'),
+                        child: gated,
                       ),
-                    ],
-                  ),
-                Expanded(
-                  child: SharedAxisSwitcher(
-                    index: selected,
-                    child: KeyedSubtree(
-                      key: ValueKey('shell-page-$selected'),
-                      child: gated,
                     ),
                   ),
-                ),
-              ],
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 10 + MediaQuery.paddingOf(context).bottom,
-              child: ShellTabBar(
-                selected: selected,
-                onCoach: () => unawaited(_openCoach()),
-                onHome: () => _show(1),
-                onPlan: () => _show(2),
+                ],
               ),
-            ),
-          ],
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 10 + MediaQuery.paddingOf(context).bottom,
+                child: ShellTabBar(
+                  selected: selected,
+                  onCoach: () => _show(0),
+                  onHome: () => _show(1),
+                  onPlan: () => _show(2),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

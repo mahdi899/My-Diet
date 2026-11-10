@@ -193,6 +193,36 @@ export class MeProfileController {
     return this.identity.totpStatus(actor(req).id);
   }
 
+  @Roles('user')
+  @Get('personal-details')
+  personalDetails(@Req() req: Request) {
+    return this.identity.personalDetails(actor(req).id);
+  }
+
+  @Roles('user')
+  @Patch('personal-details')
+  savePersonalDetails(@Req() req: Request, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['name', 'age', 'contactPhone', 'height', 'weight', 'photo']);
+    const invalid = () => new ApiError(400, 'validation', 'اطلاعات فردی معتبر نیست.');
+    const { age, height, weight, photo } = record;
+    if (typeof age !== 'number' || !Number.isInteger(age) || age < 1 || age > 130 ||
+        typeof height !== 'number' || !Number.isFinite(height) || height <= 0 || height > 300 ||
+        typeof weight !== 'number' || !Number.isFinite(weight) || weight <= 0 || weight > 700) throw invalid();
+    if (photo !== null && (typeof photo !== 'string' || photo.length > 450000 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(photo))) throw invalid();
+    if (typeof photo === 'string') {
+      const bytes = Buffer.from(photo, 'base64');
+      if (!bytes.subarray(0, 3).equals(Buffer.from([255, 216, 255])) &&
+          !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) throw invalid();
+    }
+    return this.identity.savePersonalDetails(actor(req).id, {
+      name: requiredString(record, 'name', 80),
+      contactPhone: normalizeIranianMobile(requiredString(record, 'contactPhone', 32)),
+      age, height, weight, photo,
+    });
+  }
+
   @Roles('specialist', 'admin')
   @Post('totp/setup')
   setup(@Req() req: Request) {

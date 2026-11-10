@@ -20,11 +20,13 @@ class CoachPage extends StatefulWidget {
     required this.repository,
     this.prefill,
     this.autoSend,
+    this.onClose,
   });
 
   final CoachRepository repository;
   final String? prefill;
   final String? autoSend;
+  final VoidCallback? onClose;
 
   @override
   State<CoachPage> createState() => _CoachPageState();
@@ -88,7 +90,7 @@ class _CoachPageState extends State<CoachPage> {
             children: [
               CoachHeader(
                 typing: _controller.typing,
-                onClose: () => closeCoachToHome(context),
+                onClose: widget.onClose ?? () => closeCoachToHome(context),
                 onAvatar: () => showCoachProfileSheet(context),
                 onRing: () async {
                   await _controller.refreshToday();

@@ -359,7 +359,12 @@ class MenuRow extends StatelessWidget {
         : Text(subtitle!, style: const TextStyle(fontSize: 11, color: muted)),
     trailing:
         trailing ??
-        const Icon(Icons.chevron_left_rounded, size: 21, color: muted),
+        const Icon(
+          Icons.chevron_left_rounded,
+          size: 21,
+          color: muted,
+          textDirection: TextDirection.ltr,
+        ),
     onTap: onTap,
   );
 }

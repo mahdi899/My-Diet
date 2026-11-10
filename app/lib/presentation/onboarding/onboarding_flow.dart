@@ -18,10 +18,12 @@ class OnboardingFlow extends StatefulWidget {
     required this.controller,
     required this.onDone,
     this.onExit,
+    this.exitBeforeTrack = false,
   });
   final OnboardingController controller;
   final ValueChanged<ProfileSummary> onDone;
   final VoidCallback? onExit;
+  final bool exitBeforeTrack;
 
   @override
   State<OnboardingFlow> createState() => _OnboardingFlowState();
@@ -60,7 +62,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   void _back() {
     forward = false;
-    if (c.isFirst) {
+    if (c.isFirst || (widget.exitBeforeTrack && c.index == 1)) {
       widget.onExit?.call();
     } else {
       c.back();
@@ -123,14 +125,27 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         });
       },
     ),
-    QuestionStep() => _QuestionView(controller: c, question: step.question),
+    QuestionStep() => _QuestionView(
+      controller: c,
+      question: step.question,
+      onSingleChoice: (value) {
+        if (c.current.id != step.id || c.submitting) return;
+        c.setAnswer(step.id, value);
+        if (!c.isLast && c.canAdvance) _next();
+      },
+    ),
   };
 }
 
 class _QuestionView extends StatelessWidget {
-  const _QuestionView({required this.controller, required this.question});
+  const _QuestionView({
+    required this.controller,
+    required this.question,
+    required this.onSingleChoice,
+  });
   final OnboardingController controller;
   final SpecQuestion question;
+  final ValueChanged<String> onSingleChoice;
 
   /// Same wording as the website. Age stays a wheel; these two titles depend on the path.
   String get _title {
@@ -155,7 +170,7 @@ class _QuestionView extends StatelessWidget {
         body = SingleChoice(
           question: q,
           value: raw as String?,
-          onChanged: (v) => controller.setAnswer(q.key, v),
+          onChanged: onSingleChoice,
         );
       case QuestionKind.multi:
         body = MultiChoice(
