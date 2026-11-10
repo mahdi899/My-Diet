@@ -3,18 +3,34 @@
   const $ = id => document.getElementById(id);
   const { element, table, date } = WorkspaceUI;
   const pages = {
-    dashboard: { title: 'داشبورد', icon: 'grid', group: 'نمای کلی', description: 'پرونده‌ها و برنامه‌های در انتظار بررسی.' },
-    patients: { title: 'پرونده کاربران', icon: 'users', group: 'پرونده‌ها', description: 'پرونده‌های مرتبط با درخواست‌های اختصاص‌یافته.' },
-    review: { title: 'برنامه‌های منتظر بررسی', icon: 'clipboard', group: 'پرونده‌ها', description: 'پیش‌نویس‌هایی که منتظر بررسی شما هستند.' },
-    changes: { title: 'درخواست‌های تغییر برنامه', icon: 'sliders', group: 'پرونده‌ها', description: 'درخواست‌های اصلاح برنامه را از اینجا دنبال کنید.' },
-    conversations: { title: 'گفتگوها', icon: 'message', group: 'ارتباط', description: 'گفت‌وگو با کاربرانی که پرونده‌شان به شما سپرده شده.' },
-    reports: { title: 'گزارش‌های هفتگی', icon: 'calendar', group: 'پیگیری', description: 'گزارش هفتهٔ کاربران.' },
-    profile: { title: 'پروفایل حرفه‌ای', icon: 'medical', group: 'پیگیری', description: 'هویت و مشخصات حرفه‌ای شما.' },
+    dashboard: { title: 'داشبورد', icon: 'grid', group: 'نمای کلی', description: 'شما در این صفحه می‌توانید پرونده‌ها و برنامه‌های در انتظار بررسی را مشاهده کنید.' },
+    patients: { title: 'پرونده کاربران', icon: 'users', group: 'پرونده‌ها', description: 'شما در این صفحه می‌توانید پروندهٔ کاربران را مشاهده کنید.' },
+    review: { title: 'برنامه‌های منتظر بررسی', icon: 'clipboard', group: 'پرونده‌ها', description: 'شما در این صفحه می‌توانید برنامه‌های منتظر بررسی را مشاهده کنید.' },
+    changes: { title: 'درخواست‌های تغییر برنامه', icon: 'sliders', group: 'پرونده‌ها', description: 'شما در این صفحه می‌توانید درخواست‌های تغییر برنامه را مشاهده کنید.' },
+    reports: { title: 'کاربران', icon: 'users', group: 'پیگیری', description: 'شما در این صفحه می‌توانید کاربران و گزارش هفتهٔ هر کدام را ببینید.' },
+    profile: { title: 'پروفایل حرفه‌ای', icon: 'medical', group: 'پیگیری', description: 'شما در این صفحه می‌توانید پروفایل حرفه‌ای خود را مشاهده کنید.' },
   };
   const sections = Object.fromEntries(Object.entries(pages).map(([key, page]) => [key, page.title]));
   const status = { in_review:'در انتظار بررسی',response_received:'پاسخ دریافت شده',queued:'در صف',generating:'در حال تولید',awaiting_review:'منتظر بررسی',reviewing:'در حال بررسی',
     awaiting_user:'در انتظار پاسخ کاربر',needs_info:'نیاز به اطلاعات',published:'منتشرشده',cancelled:'لغوشده' };
   const session = SabzineStaff.create({ role: 'specialist', onExpired: () => signedOut('نشست پایان یافته؛ دوباره وارد شوید.') });
+  const doctorPortal = document.body.classList.contains('doctor-portal');
+  let sidebarProfileLoaded = false;
+  async function refreshSidebarProfile() {
+    if (!session.active || (!$('sidebar-profile-name') && !$('sidebar-avatar') && !$('account-toggle'))) return;
+    try {
+      const profile = await session.api('specialist/profile');
+      const name = (profile.displayName || '').trim() || 'پزشک';
+      const initial = name.charAt(0) || 'پ';
+      if ($('sidebar-profile-name')) $('sidebar-profile-name').textContent = name;
+      if ($('sidebar-avatar')) $('sidebar-avatar').textContent = initial;
+      if ($('account-toggle')) {
+        $('account-toggle').textContent = initial;
+        $('account-toggle').setAttribute('aria-label', 'حساب ' + name);
+      }
+      sidebarProfileLoaded = true;
+    } catch { /* keep placeholders until profile loads */ }
+  }
   let messagingDemo=null;
   const messagingLive=SabzineMessagingRepository.live(session);
   const demoMessages=()=>messagingDemo ||= SabzineMessagingRepository.sample();
@@ -30,6 +46,8 @@
     session.accept(data); $('panel').hidden = false; $('login').hidden = true;
     phone = ''; challenge = null;
     for (const form of document.querySelectorAll('form')) form.reset();
+    sidebarProfileLoaded = false;
+    refreshSidebarProfile();
     load();
   }
   const digits = text => text.replace(/[۰-۹٠-٩]/g, c => String(c.charCodeAt(0) - (c <= '٩' ? 0x660 : 0x6f0)));
@@ -101,7 +119,7 @@
   for (const [key, page] of Object.entries(pages)) {
     if (page.group !== lastGroup) {
       group = element('div', null, 'nav-group');
-      group.append(element('div', page.group, 'nav-group-label'));
+      if (!doctorPortal) group.append(element('div', page.group, 'nav-group-label'));
       $('nav').append(group);
       lastGroup = page.group;
     }
@@ -165,19 +183,18 @@
     ['نوع', row => row.kind === 'new_plan' ? 'برنامه جدید' : 'بازنگری برنامه'],
     ['زمان ثبت', row => date(row.createdAt)],
   ]);
-  function showChat(repository,conversationId){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='گفتگو با کاربر';if($('breadcrumb'))$('breadcrumb').textContent='گفتگو با کاربر';$('content').replaceChildren(SabzineMessaging.chat({repository,session,conversationId}));}
-  function changeView(repository){return SabzineMessaging.changes({repository,session,onChat:showChat,onEditor:(repo,request)=>{SabzineMessaging.reset();generation++;$('content').replaceChildren(SabzinePlanReview.open({session,requestId:request.id,onBack:()=>showChanges(repository)}));}});}
+  function changeView(repository){return SabzineMessaging.changes({repository,session,onEditor:(repo,request)=>{SabzineMessaging.reset();generation++;$('content').replaceChildren(SabzinePlanReview.open({session,requestId:request.id,onBack:()=>showChanges(repository)}));}});}
   function showChanges(repository){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='درخواست‌های تغییر برنامه';$('content').replaceChildren(changeView(repository));}
   async function render(section) {
     if (section === 'dashboard') {
-      const [review, changes, conversations] = await Promise.all([
-        session.api('specialist/queue?bucket=awaiting_review'), session.api('specialist/queue?bucket=revisions'), session.api('conversations'),
+      const [review, changes] = await Promise.all([
+        session.api('specialist/queue?bucket=awaiting_review'), session.api('specialist/queue?bucket=revisions'),
       ]);
       const view = element('div'), intro = element('section', null, 'intro-card');
       intro.append(element('h2', 'فضایی برای تمرکز روی هر پرونده'), element('p', 'برنامه‌های آماده بررسی و درخواست‌های اصلاح را از میز کار دنبال کنید.'));
       view.append(intro);
       const cards = element('div', null, 'cards');
-      for (const [title, count, target] of [['منتظر بررسی', review.length, 'review'], ['درخواست اصلاح', changes.length, 'changes'], ['گفتگوها', conversations.length, 'conversations']]) {
+      for (const [title, count, target] of [['منتظر بررسی', review.length, 'review'], ['درخواست اصلاح', changes.length, 'changes']]) {
         const card = element('section', null, 'card'), button = element('button', 'مشاهده', 'secondary');
         card.append(element('p', title), element('div', new Intl.NumberFormat('fa-IR').format(count), 'count'));
         button.onclick = () => navigate(target); card.append(button); cards.append(card);
@@ -195,7 +212,6 @@
         queueTable(await session.api('specialist/queue?bucket=' + (section === 'review' ? 'awaiting_review' : 'revisions'))));
       return view;
     }
-    if(section==='conversations') {const view=element('div'),sample=element('button','باز کردن پیام‌رسان نمونه','secondary');sample.onclick=()=>showChat(demoMessages());view.append(sample,SabzineMessaging.chat({repository:messagingLive,session}));return view;}
     if (section === 'profile') {
       const profile = await session.api('specialist/profile'), card = element('section', null, 'card'), list = element('dl', null, 'definition-list');
       card.append(element('h2', 'هویت حرفه‌ای'));
@@ -208,10 +224,11 @@
     if(section==='patients') {
       const view=element('div');view.append(element('p','پرونده‌های مرتبط با درخواست‌های اختصاص‌یافته؛ دادهٔ پزشکی ارائه‌نشده از روی نام یا درخواست حدس زده نمی‌شود.','workspace-note'),demoButton(),queueTable(await session.api('specialist/queue')));return view;
     }
-    return SabzineWeeklyReports.render();
+    return SabzineWeeklyReports.render(session);
   }
   async function load() {
     if (!session.active) return;
+    if (!sidebarProfileLoaded) refreshSidebarProfile();
     const request = ++generation, section = current;
     $('title').textContent = sections[section];
     if ($('breadcrumb')) $('breadcrumb').textContent = sections[section];

@@ -14,10 +14,12 @@
     const title=e('h2','گفتگو با کاربر'),note=e('p',repository.demo?'نسخه نمایشی • هیچ پیامی به بیمار واقعی ارسال نمی‌شود.':'ارسال متنی متصل است؛ دریافت پیام با تازه‌سازی انجام می‌شود.','chat-note');
     const timeline=e('div',null,'chat-timeline');timeline.setAttribute('aria-label','پیام‌ها');
     const preview=e('div',null,'attachment-preview');preview.hidden=true;
-    const compose=e('form',null,'chat-compose'),input=e('textarea');input.rows=2;input.maxLength=2000;input.placeholder='پیام شما…';input.setAttribute('aria-label','متن پیام');
-    const send=button('ارسال پیام',()=>{}),pick=button('عکس',()=>file.click()),record=button('ضبط ویس',startRecording),cancelRecord=button('لغو ضبط',()=>stopRecording(true));cancelRecord.hidden=true;
+    const compose=e('form',null,'chat-compose'),bar=e('div',null,'composer-bar'),input=e('textarea');input.rows=1;input.maxLength=2000;input.placeholder='پیام';input.setAttribute('aria-label','متن پیام');
+    const iconButton=(name,label,action)=>{const b=e('button',null,'composer-icon');b.type='button';b.setAttribute('aria-label',label);b.append(icon(name));b.onclick=action;return b;};
+    const send=iconButton('send','ارسال پیام',()=>{}),pick=iconButton('image','عکس',()=>file.click()),record=iconButton('mic','ضبط ویس',startRecording),cancelRecord=iconButton('close','لغو ضبط',()=>stopRecording(true));cancelRecord.hidden=true;send.classList.add('send');
+    const timerLabel=e('span','','composer-timer');timerLabel.hidden=true;
     const file=e('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.hidden=true;
-    compose.append(input,pick,record,cancelRecord,send,file);room.append(title,note,alert,timeline,preview,compose);
+    bar.append(input,timerLabel,pick,record,cancelRecord,send);compose.append(bar,file);room.append(title,note,alert,timeline,preview,compose);
     const url=blob=>{const value=URL.createObjectURL(blob);urls.add(value);return value;};
     const revoke=()=>{for(const u of urls)URL.revokeObjectURL(u);urls.clear();};
     const fail=error=>{if(valid())alert.textContent=error.message||String(error);};
@@ -49,11 +51,12 @@
       try{const page=await repository.messages(id,older?cursor:null);if(!valid()||expected!==sequence)return;
         messages=older?[...page.items,...messages]:page.items;cursor=page.nextCursor;
         const ids=new Set(messages.map(m=>m.id));pending=pending.filter(m=>!ids.has(m.id));renderMessages();await repository.read(id);
+        if(selected)selected.unreadCount=0;rowsBox.querySelector(`[data-conversation="${CSS.escape(id)}"] .unread-badge`)?.remove();
       }catch(error){if(expected===sequence)fail(error);}
     }
     async function open(row){if((input.value.trim()||attachment||recording)&&!confirm('پیش‌نویس این گفتگو کنار گذاشته شود؟'))return;
-      stopRecording(true);selected=row;input.value='';attachment=null;pending=[];messages=[];title.textContent=row.title||'ارتباط با کاربر';
-      list.querySelectorAll('[data-conversation]').forEach(b=>b.classList.toggle('active',b.dataset.conversation===row.id));await refresh();updateSend();
+      stopRecording(true);selected=row;input.value='';attachment=null;pending=[];messages=[];title.textContent=personName(row);
+      list.querySelectorAll('[data-conversation]').forEach(b=>b.classList.toggle('active',b.dataset.conversation===row.id));room.scrollIntoView({block:'nearest'});await refresh();updateSend();
     }
     async function submit(retry){if(submitting||!selected||recording||voiceStarting||(!repository.media&&attachment))return;submitting=true;updateSend();try{await deliver(retry);}finally{submitting=false;if(valid())updateSend();}}
     async function deliver(retry){
@@ -76,54 +79,87 @@
         const chunks=[];recording=new MediaRecorder(stream,{mimeType:mime});discardRecording=false;seconds=0;
         recording.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
         recording.onerror=()=>{stopRecording(true);fail(new Error('ضبط صدا متوقف شد.'));};
-        recording.onstop=()=>{stream?.getTracks().forEach(t=>t.stop());stream=null;recording=null;record.textContent='ضبط ویس';record.onclick=startRecording;cancelRecord.hidden=true;
+        recording.onstop=()=>{stream?.getTracks().forEach(t=>t.stop());stream=null;recording=null;record.onclick=startRecording;cancelRecord.hidden=true;timerLabel.hidden=true;timerLabel.textContent='';
           if(valid()&&!discardRecording&&chunks.length){try{const base=mime.split(';')[0];attachment=new File(chunks,'voice.'+(base==='audio/mp4'?'m4a':base==='audio/ogg'?'ogg':'webm'),{type:base});SabzineMessagingRepository.validate(attachment);previewMedia();}catch(error){attachment=null;fail(error);}}
           updateSend();};
-        recording.start();cancelRecord.hidden=false;record.textContent='توقف و پیش‌نمایش · ۰ ثانیه';record.onclick=()=>stopRecording(false);
-        timer=setInterval(()=>{seconds++;record.textContent='توقف و پیش‌نمایش · '+seconds.toLocaleString('fa-IR')+' ثانیه';if(seconds>=120)stopRecording(false);},1000);
+        recording.start();cancelRecord.hidden=false;timerLabel.hidden=false;timerLabel.textContent='۰ ثانیه';record.onclick=()=>stopRecording(false);
+        timer=setInterval(()=>{seconds++;timerLabel.textContent=seconds.toLocaleString('fa-IR')+' ثانیه';if(seconds>=120)stopRecording(false);},1000);
       }catch(error){stream?.getTracks().forEach(t=>t.stop());stream=null;fail(new Error(error.name==='NotAllowedError'?'اجازه میکروفن داده نشد؛ از تنظیمات مرورگر فعال کنید.':error.message));}
       finally{voiceStarting=false;if(valid()){record.disabled=false;updateSend();}}
     }
     function stopRecording(discard){discardRecording=discard;clearInterval(timer);if(recording?.state==='recording')recording.stop();}
     active={get dirty(){return !!input.value.trim()||!!attachment||!!recording||voiceStarting;},dispose(){alive=false;stopRecording(true);stream?.getTracks().forEach(t=>t.stop());for(const c of uploads)c.abort();revoke();document.querySelectorAll('.media-viewer').forEach(d=>d.remove());}};
-    list.append(e('h2','صندوق گفتگوها'),button('تازه‌سازی پیام‌ها',()=>refresh()));
-    if(repository.demo)list.append(button('خطای ارسال بعدی (نمونه)',()=>repository.setFailSend(true)));
-    repository.list().then(rows=>{if(!valid())return;for(const row of rows){const label=(row.title||(row.kind==='support'?'پشتیبانی':'گفتگو با کاربر'))+(Number.isInteger(row.unreadCount)&&row.unreadCount>0?' · '+row.unreadCount.toLocaleString('fa-IR')+' خوانده‌نشده':'');const b=button(label,()=>open(row));b.dataset.conversation=row.id;list.append(b);}
-      if(rows.length)open(rows.find(r=>r.id===conversationId)||rows[0]);else list.append(e('p','هنوز گفتگویی ندارید.'));}).catch(fail);
+    const head=e('div',null,'chat-list-head'),rowsBox=e('div',null,'chat-rows');
+    const reload=e('button',null,'icon-button');reload.type='button';reload.setAttribute('aria-label','تازه‌سازی پیام‌ها');reload.append(icon('history'));reload.onclick=()=>loadInbox(false);
+    head.append(e('h2','گفتگوها'),reload);list.append(head,rowsBox);
+    if(repository.demo){const failNext=button('خطای ارسال بعدی (نمونه)',()=>repository.setFailSend(true));failNext.classList.add('chat-tool');list.append(failNext);}
+    const names=new Map();
+    const personName=row=>row.title||names.get(row.requestId)||(row.kind==='support'?'پشتیبانی':'گفتگو با کاربر');
+    function paintInbox(rows){rowsBox.replaceChildren();if(!rows.length){rowsBox.append(e('p','هنوز گفتگویی ندارید.','chat-note'));return;}
+      for(const row of rows){const b=e('button',null,'chat-row');b.type='button';b.dataset.conversation=row.id;b.onclick=()=>open(row);
+        b.append(e('span',personName(row),'chat-row-name'));
+        const count=Number(row.unreadCount);
+        if(Number.isInteger(count)&&count>0){const badge=e('span',count.toLocaleString('fa-IR'),'unread-badge');badge.setAttribute('aria-label',count.toLocaleString('fa-IR')+' پیام خوانده‌نشده');b.append(badge);}
+        b.classList.toggle('active',selected?.id===row.id);rowsBox.append(b);}
+    }
+    async function loadInbox(selectFirst){const [rows,queue]=await Promise.all([repository.list(),repository.demo?[]:session.api('specialist/queue').catch(()=>[])]);
+      if(!valid())return [];names.clear();for(const item of queue)if(item.id&&item.displayName)names.set(item.id,item.displayName);paintInbox(rows);
+      if(selectFirst&&rows.length){const match=conversationId?rows.find(r=>r.id===conversationId):rows[0];if(match)await open(match);}return rows;}
+    loadInbox(true).catch(fail);
     updateSend();return root;
   }
   function changes({repository,session,onChat,onEditor}){
     reset();let alive=true,rows=[],filter='all',selected=null,loading=false;
     const root=e('section'),alert=e('p',null,'chat-error'),queue=e('div'),detail=e('section',null,'change-detail'),filters=e('div',null,'change-filters');alert.setAttribute('role','alert');
-    root.append(e('p',repository.demo?'نسخه نمایشی جداگانه • برنامه و پیام واقعی تغییر نمی‌کنند.':'درخواست‌های اختصاص‌یافته از API فعلی دریافت می‌شوند. شروع بررسی، رد با توضیح و تأیید درخواست به قرارداد جدید سرور نیاز دارند.','chat-note'),alert,filters,queue,detail);detail.hidden=true;
+    const dialog=e('dialog',null,'change-modal'),close=e('button',null,'icon-button');close.type='button';close.setAttribute('aria-label','بستن');close.append(icon('close'));
+    const modalError=e('p',null,'chat-error');modalError.setAttribute('role','alert');
+    dialog.append(close,modalError,detail);document.body.append(dialog);
+    close.onclick=()=>dialog.close();
+    dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
+    dialog.addEventListener('close',()=>{selected=null;modalError.textContent='';});
+    root.append(e('p',repository.demo?'نسخه نمایشی جداگانه • برنامه و پیام واقعی تغییر نمی‌کنند.':'درخواست‌های اختصاص‌یافته از API فعلی دریافت می‌شوند. شروع بررسی، رد با توضیح و تأیید درخواست به قرارداد جدید سرور نیاز دارند.','chat-note'),alert,filters,queue);
     const valid=()=>alive&&session.active;
-    const fail=error=>{if(valid())alert.textContent=error.message;};
+    const fail=error=>{if(!valid())return;alert.textContent=error.message;modalError.textContent=error.message;};
     async function perform(action){if(loading)return;loading=true;root.querySelectorAll('button').forEach(b=>b.disabled=true);alert.textContent='';try{await action();}catch(error){fail(error);}finally{loading=false;if(valid()){drawQueue();drawDetail();}}}
     function drawQueue(){filters.replaceChildren();for(const [key,label]of [['all','همه'],...Object.entries(SabzineMessagingRepository.statuses)]){const b=button(label,()=>{filter=key;drawQueue();});b.classList.toggle('active',filter===key);filters.append(b);}
       queue.replaceChildren();const visible=rows.filter(r=>filter==='all'||r.status===filter);if(!visible.length)queue.append(e('p','درخواستی در این وضعیت ندارید.'));
-      queue.append(WorkspaceUI.table(visible,[['کاربر',r=>r.displayName||'نام ارائه نشده'],['وضعیت',r=>SabzineMessagingRepository.statuses[r.status]||r.status],['ثبت',r=>date(r.createdAt)],['رسیدگی',r=>button('جزئیات درخواست',()=>perform(async()=>{const result=await repository.detail(r.id);if(valid()){selected={...r,...result};drawDetail();}}))]]));
+      queue.append(WorkspaceUI.table(visible,[['کاربر',r=>r.displayName||'نام ارائه نشده'],['وضعیت',r=>SabzineMessagingRepository.statuses[r.status]||r.status],['ثبت',r=>date(r.createdAt)],['',r=>iconAction('eye','جزئیات درخواست',()=>perform(async()=>{const result=await repository.detail(r.id);if(valid()){selected={...r,...result};drawDetail();}}))]]));
     }
-    function drawDetail(){detail.replaceChildren();detail.hidden=!selected;if(!selected)return;const r=selected;
-      detail.append(e('h2','درخواست '+r.id),e('p',r.displayName||'کاربر'),e('p',SabzineMessagingRepository.statuses[r.status]||r.status),e('strong',(r.reasons||[]).join('، ')||'دلایل از API ارائه نشده'),e('p',r.details||''));
-      if(r.awaitingCustomer)detail.append(e('p','در انتظار پاسخ کاربر: '+r.clarification,'workspace-note'));
-      if(r.rejection)detail.append(e('p','دلیل رد: '+r.rejection));
-      const history=e('ol',null,'change-history');for(const h of r.history||[])history.append(e('li',(SabzineMessagingRepository.statuses[h.status]||h.status)+' · '+date(h.at)+(h.body?' · '+h.body:'')));detail.append(e('h3','تاریخچه وضعیت'),history);
-      if(!r.history?.length)history.append(e('li','تاریخچه وضعیت از API ارائه نشده است.'));
-      const actions=e('div',null,'change-actions');actions.append(button('گفتگو با کاربر',()=>onChat(repository,r.conversationId),!r.conversationId));
+    function iconAction(name,label,action,disabled=false){const b=e('button',null,'icon-button');b.type='button';b.setAttribute('aria-label',label);b.title=label;b.append(icon(name));b.onclick=action;b.disabled=!!disabled;return b;}
+    function fact(label,value){if(!value)return null;const row=e('tr');row.append(e('th',label),e('td',value));return row;}
+    function drawDetail(){detail.replaceChildren();if(!selected){if(dialog.open)dialog.close();return;}const r=selected;modalError.textContent='';
+      const head=e('header',null,'change-head'),who=e('div'),tools=e('div',null,'change-tools');
+      who.append(e('h2',r.displayName||'کاربر'),e('p',SabzineMessagingRepository.statuses[r.status]||r.status,'change-status'));
       const update=async result=>{selected=result;rows=await repository.changes();};
-      actions.append(button('شروع بررسی',()=>perform(async()=>update(await repository.start(r.id))),!repository.revisions||r.status!=='awaiting_review'));
-      actions.append(button('ویرایش و تأیید برنامه جایگزین',()=>perform(async()=>{
-        const repo=repository.demo?repository.replacement(r.id):SabzineClinicalRepository.live(session),request=await repo.get(r.id);if(valid())onEditor(repo,request);
-      }),repository.revisions?(r.status!=='under_review'||r.awaitingCustomer):!r.version));detail.append(actions);
+      if(repository.revisions&&r.status==='awaiting_review')tools.append(iconAction('check','شروع بررسی',()=>perform(async()=>update(await repository.start(r.id)))));
+      const canEdit=repository.revisions?r.status==='under_review'&&!r.awaitingCustomer:!!r.version;
+      if(canEdit)tools.append(iconAction('pencil','ویرایش برنامه',()=>perform(async()=>{
+        const repo=repository.demo?repository.replacement(r.id):SabzineClinicalRepository.live(session),request=await repo.get(r.id);if(valid()){dialog.close();onEditor(repo,request);}
+      })));
+      head.append(who,tools);detail.append(head);
+      const body=e('tbody'),table=e('table',null,'change-facts');
+      for(const row of [fact('دلیل',(r.reasons||[]).join('، ')),fact('توضیح',r.details),fact('منتظر کاربر',r.awaitingCustomer?r.clarification:''),fact('دلیل رد',r.rejection)])if(row)body.append(row);
+      if(body.childElementCount){table.append(body);const wrap=e('div',null,'change-table');wrap.append(table);detail.append(wrap);}
+      const history=e('ol',null,'change-history');detail.append(e('h3','تاریخچه'),history);
+      if(!r.history?.length)history.append(e('li','تاریخچه‌ای ثبت نشده.'));
+      for(const h of r.history||[]){const item=e('li');item.append(e('b',SabzineMessagingRepository.statuses[h.status]||h.status),e('small',date(h.at)));if(h.body)item.append(e('span',h.body));history.append(item);}
       if(repository.revisions&&r.status==='under_review'){
-        const form=e('form'),label=e('label','توضیح رد یا سؤال از کاربر'),input=e('textarea');input.maxLength=2000;input.required=true;input.setAttribute('aria-label','توضیح رد یا سؤال از کاربر');label.append(input);form.append(label);
+        const form=e('form',null,'change-decision'),input=e('textarea');
+        input.maxLength=2000;input.rows=3;input.placeholder='دلیل رد، یا سؤالی که می‌خواهید از کاربر بپرسید';input.setAttribute('aria-label','یادداشت برای کاربر');
+        const actions=e('div',null,'change-decision-actions');
+        const reject=e('button','رد درخواست','secondary'),ask=e('button','سؤال از کاربر','secondary');
+        reject.type='button';ask.type='button';
+        reject.onclick=()=>{if(!input.value.trim())return fail(new Error('دلیل رد را بنویسید.'));perform(async()=>update(await repository.reject(r.id,input.value)));};
+        ask.onclick=()=>{if(!input.value.trim())return fail(new Error('سؤال را بنویسید.'));perform(async()=>update(await repository.clarify(r.id,input.value)));};
+        actions.append(ask,reject);
+        form.append(input,actions);
         form.onsubmit=event=>event.preventDefault();
-        form.append(button('رد درخواست با توضیح',()=>{if(!input.value.trim())return fail(new Error('دلیل رد الزامی است.'));perform(async()=>update(await repository.reject(r.id,input.value)));}),button('درخواست توضیح از کاربر',()=>{if(!input.value.trim())return fail(new Error('سؤال را بنویسید.'));perform(async()=>update(await repository.clarify(r.id,input.value)));}));
-        if(repository.demo&&r.awaitingCustomer)form.append(button('شبیه‌سازی پاسخ کاربر',()=>perform(async()=>update(await repository.answer(r.id)))));
+        if(repository.demo&&r.awaitingCustomer){const sample=e('button','پاسخ نمونهٔ کاربر','secondary');sample.type='button';sample.onclick=()=>perform(async()=>update(await repository.answer(r.id)));actions.append(sample);}
         detail.append(form);
       }
+      if(!dialog.open)dialog.showModal();
     }
-    active={dirty:false,dispose(){alive=false;}};
+    active={dirty:false,dispose(){alive=false;dialog.close();dialog.remove();}};
     repository.changes().then(result=>{if(valid()){rows=result;drawQueue();}}).catch(fail);return root;
   }
   function reasonsConfig(){

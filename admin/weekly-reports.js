@@ -14,42 +14,85 @@
   const labels={ready:'آماده',partial:'داده ناقص',pending:'در انتظار آماده‌سازی',failed:'آماده‌سازی ناموفق'};
   const number = value => new Intl.NumberFormat('fa-IR').format(value);
   const ratio=(count,total)=> total>0 ? `${number(count)} از ${number(total)} (${number(Math.round(100*count/total))}٪)` : 'قابل محاسبه نیست';
-  function render() {
-    const view=element('section'), banner=element('section',null,'card');
-    banner.append(element('h2','گزارش‌های هفتگی کاربران'),element('p','حالت نمونهٔ طراحی؛ نام‌ها و آمار آزمایشی هستند و از کاربران واقعی یا سرویس AI دریافت نشده‌اند.'));
-    view.append(banner);
-    const filters=element('section',null,'card'), patient=element('select'), week=element('select'), content=element('section');
-    patient.setAttribute('aria-label','کاربر نمونه');week.setAttribute('aria-label','هفته گزارش');
-    for(const name of [...new Set(samples.map(r=>r.patient))]) {const option=element('option',name);option.value=name;patient.append(option);}
-    const patientLabel=element('label','کاربر '),weekLabel=element('label','هفته ');patientLabel.append(patient);weekLabel.append(week);filters.append(patientLabel,weekLabel);view.append(filters,content);
-    function list(title,values) {
-      const section=element('section',null,'card');section.append(element('h3',title));
-      if(!values?.length)section.append(element('p','اطلاعات ارائه نشده؛ به معنی «هیچ موردی وجود ندارد» نیست.'));
-      else { const ul=element('ul');for(const value of values)ul.append(element('li',value));section.append(ul); }
-      return section;
+  const stat=(value,label)=>{const node=element('div',null,'report-stat');node.append(element('strong',value),element('span',label));return node;};
+  const block=(title,lines)=>{const section=element('section',null,'report-block');section.append(element('h3',title));
+    const filled=lines.filter(([,value])=>value);if(!filled.length){section.append(element('p','موردی ثبت نشده.','report-empty'));return section;}
+    const wrap=element('div',null,'report-table-wrap'),table=element('table',null,'report-table'),head=element('tr'),body=element('tbody'),thead=element('thead');
+    head.append(element('th','موضوع'),element('th','جزئیات'));thead.append(head);table.append(thead,body);
+    for(const [label,value] of filled){const row=element('tr');row.append(element('td',label),element('td',value));body.append(row);}
+    wrap.append(table);section.append(wrap);return section;};
+  const digits=value=>String(value).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace('٫','.');
+  const weightTable=items=>{
+    let previous=null;
+    const rows=(items||[]).map(item=>{
+      const parts=String(item).split(':');
+      const when=parts.length>1?parts[0].trim():item;
+      const amount=parts.length>1?parts.slice(1).join(':').trim():'—';
+      const kilos=Number(digits(amount).replace(/[^\d.]/g,''));
+      let change='—';
+      if(previous!=null&&Number.isFinite(kilos)){const delta=Math.round((kilos-previous)*10)/10;change=(delta>0?'+':'')+number(delta)+' کیلوگرم';}
+      if(Number.isFinite(kilos))previous=kilos;
+      return [when,amount,change];
+    });
+    const section=element('section',null,'report-block');section.append(element('h3','تغییر وزن'));
+    if(!rows.length){section.append(element('p','وزنی ثبت نشده.','report-empty'));return section;}
+    const wrap=element('div',null,'report-table-wrap'),table=element('table',null,'report-table'),head=element('tr'),body=element('tbody'),thead=element('thead');
+    for(const header of ['تاریخ','وزن','تغییر'])head.append(element('th',header));
+    thead.append(head);table.append(thead,body);
+    for(const cells of rows){const row=element('tr');for(const cell of cells)row.append(element('td',cell));body.append(row);}
+    wrap.append(table);section.append(wrap);return section;
+  };
+  async function render(session, onChat) {
+    const view=element('section',null,'weekly-screen');
+    let people=[...new Set(samples.map(r=>r.patient))].map(name=>({name}));
+    if(session?.active){
+      try{
+        const queue=await session.api('specialist/queue');
+        const seen=new Set(),fromQueue=[];
+        for(const row of queue){const name=(row.displayName||'').trim();if(!name||seen.has(name))continue;seen.add(name);fromQueue.push({name,requestId:row.id});}
+        if(fromQueue.length)people=fromQueue;
+      }catch{/* keep the sample list when the queue cannot be read */}
     }
-    function show() {
-      const report=samples.find(r=>r.id===week.value);content.replaceChildren();
-      if(!report){content.append(element('p','گزارشی برای این انتخاب موجود نیست.'));return;}
-      const header=element('section',null,'card');header.append(element('h3',`نمونه گزارش AI · نسخه ${number(report.version)}`),element('p',`${date(report.week)} تا ${date(report.end)}`),element('p',`وضعیت: ${labels[report.status]}`),element('p',`زمان تولید: ${report.generated?new Intl.DateTimeFormat('fa-IR',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Tehran'}).format(new Date(report.generated)):'هنوز تولید نشده'}`));content.append(header);
-      if(['pending','failed'].includes(report.status)) { content.append(element('p',report.status==='failed'?'گزارش نمونه آماده نشده؛ نتیجه‌ای برای تصمیم‌گیری موجود نیست.':'در سناریوی نمونه، گزارش هنوز آماده نشده است.'));return; }
-      content.append(list('ثبت وعده و رعایت برنامه',[
-        `وعده‌های ثبت‌شده: ${ratio(report.recorded,report.expected)}`,
-        `وعده‌های طبق برنامه: ${ratio(report.adherent,report.expected)}`,
-        'ثبت «نخوردم» یا غذای متفاوت، رعایت برنامه محسوب نمی‌شود.',
-        `پوشش داده: ${ratio(report.recorded,report.expected)}؛ آمار دادهٔ ثبت‌نشده حدس زده نشده است.`,
-      ]));
-      content.append(list('مقایسه با هفته قبل',report.previous?[
-        `ثبت وعده: این هفته ${ratio(report.recorded,report.expected)}؛ هفته قبل ${ratio(report.previous.recorded,report.previous.expected)}`,
-        `رعایت برنامه: این هفته ${ratio(report.adherent,report.expected)}؛ هفته قبل ${ratio(report.previous.adherent,report.previous.expected)}`,
-      ]:[]));
-      content.append(list('غذاهای محبوب',report.favorites),list('غذاهای نامطلوب',report.disliked),list('دلایل جایگزینی',report.reasons.map(([label,count])=>`${label}: ${number(count)} بار`)),
-        list('آماده‌سازی، هزینه و دسترسی',[report.preparation,report.budget,report.availability]),list('مقدار وعده و ارتباط با متخصص',[report.portion,report.service]),list('ثبت وزن',report.weights),list('تغییرات اطلاعات سلامت',[report.health]),list('نکات پیشنهادی برای برنامه بعد',[...report.suggestions,'این پیشنهادها نمونه‌اند و نیاز به بررسی متخصص دارند.']));
+    function showList(){
+      view.replaceChildren();
+      if(!people.length){view.append(element('p','هنوز کاربری نیست.','report-empty'));return;}
+      const list=element('div',null,'weekly-users');
+      for(const person of people){
+        const open=element('button',null,'weekly-user');open.type='button';open.onclick=()=>showReport(person);
+        open.append(element('strong',person.name),element('span','‹','weekly-chevron'));list.append(open);
+      }
+      view.append(list);
     }
-    function selectPatient() {
-      week.replaceChildren();for(const report of samples.filter(r=>r.patient===patient.value)) {const option=element('option',`${date(report.week)} · ${labels[report.status]}`);option.value=report.id;week.append(option);}show();
+    function showReport(person){
+      const weeks=samples.filter(r=>r.patient===person.name);
+      view.replaceChildren();
+      const sheet=element('article',null,'weekly-report'),actions=element('div',null,'report-actions');
+      const back=element('button','فهرست','secondary');back.type='button';back.onclick=showList;
+      actions.append(back);
+      sheet.append(actions,element('h2',person.name));
+      if(!weeks.length){sheet.append(element('p','برای این کاربر هنوز گزارش هفته ثبت نشده.','report-empty'));view.append(sheet);return;}
+      const picks=element('div',null,'week-switch'),body=element('div');
+      function draw(id){
+        const report=weeks.find(r=>r.id===id)||weeks[0];
+        for(const button of picks.querySelectorAll('button'))button.classList.toggle('active',button.dataset.id===report.id);
+        body.replaceChildren(element('p',`${date(report.week)} تا ${date(report.end)} · ${labels[report.status]}`,'report-meta'));
+        if(['pending','failed'].includes(report.status)){body.append(element('p',report.status==='failed'?'گزارش این هفته آماده نشده.':'گزارش این هفته هنوز آماده نیست.','report-empty'));return;}
+        const stats=element('div',null,'report-stats');
+        stats.append(stat(ratio(report.recorded,report.expected),'ثبت وعده'),stat(ratio(report.adherent,report.expected),'طبق برنامه'),stat(report.previous?ratio(report.previous.adherent,report.previous.expected):'—','رعایت هفتهٔ قبل'));
+        body.append(stats,
+          block('غذا',[['غذاهای محبوب',report.favorites?.join('، ')],['غذاهای نامطلوب',report.disliked?.join('، ')],['جایگزینی',report.reasons?.map(([label,count])=>`${label} ${number(count)} بار`).join('، ')]]),
+          block('تجربهٔ هفته',[['آماده‌سازی',report.preparation],['هزینه',report.budget],['مواد',report.availability],['مقدار وعده',report.portion],['ارتباط',report.service]]),
+          weightTable(report.weights),
+          block('پیگیری',[['سلامت',report.health],['پیشنهاد',report.suggestions?.join('، ')]]),
+        );
+      }
+      if(weeks.length>1){
+        for(const report of weeks){const pick=element('button',date(report.week),'secondary');pick.type='button';pick.dataset.id=report.id;pick.onclick=()=>draw(report.id);picks.append(pick);}
+        sheet.append(picks);
+      }
+      sheet.append(body);view.append(sheet);draw(weeks[0].id);
     }
-    patient.onchange=selectPatient;week.onchange=show;selectPatient();return view;
+    showList();return view;
   }
   window.SabzineWeeklyReports={render};
 })();

@@ -20,9 +20,15 @@
   };}
   function sample(){
     const clinical=SabzineClinicalRepository.sample();
-    const conversations=[{id:'chat-demo',kind:'specialist',title:'کاربر نمونهٔ آموزشی',unreadCount:1,requestId:'change-demo',createdAt:'2026-11-01T07:00:00Z'}];
+    const conversations=[
+      {id:'chat-demo',kind:'specialist',title:'کاربر نمونهٔ آموزشی',unreadCount:1,requestId:'change-demo',createdAt:'2026-11-01T07:00:00Z'},
+      {id:'chat-demo-2',kind:'specialist',title:'کاربر نمونهٔ دوم',unreadCount:0,requestId:'change-demo-2',createdAt:'2026-11-03T08:00:00Z'},
+    ];
     const messages=[{id:'hello',authorId:'sample-patient',body:'سلام، برای تهیه شام زمان کمتری دارم. می‌توانیم درباره برنامه صحبت کنیم؟',createdAt:'2026-11-01T07:01:00Z',status:'sent'}];
-    const requests=[{id:'change-demo',displayName:'کاربر نمونهٔ آموزشی',planId:'published-demo-v1',status:'awaiting_review',conversationId:'chat-demo',reasons:['تهیه غذا زمان‌بر است'],details:'شام‌های سریع‌تر ترجیح می‌دهم.',createdAt:'2026-11-01T07:05:00Z',history:[{status:'awaiting_review',at:'2026-11-01T07:05:00Z'}],awaitingCustomer:false,rejection:''}];
+    const requests=[
+      {id:'change-demo',displayName:'کاربر نمونهٔ آموزشی',planId:'published-demo-v1',status:'awaiting_review',conversationId:'chat-demo',reasons:['تهیه غذا زمان‌بر است'],details:'شام‌های سریع‌تر ترجیح می‌دهم.',createdAt:'2026-11-01T07:05:00Z',history:[{status:'awaiting_review',at:'2026-11-01T07:05:00Z'}],awaitingCustomer:false,rejection:''},
+      {id:'change-demo-2',displayName:'کاربر نمونهٔ دوم',planId:'published-demo-v2',status:'awaiting_review',conversationId:'chat-demo-2',reasons:['هزینه غذا بالاست','مواد اولیه موجود نیست'],details:'وعده‌های ارزان‌تر و با مواد در دسترس می‌خواهم.',createdAt:'2026-11-03T08:20:00Z',history:[{status:'awaiting_review',at:'2026-11-03T08:20:00Z'}],awaitingCustomer:false,rejection:''},
+    ];
     let failSend=false;
     const find=id=>{const r=requests.find(r=>r.id===id);if(!r)throw new Error('درخواست پیدا نشد.');return r;};
     const transition=(r,status,body)=>{r.status=status;r.history.push({status,at:new Date().toISOString(),body});};
