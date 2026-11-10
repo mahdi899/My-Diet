@@ -135,7 +135,7 @@ function dashboard(stats, orders) {
   quick.append(links); lower.append(quick); view.append(lower); return view;
 }
 const genericColumns = {
-  users: [ { label: 'کاربر', render: r => personCell(r.displayName, r.phone) }, { label: 'وضعیت حساب', render: r => badge(r.status) }, { label: 'شناسه', render: r => shortId(r.id) }, { label: 'عملیات', render: r => userRowActions(r) } ],
+  users: [ { label: 'کاربر', render: r => userPhotoCell(r.displayName, r.phone, r.photo) }, { label: 'وضعیت حساب', render: r => badge(r.status) }, { label: 'شناسه', render: r => shortId(r.id) }, { label: 'عملیات', render: r => userRowActions(r) } ],
   requests: [ { label: 'درخواست', render: r => shortId(r.id) }, { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'نوع درخواست', render: r => kindNames[r.kind] || r.kind }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'زمان ثبت', render: r => formatDate(r.createdAt), className: 'cell-nowrap' } ],
   specialists: [ { label: 'پزشک', render: r => doctorCell(r) }, { label: 'تلفن', render: r => r.phone || '—', className: 'cell-nowrap' }, { label: 'نام کاربری', render: r => r.username || '—', className: 'cell-nowrap' }, { label: 'کد نظام', render: r => r.councilNo || '—' }, { label: 'تحصیلات', render: r => r.education || r.credential || '—' }, { label: 'تاریخ تولد', render: r => formatDate(r.birthDate, false), className: 'cell-nowrap' }, { label: 'امتیاز', render: r => r.averageRating == null ? 'هنوز بدون امتیاز' : number(r.averageRating) + ' از ۵' } ],
   reviews: [ { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'امتیاز', render: r => number(r.rating) + ' از ۵' }, { label: 'نظر', key: 'body', className: 'cell-body' }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'بررسی', render: r => {
@@ -328,16 +328,35 @@ function addSpecialistModal() {
     body.append(form);
   }, { iconName: 'medical' });
 }
+function userPhotoCell(name, phone, encoded) {
+  const cell = personCell(name, phone);
+  if (typeof encoded !== 'string' || !/^(?:\/9j\/|iVBORw0KGgo)[A-Za-z0-9+/=]+$/.test(encoded)) return cell;
+  const photo = document.createElement('img');
+  const mime = encoded.startsWith('/9j/') ? 'jpeg' : 'png';
+  photo.src = 'data:image/' + mime + ';base64,' + encoded;
+  photo.alt = '';
+  photo.className = 'avatar avatar-soft';
+  photo.style.objectFit = 'cover';
+  photo.addEventListener('load', () => cell.firstElementChild.replaceWith(photo), { once: true });
+  return cell;
+}
 function userOperations(row) {
   openModal('ویرایش کاربر', async (body, dialog) => {
     dialog.classList.add('user-detail-modal');
     body.append(skeleton());
     const detail = await api('admin/users/' + encodeURIComponent(row.id));
     const intake = detail.intake ?? {};
+    const personal = detail.personalDetails;
     const grid = element('div', null, 'detail-grid');
     for (const [label, value] of [
       ['نام', detail.displayName || row.displayName || 'بدون نام'],
-      ['شماره تلفن', detail.phone || row.phone || '—'],
+      ['شماره ورود', detail.phone || row.phone || '—'],
+      ...(personal ? [
+        ['شماره تماس', personal.contactPhone],
+        ['سن', number(personal.age)],
+        ['قد (سانتی‌متر)', number(personal.height)],
+        ['وزن (کیلوگرم)', number(personal.weight)],
+      ] : []),
       ['هدف انتخاب‌شده', intake.trackLabel || '—'],
       ['ثبت‌نام از طریق', intake.source === 'demo' ? 'آنبوردینگ وب' : (row.registrationLabel || 'اپلیکیشن')],
       ['وضعیت حساب', statusLabels[detail.status] || detail.status],
@@ -345,13 +364,13 @@ function userOperations(row) {
     ]) {
       const item = element('div');
       const val = element('strong', value);
-      if (label === 'شماره تلفن') val.classList.add('ltr');
+      if (label === 'شماره ورود' || label === 'شماره تماس') val.classList.add('ltr');
       item.append(element('small', label), val);
       grid.append(item);
     }
     const panel = element('div', null, 'report-stack');
     const identity = element('div', null, 'user-detail-identity');
-    identity.append(personCell(detail.displayName || row.displayName || 'کاربر', detail.phone || row.phone), badge(detail.status));
+    identity.append(userPhotoCell(detail.displayName || row.displayName || 'کاربر', detail.phone || row.phone, personal?.photo ?? row.photo), badge(detail.status));
     panel.append(identity, grid);
     if (intake.answers?.length) {
       const answersCard = element('section', null, 'card');

@@ -136,6 +136,9 @@ class _PersonalDetailsState extends State<PersonalDetails> {
         );
         if (mounted) {
           widget.store.questionnaire.name = values[0];
+          widget.store.profilePhoto = photo == null
+              ? null
+              : base64Encode(photo!);
           widget.store.update();
           notice('اطلاعات در حساب ذخیره شد.');
         }
@@ -148,7 +151,11 @@ class _PersonalDetailsState extends State<PersonalDetails> {
           'photo': photo == null ? null : base64Encode(photo!),
         }),
       );
-      if (mounted) notice('اطلاعات روی این دستگاه ذخیره شد.');
+      if (mounted) {
+        widget.store.profilePhoto = photo == null ? null : base64Encode(photo!);
+        widget.store.update();
+        notice('اطلاعات روی این دستگاه ذخیره شد.');
+      }
     } catch (_) {
       if (mounted) notice('ذخیرهٔ اطلاعات ممکن نشد.');
     } finally {

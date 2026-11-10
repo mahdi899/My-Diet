@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { ApiError } from '../common/errors.js';
+import { decryptText } from '../common/field-crypto.js';
 import { uuidv7 } from '../common/id.js';
 import { audit, toman, withTransaction, type Queryable } from '../common/sql.js';
 import { tehranDayStartUtc, tehranToday } from '../common/time.js';
@@ -485,11 +486,18 @@ export class AdminService {
     const user = rows.rows[0];
     if (!user) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
     const intake = await loadUserIntake(this.pool, this.env, userId);
+    const details = await this.pool.query<{ details_encrypted: string }>(
+      'select details_encrypted from user_personal_details where user_id = $1', [userId],
+    );
+    const personalDetails = details.rows[0]
+      ? JSON.parse(decryptText(details.rows[0].details_encrypted, this.env.FIELD_KEY))
+      : null;
     return {
       id: user.id,
       phone: user.phone_e164,
       role: user.role,
-      displayName: intake?.displayName ?? user.display_name,
+      displayName: personalDetails?.name ?? intake?.displayName ?? user.display_name,
+      personalDetails,
       status: user.status,
       createdAt: user.created_at.toISOString(),
       intake: intake
@@ -568,13 +576,15 @@ export class AdminService {
       campaign_source: string | null;
       package_title: string | null;
       ends_at: Date | null;
+      details_encrypted: string | null;
     }>(
       `select u.id, u.phone_e164, u.role, u.status, u.display_name, u.signup_channel,
               p.source as profile_source,
               c.name as campaign_name, c.source as campaign_source,
               coalesce(s.title_fa, ordered.title_fa) as package_title,
-              a.ends_at
+              a.ends_at, pd.details_encrypted
        from users u
+       left join user_personal_details pd on pd.user_id = u.id
        left join nutrition_profiles p on p.user_id = u.id
        left join demo_campaign_links c on c.slug = u.signup_channel
        left join lateral (
@@ -605,6 +615,9 @@ export class AdminService {
         role: row.role,
         status: row.status,
         displayName: identity?.displayName ?? row.display_name,
+        photo: row.details_encrypted
+          ? JSON.parse(decryptText(row.details_encrypted, this.env.FIELD_KEY)).photo ?? null
+          : null,
         registrationLabel: identity?.fromDemo && label === 'اپلیکیشن' ? 'آنبوردینگ وب' : label,
         packageTitle: row.package_title,
         daysRemaining: row.ends_at == null ? null : remainingDays(row.ends_at),
