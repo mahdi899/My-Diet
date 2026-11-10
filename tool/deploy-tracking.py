@@ -12,7 +12,7 @@ if not env.exists():
     env.write_text(''.join(f'{k}={v}\n' for k,v in values.items()));os.chmod(env,0o600)
 existing=subprocess.run(['docker','inspect','sabzine-admin'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
 if existing:run('docker','rm','-f','sabzine-admin')
-run('docker','run','-d','--name','sabzine-admin','--restart','unless-stopped','--network','sabzine_default','--env-file',str(env),'-v','/opt/sabzine/backend/admin-web:/app/admin-web:ro','-p','127.0.0.1:3003:3000','sabzine-admin:tracking')
+run('docker','run','-d','--name','sabzine-admin','--restart','unless-stopped','--network','sabzine_default','--env-file',str(env),'-v','/opt/sabzine/backend/admin-web:/app/admin-web:ro','-v','/opt/sabzine/backend/doctor-web:/app/doctor-web:ro','-p','127.0.0.1:3003:3000','sabzine-admin:tracking')
 site=pathlib.Path('/etc/nginx/sites-available/my-diet.ir')
 backup=site.with_name('my-diet.ir.pre-tracking')
 if not backup.exists():backup.write_text(site.read_text())
@@ -25,12 +25,20 @@ snippet='''
         proxy_set_header X-Forwarded-Proto https;
         add_header Cache-Control "no-store" always;
     }
+    location = /doctor { return 302 /doctor/; }
+    location ^~ /doctor/ {
+        proxy_pass http://127.0.0.1:3003;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $mydiet_analytics_ip;
+        add_header Cache-Control "no-store" always;
+    }
     location ^~ /v1/admin/ {
         proxy_pass http://127.0.0.1:3003;
         proxy_set_header Host $host;
         add_header Cache-Control "no-store" always;
     }
-    location ~ ^/v1/auth/(admin/login|refresh|logout|totp|otp/request|otp/verify)$ {
+    location ~ ^/v1/auth/(admin/login|specialist/login|refresh|logout|totp|otp/request|otp/verify)$ {
         limit_except POST { deny all; }
         proxy_pass http://127.0.0.1:3003;
         proxy_set_header Host $host;
@@ -114,7 +122,8 @@ if 'location ^~ /go/' not in text:
     }
     location / {''',1)
     site.write_text(text)
-text=text.replace('(admin/login|refresh|logout|totp)$','(admin/login|refresh|logout|totp|otp/request|otp/verify)$')
+text=text.replace('(admin/login|refresh|logout|totp)$','(admin/login|specialist/login|refresh|logout|totp|otp/request|otp/verify)$')
+text=text.replace('(admin/login|refresh|logout|totp|otp/request|otp/verify)$','(admin/login|specialist/login|refresh|logout|totp|otp/request|otp/verify)$')
 if 'location ~ ^/v1/onboarding/submissions/' not in text:
     text=text.replace('    location /v1/ {', '''    location ~ ^/v1/onboarding/submissions/[a-fA-F0-9-]+/verify$ {
         limit_except POST { deny all; }
@@ -135,6 +144,18 @@ if 'location = /v1/onboarding/submissions' not in text:
         add_header Cache-Control "private, no-store" always;
     }
     location /v1/ {''')
+    site.write_text(text)
+if 'location ^~ /doctor/' not in text and 'location ^~ /v1/admin/' in text:
+    doctor_locations = '''    location = /doctor { return 302 /doctor/; }
+    location ^~ /doctor/ {
+        proxy_pass http://127.0.0.1:3003;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $mydiet_analytics_ip;
+        add_header Cache-Control "no-store" always;
+    }
+'''
+    text = text.replace('    location ^~ /v1/admin/ {', doctor_locations + '    location ^~ /v1/admin/ {', 1)
     site.write_text(text)
 if '# My Diet analytics/admin' not in text:
     site.write_text(text.replace('    location / {',snippet+'\n    location / {',1))

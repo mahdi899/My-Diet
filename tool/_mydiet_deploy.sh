@@ -33,8 +33,9 @@ if [[ ! -f /tmp/mydiet-src.done ]]; then
     --exclude dist \
     backend/ /var/lib/sabzine/migrate-src/
 
-  mkdir -p /opt/sabzine/backend/admin-web
+  mkdir -p /opt/sabzine/backend/admin-web /opt/sabzine/backend/doctor-web
   rsync -a --delete admin/ /opt/sabzine/backend/admin-web/
+  rsync -a --delete doctor/ /opt/sabzine/backend/doctor-web/
   touch /tmp/mydiet-src.done
 fi
 

@@ -17,20 +17,40 @@ export async function createApp(): Promise<{
   const env = loadEnv();
   const app = await NestFactory.create(AppModule.forRoot(), {
     bufferLogs: true,
+    bodyParser: false,
   });
+  // Photo messages are JSON base64, same ceiling as care-media uploads (~1.5MB decoded).
+  app.use(express.json({ limit: '3mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '1mb' }));
   app.useLogger(app.get(Logger));
   // The container is exposed only to the local Nginx proxy, which overwrites XFF.
   app.getHttpAdapter().getInstance().set('trust proxy',1);
   app.useGlobalFilters(new ProblemFilter());
   const bundledAdmin = resolve(process.cwd(), 'admin-web');
   const adminDir = existsSync(bundledAdmin) ? bundledAdmin : resolve(process.cwd(), '..', 'admin');
-  app.use('/admin', express.static(adminDir, {
-    setHeaders(res) {
+  const bundledDoctor = resolve(process.cwd(), 'doctor-web');
+  const doctorDir = existsSync(bundledDoctor) ? bundledDoctor : resolve(process.cwd(), '..', 'doctor');
+  const staffStatic = {
+    setHeaders(res: express.Response) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      );
     },
-  }));
+  };
+  const doctorIndex = resolve(doctorDir, 'index.html');
+  const http = app.getHttpAdapter().getInstance();
+  const sendDoctorIndex = (_req: express.Request, res: express.Response) => {
+    staffStatic.setHeaders(res);
+    res.sendFile(doctorIndex, (err) => {
+      if (err && !res.headersSent) res.status(500).end();
+    });
+  };
+  http.get('/doctor/', sendDoctorIndex);
+  http.get('/doctor', (_req: express.Request, res: express.Response) => res.redirect(302, '/doctor/'));
+  http.use('/admin', express.static(adminDir, staffStatic));
   app.enableShutdownHooks();
   if (env.CORS_ORIGINS) {
     app.enableCors({

@@ -4,6 +4,7 @@ COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
 COPY backend/ ./
 COPY admin/ ./admin-web
+COPY doctor/ ./doctor-web
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-bookworm-slim
@@ -12,6 +13,7 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/admin-web ./admin-web
+COPY --from=build /app/doctor-web ./doctor-web
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/package.json ./package.json
 USER node

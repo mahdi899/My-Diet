@@ -2,8 +2,16 @@
 (() => {
   const $ = id => document.getElementById(id);
   const { element, table, date } = WorkspaceUI;
-  const sections = { dashboard: 'داشبورد', patients: 'پرونده کاربران', review: 'برنامه‌های منتظر بررسی',
-    changes: 'درخواست‌های تغییر برنامه', conversations: 'گفتگوها', reports: 'گزارش‌های هفتگی', profile: 'پروفایل حرفه‌ای' };
+  const pages = {
+    dashboard: { title: 'داشبورد', icon: 'grid', group: 'نمای کلی', description: 'پرونده‌ها و برنامه‌های در انتظار بررسی.' },
+    patients: { title: 'پرونده کاربران', icon: 'users', group: 'پرونده‌ها', description: 'پرونده‌های مرتبط با درخواست‌های اختصاص‌یافته.' },
+    review: { title: 'برنامه‌های منتظر بررسی', icon: 'clipboard', group: 'پرونده‌ها', description: 'پیش‌نویس‌هایی که منتظر بررسی شما هستند.' },
+    changes: { title: 'درخواست‌های تغییر برنامه', icon: 'sliders', group: 'پرونده‌ها', description: 'درخواست‌های اصلاح برنامه را از اینجا دنبال کنید.' },
+    conversations: { title: 'گفتگوها', icon: 'message', group: 'ارتباط', description: 'گفت‌وگو با کاربرانی که پرونده‌شان به شما سپرده شده.' },
+    reports: { title: 'گزارش‌های هفتگی', icon: 'calendar', group: 'پیگیری', description: 'گزارش هفتهٔ کاربران.' },
+    profile: { title: 'پروفایل حرفه‌ای', icon: 'medical', group: 'پیگیری', description: 'هویت و مشخصات حرفه‌ای شما.' },
+  };
+  const sections = Object.fromEntries(Object.entries(pages).map(([key, page]) => [key, page.title]));
   const status = { in_review:'در انتظار بررسی',response_received:'پاسخ دریافت شده',queued:'در صف',generating:'در حال تولید',awaiting_review:'منتظر بررسی',reviewing:'در حال بررسی',
     awaiting_user:'در انتظار پاسخ کاربر',needs_info:'نیاز به اطلاعات',published:'منتشرشده',cancelled:'لغوشده' };
   const session = SabzineStaff.create({ role: 'specialist', onExpired: () => signedOut('نشست پایان یافته؛ دوباره وارد شوید.') });
@@ -11,7 +19,7 @@
   const messagingLive=SabzineMessagingRepository.live(session);
   const demoMessages=()=>messagingDemo ||= SabzineMessagingRepository.sample();
   let current = 'dashboard', generation = 0, phone = '', challenge = null;
-  const notice = text => { $('message').textContent = text || ''; };
+  const notice = text => { const node = $('message'); if (!node) return; node.textContent = text || ''; node.hidden = !text; };
   function signedOut(message = '') {
     SabzineMessaging.reset();messagingDemo=null; SabzineClinical.reset(); generation++; session.clear(); $('panel').hidden = true; $('login').hidden = false;
     $('phone-form').hidden = false; $('password-form').hidden = true; $('code-form').hidden = true; $('totp-form').hidden = true;
@@ -73,17 +81,54 @@
     $('code-form').reset(); $('code-form').hidden = true; $('phone-form').hidden = false; $('password-form').hidden = true;
     $('login-method').hidden = false; $('login-method').textContent = 'ورود با نام کاربری و رمز';
   };
-  $('logout').onclick = async () => {
-    $('logout').disabled = true;
+  async function logoutAccount(button) {
+    button.disabled = true;
     try { await session.logout(); signedOut('از حساب خارج شدید.'); }
     catch (error) { notice(error.message); }
-    finally { $('logout').disabled = false; }
-  };
-  function navigate(section) { if(!SabzineClinical.leave()||!SabzineMessaging.leave())return; current = section; location.hash = section; load(); }
-  for (const [key, label] of Object.entries(sections)) {
-    const button = element('button', label); button.type = 'button'; button.dataset.section = key;
-    button.onclick = () => navigate(key); $('nav').append(button);
+    finally { button.disabled = false; }
   }
+  $('logout').onclick = () => logoutAccount($('logout'));
+  if ($('logout-menu')) $('logout-menu').onclick = () => logoutAccount($('logout-menu'));
+  if ($('password-toggle')) $('password-toggle').onclick = () => {
+    const input = $('login-password');
+    const shown = input.type === 'text';
+    input.type = shown ? 'password' : 'text';
+    $('password-toggle').setAttribute('aria-pressed', String(!shown));
+    $('password-toggle').setAttribute('aria-label', shown ? 'نمایش رمز عبور' : 'پنهان کردن رمز عبور');
+  };
+  function navigate(section) { if(!SabzineClinical.leave()||!SabzineMessaging.leave())return; current = section; location.hash = section; if (typeof setMenu === 'function') setMenu(false); load(); }
+  let lastGroup, group;
+  for (const [key, page] of Object.entries(pages)) {
+    if (page.group !== lastGroup) {
+      group = element('div', null, 'nav-group');
+      group.append(element('div', page.group, 'nav-group-label'));
+      $('nav').append(group);
+      lastGroup = page.group;
+    }
+    const link = element('a', null, 'nav-link'); link.href = '#' + key; link.dataset.section = key;
+    if (typeof icon === 'function') link.append(icon(page.icon));
+    link.append(element('span', page.title));
+    link.onclick = () => { if (current === key) setMenu(false); };
+    (group || $('nav')).append(link);
+  }
+  const smallScreen = matchMedia('(max-width: 760px)');
+  function setMenu(open) {
+    if (!$('sidebar') || !$('menu-toggle')) return;
+    const visible = open && smallScreen.matches;
+    document.body.classList.toggle('menu-open', visible);
+    $('sidebar-backdrop').hidden = !visible;
+    $('menu-toggle').setAttribute('aria-expanded', String(visible));
+  }
+  if ($('menu-toggle')) {
+    $('menu-toggle').onclick = () => setMenu(true);
+    $('menu-close').onclick = $('sidebar-backdrop').onclick = () => setMenu(false);
+    smallScreen.addEventListener('change', () => setMenu(false));
+  }
+  if ($('account-toggle')) {
+    $('account-toggle').onclick = event => { event.stopPropagation(); $('account-menu').hidden = !$('account-menu').hidden; $('account-toggle').setAttribute('aria-expanded', String(!$('account-menu').hidden)); };
+    document.addEventListener('click', event => { if (!$('account-menu') || $('account-menu').hidden) return; if (!$('account-toggle').parentElement.contains(event.target)) { $('account-menu').hidden = true; $('account-toggle').setAttribute('aria-expanded', 'false'); } });
+  }
+  if (globalThis.hydrateIcons) hydrateIcons();
   $('refresh').onclick = () => load();
   $('today').textContent = date(new Date());
   function demoClinical() {
@@ -120,7 +165,7 @@
     ['نوع', row => row.kind === 'new_plan' ? 'برنامه جدید' : 'بازنگری برنامه'],
     ['زمان ثبت', row => date(row.createdAt)],
   ]);
-  function showChat(repository,conversationId){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='گفتگو با کاربر';$('content').replaceChildren(SabzineMessaging.chat({repository,session,conversationId}));}
+  function showChat(repository,conversationId){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='گفتگو با کاربر';if($('breadcrumb'))$('breadcrumb').textContent='گفتگو با کاربر';$('content').replaceChildren(SabzineMessaging.chat({repository,session,conversationId}));}
   function changeView(repository){return SabzineMessaging.changes({repository,session,onChat:showChat,onEditor:(repo,request)=>{SabzineMessaging.reset();generation++;$('content').replaceChildren(SabzinePlanReview.open({session,requestId:request.id,onBack:()=>showChanges(repository)}));}});}
   function showChanges(repository){if(!SabzineClinical.leave()||!SabzineMessaging.leave())return;generation++;$('title').textContent='درخواست‌های تغییر برنامه';$('content').replaceChildren(changeView(repository));}
   async function render(section) {
@@ -168,11 +213,15 @@
   async function load() {
     if (!session.active) return;
     const request = ++generation, section = current;
-    $('title').textContent = sections[section]; $('content').textContent = 'در حال دریافت اطلاعات…';
+    $('title').textContent = sections[section];
+    if ($('breadcrumb')) $('breadcrumb').textContent = sections[section];
+    if ($('page-eyebrow')) $('page-eyebrow').textContent = pages[section].group;
+    if ($('page-description')) $('page-description').textContent = pages[section].description;
+    $('content').textContent = 'در حال دریافت اطلاعات…';
     $('content').setAttribute('aria-busy', 'true'); notice();
-    for (const button of $('nav').querySelectorAll('button')) {
-      button.classList.toggle('active', button.dataset.section === section);
-      if (button.dataset.section === section) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current');
+    for (const link of $('nav').querySelectorAll('.nav-link')) {
+      link.classList.toggle('active', link.dataset.section === section);
+      if (link.dataset.section === section) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
     }
     try { const view = await render(section); if (request === generation && session.active) $('content').replaceChildren(view); }
     catch (error) {

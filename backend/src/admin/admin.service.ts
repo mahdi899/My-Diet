@@ -692,7 +692,7 @@ export class AdminService {
       bio: string;
       education: string;
       medical_council_no: string;
-      birth_date: Date | null;
+      birth_date: string | null;
       portrait: string;
       username: string | null;
       average: string | null;
@@ -722,7 +722,7 @@ export class AdminService {
       bio: row.bio,
       education: row.education || row.credential,
       councilNo: row.medical_council_no,
-      birthDate: row.birth_date ? row.birth_date.toISOString().slice(0, 10) : null,
+      birthDate: row.birth_date ? String(row.birth_date).slice(0, 10) : null,
       portrait: row.portrait || null,
       username: row.username,
       averageRating: row.average == null ? null : Number(row.average),

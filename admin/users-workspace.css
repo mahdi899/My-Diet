@@ -18,8 +18,9 @@
 }
 
 /* User detail modal */
-.user-detail-modal { border-radius:24px; overflow:hidden; }
-.user-detail-modal .modal-body { padding:26px; background:#f5f8f3; }
+.user-detail-modal { display:flex; flex-direction:column; border-radius:24px; overflow:hidden; max-height:calc(100dvh - 48px); }
+.user-detail-modal .modal-header { flex:none; }
+.user-detail-modal .modal-body { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:26px; background:#f5f8f3; }
 .user-detail-modal .user-detail-identity { background:linear-gradient(115deg,#24614d,#153e35); color:white; border:0; padding:26px; }
 .user-detail-identity strong,.user-detail-identity small { color:inherit; }
 .user-detail-modal .detail-grid > div { padding:14px; background:#f7faf5; border-radius:12px; }
