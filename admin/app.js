@@ -621,6 +621,11 @@ async function load() {
     else if (section === 'streaks') view = SabzineStreak.campaignPage();
     else if (section === 'settings') view = settings();
     else if (section === 'dashboard') { const [stats, payments] = await Promise.all([api('admin/dashboard'), api('admin/payments')]); view = dashboard(stats, payments); }
+    else if (section === 'payments') {
+      const [payments, transfers] = await Promise.all([api('admin/payments'), api('admin/onboarding-transfers')]);
+      view = element('div', null, 'report-stack');
+      view.append(onboardingTransferPanel(transfers), tablePage(payments, section));
+    }
     else if (section === 'reviews') { view = tablePage(await api('admin/reviews?status=pending'), section); }
     else { const path = section === 'messages' ? 'conversations' : section === 'tickets' ? 'admin/support-conversations' : 'admin/' + section; view = tablePage(await api(path), section); }
     if (request !== generation || !staffSession.active) return;
@@ -654,3 +659,35 @@ async function loadAfterSessionCheck(){
 }
 setInterval(()=>{if(!$('panel').hidden&&!staffSession.active){signedOut();notice('نشست پایان یافته؛ دوباره وارد شوید.','error');}},30000);
 api('auth/refresh','POST',{}).then(signedIn).catch(error=>{signedOut();if(error.status!==401)notice(error.message,'error');});
+function onboardingTransferPanel(rows) {
+  const plans = { weekly: 'شروع', monthly: 'همراه', quarterly: 'VIP' };
+  return listPanel(rows, {
+    title: 'واریزهای کارت‌به‌کارت آنبوردینگ',
+    description: 'مبلغ را با گردش حساب تطبیق دهید و شناسه پیگیری بانکی را ثبت کنید.',
+    columns: [
+      { label: 'شماره کاربر', render: row => row.phone_e164 },
+      { label: 'پلن', render: row => plans[row.plan] },
+      { label: 'مبلغ', render: row => money(row.amount_toman) },
+      { label: 'مهلت واریز', render: row => new Date(row.expires_at).toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' }) },
+      { label: 'وضعیت', render: row => row.confirmed_at ? 'تأیید شد' : Date.parse(row.expires_at) > Date.now() ? 'در انتظار' : 'مهلت تمام شد' },
+      { label: 'پیامک', render: row => ({ sent: 'ارسال شد', failed: 'ارسال ناموفق', sending: 'در حال ارسال' })[row.sms_status] || '—' },
+      { label: 'پیگیری', render: row => row.confirmed_at ? row.bank_reference : button('تأیید واریز', () => {
+        openModal('تأیید واریز کارت‌به‌کارت', (body, dialog) => {
+          const form = element('form');
+          form.append(infoNote('مبلغ مورد انتظار ' + number(row.amount_toman) + ' تومان است. مبلغ واقعی و شناسه را از گردش حساب وارد کنید.'));
+          const amount = field(form, 'amount', 'مبلغ واریزشده (تومان)', 'number');
+          const reference = field(form, 'reference', 'شناسه پیگیری بانکی', 'text');
+          amount.required = reference.required = true;
+          form.append(formFooter('ثبت تأیید', 'check'));
+          onForm(form, async values => {
+            const result = await api('admin/onboarding-transfers/' + row.id + '/confirm', 'POST', { reference: values.reference, amountToman: Number(values.amount) });
+            dialog.close();
+            notice(result.smsStatus === 'sent' ? 'واریز تأیید و پیامک ارسال شد' : 'واریز تأیید شد. پیامک ارسال نشد.');
+            await load();
+          });
+          body.append(form);
+        });
+      }, { secondary: true }) },
+    ],
+  });
+}

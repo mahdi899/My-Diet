@@ -210,8 +210,10 @@
     }
   </style>
   <link rel="stylesheet" href="matching.css?v=21">
-  <link rel="stylesheet" href="plans.css?v=6">
+  <link rel="stylesheet" href="plans.css?v=8">
   <link rel="stylesheet" href="verification.css?v=10">
+  <link rel="stylesheet" href="payment-card.css?v=2">
+  <script src="payment-card.js?v=1" defer></script>
 </head>
 <body class="selection:bg-[#205638] selection:text-white">
 
@@ -433,21 +435,34 @@
       </div>
     </section>
 
-    <!-- Order summary: online payments are not available yet. -->
+    <!-- Card transfer payment summary. -->
     <section id="page3Container" class="hidden stage-fade-in" aria-labelledby="orderSummaryTitle">
       <div class="max-w-3xl mx-auto rounded-3xl bg-white border border-[#dee5d5] p-6 sm:p-8 text-[#233c2d]">
         <p class="font-bold text-sm mb-3">خلاصهٔ انتخاب شما</p>
-        <h2 id="orderSummaryTitle" class="text-2xl font-black mb-4">پرداخت آنلاین هنوز فعال نشده است</h2>
-        <p class="leading-8 mb-6">شمارهٔ شما تأیید شد. در این مرحله هیچ مبلغی دریافت نمی‌شود و خرید، رزرو نوبت یا سفارش قطعی ثبت نشده است. پس از فعال‌شدن پرداخت آنلاین، امکان خرید فراهم خواهد شد.</p>
+        <h2 id="orderSummaryTitle" class="text-2xl font-black mb-4">یک قدم تا شروع مسیرت</h2>
+        <video class="transfer-video" controls playsinline preload="metadata" aria-label="راهنمای پرداخت">
+          <source src="payment-guide.mp4" type="video/mp4">
+        </video>
+        <div class="transfer-card">
+          <div class="transfer-card-top"><span>رژیم من</span><span>پرداخت کارت‌به‌کارت</span></div>
+          <span class="transfer-chip" aria-hidden="true"></span>
+          <button type="button" class="transfer-number" aria-label="کپی شماره کارت 5859831818609595"><b dir="ltr">5859 8318 1860 9595</b><span>برای کپی شماره کارت لمس کنید</span></button>
+          <div class="transfer-owner"><small>به نام</small><strong>بهرام رستمی</strong></div>
+        </div>
+        <p class="transfer-feedback" role="status" aria-live="polite"></p>
         <dl class="grid gap-4 sm:grid-cols-2 mb-6">
           <div><dt>هدف</dt><dd id="paymentGoalSummary" class="font-bold mt-1"></dd></div>
           <div><dt>پلن انتخابی</dt><dd id="paymentPlanNameSummary" class="font-bold mt-1"></dd></div>
-          <div><dt>تعرفهٔ پلن (غیرقابل پرداخت در حال حاضر)</dt><dd id="paymentTotalAmount" class="font-bold mt-1"></dd></div>
+          <div><dt>مبلغ قابل پرداخت</dt><dd id="paymentTotalAmount" class="font-bold mt-1"></dd></div>
         </dl>
         <div class="flex flex-wrap gap-3">
           <button id="changePlanFromPaymentBtn" type="button" class="quiz-green-btn rounded-xl px-5 py-3 font-bold">تغییر پلن</button>
           <a href="/pricing.html" class="rounded-xl px-5 py-3 border border-[#dee5d5]">خدمات و تعرفه‌ها</a>
           <a href="/contact.html" class="rounded-xl px-5 py-3 border border-[#dee5d5]">تماس با پشتیبانی</a>
+        </div>
+        <div class="mt-6 pt-4 border-t border-[#dee5d5]">
+          <p class="mb-3">اگر پرداخت شما تأیید نشد، در تلگرام به پشتیبانی پیام دهید.</p>
+          <a href="https://t.me/hale_a" target="_blank" rel="noopener noreferrer" class="inline-flex rounded-xl px-5 py-3 border border-[#dee5d5]">پیام به پشتیبانی در تلگرام</a>
         </div>
       </div>
     </section>
@@ -494,7 +509,9 @@
              Click a plan to inspect features; purchase buttons remain visible.
              ====================================== -->
 <div id="modalStep1Content">
-<div class="plans-stack"><section class="plan-tier" data-tier="weekly"><button type="button" class="plan-option-card" data-plan-id="weekly" aria-expanded="false" aria-controls="features-weekly"><span class="plan-heading"><strong>شروع</strong><span class="plan-duration">۱۵ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">یک شروع مشخص، متناسب با تو</span></button><div id="features-weekly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه تغذیه اختصاصی با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>جایگزین‌های غذایی متناسب با سلیقه‌ات</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>لیست خرید برنامه</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۲۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="weekly">انتخاب پلن شروع<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="monthly"><button type="button" class="plan-option-card" data-plan-id="monthly" aria-expanded="false" aria-controls="features-monthly"><span class="plan-heading"><strong>همراه</strong><span class="plan-duration">۳۰ روزه</span><span class="plan-recommendation">پیشنهاد ما</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">زمان بیشتر، همراهی نزدیک‌تر</span></button><div id="features-monthly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>همه امکانات پلن شروع با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۲ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی روند و اجرای برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پشتیبانی متنی در طول دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="monthly">انتخاب پلن همراه<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section><section class="plan-tier" data-tier="quarterly"><button type="button" class="plan-option-card" data-plan-id="quarterly" aria-expanded="false" aria-controls="features-quarterly"><span class="plan-heading"><strong>VIP</strong><span class="plan-duration">۹۰ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">همراهی خصوصی و پیوسته</span></button><div id="features-quarterly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه اختصاصی و همراهی <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۶ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۳ جلسه آنلاین با متخصص منتخب</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی و پشتیبانی اولویت‌دار</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه حفظ عادت‌ها در پایان دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۸٬۹۹۰٬۰۰۰</strong><span>تومان</span></span><button type="button" class="plan-continue" data-continue-plan="quarterly">انتخاب پلن VIP<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button></div></section></div></div>
+<div class="plans-stack"><section class="plan-tier" data-tier="weekly"><button type="button" class="plan-option-card" data-plan-id="weekly" aria-expanded="false" aria-controls="features-weekly"><span class="plan-heading"><strong>شروع</strong><span class="plan-duration">۱۵ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">یک شروع مشخص، متناسب با تو</span></button><div id="features-weekly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه تغذیه اختصاصی با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>جایگزین‌های غذایی متناسب با سلیقه‌ات</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>لیست خرید برنامه</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۲۹۰٬۰۰۰</strong><span>تومان</span></span></div></section><section class="plan-tier" data-tier="monthly"><button type="button" class="plan-option-card" data-plan-id="monthly" aria-expanded="false" aria-controls="features-monthly"><span class="plan-heading"><strong>همراه</strong><span class="plan-duration">۳۰ روزه</span><span class="plan-recommendation">پیشنهاد ما</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">زمان بیشتر، همراهی نزدیک‌تر</span></button><div id="features-monthly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>همه امکانات پلن شروع با <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۲ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی روند و اجرای برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پشتیبانی متنی در طول دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۱٬۹۹۰٬۰۰۰</strong><span>تومان</span></span></div></section><section class="plan-tier" data-tier="quarterly"><button type="button" class="plan-option-card" data-plan-id="quarterly" aria-expanded="false" aria-controls="features-quarterly"><span class="plan-heading"><strong>VIP</strong><span class="plan-duration">۹۰ روزه</span><span class="plan-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></span><span class="plan-description">همراهی خصوصی و پیوسته</span></button><div id="features-quarterly" class="plan-details" hidden><ul><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه اختصاصی و همراهی <span class="plan-doctor-name"></span></li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۶ نوبت بازبینی و اصلاح برنامه</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>۳ جلسه آنلاین با متخصص منتخب</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>پیگیری هفتگی و پشتیبانی اولویت‌دار</li><li><span class="plan-feature-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>برنامه حفظ عادت‌ها در پایان دوره</li></ul></div><div class="plan-purchase"><span class="plan-price"><strong>۸٬۹۹۰٬۰۰۰</strong><span>تومان</span></span></div></section></div>
+<button type="button" id="buySelectedPlan" class="plan-continue plans-buy" disabled>خرید پلن</button>
+</div>
 
         <!-- ======================================
              MODAL STEP 2: PHONE INPUT -> MORPHS INTO OTP INPUT IN-PLACE
@@ -1548,7 +1565,7 @@
       window.demoTracking?.step('plans');
       state.modalStep = 1;
       document.querySelectorAll('.plan-doctor-name').forEach(el => { el.textContent = state.selectedSpecialist?.name || 'متخصص منتخب شما'; });
-      selectPlanDetails(null);
+      selectPlanDetails('monthly');
       document.getElementById('modalHeaderTitle').textContent = 'انتخاب نوع برنامه';
 
       // Hide top-left Back button on Step 1
@@ -1560,11 +1577,15 @@
       document.getElementById('modalStep2Content').classList.add('hidden');
     }
 
-    function selectPlanDetails(planId) {
-      if (planId && PLANS_CATALOG[planId]) state.selectedPlan = PLANS_CATALOG[planId];
+    function selectPlanDetails(planId, confirmSelection = true) {
+      state.selectedPlan = confirmSelection ? PLANS_CATALOG[planId] : null;
+      const buy = document.getElementById('buySelectedPlan');
+      buy.disabled = !state.selectedPlan;
+      buy.textContent = state.selectedPlan ? 'خرید پلن ' + state.selectedPlan.tierLabel : 'خرید پلن';
       document.querySelectorAll('.plan-option-card').forEach(button => {
         const selected = button.dataset.planId === planId;
         button.setAttribute('aria-expanded', String(selected));
+        button.setAttribute('aria-pressed', String(selected && confirmSelection));
         button.closest('.plan-tier').classList.toggle('is-open', selected);
         document.getElementById(button.getAttribute('aria-controls')).hidden = !selected;
       });
@@ -1778,13 +1799,13 @@
       }
     }
 
-    // The final demo stage is an unpaid summary, never a payment gateway.
     function populateAndShowPaymentPage() {
-      switchPage(3);
-      document.getElementById('paymentGoalSummary').textContent = state.selectedGoal.title;
-      document.getElementById('paymentPlanNameSummary').textContent = state.selectedPlan.name;
-      document.getElementById('paymentTotalAmount').textContent = state.selectedPlan.priceText;
-      showToast('شماره تأیید شد؛ پرداخت آنلاین هنوز فعال نیست.');
+      sessionStorage.setItem('mydiet.checkout', JSON.stringify({
+        token: state.smsSession.token,
+        submissionId: state.submissionId,
+        plan: state.selectedPlan.id,
+      }));
+      location.assign('payment.html');
     }
 
     // =========================================================
@@ -1988,16 +2009,18 @@
         document.querySelector(`[data-specialist-id="${person.id}"]`)?.focus();
       });
 
-      // Modal Step 1: Toggle details independently from purchasing
+      // Modal Step 1: Select a plan, then continue with the shared purchase button.
       document.querySelectorAll('.plan-tier').forEach(tier => {
-        tier.addEventListener('click', (event) => {
-          if (event.target.closest('[data-continue-plan]')) return;
-          const card = tier.querySelector('.plan-option-card');
-          selectPlanDetails(card.getAttribute('aria-expanded') === 'true' ? null : card.dataset.planId);
-        });
+        tier.addEventListener('click', () => selectPlanDetails(tier.dataset.tier));
       });
-      document.querySelectorAll('[data-continue-plan]').forEach(button => {
-        button.addEventListener('click', () => showModalStep2(button.dataset.continuePlan));
+      document.getElementById('buySelectedPlan').addEventListener('click', () => {
+        if (!state.selectedPlan) return;
+        if (state.currentPage === 3 && state.smsSession?.phone === state.userPhone) {
+          closePlanSelectionModal();
+          populateAndShowPaymentPage();
+          return;
+        }
+        showModalStep2(state.selectedPlan.id);
       });
 
       // Modal Step 2: Top-left Back button returns to Step 1 (plan selection)
