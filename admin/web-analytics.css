@@ -1,1 +1,14 @@
 .tracking-filters{display:flex;align-items:center;gap:24px;padding:20px;flex-wrap:wrap}.tracking-filters label{display:flex;align-items:center;gap:12px;font-weight:700}.tracking-filters select{font:inherit;color:var(--ink,#233c2d);padding:10px 14px;min-height:44px;border:1px solid #dce6de;border-radius:12px;background:#fff}.tracking-filters p{margin:0;color:#64756c;font-size:13px;line-height:1.8}.tracking-filters select:focus-visible{outline:2px solid #205638;outline-offset:3px}
+
+.tracking-live .tracking-filters { gap: 12px 20px; }
+.tracking-live .tracking-filters select { max-width: min(100%, 320px); }
+.tracking-live .tracking-filters p { overflow-wrap: anywhere; }
+.tracking-live-table { max-height: 55vh; overflow: auto; }
+.tracking-live-table table { width: 100%; min-width: 560px; border-collapse: separate; border-spacing: 0; }
+.tracking-live-table th,
+.tracking-live-table td { padding: 12px 16px; text-align: right; border-top: 1px solid var(--line, #dce6de); }
+.tracking-live-table th { position: sticky; top: 0; background: #f4f7f2; }
+.tracking-live-table td[dir="ltr"] { font-family: monospace; }
+.tracking-history > summary { padding: 16px 20px; font-weight: 700; cursor: pointer; }
+.tracking-history > .report-stack { padding: 0 20px 20px; }
+.tracking-results-status { margin: 0; padding: 10px 20px; color: #52675b; font-size: 13px; }

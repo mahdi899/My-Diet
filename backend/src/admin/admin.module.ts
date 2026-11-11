@@ -1,3 +1,4 @@
+import { OnboardingTransfersController } from './onboarding-transfers.controller.js';
 import { Module } from '@nestjs/common';
 import { MaintenanceModule } from '../maintenance/maintenance.module.js';
 import { OnboardingModule } from '../onboarding/onboarding.module.js';
@@ -18,7 +19,7 @@ import { CampaignLinksController, CampaignRedirectController } from './campaign-
 
 @Module({
   imports: [MaintenanceModule, MoneyModule, PublishingModule, OnboardingModule],
-  controllers: [AdminController, SpecialistsController, SpecialistProfileController, PublicConfigController, IntegrationsController, WebAnalyticsController, OnboardingSubmissionsController, OnboardingQuestionnaireController, CampaignLinksController, CampaignRedirectController],
+  controllers: [OnboardingTransfersController, AdminController, SpecialistsController, SpecialistProfileController, PublicConfigController, IntegrationsController, WebAnalyticsController, OnboardingSubmissionsController, OnboardingQuestionnaireController, CampaignLinksController, CampaignRedirectController],
   providers: [AdminService, IntegrationsService],
   exports: [AdminService, MaintenanceModule],
 })

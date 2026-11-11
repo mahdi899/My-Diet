@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تکمیل خرید | رژیم من</title>
+<link rel="stylesheet" href="theme.css?v=48">
+<link rel="stylesheet" href="payment-card.css?v=6">
+<script src="payment-card.js?v=1" defer></script>
+<script src="tracking-config.js?v=1" defer></script>
+<script src="tracking.js?v=4" defer></script>
+<script src="checkout.js?v=5" defer></script>
+</head>
+<body class="checkout-page">
+<main class="checkout-panel">
+  <p id="checkout-status" role="status">در حال بررسی نشست پرداخت…</p>
+  <section id="checkout-content" hidden>
+    <section class="checkout-video-panel" aria-labelledby="checkout-video-title">
+    <h1 id="checkout-video-title" class="checkout-video-note">قبل پرداخت ویدیو زیر رو ببین <span aria-hidden="true">👇</span></h1>
+        <video class="transfer-video" controls playsinline preload="metadata" aria-label="راهنمای پرداخت">
+          <source src="payment-guide.mp4" type="video/mp4">
+        </video>
+    </section>
+    <p class="checkout-timer">مهلت واریز <b id="checkout-timer" dir="ltr">--:--</b></p>
+    <div id="checkout-methods" role="group" aria-label="روش پرداخت">
+      <button type="button" data-method="gateway" aria-pressed="true">پرداخت آنلاین با زیبال</button>
+      <button type="button" data-method="transfer" aria-pressed="false">کارت‌به‌کارت</button>
+    </div>
+    <div id="checkout-gateway">
+      <p class="checkout-total"><span>مبلغ پرداخت</span><strong id="gateway-amount"></strong></p>
+      <button id="pay-gateway" type="button" class="checkout-action">رفتن به درگاه زیبال <span aria-hidden="true">←</span></button>
+    </div>
+    <div id="checkout-transfer" hidden>
+      <button id="copy-amount" type="button" class="checkout-action"></button>
+      <p>مبلغ را دقیقاً تا آخرین رقم واریز کنید تا پشتیبانی پرداخت را با سفارش تطبیق دهد.</p>
+        <div class="transfer-card">
+          <div class="transfer-card-top"><span>رژیم من</span><span>پرداخت کارت‌به‌کارت</span></div>
+          <span class="transfer-chip" aria-hidden="true"></span>
+          <button type="button" class="transfer-number" aria-label="کپی شماره کارت 5859831818609595"><b dir="ltr">5859 8318 1860 9595</b><span>برای کپی شماره کارت لمس کنید</span></button>
+          <div class="transfer-owner"><small>به نام</small><strong>بهرام رستمی</strong></div>
+        </div>
+        <p class="transfer-feedback" role="status" aria-live="polite"></p>
+    </div>
+    <form id="checkout-plan">
+      <label for="checkout-plan-choice">تغییر پلن</label>
+      <select id="checkout-plan-choice">
+        <option value="weekly">شروع · ۱۵ روزه</option>
+        <option value="monthly">همراه · ۳۰ روزه</option>
+        <option value="quarterly">VIP · ۹۰ روزه</option>
+      </select>
+      <button class="checkout-action checkout-secondary" type="submit">تأیید پلن</button>
+    </form>
+    <footer>
+      <p>اگر پرداخت شما تأیید نشد، در تلگرام به پشتیبانی پیام دهید.</p>
+      <a href="https://t.me/hale_a" target="_blank" rel="noopener noreferrer">پیام به پشتیبانی در تلگرام</a>
+    </footer>
+  </section>
+  <a id="checkout-return" href="./" hidden>بازگشت به آنبوردینگ</a>
+</main>
+</body>
+</html>

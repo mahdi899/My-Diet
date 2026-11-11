@@ -100,3 +100,24 @@
 #twoStepModalCard:has(#modalStep1Content:not(.hidden)) #modalHeaderTitle{font-size:13px!important;font-weight:700;color:#4b6451!important}
 #twoStepModalCard:has(#modalStep1Content:not(.hidden)) #closeModalBtn{background:transparent;width:36px;height:36px;font-size:16px;color:#748071}
 #twoStepModalCard:has(#modalStep1Content:not(.hidden)) #closeModalBtn:hover{background:#e9eee1}
+
+.plans-buy {
+  justify-content: center;
+  min-height: 48px;
+  margin-top: 18px;
+}
+.plans-buy:disabled {
+  opacity: .55;
+  cursor: default;
+}
+.plan-option-card[aria-pressed="true"] .plan-heading > strong::after {
+  content: " ✓";
+  color: var(--tier-color, #24563c);
+}
+
+.plans-buy {
+  position: sticky;
+  bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 2;
+  box-shadow: 0 3px 16px #173b2850;
+}
