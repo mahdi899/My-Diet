@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../core/motion/motion_kit.dart';
@@ -23,6 +25,26 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
+  bool _loadedPhoto = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final store = DemoScope.of(context);
+    final auth = store.customerAuth;
+    if (_loadedPhoto || !store.userSignedIn || auth == null) return;
+    _loadedPhoto = true;
+    final previous = store.profilePhoto;
+    auth.api('me/personal-details').then<void>((response) {
+      if (!mounted || !store.userSignedIn || previous != store.profilePhoto)
+        return;
+      final photo = response is Map && response['details'] is Map
+          ? response['details']['photo']
+          : null;
+      if (photo is String) setState(() => store.profilePhoto = photo);
+    }, onError: (Object _) {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
@@ -56,6 +78,9 @@ class _HomeTabState extends State<HomeTab> {
               child: CircleAvatar(
                 radius: 26,
                 backgroundColor: AppColors.mint,
+                foregroundImage: store.profilePhoto == null
+                    ? null
+                    : MemoryImage(base64Decode(store.profilePhoto!)),
                 child: Text(
                   name.substring(0, 1),
                   style: const TextStyle(

@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { ApiError } from '../common/errors.js';
+import { decryptText } from '../common/field-crypto.js';
 import { uuidv7 } from '../common/id.js';
-import { audit, toman, withTransaction, type Queryable } from '../common/sql.js';
+import { audit, toman, withTransaction } from '../common/sql.js';
 import { tehranDayStartUtc, tehranToday } from '../common/time.js';
 import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
@@ -13,6 +14,7 @@ import {
   verificationAfterCouncilChange,
   type VerificationStatus,
 } from './profile.js';
+import { purgeUser } from './purge-user.js';
 
 @Injectable()
 export class AdminService {
@@ -130,7 +132,14 @@ export class AdminService {
     displayName?: string;
     credential?: string;
     bio?: string;
+    rating?: number;
   }) {
+    if (input.capacity != null && (input.capacity < 0 || input.capacity > 500)) {
+      throw new ApiError(400, 'validation', 'ظرفیت پذیرش باید عددی بین ۰ و ۵۰۰ باشد');
+    }
+    if (input.rating != null && (input.rating < 0 || input.rating > 5)) {
+      throw new ApiError(400, 'validation', 'امتیاز باید بین ۰ و ۵ باشد');
+    }
     return withTransaction(this.pool, async (client) => {
     const current = await client.query(`select user_id from specialist_profiles where user_id = $1 for update`, [specialistId]);
     if (current.rowCount === 0) throw new ApiError(404, 'not_found', 'متخصص پیدا نشد');
@@ -140,9 +149,10 @@ export class AdminService {
            capacity = coalesce($3, capacity),
            display_name = coalesce($4, display_name),
            credential = coalesce($5, credential),
-           bio = coalesce($6, bio)
+           bio = coalesce($6, bio),
+           rating = coalesce($7, rating)
        where user_id = $1`,
-      [specialistId, input.active ?? null, input.capacity ?? null, input.displayName ?? null, input.credential ?? null, input.bio ?? null],
+      [specialistId, input.active ?? null, input.capacity ?? null, input.displayName ?? null, input.credential ?? null, input.bio ?? null, input.rating ?? null],
     );
     await audit(client, actorId, 'specialist_updated', 'user', specialistId, input);
     if (input.active === false) {
@@ -485,11 +495,18 @@ export class AdminService {
     const user = rows.rows[0];
     if (!user) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
     const intake = await loadUserIntake(this.pool, this.env, userId);
+    const details = await this.pool.query<{ details_encrypted: string }>(
+      'select details_encrypted from user_personal_details where user_id = $1', [userId],
+    );
+    const personalDetails = details.rows[0]
+      ? JSON.parse(decryptText(details.rows[0].details_encrypted, this.env.FIELD_KEY))
+      : null;
     return {
       id: user.id,
       phone: user.phone_e164,
       role: user.role,
-      displayName: intake?.displayName ?? user.display_name,
+      displayName: personalDetails?.name ?? intake?.displayName ?? user.display_name,
+      personalDetails,
       status: user.status,
       createdAt: user.created_at.toISOString(),
       intake: intake
@@ -568,13 +585,15 @@ export class AdminService {
       campaign_source: string | null;
       package_title: string | null;
       ends_at: Date | null;
+      details_encrypted: string | null;
     }>(
       `select u.id, u.phone_e164, u.role, u.status, u.display_name, u.signup_channel,
               p.source as profile_source,
               c.name as campaign_name, c.source as campaign_source,
               coalesce(s.title_fa, ordered.title_fa) as package_title,
-              a.ends_at
+              a.ends_at, pd.details_encrypted
        from users u
+       left join user_personal_details pd on pd.user_id = u.id
        left join nutrition_profiles p on p.user_id = u.id
        left join demo_campaign_links c on c.slug = u.signup_channel
        left join lateral (
@@ -605,6 +624,9 @@ export class AdminService {
         role: row.role,
         status: row.status,
         displayName: identity?.displayName ?? row.display_name,
+        photo: row.details_encrypted
+          ? JSON.parse(decryptText(row.details_encrypted, this.env.FIELD_KEY)).photo ?? null
+          : null,
         registrationLabel: identity?.fromDemo && label === 'اپلیکیشن' ? 'آنبوردینگ وب' : label,
         packageTitle: row.package_title,
         daysRemaining: row.ends_at == null ? null : remainingDays(row.ends_at),
@@ -637,7 +659,7 @@ export class AdminService {
       if (!user) throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
       if (user.role === 'admin') throw new ApiError(403, 'forbidden', 'حساب مدیریت از اینجا حذف نمی‌شود');
       await audit(client, actorId, 'user_delete', 'user', userId, { purged: true });
-      await purgeUser(client, userId);
+      await purgeUser(client, userId, this.env.FIELD_KEY);
       return { deleted: true };
     });
   }
@@ -695,11 +717,17 @@ export class AdminService {
       birth_date: string | null;
       portrait: string;
       username: string | null;
+      capacity: number;
+      active: boolean;
+      rating: string | null;
+      started_at: Date;
       average: string | null;
       reviews: number;
+      subordinates: number;
     }>(
       `select sp.user_id, sp.display_name, u.phone_e164, sp.credential, sp.bio, sp.education,
               sp.medical_council_no, sp.birth_date, sp.portrait, sc.username,
+              sp.capacity, sp.active, sp.rating, u.created_at as started_at,
               (select round(avg(pr.rating)::numeric, 2)
                from program_reviews pr
                join plan_requests r on r.id = pr.request_id
@@ -707,7 +735,8 @@ export class AdminService {
               (select count(*)::int
                from program_reviews pr
                join plan_requests r on r.id = pr.request_id
-               where r.assigned_specialist_id = sp.user_id and pr.status = 'approved') as reviews
+               where r.assigned_specialist_id = sp.user_id and pr.status = 'approved') as reviews,
+              (select count(*)::int from specialist_members sm where sm.specialist_id = sp.user_id) as subordinates
        from specialist_profiles sp
        join users u on u.id = sp.user_id
        left join specialist_credentials sc on sc.user_id = sp.user_id
@@ -725,9 +754,102 @@ export class AdminService {
       birthDate: row.birth_date ? String(row.birth_date).slice(0, 10) : null,
       portrait: row.portrait || null,
       username: row.username,
+      capacity: row.capacity,
+      active: row.active,
+      rating: row.rating == null ? null : Number(row.rating),
+      startedAt: row.started_at.toISOString(),
       averageRating: row.average == null ? null : Number(row.average),
       reviewCount: row.reviews,
+      subordinateCount: row.subordinates,
     }));
+  }
+
+  async specialistMembers(specialistId: string, available: boolean) {
+    const specialist = await this.pool.query(`select user_id from specialist_profiles where user_id = $1`, [specialistId]);
+    if (specialist.rowCount === 0) throw new ApiError(404, 'not_found', 'متخصص پیدا نشد');
+    const rows = await this.pool.query<{
+      id: string;
+      phone_e164: string;
+      display_name: string | null;
+      details_encrypted: string | null;
+    }>(
+      available
+        ? `select u.id, u.phone_e164, u.display_name, pd.details_encrypted
+           from users u
+           left join user_personal_details pd on pd.user_id = u.id
+           where u.role = 'user' and u.status <> 'deleted'
+             and not exists (select 1 from specialist_members sm where sm.user_id = u.id)
+           order by nullif(u.display_name, '') nulls last, u.phone_e164
+           limit 300`
+        : `select u.id, u.phone_e164, u.display_name, pd.details_encrypted
+           from specialist_members sm
+           join users u on u.id = sm.user_id
+           left join user_personal_details pd on pd.user_id = u.id
+           where sm.specialist_id = $1 and u.status <> 'deleted'
+           order by nullif(u.display_name, '') nulls last, u.phone_e164`,
+      available ? [] : [specialistId],
+    );
+    const identities = await rememberDemoIdentities(
+      this.pool,
+      this.env,
+      rows.rows.map((row) => ({ id: row.id, phone: row.phone_e164, displayName: row.display_name })),
+    );
+    return rows.rows.map((row) => ({
+      id: row.id,
+      phone: row.phone_e164,
+      displayName: identities.get(row.id)?.displayName || row.display_name || row.phone_e164,
+      photo: this.memberPhoto(row.details_encrypted),
+    }));
+  }
+
+  async addSpecialistMember(actorId: string, specialistId: string, userId: string) {
+    if (specialistId === userId) throw new ApiError(400, 'validation', 'پزشک نمی‌تواند زیرمجموعهٔ خودش باشد');
+    return withTransaction(this.pool, async (client) => {
+      const specialist = await client.query(`select user_id from specialist_profiles where user_id = $1 for update`, [specialistId]);
+      if (specialist.rowCount === 0) throw new ApiError(404, 'not_found', 'متخصص پیدا نشد');
+      const user = await client.query<{ role: string; status: string }>(
+        `select role, status from users where id = $1 for update`,
+        [userId],
+      );
+      const account = user.rows[0];
+      if (!account || account.status === 'deleted') throw new ApiError(404, 'not_found', 'کاربر پیدا نشد');
+      if (account.role !== 'user') throw new ApiError(409, 'conflict', 'فقط حساب کاربری را می‌توان به زیرمجموعه اضافه کرد');
+      const existing = await client.query<{ specialist_id: string }>(
+        `select specialist_id from specialist_members where user_id = $1`,
+        [userId],
+      );
+      const current = existing.rows[0];
+      if (current?.specialist_id === specialistId) throw new ApiError(409, 'conflict', 'این کاربر همین حالا زیرمجموعهٔ این پزشک است');
+      if (current) throw new ApiError(409, 'conflict', 'این کاربر زیرمجموعهٔ پزشک دیگری است');
+      await client.query(
+        `insert into specialist_members (user_id, specialist_id) values ($1, $2)`,
+        [userId, specialistId],
+      );
+      await audit(client, actorId, 'specialist_member_added', 'specialist', specialistId, { userId });
+      return { ok: true };
+    });
+  }
+
+  async removeSpecialistMember(actorId: string, specialistId: string, userId: string) {
+    return withTransaction(this.pool, async (client) => {
+      const removed = await client.query(
+        `delete from specialist_members where specialist_id = $1 and user_id = $2`,
+        [specialistId, userId],
+      );
+      if ((removed.rowCount ?? 0) === 0) throw new ApiError(404, 'not_found', 'این کاربر زیرمجموعهٔ این پزشک نیست');
+      await audit(client, actorId, 'specialist_member_removed', 'specialist', specialistId, { userId });
+      return { ok: true };
+    });
+  }
+
+  private memberPhoto(encrypted: string | null) {
+    if (!encrypted) return null;
+    try {
+      const photo = JSON.parse(decryptText(encrypted, this.env.FIELD_KEY)).photo;
+      return typeof photo === 'string' ? photo : null;
+    } catch {
+      return null;
+    }
   }
 
   async publicSpecialists() {
@@ -964,118 +1086,4 @@ function registrationLabel(row: {
 
 function remainingDays(endsAt: Date) {
   return Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / 86_400_000));
-}
-
-type ForeignKey = {
-  child: string;
-  parent: string;
-  childCols: string[];
-  parentCols: string[];
-  nullable: boolean;
-};
-
-function ident(name: string) {
-  if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error('unsafe identifier');
-  return `"${name}"`;
-}
-
-function pgTextArray(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map((item) => String(item));
-  return [];
-}
-
-async function purgeUser(client: Queryable, userId: string) {
-  const keys = await client.query<{
-    child: string;
-    parent: string;
-    child_cols: string[];
-    parent_cols: string[];
-    nullable: boolean;
-  }>(
-    `select child.relname as child, parent.relname as parent,
-            array_agg(att.attname order by ck.ord) as child_cols,
-            array_agg(patt.attname order by ck.ord) as parent_cols,
-            bool_and(not att.attnotnull) as nullable
-     from pg_constraint c
-     join pg_class child on child.oid = c.conrelid
-     join pg_class parent on parent.oid = c.confrelid
-     join pg_namespace n on n.oid = child.relnamespace
-     join lateral unnest(c.conkey) with ordinality as ck(attnum, ord) on true
-     join pg_attribute att on att.attrelid = child.oid and att.attnum = ck.attnum
-     join lateral unnest(c.confkey) with ordinality as pk(attnum, ord) on pk.ord = ck.ord
-     join pg_attribute patt on patt.attrelid = parent.oid and patt.attnum = pk.attnum
-     where c.contype = 'f' and n.nspname = 'public' and parent.relnamespace = n.oid
-     group by c.oid, child.relname, parent.relname`,
-  );
-  const foreignKeys: ForeignKey[] = keys.rows.map((row) => ({
-    child: row.child,
-    parent: row.parent,
-    childCols: pgTextArray(row.child_cols),
-    parentCols: pgTextArray(row.parent_cols),
-    nullable: row.nullable === true || String(row.nullable) === 't',
-  }));
-  const triggers = await client.query<{ name: string }>(
-    `select distinct c.relname as name
-     from pg_trigger t
-     join pg_class c on c.oid = t.tgrelid
-     join pg_namespace n on n.oid = c.relnamespace
-     where n.nspname = 'public' and not t.tgisinternal and c.relkind = 'r'`,
-  );
-  for (const table of triggers.rows) {
-    await client.query(`alter table public.${ident(table.name)} disable trigger user`);
-  }
-  const stack: string[] = [];
-  const remove = async (table: string, whereSql: string) => {
-    if (stack.includes(table) || stack.length > 32) return;
-    stack.push(table);
-    for (const key of foreignKeys.filter((item) => item.parent === table)) {
-      if (!key.childCols.length || !key.parentCols.length) continue;
-      const match = `(${key.childCols.map(ident).join(', ')}) in (select ${key.parentCols.map(ident).join(', ')} from ${ident(table)} where ${whereSql})`;
-      if (key.child === table) {
-        if (key.nullable) {
-          const sets = key.childCols.map((column) => `${ident(column)} = null`).join(', ');
-          await client.query(`update ${ident(table)} set ${sets} where ${match}`, [userId]);
-        }
-        continue;
-      }
-      if (key.nullable) {
-        const sets = key.child === 'journey_installs' && key.childCols.includes('linked_user_id')
-          ? 'linked_user_id = null, linked_at = null'
-          : key.childCols.map((column) => `${ident(column)} = null`).join(', ');
-        await client.query(`update ${ident(key.child)} set ${sets} where ${match}`, [userId]);
-        continue;
-      }
-      await remove(key.child, match);
-    }
-    await client.query(`delete from ${ident(table)} where ${whereSql}`, [userId]);
-    stack.pop();
-  };
-  try {
-    await client.query(
-      `delete from refresh_tokens where session_id in (select id from sessions where user_id = $1)`,
-      [userId],
-    );
-    await client.query(`delete from sessions where user_id = $1`, [userId]);
-    await client.query(`delete from wallet_ledger where user_id = $1`, [userId]);
-    await client.query(`delete from wallets where user_id = $1`, [userId]);
-    await client.query(
-      `update demo_lead_submissions set claimed_user_id = null, claimed_at = null where claimed_user_id = $1`,
-      [userId],
-    );
-    await client.query(`delete from conversation_participants where user_id = $1`, [userId]);
-    await client.query(
-      `delete from messages where conversation_id in (select id from conversations where user_id = $1)`,
-      [userId],
-    );
-    await client.query(`delete from conversations where user_id = $1`, [userId]);
-    await client.query(`delete from onboarding_drafts where user_id = $1`, [userId]);
-    await remove('users', 'id = $1');
-    for (const table of triggers.rows) {
-      await client.query(`alter table public.${ident(table.name)} enable trigger user`);
-    }
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    console.error('user purge failed', error);
-    throw new ApiError(409, 'delete_blocked', 'حذف این کاربر به‌خاطر وابستگی داده‌ها انجام نشد');
-  }
 }

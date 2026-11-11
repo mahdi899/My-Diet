@@ -4,7 +4,7 @@ import '../../data/day.dart';
 import '../../data/demo_store.dart';
 
 /// Space the shell's floating bar needs. Tabs must not draw their own bar.
-const double shellBottomInset = 110;
+const double shellBottomInset = 134;
 
 class MacroGrams {
   const MacroGrams(this.protein, this.carbs, this.fat);

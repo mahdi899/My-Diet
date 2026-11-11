@@ -1,4 +1,5 @@
 import { assertPublicEndpoint } from './endpoint.js';
+import { aiFetch } from './proxy-fetch.js';
 import {
   ProviderCallError,
   StreamBrokenError,
@@ -84,7 +85,7 @@ async function open(
     throw new ProviderCallError('rejected', error instanceof Error ? error.message : 'endpoint_invalid', elapsed());
   }
   const endpoint = `${url.toString().replace(/\/+$/, '')}/chat/completions`;
-  const send = deps.fetch ?? fetch;
+  const send = deps.fetch ?? aiFetch;
 
   let response: Response;
   try {

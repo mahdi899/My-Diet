@@ -154,7 +154,7 @@ class AppRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     // Legacy fixtures may still set staff roles; the shipped client is user-only.
-    if (!store.userSignedIn) return const FirstLoginScreen();
+    if (!store.userSignedIn || store.suppressLiveEntry) return const FirstLoginScreen();
     // One app. The server only decides the onboarding path; the home is always this shell.
     if (store.serverAuthEnabled && !store.liveReady) {
       return LiveEntry(store: store);
@@ -284,13 +284,11 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     final selected = _index;
+    final coach = selected == 0;
     final page = switch (selected) {
-      0 => Padding(
-        padding: const EdgeInsets.only(bottom: 86),
-        child: CoachPage(
-          repository: createCoachRepository(store),
-          onClose: () => _show(1),
-        ),
+      0 => CoachPage(
+        repository: createCoachRepository(store),
+        onClose: () => _show(1),
       ),
       2 => const PlanTab(),
       _ => HomeTab(onOpenPlan: () => _show(2)),
@@ -329,17 +327,18 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 10 + MediaQuery.paddingOf(context).bottom,
-                child: ShellTabBar(
-                  selected: selected,
-                  onCoach: () => _show(0),
-                  onHome: () => _show(1),
-                  onPlan: () => _show(2),
+              if (!coach)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 10 + MediaQuery.paddingOf(context).bottom,
+                  child: ShellTabBar(
+                    selected: selected,
+                    onCoach: () => _show(0),
+                    onHome: () => _show(1),
+                    onPlan: () => _show(2),
+                  ),
                 ),
-              ),
             ],
           ),
         ),

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { actor, Public, Roles } from '../common/auth.js';
@@ -118,14 +118,40 @@ export class AdminController {
   @Patch('specialists/:id')
   update(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
     const record = bodyRecord(body);
-    rejectUnknown(record, ['active', 'capacity', 'displayName', 'credential', 'bio']);
+    rejectUnknown(record, ['active', 'capacity', 'displayName', 'credential', 'bio', 'rating']);
+    let rating: number | undefined;
+    if (record.rating != null) {
+      if (typeof record.rating !== 'number' || !Number.isFinite(record.rating)) {
+        throw new ApiError(400, 'validation', 'امتیاز باید بین ۰ و ۵ باشد');
+      }
+      rating = Math.round(record.rating * 100) / 100;
+      if (rating < 0 || rating > 5) throw new ApiError(400, 'validation', 'امتیاز باید بین ۰ و ۵ باشد');
+    }
     return this.admin.updateSpecialist(actor(req).id, requiredUuid(id), {
       active: typeof record.active === 'boolean' ? record.active : undefined,
       capacity: record.capacity == null ? undefined : requiredInt(record.capacity),
       displayName: optionalString(record, 'displayName', 80),
       credential: optionalString(record, 'credential', 120),
       bio: optionalString(record, 'bio', 500),
+      rating,
     });
+  }
+
+  @Get('specialists/:id/members')
+  members(@Param('id') id: string, @Query('available') available?: string) {
+    return this.admin.specialistMembers(requiredUuid(id), available === '1' || available === 'true');
+  }
+
+  @Post('specialists/:id/members')
+  addMember(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    const record = bodyRecord(body);
+    rejectUnknown(record, ['userId']);
+    return this.admin.addSpecialistMember(actor(req).id, requiredUuid(id), requiredUuid(record.userId));
+  }
+
+  @Delete('specialists/:id/members/:userId')
+  removeMember(@Req() req: Request, @Param('id') id: string, @Param('userId') userId: string) {
+    return this.admin.removeSpecialistMember(actor(req).id, requiredUuid(id), requiredUuid(userId));
   }
 
   @Post('requests/:id/assignment')

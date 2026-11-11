@@ -21,9 +21,17 @@
 .user-detail-modal { display:flex; flex-direction:column; border-radius:24px; overflow:hidden; max-height:calc(100dvh - 48px); }
 .user-detail-modal .modal-header { flex:none; }
 .user-detail-modal .modal-body { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:26px; background:#f5f8f3; }
-.user-detail-modal .user-detail-identity { background:linear-gradient(115deg,#24614d,#153e35); color:white; border:0; padding:26px; }
+.user-detail-modal .user-detail-identity { flex-direction:column; background:transparent; color:var(--text); border:0; padding:12px 0; gap:12px; text-align:center; }
+.user-detail-identity .person-cell { flex-direction:column; gap:12px; min-width:0; }
+.user-detail-identity .avatar { width:96px; height:96px; min-width:96px; border-radius:50%; object-fit:cover; overflow:hidden; font-size:32px; }
+.user-detail-identity .person-cell strong { font-size:16px; }
 .user-detail-identity strong,.user-detail-identity small { color:inherit; }
 .user-detail-modal .detail-grid > div { padding:14px; background:#f7faf5; border-radius:12px; }
+.user-detail-modal .detail-grid .span-row { grid-column: 1 / -1; }
+.member-toolbar { display: flex; justify-content: flex-end; gap: 8px; }
+.member-list { display: flex; flex-direction: column; gap: 8px; }
+.member-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+.member-row .person-cell { min-width: 0; }
 .user-detail-modal .detail-grid small { display:block; margin-bottom:8px; color:#627368; }
 @media(max-width:640px) {
  .user-detail-modal .modal-body { padding:16px; }

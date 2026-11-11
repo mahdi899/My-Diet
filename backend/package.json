@@ -18,7 +18,8 @@
     "migrate": "node-pg-migrate -f node-pg-migrate.json up",
     "migrate:down": "node-pg-migrate -f node-pg-migrate.json down",
     "admin:create": "node --import tsx src/cli/create-admin.ts",
-    "admin:password": "node --import tsx src/cli/admin-password.ts"
+    "admin:password": "node --import tsx src/cli/admin-password.ts",
+    "admin:purge-user": "node --import tsx src/cli/purge-user.ts"
   },
   "engines": {
     "node": ">=22"

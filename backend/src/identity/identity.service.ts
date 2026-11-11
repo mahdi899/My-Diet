@@ -166,12 +166,16 @@ export class IdentityService {
         throw new ApiError(429, 'rate_limited', 'درخواست کد جدید کمی بعد ممکن است');
       }
       if (existingAccountOnly) {
-        const account = await client.query(
-          "select 1 from users where phone_e164 = $1 and role = 'user' and status = 'active'",
+        const account = await client.query<{ status: string }>(
+          `select status from users where phone_e164 = $1 and role = 'user'`,
           [phoneE164],
         );
-        if (!account.rowCount) {
+        const status = account.rows[0]?.status;
+        if (!status || status === 'deleted') {
           throw new ApiError(404, 'account_not_registered', 'هنوز ثبت‌نام نکردی');
+        }
+        if (status === 'suspended') {
+          throw new ApiError(403, 'suspended', 'این حساب غیرفعال است');
         }
       }
       await client.query(

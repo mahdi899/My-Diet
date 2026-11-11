@@ -94,6 +94,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('مربی رژیم من'), findsOneWidget);
     expect(find.byKey(const ValueKey('coach-close')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-tab-bar')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('coach-close')));
     await tester.pumpAndSettle();

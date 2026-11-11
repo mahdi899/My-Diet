@@ -9,6 +9,7 @@ import { ENV, type Env } from '../config/env.js';
 import { PG_POOL } from '../database/database.js';
 import { BudgetService } from './budget.service.js';
 import { OPENROUTER_BASE_URL, chatCompletion } from './pool/client.js';
+import { aiFetch } from './pool/proxy-fetch.js';
 import { assertPublicEndpoint } from './pool/endpoint.js';
 import { openApiKey } from './pool/pool-store.js';
 import { PoolRouter, PoolExhaustedError } from './pool/router.js';
@@ -21,10 +22,8 @@ const MODEL_CACHE_MS = 10 * 60 * 1000;
 
 /** Models worth trying first for Persian meal planning; shown as hints, never applied automatically. */
 export const SUGGESTED_MODELS = [
-  'google/gemini-2.5-flash',
-  'openai/gpt-4o-mini',
+  'deepseek/deepseek-v4.1-flash-1017',
   'anthropic/claude-3.5-haiku',
-  'deepseek/deepseek-chat',
   'qwen/qwen-2.5-72b-instruct',
 ];
 
@@ -234,7 +233,7 @@ export class AiAdminService {
   /** A one-line call that proves the key, the address and the model work, and what a call costs. */
   async testProvider(adminId: string, id: string, modelInput: unknown) {
     const config = await this.configOf(id);
-    const model = typeof modelInput === 'string' && modelInput.trim() ? modelInput.trim().slice(0, 200) : SUGGESTED_MODELS[1]!;
+    const model = typeof modelInput === 'string' && modelInput.trim() ? modelInput.trim().slice(0, 200) : SUGGESTED_MODELS[0]!;
     const result = {
       ok: false,
       model,
@@ -319,7 +318,7 @@ export class AiAdminService {
     if (row.api_key_encrypted) headers.Authorization = `Bearer ${openApiKey(row.api_key_encrypted, this.env.FIELD_KEY)}`;
     let response: Response;
     try {
-      response = await fetch(`${base.toString().replace(/\/+$/, '')}/models`, {
+      response = await aiFetch(`${base.toString().replace(/\/+$/, '')}/models`, {
         headers,
         redirect: 'error',
         signal: AbortSignal.timeout(20_000),
