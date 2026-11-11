@@ -10,16 +10,37 @@
   let method = 'gateway';
   let gatewayResult = new URLSearchParams(location.search).get('gateway');
 
-  async function request(path = '', payload) {
+  let refreshing;
+  async function refreshSession() {
+    if (!refreshing) refreshing = (async () => {
+      const response = await fetch('/v1/auth/refresh', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'x-sabzine-client': 'web' },
+        body: '{}', signal: AbortSignal.timeout(15000),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.accessToken || data.role !== 'user') return false;
+      session.token = data.accessToken;
+      sessionStorage.setItem('mydiet.checkout', JSON.stringify(session));
+      return true;
+    })().catch(() => false).finally(() => { refreshing = null; });
+    return refreshing;
+  }
+
+  async function request(path = '', payload, retry = true) {
     const response = await fetch('/v1/me/onboarding-transfers' + path, {
       method: payload ? 'POST' : 'GET',
       headers: { Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json' },
       body: payload ? JSON.stringify(payload) : undefined,
-      cache: 'no-store',
+      cache: 'no-store', signal: AbortSignal.timeout(20000),
     });
-    if (response.status === 401) byId('checkout-return').hidden = false;
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'ارتباط با سرویس پرداخت برقرار نشد');
+    if (response.status === 401) {
+      if (retry && await refreshSession()) return request(path, payload, false);
+      byId('checkout-return').hidden = false;
+      throw new Error('نشست پرداخت منقضی شده است. برای ادامه، به آنبوردینگ برگردید و شماره همراه را دوباره تأیید کنید.');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || data.messageFa || 'ارتباط با سرویس پرداخت برقرار نشد؛ دوباره تلاش کنید.');
     return data;
   }
 
