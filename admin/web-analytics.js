@@ -23,75 +23,101 @@ async function liveTrackingPanel() {
   controls.append(label, selectedLink, status);
   panel.append(sectionHead('کاربران آنلاین آنبوردینگ', 'موقعیت هر نشست فعال، با بررسی هر ثانیه'), controls);
 
-  const wrapper = element('div', null, 'tracking-live-table');
-  const table = element('table');
-  table.setAttribute('aria-label', 'موقعیت زنده کاربران آنبوردینگ');
-  const header = element('tr');
-  for (const title of ['نشست', 'لینک ورودی', 'صفحه', 'مرحلهٔ فعلی', 'آخرین فعالیت']) {
-    const th = element('th', title);
-    th.scope = 'col';
-    header.append(th);
+  const result = element('section', null, 'card tracking-live');
+  const resultStatus = element('p', 'در حال دریافت نتیجهٔ نشست‌ها…', 'tracking-results-status');
+  result.append(sectionHead('نتیجهٔ نشست‌ها · آخرین محل ترک',
+    'تا ۲۰۰ نشست در ۲۴ ساعت اخیر برای لینک انتخاب‌شده. پس از ۲ دقیقه بدون رویداد نمایش داده می‌شود.'), resultStatus);
+
+  function addTable(container, accessibleName, stepLabel) {
+    const wrapper = element('div', null, 'tracking-live-table');
+    const table = element('table');
+    table.setAttribute('aria-label', accessibleName);
+    const header = element('tr');
+    for (const title of ['نشست', 'لینک ورودی', 'صفحه', stepLabel, 'آخرین فعالیت']) {
+      const th = element('th', title);
+      th.scope = 'col';
+      header.append(th);
+    }
+    const head = element('thead'), body = element('tbody');
+    head.append(header);
+    table.append(head, body);
+    wrapper.append(table);
+    container.append(wrapper);
+    return body;
   }
-  const head = element('thead'), body = element('tbody');
-  head.append(header);
-  table.append(head, body);
-  wrapper.append(table);
-  panel.append(wrapper);
+  const liveBody = addTable(panel, 'موقعیت زنده کاربران آنبوردینگ', 'مرحلهٔ فعلی');
+  const resultBody = addTable(result, 'آخرین محل ترک نشست‌ها', 'آخرین مرحله');
+  const root = element('div', null, 'report-stack');
+  root.append(panel, result);
 
   const pages = {
     '/onboarding/': 'شروع', '/onboarding/index.html': 'شروع', '/onboarding/goals.html': 'اهداف',
     '/onboarding/quiz.html': 'پرسش‌نامه', '/onboarding/payment.html': 'پرداخت',
   };
   const names = new Map(links.map(link => [link.slug, link.name]));
-  const time = new Intl.DateTimeFormat('fa-IR', { timeStyle: 'medium', timeZone: 'Asia/Tehran' });
-  let generation = 0, previous = null;
-  async function refresh() {
-    const ticket = ++generation;
-    const filter = select.value ? '?campaign=' + encodeURIComponent(select.value) : '';
-    try {
-      const { sessions } = await api('admin/web-analytics/live' + filter);
-      if (ticket !== generation) return;
-      status.textContent = number(sessions.length) + ' نشست فعال';
-      const signature = JSON.stringify(sessions);
-      if (signature === previous) return;
-      previous = signature;
-      if (!sessions.length) {
-        const row = element('tr'), cell = element('td', 'در حال حاضر نشست فعالی برای این انتخاب وجود ندارد.');
-        cell.colSpan = 5;
-        row.append(cell);
-        body.replaceChildren(row);
-        return;
+  const zone = { timeStyle: 'medium', timeZone: 'Asia/Tehran' };
+  const liveTime = new Intl.DateTimeFormat('fa-IR', zone);
+  const resultTime = new Intl.DateTimeFormat('fa-IR', { ...zone, dateStyle: 'short' });
+  let selectionVersion = 0;
+
+  function startPolling(path, body, message, time, interval, emptyText, countLabel) {
+    let previous = null, latestRequest = 0;
+    async function refresh() {
+      const selection = selectionVersion;
+      const request = ++latestRequest;
+      const filter = select.value ? '?campaign=' + encodeURIComponent(select.value) : '';
+      try {
+        const { sessions } = await api('admin/web-analytics/' + path + filter);
+        if (selection !== selectionVersion || request !== latestRequest) return;
+        message.textContent = number(sessions.length) + ' ' + countLabel;
+        const signature = JSON.stringify(sessions);
+        if (signature === previous) return;
+        previous = signature;
+        if (!sessions.length) {
+          const row = element('tr'), cell = element('td', emptyText);
+          cell.colSpan = 5;
+          row.append(cell);
+          body.replaceChildren(row);
+          return;
+        }
+        body.replaceChildren(...sessions.map(session => {
+          const row = element('tr');
+          const id = element('td', session.id.slice(0, 8));
+          id.dir = 'ltr';
+          row.append(id, element('td', names.get(session.campaign) || session.campaign || 'مستقیم / نامشخص'),
+            element('td', pages[session.page] || session.page),
+            element('td', trackingStepLabel(session.step) || '—'),
+            element('td', time.format(new Date(session.lastSeen))));
+          return row;
+        }));
+      } catch {
+        if (selection === selectionVersion && request === latestRequest) {
+          message.textContent = 'دریافت اطلاعات ممکن نشد؛ دوباره بررسی می‌شود.';
+        }
       }
-      body.replaceChildren(...sessions.map(session => {
-        const row = element('tr');
-        const id = element('td', session.id.slice(0, 8));
-        id.dir = 'ltr';
-        row.append(id, element('td', names.get(session.campaign) || session.campaign || 'مستقیم / نامشخص'),
-          element('td', pages[session.page] || session.page),
-          element('td', trackingStepLabel(session.step) || '—'),
-          element('td', time.format(new Date(session.lastSeen))));
-        return row;
-      }));
-    } catch {
-      if (ticket === generation) status.textContent = 'ارتباط زنده قطع است؛ دوباره بررسی می‌شود.';
     }
+    select.addEventListener('change', () => {
+      previous = null;
+      body.replaceChildren();
+      message.textContent = 'در حال دریافت…';
+      void refresh();
+    });
+    const poll = async () => {
+      if (!root.isConnected) return;
+      if (!document.hidden) await refresh();
+      setTimeout(poll, interval);
+    };
+    setTimeout(poll, interval);
+    void refresh();
   }
 
   select.addEventListener('change', () => {
+    selectionVersion++;
     selectedLink.textContent = select.value ? location.origin + '/go/' + select.value : 'همهٔ ورودی‌ها';
-    status.textContent = 'در حال دریافت نشست‌های فعال…';
-    previous = null;
-    body.replaceChildren();
-    void refresh();
   });
-  const poll = async () => {
-    if (!panel.isConnected) return;
-    if (!document.hidden) await refresh();
-    setTimeout(poll, 1000);
-  };
-  setTimeout(poll, 1000);
-  void refresh();
-  return panel;
+  startPolling('live', liveBody, status, liveTime, 1000, 'نشست فعالی برای این انتخاب وجود ندارد.', 'نشست فعال');
+  startPolling('departures', resultBody, resultStatus, resultTime, 10000, 'نشستی برای این انتخاب ثبت نشده است.', 'نشست در نتیجه');
+  return root;
 }
 
 async function webAnalyticsPage() {

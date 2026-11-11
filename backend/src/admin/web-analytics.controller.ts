@@ -44,6 +44,16 @@ export class WebAnalyticsController implements OnApplicationShutdown {
   @Get('live')
   @Header('Cache-Control', 'private, no-store')
   async live(@Query('campaign') campaign?: string) {
+    return this.sessionPositions(campaign, false);
+  }
+
+  @Get('departures')
+  @Header('Cache-Control', 'private, no-store')
+  async departures(@Query('campaign') campaign?: string) {
+    return this.sessionPositions(campaign, true);
+  }
+
+  private async sessionPositions(campaign: string | undefined, departed: boolean) {
     if (campaign !== undefined && (typeof campaign !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(campaign) || campaign.length > 64)) {
       throw new ApiError(400, 'validation', 'لینک ورودی معتبر نیست');
     }
@@ -58,7 +68,7 @@ export class WebAnalyticsController implements OnApplicationShutdown {
           from website_event e
           left join event_data j on j.website_event_id=e.event_id and j.data_key='journey'
           left join event_data s on s.website_event_id=e.event_id and s.data_key='step'
-          where e.website_id=$1 and e.created_at >= now()-interval '90 seconds'
+          where e.website_id=$1 and e.created_at >= now() - (case when $4::boolean then interval '24 hours' else interval '90 seconds' end)
             and ($2::timestamptz is null or e.created_at >= $2::timestamptz)
             and e.tag is distinct from 'qa'
             and e.event_name in ('step_view', 'active_heartbeat', 'presence_end')
@@ -71,13 +81,19 @@ export class WebAnalyticsController implements OnApplicationShutdown {
         )
         select journey as id, url_path as page, step, utm_campaign as campaign, created_at as "lastSeen"
         from latest
-        where (step='preparing' or (event_name <> 'presence_end' and created_at >= now()-interval '25 seconds'))
+        where (case when $4::boolean
+          then created_at < now()-interval '2 minutes' and step is distinct from 'payment_success'
+          else step='preparing' or (event_name <> 'presence_end' and created_at >= now()-interval '25 seconds')
+        end)
           and ($3::text is null or utm_campaign=$3)
         order by created_at desc, journey
-      `, [this.env.ANALYTICS_WEBSITE_ID, await this.resetTime(), campaign ?? null]);
+        limit (case when $4::boolean then 200 else null end)
+      `, [this.env.ANALYTICS_WEBSITE_ID, await this.resetTime(), campaign ?? null, departed]);
       return { sessions: rows, generatedAt: new Date().toISOString() };
     } catch {
-      throw new ApiError(503, 'analytics_unavailable', 'دریافت موقعیت زنده کاربران ممکن نشد');
+      throw new ApiError(503, 'analytics_unavailable', departed
+        ? 'دریافت نتیجهٔ نشست‌ها ممکن نشد'
+        : 'دریافت موقعیت زنده کاربران ممکن نشد');
     }
   }
 

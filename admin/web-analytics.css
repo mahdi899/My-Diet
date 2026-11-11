@@ -11,3 +11,4 @@
 .tracking-live-table td[dir="ltr"] { font-family: monospace; }
 .tracking-history > summary { padding: 16px 20px; font-weight: 700; cursor: pointer; }
 .tracking-history > .report-stack { padding: 0 20px 20px; }
+.tracking-results-status { margin: 0; padding: 10px 20px; color: #52675b; font-size: 13px; }
