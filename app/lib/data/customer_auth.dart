@@ -115,6 +115,44 @@ class CustomerAuth {
   CustomerSession? session;
   Future<CustomerSession?>? _refreshing;
 
+  /// Public routes such as the onboarding spec. No session is required.
+  Future<Map<String, dynamic>> publicGet(String path) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('${baseUrl.replaceAll(RegExp(r'/+$'), '')}/v1/$path'),
+            headers: {
+              'Accept': 'application/json',
+              if (kIsWeb) 'x-sabzine-client': 'web',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      final data = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+      if (response.statusCode >= 400) {
+        throw AuthFailure(
+          data['messageFa'] as String? ??
+              data['detail'] as String? ??
+              'بارگذاری پرسش‌نامه انجام نشد.',
+          code: data['code'] as String?,
+          fault: classifyLink(status: response.statusCode),
+        );
+      }
+      return data;
+    } on AuthFailure {
+      rethrow;
+    } on TimeoutException {
+      throw const AuthFailure(
+        'پاسخ سرور به‌موقع نرسید.',
+        fault: LinkFault.timeout,
+      );
+    } catch (_) {
+      throw const AuthFailure('ارتباط برقرار نیست.', fault: LinkFault.offline);
+    }
+  }
+
   Future<Map<String, dynamic>> _post(
     String path,
     Map<String, dynamic> body, {

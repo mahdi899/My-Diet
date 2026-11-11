@@ -154,7 +154,7 @@ class AppRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     // Legacy fixtures may still set staff roles; the shipped client is user-only.
-    if (!store.userSignedIn) return const FirstLoginScreen();
+    if (!store.userSignedIn || store.suppressLiveEntry) return const FirstLoginScreen();
     // One app. The server only decides the onboarding path; the home is always this shell.
     if (store.serverAuthEnabled && !store.liveReady) {
       return LiveEntry(store: store);

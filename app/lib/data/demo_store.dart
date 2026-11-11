@@ -2188,6 +2188,9 @@ class DemoStore extends ChangeNotifier {
 
   /// Real sessions stay on the sign-in gate until the server plan is loaded.
   bool liveReady = false;
+
+  /// Keeps the login screen under an in-app signup questionnaire until that route closes.
+  bool suppressLiveEntry = false;
   String? profilePhoto;
 
   /// Meal uid per civil date and index, so "خوردم" updates the server plan.
@@ -2468,6 +2471,7 @@ class DemoStore extends ChangeNotifier {
     foodPreferences = null;
     userRequestIds.clear();
     liveReady = false;
+    suppressLiveEntry = false;
     profilePhoto = null;
     liveTargetKcal = null;
     coachDay = null;

@@ -4,6 +4,8 @@ import request from 'supertest';
 import { uuidv7 } from '../../src/common/id.js';
 import { bootApp, type Booted } from '../helpers/boot.js';
 import { completeOnboarding } from '../helpers/onboarding.js';
+import { loginAdmin } from '../helpers/admin-login.js';
+import { normalizeIranianMobile } from '../../src/common/phone.js';
 
 interface SseFrame {
   event: string;
@@ -81,5 +83,24 @@ describe('coach API with the fake driver', { concurrency: 1, timeout: 240_000 },
     const thread = await request(server).get('/v1/me/coach/thread').set(auth);
     assert.equal(thread.status, 200);
     assert.ok(thread.body.messages.length >= 2);
+
+    const adminPhone = '09128000088';
+    await app.pool.query(
+      `insert into users (id, phone_e164, role, status) values ($1, $2, 'admin', 'active')`,
+      [uuidv7(), normalizeIranianMobile(adminPhone)],
+    );
+    const admin = await loginAdmin(app.api, app.pool, adminPhone);
+    const userId = (
+      await app.pool.query<{ id: string }>(`select id from users where phone_e164 = $1`, [
+        normalizeIranianMobile('09120000021'),
+      ])
+    ).rows[0]!.id;
+    const removed = await request(server)
+      .post(`/v1/admin/users/${userId}/delete`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ confirmation: 'حذف حساب' });
+    assert.equal(removed.status, 201, JSON.stringify(removed.body));
+    const gone = await app.pool.query(`select 1 from users where id = $1`, [userId]);
+    assert.equal(gone.rowCount, 0);
   });
 });

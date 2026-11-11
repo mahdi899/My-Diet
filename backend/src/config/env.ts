@@ -47,6 +47,8 @@ export const envSchema = z.object({
   PUBLIC_API_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   IDPAY_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   AI_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** CONNECT proxy for model calls only. Leaves payments and SMS on the normal route. */
+  AI_HTTPS_PROXY: z.preprocess(emptyToUndefined, z.string().url().optional()),
   CORS_ORIGINS: z.string().default(''),
   JWT_SECRET: z.string().min(16).default('dev-only-jwt-secret-not-for-production'),
   OTP_PEPPER: z.string().min(16).default('dev-only-otp-pepper-not-for-production'),

@@ -137,7 +137,7 @@ function dashboard(stats, orders) {
 const genericColumns = {
   users: [ { label: 'کاربر', render: r => userPhotoCell(r.displayName, r.phone, r.photo) }, { label: 'وضعیت حساب', render: r => badge(r.status) }, { label: 'شناسه', render: r => shortId(r.id) }, { label: 'عملیات', render: r => userRowActions(r) } ],
   requests: [ { label: 'درخواست', render: r => shortId(r.id) }, { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'نوع درخواست', render: r => kindNames[r.kind] || r.kind }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'زمان ثبت', render: r => formatDate(r.createdAt), className: 'cell-nowrap' } ],
-  specialists: [ { label: 'پزشک', render: r => doctorCell(r) }, { label: 'تلفن', render: r => r.phone || '—', className: 'cell-nowrap' }, { label: 'نام کاربری', render: r => r.username || '—', className: 'cell-nowrap' }, { label: 'کد نظام', render: r => r.councilNo || '—' }, { label: 'تحصیلات', render: r => r.education || r.credential || '—' }, { label: 'تاریخ تولد', render: r => formatDate(r.birthDate, false), className: 'cell-nowrap' }, { label: 'امتیاز', render: r => r.averageRating == null ? 'هنوز بدون امتیاز' : number(r.averageRating) + ' از ۵' } ],
+  specialists: [ { label: 'نام', render: r => doctorCell(r) }, { label: 'شماره تلفن', render: r => ltrText(r.phone), className: 'cell-nowrap' }, { label: 'کد نظام پزشکی', render: r => ltrText(r.councilNo), className: 'cell-nowrap' }, { label: 'تعداد زیرمجموعه', render: r => number(r.subordinateCount ?? 0) }, { label: 'زیرمجموعه‌ها', render: r => specialistMembersAction(r) }, { label: 'عملیات', render: r => specialistRowActions(r) } ],
   reviews: [ { label: 'کاربر', render: r => shortId(r.userId) }, { label: 'امتیاز', render: r => number(r.rating) + ' از ۵' }, { label: 'نظر', key: 'body', className: 'cell-body' }, { label: 'وضعیت', render: r => badge(r.status) }, { label: 'بررسی', render: r => {
     const actions = element('div', null, 'cell-actions');
     for (const [status, text, name] of [['approved', 'تأیید', 'check'], ['rejected', 'رد', 'close']]) actions.append(button(text, async () => { await api('admin/reviews/' + encodeURIComponent(r.id), 'POST', { status }); await load(); notice('نظر بررسی شد'); }, { secondary: true, iconName: name, className: status === 'rejected' ? 'danger' : '' }));
@@ -165,8 +165,23 @@ function userRowActions(row) {
   }
   return actions;
 }
+function ltrText(value) {
+  return element('span', value || '—', 'ltr');
+}
+function startedLabel(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran', year: 'numeric', month: 'long', day: 'numeric' });
+}
+function civilLabel(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ''));
+  if (!match) return '—';
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' });
+}
 function doctorCell(row) {
-  const cell = personCell(row.displayName, row.education || row.credential);
+  const cell = personCell(row.displayName);
   if (row.portrait) {
     const photo = element('img');
     photo.className = 'avatar avatar-soft';
@@ -197,6 +212,134 @@ function portraitFile(file) {
     image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تصویر خوانده نشد')); };
     image.src = url;
   });
+}
+function specialistMembersAction(row) {
+  const actions = element('div', null, 'cell-actions');
+  actions.append(iconAction('زیرمجموعه‌ها', () => specialistMembers(row), 'eye'));
+  return actions;
+}
+function memberLine(person, action) {
+  const line = element('div', null, 'member-row');
+  line.append(userPhotoCell(person.displayName, person.phone, person.photo), action);
+  return line;
+}
+function specialistMembers(doctor) {
+  openModal('زیرمجموعه‌های ' + (doctor.displayName || 'پزشک'), async (body, dialog) => {
+    dialog.classList.add('user-detail-modal');
+    dialog.addEventListener('close', () => { void load(); }, { once: true });
+    const paint = (nodes) => { body.replaceChildren(...nodes); };
+    const showCurrent = async () => {
+      paint([skeleton()]);
+      const people = await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members');
+      const toolbar = element('div', null, 'member-toolbar');
+      toolbar.append(button('افزودن', () => { void showAvailable(); }, { iconName: 'plus' }));
+      const list = element('div', null, 'member-list');
+      if (!people.length) list.append(infoNote('هنوز کاربری در زیرمجموعهٔ این پزشک نیست.'));
+      for (const person of people) {
+        const remove = iconAction('حذف از زیرمجموعه', async () => {
+          remove.disabled = true;
+          try {
+            await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members/' + encodeURIComponent(person.id), 'DELETE');
+            notice('کاربر از زیرمجموعه خارج شد');
+            await showCurrent();
+          } catch (error) {
+            notice(error.message, 'error');
+            remove.disabled = false;
+          }
+        }, 'trash', 'danger');
+        list.append(memberLine(person, remove));
+      }
+      paint([toolbar, list]);
+    };
+    const showAvailable = async () => {
+      paint([skeleton()]);
+      const people = await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members?available=1');
+      const toolbar = element('div', null, 'member-toolbar');
+      toolbar.append(button('بازگشت', () => { void showCurrent(); }, { secondary: true, iconName: 'chevron-right' }));
+      const list = element('div', null, 'member-list');
+      if (!people.length) list.append(infoNote('کاربری که زیرمجموعهٔ هیچ پزشکی نباشد پیدا نشد.'));
+      for (const person of people) {
+        const add = button('افزودن', async () => {
+          add.disabled = true;
+          try {
+            await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members', 'POST', { userId: person.id });
+            notice('کاربر به زیرمجموعه اضافه شد');
+            await showCurrent();
+          } catch (error) {
+            notice(error.message, 'error');
+            add.disabled = false;
+          }
+        }, { secondary: true, iconName: 'plus' });
+        list.append(memberLine(person, add));
+      }
+      paint([toolbar, list]);
+    };
+    await showCurrent();
+  }, { iconName: 'users', modalClass: 'modal-wide' });
+}
+function specialistRowActions(row) {
+  const actions = element('div', null, 'cell-actions');
+  actions.append(button('ویرایش', () => specialistDetail(row), { secondary: true, iconName: 'pencil' }));
+  return actions;
+}
+function specialistDetail(row) {
+  openModal('اطلاعات پزشک', (body, dialog) => {
+    dialog.classList.add('user-detail-modal');
+    const panel = element('div', null, 'report-stack');
+    const identity = element('div', null, 'user-detail-identity');
+    identity.append(doctorCell(row), badge(row.active === false ? 'suspended' : 'active', row.active === false ? 'غیرفعال' : 'فعال'));
+    const grid = element('div', null, 'detail-grid');
+    const education = row.education || row.credential || '—';
+    const fields = [
+      ['شماره تلفن', row.phone || '—', true],
+      ['کد نظام پزشکی', row.councilNo || '—', true],
+      ['نام کاربری', row.username || '—', true],
+      ['تحصیلات', education, false],
+    ];
+    if (row.credential && row.education && row.credential !== row.education) fields.push(['تخصص', row.credential, false]);
+    fields.push(
+      ['تاریخ تولد', civilLabel(row.birthDate), false],
+      ['تاریخ شروع فعالیت', startedLabel(row.startedAt), false],
+      ['تعداد نظر', number(row.reviewCount ?? 0), false],
+      ['تعداد زیرمجموعه', number(row.subordinateCount ?? 0), false],
+    );
+    for (const [label, value, ltr] of fields) {
+      const item = element('div');
+      const val = element('strong', String(value));
+      if (ltr) val.classList.add('ltr');
+      item.append(element('small', label), val);
+      grid.append(item);
+    }
+    const about = element('div', null, 'span-row');
+    about.append(element('small', 'معرفی'), element('strong', row.bio || '—'));
+    grid.append(about);
+    const form = element('form');
+    form.classList.add('user-package-form');
+    const edit = element('div', null, 'form-grid');
+    const capacity = field(edit, 'capacity', 'ظرفیت پذیرش', 'number', String(row.capacity ?? 0));
+    capacity.min = '0';
+    capacity.max = '500';
+    capacity.step = '1';
+    const shownRating = row.rating != null ? row.rating : row.averageRating;
+    const rating = field(edit, 'rating', 'امتیاز', 'number', shownRating == null ? '0' : String(shownRating));
+    rating.min = '0';
+    rating.max = '5';
+    rating.step = '0.1';
+    help(rating, 'از ۰ تا ۵. با ثبت، همین مقدار برای پزشک ذخیره می‌شود.');
+    form.append(edit, formFooter('ثبت تغییرات', 'check'));
+    onForm(form, async data => {
+      const capacityValue = Number(data.capacity);
+      const ratingValue = Number(data.rating);
+      if (!Number.isInteger(capacityValue) || capacityValue < 0 || capacityValue > 500) throw new Error('ظرفیت پذیرش باید عددی بین ۰ و ۵۰۰ باشد');
+      if (!Number.isFinite(ratingValue) || ratingValue < 0 || ratingValue > 5) throw new Error('امتیاز باید بین ۰ و ۵ باشد');
+      await api('admin/specialists/' + encodeURIComponent(row.id), 'PATCH', { capacity: capacityValue, rating: ratingValue });
+      dialog.close();
+      notice('امتیاز و ظرفیت پذیرش ذخیره شد');
+      await load();
+    });
+    panel.append(identity, grid, form);
+    body.append(panel);
+  }, { iconName: 'medical', modalClass: 'modal-wide' });
 }
 function addSpecialistModal() {
   openModal('افزودن پزشک', (body, dialog) => {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/theme/theme.dart';
 import '../../data/demo_store.dart' show DemoScope, latinDigits;
 import '../../data/customer_auth.dart';
+import '../onboarding/signup_onboarding.dart';
 import '../widgets/auth_canvas.dart';
 import '../widgets/kit/pill_button.dart';
 
@@ -16,7 +17,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
   final _form = GlobalKey<FormState>();
-  bool _busy = false, _codeStep = false;
+  bool _busy = false, _codeStep = false, _unregistered = false;
   String? _error;
 
   @override
@@ -26,21 +27,15 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
     super.dispose();
   }
 
-  Future<void> _register() async {
-    try {
-      await const MethodChannel(
-        'ir.sabzine/registration',
-      ).invokeMethod<void>('open');
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'مرورگر باز نشد. برای ثبت‌نام به my-diet.ir/onboarding/ برو.',
-          ),
-        ),
-      );
-    }
+  Future<void> _openOnboarding() async {
+    final store = DemoScope.of(context);
+    final phone = latinDigits(_phone.text).trim();
+    final initial = RegExp(r'^09\d{9}$').hasMatch(phone) ? phone : null;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SignupOnboardingPage(store: store, initialPhone: initial),
+      ),
+    );
   }
 
   Future<void> _continue() async {
@@ -61,32 +56,13 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
       if (_codeStep) {
         await store.verifyLoginCode(phone, latinDigits(_code.text).trim());
       } else {
-        await auth.requestCode(phone);
+        await auth.requestCode(phone, existingAccountOnly: true);
         if (mounted) setState(() => _codeStep = true);
       }
     } on AuthFailure catch (failure) {
       if (!mounted) return;
       if (failure.code == 'account_not_registered') {
-        final register = await showDialog<bool>(
-          context: context,
-          builder: (dialog) => AlertDialog(
-            title: const Text('هنوز ثبت‌نام نکردی'),
-            content: const Text(
-              'حسابی با این شماره پیدا نشد. برای ساخت حساب به سایت رژیم من برو.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialog),
-                child: const Text('بستن'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(dialog, true),
-                child: const Text('ثبت‌نام'),
-              ),
-            ],
-          ),
-        );
-        if (register == true && mounted) await _register();
+        setState(() => _unregistered = true);
       } else {
         setState(() => _error = failure.message);
       }
@@ -131,7 +107,12 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
               prefixIcon: const Icon(Icons.phone_android_rounded),
             ),
             onChanged: (_) {
-              if (_error != null) setState(() => _error = null);
+              if (_error != null || _unregistered) {
+                setState(() {
+                  _error = null;
+                  _unregistered = false;
+                });
+              }
             },
             onFieldSubmitted: (_) => _continue(),
             validator: (value) {
@@ -166,6 +147,22 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
               ),
             ),
           ],
+          if (_unregistered) ...[
+            const SizedBox(height: 12),
+            Semantics(
+              liveRegion: true,
+              child: const Text(
+                'ثبت‌نام نکردی',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.danger, height: 1.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            PillButton(
+              label: 'ثبت‌نام',
+              onPressed: _busy ? null : _openOnboarding,
+            ),
+          ],
           if (_codeStep)
             TextButton(
               onPressed: _busy
@@ -174,12 +171,13 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                       _codeStep = false;
                       _code.clear();
                       _error = null;
+                      _unregistered = false;
                     }),
               child: const Text('تغییر شماره یا درخواست کد جدید'),
             )
-          else
+          else if (!_unregistered)
             TextButton(
-              onPressed: _busy ? null : _register,
+              onPressed: _busy ? null : _openOnboarding,
               child: const Text('هنوز ثبت‌نام نکردی؟'),
             ),
         ],

@@ -64,7 +64,7 @@ const promptTitles = { plan_draft: 'پرامپت پیش‌نویس برنامه'
   function testModal(provider, defaultModel) {
     openModal('آزمایش اتصال «' + provider.name + '»', (body, dialog) => {
       const form = element('form');
-      const model = field(form, 'model', 'مدل برای آزمایش', 'text', defaultModel || 'openai/gpt-4o-mini'); model.dir = 'ltr';
+      const model = field(form, 'model', 'مدل برای آزمایش', 'text', defaultModel || 'deepseek/deepseek-v4.1-flash-1017'); model.dir = 'ltr';
       const out = element('div', null, 'ai-test-result'); out.setAttribute('aria-live', 'polite');
       form.append(formFooter('ارسال یک درخواست کوتاه', 'send', dialog), out); body.append(infoNote('یک درخواست بسیار کوتاه می‌فرستیم تا درستی کلید، نشانی و مدل مشخص شود. هزینهٔ آن در دفتر مصرف ثبت می‌شود.'), form);
       onForm(form, async data => {
@@ -104,7 +104,7 @@ const promptTitles = { plan_draft: 'پرامپت پیش‌نویس برنامه'
       const form = element('form');
       const provider = field(form, 'providerId', 'سرویس', 'select');
       addSelectOptions(provider, providers.map(p => [p.id, p.name + ' · ' + kindNames[p.kind]]));
-      const model = field(form, 'model', 'شناسهٔ مدل (مثلاً google/gemini-2.5-flash)', 'text'); model.dir = 'ltr';
+      const model = field(form, 'model', 'شناسهٔ مدل (مثلاً deepseek/deepseek-v4.1-flash-1017)', 'text'); model.dir = 'ltr';
       const list = element('datalist'); list.id = 'ai-model-list'; model.setAttribute('list', list.id);
       const priceIn = field(form, 'priceIn', 'قیمت ورودی (دلار برای هر یک میلیون توکن)', 'number'); const priceOut = field(form, 'priceOut', 'قیمت خروجی (دلار برای هر یک میلیون توکن)', 'number');
       for (const input of [priceIn, priceOut]) { input.step = '0.0001'; input.min = '0'; input.value = '0'; input.dir = 'ltr'; }
