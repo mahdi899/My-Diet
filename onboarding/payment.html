@@ -5,25 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>پرداخت کارت‌به‌کارت | رژیم من</title>
 <link rel="stylesheet" href="theme.css?v=48">
-<link rel="stylesheet" href="payment-card.css?v=4">
+<link rel="stylesheet" href="payment-card.css?v=5">
 <script src="payment-card.js?v=1" defer></script>
-<script src="checkout.js?v=2" defer></script>
+<script src="checkout.js?v=3" defer></script>
 </head>
 <body class="checkout-page">
 <main class="checkout-panel">
-  <h1>پرداخت کارت‌به‌کارت</h1>
   <p id="checkout-status" role="status">در حال بررسی نشست پرداخت…</p>
   <section id="checkout-content" hidden>
-    <p class="checkout-video-note">قبل پرداخت ویدیو زیر رو ببین.</p>
+    <p class="checkout-video-note">قبل پرداخت ویدیو زیر رو ببین <span aria-hidden="true">👇</span></p>
         <video class="transfer-video" controls playsinline preload="metadata" aria-label="راهنمای پرداخت">
           <source src="payment-guide.mp4" type="video/mp4">
         </video>
     <p class="checkout-timer">مهلت واریز <b id="checkout-timer" dir="ltr">--:--</b></p>
-    <fieldset id="checkout-methods">
-      <legend>روش پرداخت</legend>
-      <label><input type="radio" name="payment-method" value="gateway" checked> پرداخت آنلاین با زیبال</label>
-      <label><input type="radio" name="payment-method" value="transfer"> کارت‌به‌کارت</label>
-    </fieldset>
+    <div id="checkout-methods" role="group" aria-label="روش پرداخت">
+      <button type="button" data-method="gateway" aria-pressed="true">پرداخت آنلاین با زیبال</button>
+      <button type="button" data-method="transfer" aria-pressed="false">کارت‌به‌کارت</button>
+    </div>
     <div id="checkout-gateway">
       <p id="gateway-amount"></p>
       <button id="pay-gateway" type="button" class="checkout-action">رفتن به درگاه زیبال</button>

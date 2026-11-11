@@ -34,11 +34,13 @@
     byId('gateway-amount').textContent = 'مبلغ پرداخت ' + price.format(order.amount_toman) + ' تومان';
     byId('checkout-plan').hidden = Boolean(order.confirmed_at);
     byId('copy-amount').textContent = price.format(order.amount_toman) + ' تومان · کپی مبلغ';
+    status.hidden = false;
     if (order.confirmed_at) status.textContent = 'پرداخت شما تأیید شد.';
     else if (gatewayResult === 'cancelled') status.textContent = 'پرداخت آنلاین تکمیل نشد. می‌توانید دوباره به درگاه بروید.';
     else if (gatewayResult === 'pending') status.textContent = 'پرداخت هنوز تأیید نشده است. اگر مبلغ کسر شده، به پشتیبانی پیام دهید.';
     else if (order.gateway_started) status.textContent = 'منتظر تکمیل پرداخت در زیبال';
-    else if (remaining) status.textContent = method === 'transfer' ? 'منتظر واریز و بررسی پشتیبانی' : 'روش پرداخت را انتخاب کنید.';
+    else if (remaining && method === 'transfer') status.textContent = 'منتظر واریز و بررسی پشتیبانی';
+    else if (remaining) { status.textContent = ''; status.hidden = true; }
     else status.textContent = 'مهلت واریز تمام شد. اگر واریز کرده‌اید با پشتیبانی تماس بگیرید.';
   }
 
@@ -53,6 +55,7 @@
       byId('checkout-content').hidden = false;
       render();
     } catch (error) {
+      status.hidden = false;
       status.textContent = error.message;
       if (!order) byId('checkout-return').hidden = false;
     } finally {
@@ -67,8 +70,13 @@
     return;
   }
 
-  byId('checkout-methods').addEventListener('change', event => {
-    method = event.target.value;
+  byId('checkout-methods').addEventListener('click', event => {
+    const button = event.target.closest('button[data-method]');
+    if (!button) return;
+    method = button.dataset.method;
+    for (const option of byId('checkout-methods').querySelectorAll('button')) {
+      option.setAttribute('aria-pressed', String(option === button));
+    }
     render();
   });
   byId('pay-gateway').addEventListener('click', async () => {
@@ -80,6 +88,7 @@
       const payment = await request('/' + encodeURIComponent(order.id) + '/zibal', {});
       location.assign(payment.url);
     } catch (error) {
+      status.hidden = false;
       status.textContent = error.message;
       startingGateway = false;
       button.disabled = false;
@@ -97,6 +106,7 @@
       await navigator.clipboard.writeText(String(order.amount_toman));
       byId('copy-amount').textContent = price.format(order.amount_toman) + ' تومان · کپی شد';
     } catch {
+      status.hidden = false;
       status.textContent = 'کپی خودکار ممکن نیست. مبلغ را دستی وارد کنید.';
     }
   });
@@ -126,6 +136,7 @@
       byId('checkout-content').hidden = false;
       render();
     }).catch(error => {
+      status.hidden = false;
       status.textContent = error.message;
       byId('checkout-return').hidden = false;
     });
