@@ -209,7 +209,8 @@
       animation: shakeError 0.4s ease-in-out;
     }
   </style>
-  <link rel="stylesheet" href="matching.css?v=21">
+  <link rel="stylesheet" href="matching.css?v=portraits-2">
+  <script src="specialist-choices.js?v=2" defer></script>
   <link rel="stylesheet" href="plans.css?v=8">
   <link rel="stylesheet" href="verification.css?v=10">
   <link rel="stylesheet" href="payment-card.css?v=2">
@@ -428,7 +429,7 @@
             <p class="community-hero-number" id="communityNumber" aria-live="polite">۱٬۰۰۰</p>
             <p class="community-hero-copy">نفری هستی که عضو<br>جامعه رژیم من میشی</p>
           </div>
-          <p class="matching-section-lead">۲ متخصص، متناسب با اطلاعات شما</p>
+          <p class="matching-section-lead">۲ پروفایل نمونهٔ تغذیه</p>
           <div id="specialistList" class="specialist-list" role="group" aria-label="انتخاب متخصص"></div>
           <button id="aiReadyGoBtn" type="button" class="quiz-green-btn w-full py-3.5 rounded-2xl font-black text-base cursor-pointer"><span>انتخاب پلن و ادامه</span><span aria-hidden="true">←</span></button>
         </div>
@@ -604,7 +605,7 @@
   </div>
 
   <script src="tracking-config.js?v=1"></script>
-  <script src="tracking.js?v=3"></script>
+  <script src="tracking.js?v=4"></script>
   <script src="community-counter.js?v=1"></script>
   <script src="questionnaire-data.js?v=12"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script>
   <script>
@@ -655,44 +656,18 @@
       autoAdvanceTimer: null,
       aiPreparingTimer: null,
       selectedSpecialist: null,
+      specialistChoices: [],
     };
-
-    const SPECIALISTS_BY_GOAL = {
-      weight_loss: [
-        { id: 'sara', name: 'دکتر سارا محمدی', focus: 'کاهش وزن پایدار', initials: 'سم' },
-        { id: 'amir', name: 'دکتر امیر حسینی', focus: 'متابولیسم و چربی‌سوزی', initials: 'اح' },
-      ],
-      weight_gain: [
-        { id: 'nazanin', name: 'دکتر نازنین کریمی', focus: 'افزایش وزن سالم', initials: 'نک' },
-        { id: 'reza', name: 'دکتر رضا احمدی', focus: 'عضله‌سازی و انرژی', initials: 'را' },
-      ],
-      pregnancy: [
-        { id: 'maryam', name: 'دکتر مریم نوری', focus: 'تغذیه بارداری', initials: 'من' },
-        { id: 'elham', name: 'دکتر الهام صادقی', focus: 'تغذیه شیردهی', initials: 'اص' },
-      ],
-      detox: [
-        { id: 'parsa', name: 'دکتر پارسا کیانی', focus: 'گوارش و پاکسازی', initials: 'پک' },
-        { id: 'hanieh', name: 'دکتر هانیه مرادی', focus: 'انرژی و تعادل روزانه', initials: 'هم' },
-      ],
-    };
-
-    function specialistsForGoal() {
-      return SPECIALISTS_BY_GOAL[state.selectedGoal?.id] || SPECIALISTS_BY_GOAL.weight_loss;
-    }
 
     function renderSpecialistChoices() {
       const list = document.getElementById('specialistList');
       if (!list) return;
-      const people = specialistsForGoal();
+      const people = state.specialistChoices;
       const selectedId = state.selectedSpecialist?.id;
       list.innerHTML = people.map((person) => `
         <button type="button" class="specialist-card${person.id === selectedId ? ' is-selected' : ''}" aria-pressed="${person.id === selectedId}" data-specialist-id="${person.id}">
           <span class="specialist-portrait-group">
-            <img class="specialist-portrait" src="assets/doctor-onboarding-${['amir','reza','parsa'].includes(person.id) ? 'male' : 'female'}.jpg" alt="پرتره نمونه برای نمایش دمو" width="640" height="800" />
-            <span class="specialist-rating" aria-label="امتیاز ۴٫۸ از ۵">
-              <span class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="is-partial"></i></span>
-              <span class="star-score">۴٫۸</span>
-            </span>
+            ${onboardingPortrait(person)}
           </span>
           <span class="specialist-copy">
             <span class="specialist-name">${person.name}</span>
@@ -1557,6 +1532,9 @@
       const backdrop = document.getElementById('twoStepModalBackdrop');
       backdrop.classList.add('hidden');
       backdrop.classList.remove('flex');
+      if (!document.getElementById('aiReadyPhase').classList.contains('hidden')) {
+        window.demoTracking?.step('specialists');
+      }
     }
 
     function showModalStep1() {
@@ -1656,6 +1634,7 @@
     }
 
     function setMorphInputMode(mode) {
+      if (mode === 'otp' || mode === 'phone') window.demoTracking?.step(mode === 'otp' ? 'otp' : 'contact');
       if (state.verificationBusy) return;
       state.inputMode = mode;
       resetOtpFieldMorph();
@@ -1881,20 +1860,26 @@
       if (el) el.classList.add('hidden');
     }
 
-    async function showAiReadyPhase() {
+    function showAiReadyPhase() {
       clearInterval(matchingTicker);
       const counter = document.getElementById('communityNumber');
       clearInterval(communityTicker);
-      communityTicker = await window.SabzineCommunityCounter.start(counter);
+
       state.aiPreparingTimer = null;
       document.getElementById('aiPreparingPhase').classList.add('hidden');
       const ready = document.getElementById('aiReadyPhase');
       ready.classList.remove('hidden');
       ready.classList.add('ai-prep-phase--enter');
       renderSpecialistChoices();
+      window.demoTracking?.step('specialists');
+      window.SabzineCommunityCounter?.start(counter).then(ticker => {
+        communityTicker = ticker;
+      }).catch(() => {});
     }
 
     function startAiPreparingFlow() {
+      state.specialistChoices = sampleOnboardingSpecialists();
+      state.selectedSpecialist = null;
       window.demoTracking?.complete();
       window.demoTracking?.step('preparing');
       clearAiPreparingTimer();
@@ -2005,7 +1990,7 @@
         }
         const card = event.target.closest('[data-specialist-id]');
         if (!card) return;
-        const person = specialistsForGoal().find((item) => item.id === card.dataset.specialistId);
+        const person = state.specialistChoices.find((item) => item.id === card.dataset.specialistId);
         if (!person) return;
         state.selectedSpecialist = person;
         renderSpecialistChoices();

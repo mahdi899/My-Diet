@@ -40,3 +40,18 @@ test('privacy filter preserves only the anonymous journey and allowed fields',()
   assert.equal(result.data.journey,id);assert.equal(result.data.phone,undefined);
   assert.equal(result.data.answer,undefined);assert.equal(result.url,'/onboarding/quiz.html');
 });
+
+test('checkout preserves campaign attribution without exposing order parameters', () => {
+  const storage = new Map();
+  const intro = load('/onboarding/?utm_campaign=telegram-launch&utm_source=telegram', storage);
+  load('/onboarding/goals.html', storage);
+  load('/onboarding/quiz.html', storage);
+  const payment = load('/onboarding/payment.html?order=private', storage);
+  assert.equal(payment.id, intro.id);
+  const payload = payment.context.mydietBeforeSend('event', {
+    url: '/onboarding/payment.html?order=private',
+    data: { step: 'payment_gateway', journey: payment.id },
+  });
+  assert.equal(payload.url, '/onboarding/payment.html?utm_source=telegram&utm_campaign=telegram-launch');
+  assert.equal(payload.data.step, 'payment_gateway');
+});

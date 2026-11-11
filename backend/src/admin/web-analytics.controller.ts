@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, OnApplicationShutdown, Post, Query, Req } from '@nestjs/common';
+import { Controller, Get, Header, Inject, OnApplicationShutdown, Post, Query, Req } from '@nestjs/common';
 import { Pool } from 'pg';
 import type { Request } from 'express';
 import { actor, Roles } from '../common/auth.js';
@@ -34,6 +34,53 @@ export class WebAnalyticsController implements OnApplicationShutdown {
     });
   }
 
+  private async resetTime() {
+    const { rows } = await this.appPool.query<{ updated_at: Date }>(
+      "select updated_at from app_settings where key='analytics.report_reset'",
+    );
+    return rows[0]?.updated_at.toISOString() ?? null;
+  }
+
+  @Get('live')
+  @Header('Cache-Control', 'private, no-store')
+  async live(@Query('campaign') campaign?: string) {
+    if (campaign !== undefined && (typeof campaign !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(campaign) || campaign.length > 64)) {
+      throw new ApiError(400, 'validation', 'لینک ورودی معتبر نیست');
+    }
+    if (!this.pool || !this.env.ANALYTICS_WEBSITE_ID) {
+      throw new ApiError(503, 'analytics_unavailable', 'سرویس رهگیری هنوز متصل نشده است');
+    }
+    try {
+      const { rows } = await this.pool.query(`
+        with recent as (
+          select e.event_id, e.event_name, e.created_at, e.url_path, e.utm_campaign,
+            coalesce(j.string_value, e.visit_id::text) as journey, s.string_value as step
+          from website_event e
+          left join event_data j on j.website_event_id=e.event_id and j.data_key='journey'
+          left join event_data s on s.website_event_id=e.event_id and s.data_key='step'
+          where e.website_id=$1 and e.created_at >= now()-interval '90 seconds'
+            and ($2::timestamptz is null or e.created_at >= $2::timestamptz)
+            and e.tag is distinct from 'qa'
+            and e.event_name in ('step_view', 'active_heartbeat', 'presence_end')
+            and e.url_path in ('/onboarding/', '/onboarding/index.html', '/onboarding/goals.html',
+              '/onboarding/quiz.html', '/onboarding/payment.html')
+        ),
+        latest as (
+          select distinct on (journey) * from recent
+          order by journey, created_at desc, event_id desc
+        )
+        select journey as id, url_path as page, step, utm_campaign as campaign, created_at as "lastSeen"
+        from latest
+        where (step='preparing' or (event_name <> 'presence_end' and created_at >= now()-interval '25 seconds'))
+          and ($3::text is null or utm_campaign=$3)
+        order by created_at desc, journey
+      `, [this.env.ANALYTICS_WEBSITE_ID, await this.resetTime(), campaign ?? null]);
+      return { sessions: rows, generatedAt: new Date().toISOString() };
+    } catch {
+      throw new ApiError(503, 'analytics_unavailable', 'دریافت موقعیت زنده کاربران ممکن نشد');
+    }
+  }
+
   @Get()
   async report(@Query('days') raw = '7') {
     const days = Number(raw);
@@ -43,10 +90,7 @@ export class WebAnalyticsController implements OnApplicationShutdown {
       d as (select d.* from event_data d join e on e.event_id=d.website_event_id),
       steps as (select e.*,d.string_value as step from e join d on d.website_event_id=e.event_id and d.data_key='step' where e.event_name='step_view') `;
     try {
-      const { rows } = await this.appPool.query<{ updated_at: Date }>(
-        "select updated_at from app_settings where key='analytics.report_reset'",
-      );
-      const resetAt = rows[0]?.updated_at.toISOString() ?? null;
+      const resetAt = await this.resetTime();
       const query = (text: string) => this.pool!.query(prefix + text, [this.env.ANALYTICS_WEBSITE_ID, days, resetAt]).then(r => r.rows);
       const [summary,events,goals,stages,exits,sources,daily,active] = await Promise.all([
         query(`select count(*) filter(where event_type=1)::int as pageviews,count(distinct session_id)::int as visitors,count(distinct visit_id)::int as visits,count(distinct visit_id) filter(where event_name='questionnaire_completed')::int as completed from e`),

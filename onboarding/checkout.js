@@ -34,6 +34,8 @@
     byId('gateway-amount').textContent = price.format(order.amount_toman) + ' تومان';
     byId('checkout-plan').hidden = Boolean(order.confirmed_at);
     byId('copy-amount').textContent = price.format(order.amount_toman) + ' تومان · کپی مبلغ';
+    window.demoTracking?.step(order.confirmed_at ? 'payment_success' :
+      order.gateway_started || method === 'gateway' ? 'payment_gateway' : 'payment_transfer');
     status.hidden = false;
     if (order.confirmed_at) status.textContent = 'پرداخت شما تأیید شد.';
     else if (gatewayResult === 'cancelled') status.textContent = 'پرداخت آنلاین تکمیل نشد. می‌توانید دوباره به درگاه بروید.';

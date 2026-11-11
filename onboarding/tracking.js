@@ -4,18 +4,28 @@
   try { if(localStorage.getItem('mydiet.analytics.disabled')==='1')return; } catch { /* storage may be unavailable */ }
   const goals=new Set(['weight_loss','weight_gain','pregnancy','detox']);
   const queue=[];
-  let current=location.pathname.endsWith('goals.html')?'goals':location.pathname.endsWith('quiz.html')?'quiz':'intro';
+  let current=location.pathname.endsWith('goals.html')?'goals':location.pathname.endsWith('quiz.html')?'quiz':location.pathname.endsWith('payment.html')?'payment':'intro';
   // One anonymous path per tab; returning to the start/goal page begins a new
   // path. Reloading quiz resets its answers, so that also begins a new path.
   const page=current;
   const journeyKey='mydiet.analytics.journey';
-  let journey;
+  const campaignKeys=['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+  const entryParams=new URLSearchParams(location.search);
+  let journey, attribution={};
+  const rememberJourney=()=>{
+    try{sessionStorage.setItem(journeyKey,JSON.stringify({id:journey,page,attribution}));}catch{}
+  };
   const selectJourney=()=>{
     let saved;try{saved=JSON.parse(sessionStorage.getItem(journeyKey)||'null');}catch{}
     const valid=saved&&/^[0-9a-f-]{36}$/.test(saved.id);
-    const restart=page==='intro'||saved?.page==='quiz';
+    const restart=page==='intro'||(saved?.page==='quiz'&&page!=='payment');
     journey=valid&&!restart?saved.id:crypto.randomUUID();
-    try{sessionStorage.setItem(journeyKey,JSON.stringify({id:journey,page}));}catch{}
+    attribution={};
+    for(const key of campaignKeys) {
+      const value=entryParams.get(key) ?? (valid && page!=='intro' ? saved.attribution?.[key] : null);
+      if(typeof value==='string'&&/^[a-zA-Z0-9_.-]{1,80}$/.test(value))attribution[key]=value;
+    }
+    rememberJourney();
   };
   selectJourney();
   let context={},lastTick=performance.now(),lastActivity=lastTick,activeMs=0,hidden=document.hidden;
@@ -45,14 +55,14 @@
   window.mydietBeforeSend=(type,payload)=>{
     if(type!=='event')return false;
     const url=new URL(payload.url,location.origin),safe=new URLSearchParams();
-    for(const key of ['utm_source','utm_medium','utm_campaign','utm_content','utm_term']) {
-      const value=url.searchParams.get(key);
+    for(const key of campaignKeys) {
+      const value=url.searchParams.get(key) ?? attribution[key];
       if(value&&/^[a-zA-Z0-9_.-]{1,80}$/.test(value))safe.set(key,value);
     }
     const goal=url.searchParams.get('goal');if(goals.has(goal))safe.set('goal',goal);
     const data={};
     for(const [key,value] of Object.entries(payload.data||{})) {
-      if(key==='step'&&/^(intro|goals|quiz|preparing|plans|contact|payment|question:(weight_loss|weight_gain|pregnancy|detox):\d{1,3})$/.test(value))data[key]=value;
+      if(key==='step'&&/^(intro|goals|quiz|preparing|specialists|plans|contact|otp|payment|payment_gateway|payment_transfer|payment_success|question:(weight_loss|weight_gain|pregnancy|detox):\d{1,3})$/.test(value))data[key]=value;
       if(key==='journey'&&typeof value==='string'&&/^[0-9a-f-]{36}$/.test(value))data[key]=value;
       if(key==='goal'&&goals.has(value))data[key]=value;
       if(key==='question'&&Number.isInteger(value)&&value>=0&&value<1000)data[key]=value;
@@ -62,7 +72,7 @@
     return {...payload,url:url.pathname+(safe.size?'?'+safe:''),referrer,title:'My Diet Onboarding',data};
   };
   for(const type of ['pointerdown','keydown','touchstart','scroll'])addEventListener(type,()=>{lastActivity=performance.now();},{passive:true});
-  const heartbeat=()=>{if(!document.hidden&&performance.now()-lastActivity<60000)event('active_heartbeat');};
+  const heartbeat=()=>{if(!document.hidden)event('active_heartbeat');};
   setInterval(()=>{flush();heartbeat();},10000);
   heartbeat();
   document.addEventListener('visibilitychange',()=>{if(document.hidden)event('presence_end');else heartbeat();});
@@ -71,7 +81,7 @@
   addEventListener('pagehide',flush);
   addEventListener('pageshow',e=>{if(e.persisted){
     if(page!=='quiz')selectJourney();
-    else try{sessionStorage.setItem(journeyKey,JSON.stringify({id:journey,page}));}catch{}
+    else rememberJourney();
     lastTick=performance.now();lastActivity=lastTick;event('step_view');
   }});
   document.addEventListener('click',e=>{

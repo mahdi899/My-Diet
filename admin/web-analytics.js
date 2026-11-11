@@ -1,26 +1,118 @@
 /* Live Umami reports, fetched through the authenticated admin API. */
 const trackingGoals = {weight_loss:'لاغری',weight_gain:'افزایش وزن',pregnancy:'بارداری و شیردهی',detox:'سلامت و پاکسازی'};
 function trackingStepLabel(step) {
-  const names={intro:'شروع',goals:'انتخاب هدف',quiz:'شروع پرسش‌نامه',preparing:'آماده‌سازی برنامه',plans:'انتخاب برنامه',contact:'ثبت شماره',payment:'پرداخت'};
+  const names={intro:'شروع',goals:'انتخاب هدف',quiz:'شروع پرسش‌نامه',preparing:'آماده‌سازی برنامه',specialists:'انتخاب پزشک',otp:'وارد کردن کد تأیید',payment_gateway:'پرداخت آنلاین',payment_transfer:'کارت‌به‌کارت',payment_success:'پرداخت تأیید شد',plans:'انتخاب برنامه',contact:'ثبت شماره',payment:'پرداخت'};
   if (names[step]) return names[step];
   const parts=String(step||'').split(':');
   return parts[0]==='question' ? `سؤال ${number(parts[2])} · ${trackingGoals[parts[1]]||parts[1]}` : step;
 }
+async function liveTrackingPanel() {
+  const links = await api('admin/campaign-links');
+  const panel = element('section', null, 'card tracking-live');
+  const controls = element('div', null, 'tracking-filters');
+  const label = element('label', 'لینک ورودی');
+  const select = element('select');
+  select.append(Object.assign(element('option', 'همهٔ لینک‌ها و ورودهای مستقیم'), { value: '' }));
+  for (const link of links) {
+    select.append(Object.assign(element('option', link.name + ' · /go/' + link.slug), { value: link.slug }));
+  }
+  const selectedLink = element('p', 'همهٔ ورودی‌ها');
+  selectedLink.dir = 'auto';
+  const status = element('p', 'در حال دریافت نشست‌های فعال…');
+  label.append(select);
+  controls.append(label, selectedLink, status);
+  panel.append(sectionHead('کاربران آنلاین آنبوردینگ', 'موقعیت هر نشست فعال، با بررسی هر ثانیه'), controls);
+
+  const wrapper = element('div', null, 'tracking-live-table');
+  const table = element('table');
+  table.setAttribute('aria-label', 'موقعیت زنده کاربران آنبوردینگ');
+  const header = element('tr');
+  for (const title of ['نشست', 'لینک ورودی', 'صفحه', 'مرحلهٔ فعلی', 'آخرین فعالیت']) {
+    const th = element('th', title);
+    th.scope = 'col';
+    header.append(th);
+  }
+  const head = element('thead'), body = element('tbody');
+  head.append(header);
+  table.append(head, body);
+  wrapper.append(table);
+  panel.append(wrapper);
+
+  const pages = {
+    '/onboarding/': 'شروع', '/onboarding/index.html': 'شروع', '/onboarding/goals.html': 'اهداف',
+    '/onboarding/quiz.html': 'پرسش‌نامه', '/onboarding/payment.html': 'پرداخت',
+  };
+  const names = new Map(links.map(link => [link.slug, link.name]));
+  const time = new Intl.DateTimeFormat('fa-IR', { timeStyle: 'medium', timeZone: 'Asia/Tehran' });
+  let generation = 0, previous = null;
+  async function refresh() {
+    const ticket = ++generation;
+    const filter = select.value ? '?campaign=' + encodeURIComponent(select.value) : '';
+    try {
+      const { sessions } = await api('admin/web-analytics/live' + filter);
+      if (ticket !== generation) return;
+      status.textContent = number(sessions.length) + ' نشست فعال';
+      const signature = JSON.stringify(sessions);
+      if (signature === previous) return;
+      previous = signature;
+      if (!sessions.length) {
+        const row = element('tr'), cell = element('td', 'در حال حاضر نشست فعالی برای این انتخاب وجود ندارد.');
+        cell.colSpan = 5;
+        row.append(cell);
+        body.replaceChildren(row);
+        return;
+      }
+      body.replaceChildren(...sessions.map(session => {
+        const row = element('tr');
+        const id = element('td', session.id.slice(0, 8));
+        id.dir = 'ltr';
+        row.append(id, element('td', names.get(session.campaign) || session.campaign || 'مستقیم / نامشخص'),
+          element('td', pages[session.page] || session.page),
+          element('td', trackingStepLabel(session.step) || '—'),
+          element('td', time.format(new Date(session.lastSeen))));
+        return row;
+      }));
+    } catch {
+      if (ticket === generation) status.textContent = 'ارتباط زنده قطع است؛ دوباره بررسی می‌شود.';
+    }
+  }
+
+  select.addEventListener('change', () => {
+    selectedLink.textContent = select.value ? location.origin + '/go/' + select.value : 'همهٔ ورودی‌ها';
+    status.textContent = 'در حال دریافت نشست‌های فعال…';
+    previous = null;
+    body.replaceChildren();
+    void refresh();
+  });
+  const poll = async () => {
+    if (!panel.isConnected) return;
+    if (!document.hidden) await refresh();
+    setTimeout(poll, 1000);
+  };
+  setTimeout(poll, 1000);
+  void refresh();
+  return panel;
+}
+
 async function webAnalyticsPage() {
   const root=element('div',null,'report-stack'), filters=element('div',null,'card tracking-filters');
   const label=element('label','بازهٔ گزارش'), range=element('select');
   for(const [value,text] of [[1,'۲۴ ساعت اخیر'],[7,'۷ روز اخیر'],[30,'۳۰ روز اخیر'],[90,'۹۰ روز اخیر']]) {
     const option=element('option',text); option.value=value; range.append(option);
   }
-  const live=element('p','در حال دریافت وضعیت زنده…');live.setAttribute('role','status');
   const reset = button('ریست داده‌ها', () => confirmAction(
     'ریست گزارش رهگیری',
     'گزارش از همین لحظه دوباره شروع می‌شود. رویدادهای قبلی در گزارش نمایش داده نمی‌شوند.',
     'ریست گزارش',
     async () => { await api('admin/web-analytics/reset', 'POST', {}); notice('گزارش رهگیری ریست شد'); },
   ), { secondary: true, iconName: 'history' });
-  range.value='7'; label.append(range); filters.append(label,live,reset); root.append(filters);
-  const content=element('div',null,'report-stack'); root.append(content);
+  const live = await liveTrackingPanel();
+  root.append(live);
+  const history = element('details', null, 'card tracking-history');
+  history.append(element('summary', 'گزارش تاریخی همهٔ ورودی‌ها'));
+  root.append(history);
+  range.value='7'; label.append(range); filters.append(label,reset); history.append(filters);
+  const content=element('div',null,'report-stack'); history.append(content);
   let generation=0;
   async function paint() {
     const ticket=++generation;
@@ -29,7 +121,6 @@ async function webAnalyticsPage() {
     try {
       const report=await api('admin/web-analytics?days='+range.value);
       if(ticket!==generation)return;
-      live.textContent='نشست فعال اکنون: '+number(report.activeSessions)+' · به‌روزرسانی هر ۵ ثانیه · '+new Date(report.generatedAt).toLocaleTimeString('fa-IR');
       if(content.contains(document.activeElement))return;
       const stack=element('div',null,'report-stack'), cards=element('div',null,'metrics-grid');
       const stats=report.summary, rate=stats.visits ? Math.round(stats.completed/stats.visits*1000)/10 : 0;
@@ -42,18 +133,16 @@ async function webAnalyticsPage() {
       const table=(rows,title,description,columns)=>listPanel(rows,{title,description,columns,pageSize:10,iconName:'history',emptyTitle:'داده‌ای ثبت نشده',emptyDescription:'پس از فعالیت کاربران، گزارش این بخش تکمیل می‌شود.'});
       const maximum=Math.max(0,...report.goals.map(r=>r.clicks));
       stack.append(table(report.goals,'انتخاب دستهٔ رژیم','درصد از مجموع کلیک‌های انتخاب هدف در بازهٔ انتخاب‌شده.',[{label:'هدف',render:r=>(trackingGoals[r.goal]||r.goal)+(r.clicks===maximum?' · بیشترین کلیک':'')},{label:'درصد کلیک',render:r=>number(r.percent)+'٪'},{label:'کلیک',render:r=>number(r.clicks)},{label:'نشست',render:r=>number(r.visits)}]));
-      const actions={start_clicked:'شروع مسیر',goal_selected:'انتخاب هدف',question_interacted:'تعامل با سؤال',back_clicked:'بازگشت',questionnaire_completed:'تکمیل پرسش‌نامه'};
-      stack.append(table(report.events.filter(row=>actions[row.name]),'تعامل با دکمه‌ها و سؤال‌ها','تعداد تعامل‌ها و نشست‌های مستقل؛ مقدار پاسخ سؤال ثبت نمی‌شود.',[{label:'تعامل',render:r=>actions[r.name]},{label:'تعداد',render:r=>number(r.count)},{label:'نشست',render:r=>number(r.visits)}]));
-      stack.append(table(report.stages,'مکث در هر مرحله','میانگین زمان فعال هر نشست؛ زمان تب پنهان و بی‌فعالیتی طولانی محاسبه نمی‌شود.',[{label:'مرحله',render:r=>trackingStepLabel(r.step)},{label:'نمایش',render:r=>number(r.views)},{label:'نشست',render:r=>number(r.visits)},{label:'میانگین مکث',render:r=>number(r.averageSeconds)+' ثانیه'},{label:'زمان کل',render:r=>number(r.totalSeconds)+' ثانیه'}]));
       stack.append(table(report.exits,'ریزش کاربران بر اساس صفحه و سؤال','هر مسیر مستقل پس از ۲ دقیقه بی‌فعالیتی؛ مسیرهای ثبت شماره حذف می‌شوند. شروع مسیر جدید، ریزش قبلی را حذف نمی‌کند. سؤال نمایش‌داده‌شدهٔ آخر محاسبه می‌شود؛ بستن مرورگر قطعی نیست.',[{label:'صفحه / سؤال',render:r=>trackingStepLabel(r.step)},{label:'مسیر ریزش‌کرده',render:r=>number(r.visits)},{label:'سهم از ریزش‌ها',render:r=>number(r.percent)+'٪'}]));
       stack.append(table(report.sources,'کانال‌های ورودی','تفکیک بر اساس UTM و دامنهٔ ارجاع؛ مستقیم یعنی منبع قابل تشخیص نیست.',[{label:'منبع',render:r=>r.source==='direct'?'مستقیم / نامشخص':r.source},{label:'کمپین',render:r=>r.campaign||'—'},{label:'نشست',render:r=>number(r.visits)}]));
-      stack.append(table(report.daily,'روند روزانه','تاریخ‌ها بر اساس منطقهٔ زمانی تهران هستند.',[{label:'روز',key:'day'},{label:'نشست',render:r=>number(r.visits)},{label:'بازدید صفحه',render:r=>number(r.pageviews)}]));
-      stack.append(infoNote('نام، شمارهٔ تلفن، مقادیر پاسخ‌ها و متن پزشکی در گزارش رهگیری جمع‌آوری نمی‌شوند. ثبت تعامل سؤال، فقط وقوع تعامل را نشان می‌دهد.'));
       content.replaceChildren(stack);
-    } catch(error) {if(ticket===generation){live.textContent='ارتباط زنده قطع است؛ تلاش خودکار ادامه دارد.';if(!content.childElementCount)content.replaceChildren(emptyState('گزارش دریافت نشد',error.message,'error',button('تلاش دوباره',paint,{secondary:true})));}}
-    finally {if(ticket===generation)content.removeAttribute('aria-busy');}
+    } catch (error) {
+      if (ticket === generation) content.replaceChildren(emptyState('گزارش دریافت نشد', error.message, 'error', button('تلاش دوباره', paint, { secondary: true })));
+    } finally {
+      if (ticket === generation) content.removeAttribute('aria-busy');
+    }
   }
-  range.addEventListener('change',()=>void paint()); await paint();
-  const poll=async()=>{if(!root.isConnected)return;if(!document.hidden)await paint();setTimeout(poll,5000);};
-  setTimeout(poll,5000);return root;
+  range.addEventListener('change', () => void paint());
+  history.addEventListener('toggle', () => { if (history.open) void paint(); });
+  return root;
 }

@@ -117,3 +117,10 @@ body:has(#pageAiPreparingContainer:not(.hidden)) main{padding:24px 20px!importan
 #pageAiPreparingContainer #aiReadyPhase .specialist-card.is-selected{background:linear-gradient(125deg,#fcfdf6,#eaf1df);box-shadow:0 8px 30px #071b1a22;border-color:#dce8c4}
 #pageAiPreparingContainer #aiReadyPhase .specialist-card.is-selected .specialist-focus{border-color:#41663b24}
 @media(max-width:359px){#pageAiPreparingContainer #aiReadyPhase .specialist-card{grid-template-columns:92px minmax(0,1fr);gap:12px;padding:8px}.specialist-portrait-group{width:92px}#pageAiPreparingContainer #aiReadyPhase .specialist-name{font-size:14px}#pageAiPreparingContainer #aiReadyPhase .specialist-focus{font-size:10px}}
+
+.specialist-portrait--generated {
+  aspect-ratio: 1 / 1;
+  background-image: url("assets/doctor-portrait-grid-v2.png");
+  background-size: 500% 200%;
+  background-repeat: no-repeat;
+}
