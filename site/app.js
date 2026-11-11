@@ -50,7 +50,7 @@ function wireHorizontalSlider(track,itemSelector,{autoplayMs=0}={}){
     addEventListener('pagehide',()=>{clearInterval(timer);io.disconnect();});
   }
 }
-const card=(p,{showIntro=false}={})=>`<a class="article-card" href="article.html?id=${encodeURIComponent(p.id)}"><div class="photo"><img loading="lazy" src="assets/${photos[p.image]}" alt="غذای تازه و سبزیجات"></div><h3>${escapeArticle(p.title)}</h3>${showIntro?`<p class="article-card-excerpt">${escapeArticle(p.intro)}</p>`:''}</a>`;
+const card=(p,{showIntro=false}={})=>`<a class="article-card" href="article.html?id=${encodeURIComponent(p.id)}"><div class="photo"><img loading="lazy" src="assets/${photos[p.image]}" alt=""></div><div class="article-card-copy"><span class="tag">${escapeArticle(p.category||'')}</span><h3>${escapeArticle(p.title)}</h3>${showIntro?`<p class="article-card-excerpt">${escapeArticle(String(p.intro||'').split('\n')[0])}</p>`:''}</div></a>`;
 const page=document.body.dataset.page;
 document.querySelector('#header').innerHTML=`<header class="header"><nav class="nav wrap" aria-label="منوی اصلی"><a class="brand" href="index.html">${svg('leaf')}رژیم من</a><div class="navlinks" id="navlinks">${[['index.html','خانه','home'],['pricing.html','خدمات و تعرفه‌ها','pricing'],['about.html','دربارهٔ ما','about'],['articles.html','مقالات','articles'],['contact.html','تماس با ما','contact']].map(([url,label,key])=>`<a ${page===key||page==='article'&&key==='articles'?'class="active" aria-current="page"':''} href="${url}">${label}</a>`).join('')}</div><button class="btn" data-download>دانلود اپلیکیشن ${svg('arrow')}</button><button class="menu" aria-label="باز کردن منو" aria-expanded="false" aria-controls="navlinks">${svg('menu')}</button></nav></header>`;
 document.querySelector('#footer').innerHTML=`<footer class="footer"><div class="wrap"><div class="footer-grid"><div class="footer-brand"><a class="brand" href="index.html">${svg('leaf')}رژیم من</a><p>غذای خوب، متناسب با زندگی تو.<br>ترکیب هوش مصنوعی و نگاه متخصص، برای یک مسیر شخصی‌تر در تغذیه.</p></div><div class="footer-links-block"><div class="footer-nav"><h3>دسترسی سریع</h3><a href="index.html">خانه</a><a href="pricing.html">خدمات و تعرفه‌ها</a><a href="about.html">دربارهٔ ما</a><a href="articles.html">مقالات</a><a href="contact.html">تماس و پشتیبانی</a><a href="terms.html">شرایط خرید</a><a href="refund.html">لغو و بازگشت وجه</a><a href="#" data-download>دانلود اپلیکیشن</a></div><div class="footer-trust" aria-label="نمادهای اعتماد"><a class="trust-badge trust-badge--1" href="https://ecunion.ir" target="_blank" rel="noopener noreferrer" title="اتحادیه کسب‌وکارهای مجازی"></a><a class="trust-badge trust-badge--2" href="https://nec.ir" target="_blank" rel="noopener noreferrer" title="نظام صنفی رایانه‌ای کشور"></a><a class="trust-badge" referrerpolicy="origin" target="_blank" rel="noopener" href="https://trustseal.enamad.ir/?id=8548363&amp;Code=ZYiwbYxH0J4xKTd1Bk19P4I9o8sD2WUa"><img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=8548363&amp;Code=ZYiwbYxH0J4xKTd1Bk19P4I9o8sD2WUa" alt="نماد اعتماد الکترونیکی" style="width:100%;height:100%;object-fit:contain;cursor:pointer" code="ZYiwbYxH0J4xKTd1Bk19P4I9o8sD2WUa"></a><a class="trust-badge trust-badge--4" href="https://samandehi.ir" target="_blank" rel="noopener noreferrer" title="ساماندهی"></a></div></div></div><div class="footer-bottom"><span>طراحی شده با عشق توسط آکادمی رستمی ❤️</span><span>با فکرِ حال بهتر تو ${svg('leaf')}</span></div></div></footer><dialog class="dialog" id="start-dialog"><button class="close" aria-label="بستن">×</button><div class="iconbox">${svg('phone')}</div><h2 style="margin-top:18px">شروع یک مسیر سبز</h2><p>در اپلیکیشن رژیم من می‌توانی اطلاعاتت را تکمیل کنی، برنامه بگیری و با متخصص گفتگو کنی.</p><p class="sample-label">این سایت فعلاً نسخهٔ طراحی رابط است؛ دریافت اپلیکیشن و ثبت درخواست پس از آماده شدن سرویس فعال می‌شود.</p><button class="btn light" id="dialog-done">متوجه شدم</button></dialog><div class="toast" id="toast" role="status" hidden></div>`;
@@ -62,10 +62,31 @@ const escapeArticle = text => String(text).replace(/[&<>"']/g, char => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
 })[char]);
 
-async function articleApi(path) {
-  const response = await fetch('/v1/public/articles' + path, {cache:'no-store'});
-  if (!response.ok) throw new Error(response.status === 404 ? 'مقاله پیدا نشد.' : 'دریافت مقالات ممکن نشد.');
-  return response.json();
+const articleParagraphs = text => String(text || '').split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+
+function articleRichText(text) {
+  return articleParagraphs(text).map(para =>
+    escapeArticle(para).replace(/«([^»]+)»/g, '<strong>«$1»</strong>')
+  );
+}
+
+function fillArticleText(target, text) {
+  target.replaceChildren();
+  for (const html of articleRichText(text)) {
+    const para = document.createElement('p');
+    para.className = 'article-para';
+    para.innerHTML = html;
+    target.append(para);
+  }
+}
+
+async function magazineItems() {
+  if (!magazineItems.cache) {
+    const response = await fetch('magazine.json?v=1', {cache:'no-store'});
+    if (!response.ok) throw new Error('دریافت مقالات ممکن نشد.');
+    magazineItems.cache = (await response.json()).items || [];
+  }
+  return magazineItems.cache;
 }
 
 if (page === 'home') {
@@ -81,28 +102,27 @@ if (page === 'home') {
 
 async function renderMagazine() {
   const query = new URLSearchParams(location.search);
-  const requestedPage = Number(query.get('page'));
-  const current = Number.isInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 1000 ? requestedPage : 1;
   if (page === 'article') {
     const slug = query.get('id') || '';
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('مقاله پیدا نشد.');
-    const article = await articleApi('/' + encodeURIComponent(slug));
+    const article = (await magazineItems()).find(item => item.id === slug);
+    if (!article) throw new Error('مقاله پیدا نشد.');
     document.title = article.title + ' | مجلهٔ رژیم من';
     document.querySelector('#article-title').textContent = article.title;
     document.querySelector('#article-category').textContent = article.category;
     document.querySelector('#article-time').textContent = article.time + ' دقیقه مطالعه';
     document.querySelector('#article-cover').src = 'assets/' + photos[article.image];
-    document.querySelector('#article-intro').textContent = article.intro;
+    fillArticleText(document.querySelector('#article-intro'), article.intro);
     const content = document.querySelector('#article-content');
     const toc = document.querySelector('#toc-links');
     for (const [index, section] of article.sections.entries()) {
       const heading = document.createElement('h2');
       heading.id = 'part-' + index;
       heading.textContent = section.heading;
-      const paragraph = document.createElement('p');
-      paragraph.textContent = section.body;
-      paragraph.style.whiteSpace = 'pre-line';
-      content.append(heading, paragraph);
+      const body = document.createElement('div');
+      body.className = 'article-section-text';
+      fillArticleText(body, section.body);
+      content.append(heading, body);
       const link = document.createElement('a');
       link.href = '#' + heading.id;
       link.textContent = section.heading;
@@ -119,39 +139,16 @@ async function renderMagazine() {
     };
     addEventListener('scroll', update, {passive:true});
     update();
-    try {
-      const related = await articleApi('?pageSize=4');
-      document.querySelector('#related-posts').innerHTML = related.items.filter(item => item.id !== slug).slice(0, 3).map(card).join('');
-    } catch { /* Article remains available without recommendations. */ }
+    const related = (await magazineItems()).filter(item => item.id !== slug);
+    document.querySelector('#related-posts').innerHTML = related.map(item => card(item, {showIntro:true})).join('');
     return;
   }
   const home = page === 'home';
   const target = document.querySelector(home ? '#home-posts' : '#article-grid');
-  const result = await articleApi(home ? '?pageSize=6' : '?page=' + current);
-  target.innerHTML = result.items.map(item => card(item, {showIntro:true})).join('');
-  if (!result.items.length) target.textContent = 'مقاله‌ای برای نمایش وجود ندارد.';
-  if (home) {
-    target.className = 'blog-slider';
-    target.setAttribute('role', 'region');
-    target.setAttribute('aria-label', 'اسلایدر مقاله‌های رژیم من');
-    target.querySelectorAll('img').forEach(img => img.draggable = false);
-    if (result.items.length) wireHorizontalSlider(target, '.article-card');
-  } else {
-    const pager = document.createElement('nav');
-    pager.setAttribute('aria-label', 'صفحه‌بندی مقالات');
-    for (const [visible, value, label] of [
-      [current > 1, current - 1, 'صفحهٔ قبل'],
-      [current * result.pageSize < result.total, current + 1, 'صفحهٔ بعد'],
-    ]) {
-      if (!visible) continue;
-      const link = document.createElement('a');
-      link.className = 'btn light';
-      link.href = '?page=' + value;
-      link.textContent = label;
-      pager.append(link);
-    }
-    if (pager.childElementCount) target.after(pager);
-  }
+  const items = await magazineItems();
+  target.className = 'magazine-grid';
+  target.innerHTML = items.map(item => card(item, {showIntro:true})).join('');
+  if (!items.length) target.textContent = 'مقاله‌ای برای نمایش وجود ندارد.';
 }
 
 if (['home','articles','article'].includes(page)) {
