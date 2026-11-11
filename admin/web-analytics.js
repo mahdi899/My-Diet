@@ -13,7 +13,13 @@ async function webAnalyticsPage() {
     const option=element('option',text); option.value=value; range.append(option);
   }
   const live=element('p','در حال دریافت وضعیت زنده…');live.setAttribute('role','status');
-  range.value='7'; label.append(range); filters.append(label,live); root.append(filters);
+  const reset = button('ریست داده‌ها', () => confirmAction(
+    'ریست گزارش رهگیری',
+    'گزارش از همین لحظه دوباره شروع می‌شود. رویدادهای قبلی در گزارش نمایش داده نمی‌شوند.',
+    'ریست گزارش',
+    async () => { await api('admin/web-analytics/reset', 'POST', {}); notice('گزارش رهگیری ریست شد'); },
+  ), { secondary: true, iconName: 'history' });
+  range.value='7'; label.append(range); filters.append(label,live,reset); root.append(filters);
   const content=element('div',null,'report-stack'); root.append(content);
   let generation=0;
   async function paint() {
@@ -31,6 +37,7 @@ async function webAnalyticsPage() {
         const card=element('section',null,'card metric-card'); card.append(element('p',label),element('div',typeof value==='number'?number(value):value,'metric-value'),element('p',note,'metric-foot')); cards.append(card);
       }
       stack.append(cards);
+      if (report.resetAt) stack.append(infoNote('آخرین ریست: ' + new Date(report.resetAt).toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })));
       if(!stats.visits)stack.append(infoNote('هنوز داده‌ای در این بازه ثبت نشده است. آمار فقط از زمان فعال‌سازی رهگیری جمع‌آوری می‌شود.'));
       const table=(rows,title,description,columns)=>listPanel(rows,{title,description,columns,pageSize:10,iconName:'history',emptyTitle:'داده‌ای ثبت نشده',emptyDescription:'پس از فعالیت کاربران، گزارش این بخش تکمیل می‌شود.'});
       const maximum=Math.max(0,...report.goals.map(r=>r.clicks));

@@ -6,6 +6,9 @@
   let session;
   let order;
   let creating = false;
+  let startingGateway = false;
+  let method = 'gateway';
+  let gatewayResult = new URLSearchParams(location.search).get('gateway');
 
   async function request(path = '', payload) {
     const response = await fetch('/v1/me/onboarding-transfers' + path, {
@@ -24,12 +27,19 @@
     if (!order) return;
     const remaining = Math.max(0, Math.ceil((Date.parse(order.expires_at) - Date.now()) / 1000));
     byId('checkout-timer').textContent = [Math.floor(remaining / 60), remaining % 60].map(n => String(n).padStart(2, '0')).join(':');
-    byId('checkout-transfer').hidden = Boolean(order.confirmed_at) || !remaining;
+    const payable = !order.confirmed_at && (remaining > 0 || order.gateway_started);
+    byId('checkout-methods').hidden = !payable || order.gateway_started;
+    byId('checkout-gateway').hidden = !payable || (!order.gateway_started && method !== 'gateway');
+    byId('checkout-transfer').hidden = !payable || order.gateway_started || method !== 'transfer';
+    byId('gateway-amount').textContent = 'مبلغ پرداخت ' + price.format(order.amount_toman) + ' تومان';
     byId('checkout-plan').hidden = Boolean(order.confirmed_at);
     byId('copy-amount').textContent = price.format(order.amount_toman) + ' تومان · کپی مبلغ';
-    status.textContent = order.confirmed_at ? 'پرداخت شما تأیید شد.' : remaining
-      ? 'منتظر واریز و بررسی پشتیبانی'
-      : 'مهلت واریز تمام شد. اگر واریز کرده‌اید با پشتیبانی تماس بگیرید.';
+    if (order.confirmed_at) status.textContent = 'پرداخت شما تأیید شد.';
+    else if (gatewayResult === 'cancelled') status.textContent = 'پرداخت آنلاین تکمیل نشد. می‌توانید دوباره به درگاه بروید.';
+    else if (gatewayResult === 'pending') status.textContent = 'پرداخت هنوز تأیید نشده است. اگر مبلغ کسر شده، به پشتیبانی پیام دهید.';
+    else if (order.gateway_started) status.textContent = 'منتظر تکمیل پرداخت در زیبال';
+    else if (remaining) status.textContent = method === 'transfer' ? 'منتظر واریز و بررسی پشتیبانی' : 'روش پرداخت را انتخاب کنید.';
+    else status.textContent = 'مهلت واریز تمام شد. اگر واریز کرده‌اید با پشتیبانی تماس بگیرید.';
   }
 
   async function create(plan) {
@@ -57,9 +67,30 @@
     return;
   }
 
+  byId('checkout-methods').addEventListener('change', event => {
+    method = event.target.value;
+    render();
+  });
+  byId('pay-gateway').addEventListener('click', async () => {
+    if (!order || creating || startingGateway) return;
+    startingGateway = true;
+    const button = byId('pay-gateway');
+    button.disabled = true;
+    try {
+      const payment = await request('/' + encodeURIComponent(order.id) + '/zibal', {});
+      location.assign(payment.url);
+    } catch (error) {
+      status.textContent = error.message;
+      startingGateway = false;
+      button.disabled = false;
+    }
+  });
   byId('checkout-plan').addEventListener('submit', event => {
     event.preventDefault();
-    void create(select.value);
+    if (!startingGateway) {
+      gatewayResult = null;
+      void create(select.value);
+    }
   });
   byId('copy-amount').addEventListener('click', async () => {
     try {
@@ -73,7 +104,7 @@
     if (order) {
       const remaining = Math.max(0, Math.ceil((Date.parse(order.expires_at) - Date.now()) / 1000));
       byId('checkout-timer').textContent = [Math.floor(remaining / 60), remaining % 60].map(n => String(n).padStart(2, '0')).join(':');
-      if (!remaining && !byId('checkout-transfer').hidden) render();
+      if (!remaining && !byId('checkout-methods').hidden) render();
     }
   }, 1000);
   setInterval(async () => {
@@ -87,5 +118,18 @@
       }
     } catch {}
   }, 8000);
-  void create(session.plan);
+  const returnedOrder = new URLSearchParams(location.search).get('order');
+  if (returnedOrder) {
+    void request('/' + encodeURIComponent(returnedOrder)).then(data => {
+      order = data;
+      select.value = data.plan;
+      byId('checkout-content').hidden = false;
+      render();
+    }).catch(error => {
+      status.textContent = error.message;
+      byId('checkout-return').hidden = false;
+    });
+  } else {
+    void create(session.plan);
+  }
 })();

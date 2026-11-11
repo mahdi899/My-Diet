@@ -47,3 +47,8 @@
 .checkout-panel a { color: #205638; font-weight: bold; }
 
 .checkout-page [hidden] { display: none !important; }
+
+.checkout-video-note { margin-bottom: 0; font-weight: bold; }
+#checkout-methods { display: grid; gap: 8px; margin: 14px 0; border: 1px solid #dce5d6; border-radius: 12px; }
+#checkout-methods input { accent-color: #205638; }
+#checkout-gateway { margin-bottom: 18px; }

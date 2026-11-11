@@ -667,11 +667,12 @@ function onboardingTransferPanel(rows) {
     columns: [
       { label: 'شماره کاربر', render: row => row.phone_e164 },
       { label: 'پلن', render: row => plans[row.plan] },
+      { label: 'روش پرداخت', render: row => row.zibal_track_id ? 'زیبال' : 'کارت‌به‌کارت' },
       { label: 'مبلغ', render: row => money(row.amount_toman) },
       { label: 'مهلت واریز', render: row => new Date(row.expires_at).toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' }) },
       { label: 'وضعیت', render: row => row.confirmed_at ? 'تأیید شد' : Date.parse(row.expires_at) > Date.now() ? 'در انتظار' : 'مهلت تمام شد' },
       { label: 'پیامک', render: row => ({ sent: 'ارسال شد', failed: 'ارسال ناموفق', sending: 'در حال ارسال' })[row.sms_status] || '—' },
-      { label: 'پیگیری', render: row => row.confirmed_at ? row.bank_reference : button('تأیید واریز', () => {
+      { label: 'پیگیری', render: row => row.confirmed_at ? row.bank_reference : row.zibal_track_id ? 'منتظر زیبال' : button('تأیید واریز', () => {
         openModal('تأیید واریز کارت‌به‌کارت', (body, dialog) => {
           const form = element('form');
           form.append(infoNote('مبلغ مورد انتظار ' + number(row.amount_toman) + ' تومان است. مبلغ واقعی و شناسه را از گردش حساب وارد کنید.'));
