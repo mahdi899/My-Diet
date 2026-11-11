@@ -31,7 +31,7 @@
     byId('checkout-methods').hidden = !payable || order.gateway_started;
     byId('checkout-gateway').hidden = !payable || (!order.gateway_started && method !== 'gateway');
     byId('checkout-transfer').hidden = !payable || order.gateway_started || method !== 'transfer';
-    byId('gateway-amount').textContent = 'مبلغ پرداخت ' + price.format(order.amount_toman) + ' تومان';
+    byId('gateway-amount').textContent = price.format(order.amount_toman) + ' تومان';
     byId('checkout-plan').hidden = Boolean(order.confirmed_at);
     byId('copy-amount').textContent = price.format(order.amount_toman) + ' تومان · کپی مبلغ';
     status.hidden = false;
@@ -84,6 +84,8 @@
     startingGateway = true;
     const button = byId('pay-gateway');
     button.disabled = true;
+    const label = button.innerHTML;
+    button.textContent = 'در حال اتصال به زیبال…';
     try {
       const payment = await request('/' + encodeURIComponent(order.id) + '/zibal', {});
       location.assign(payment.url);
@@ -92,6 +94,7 @@
       status.textContent = error.message;
       startingGateway = false;
       button.disabled = false;
+      button.innerHTML = label;
     }
   });
   byId('checkout-plan').addEventListener('submit', event => {

@@ -3,28 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>پرداخت کارت‌به‌کارت | رژیم من</title>
+<title>تکمیل خرید | رژیم من</title>
 <link rel="stylesheet" href="theme.css?v=48">
-<link rel="stylesheet" href="payment-card.css?v=5">
+<link rel="stylesheet" href="payment-card.css?v=6">
 <script src="payment-card.js?v=1" defer></script>
-<script src="checkout.js?v=3" defer></script>
+<script src="checkout.js?v=4" defer></script>
 </head>
 <body class="checkout-page">
 <main class="checkout-panel">
   <p id="checkout-status" role="status">در حال بررسی نشست پرداخت…</p>
   <section id="checkout-content" hidden>
-    <p class="checkout-video-note">قبل پرداخت ویدیو زیر رو ببین <span aria-hidden="true">👇</span></p>
+    <section class="checkout-video-panel" aria-labelledby="checkout-video-title">
+    <h1 id="checkout-video-title" class="checkout-video-note">قبل پرداخت ویدیو زیر رو ببین <span aria-hidden="true">👇</span></h1>
         <video class="transfer-video" controls playsinline preload="metadata" aria-label="راهنمای پرداخت">
           <source src="payment-guide.mp4" type="video/mp4">
         </video>
+    </section>
     <p class="checkout-timer">مهلت واریز <b id="checkout-timer" dir="ltr">--:--</b></p>
     <div id="checkout-methods" role="group" aria-label="روش پرداخت">
       <button type="button" data-method="gateway" aria-pressed="true">پرداخت آنلاین با زیبال</button>
       <button type="button" data-method="transfer" aria-pressed="false">کارت‌به‌کارت</button>
     </div>
     <div id="checkout-gateway">
-      <p id="gateway-amount"></p>
-      <button id="pay-gateway" type="button" class="checkout-action">رفتن به درگاه زیبال</button>
+      <p class="checkout-total"><span>مبلغ پرداخت</span><strong id="gateway-amount"></strong></p>
+      <button id="pay-gateway" type="button" class="checkout-action">رفتن به درگاه زیبال <span aria-hidden="true">←</span></button>
     </div>
     <div id="checkout-transfer" hidden>
       <button id="copy-amount" type="button" class="checkout-action"></button>
@@ -44,7 +46,7 @@
         <option value="monthly">همراه · ۳۰ روزه</option>
         <option value="quarterly">VIP · ۹۰ روزه</option>
       </select>
-      <button class="checkout-action" type="submit">خرید پلن</button>
+      <button class="checkout-action checkout-secondary" type="submit">تأیید پلن</button>
     </form>
     <footer>
       <p>اگر پرداخت شما تأیید نشد، در تلگرام به پشتیبانی پیام دهید.</p>
