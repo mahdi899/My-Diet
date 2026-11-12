@@ -134,6 +134,7 @@
 }
 .checkout-total strong { font-size: clamp(19px, 5vw, 25px); font-weight: 900; }
 #pay-gateway { width: 100%; min-height: 48px; font-weight: 800; }
+.gateway-status { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: #f8efe4; color: #6a3b12; font-size: 14px; }
 #pay-gateway span { margin-inline-start: 8px; }
 .checkout-action:hover { background: #16432d; }
 .checkout-action:disabled { opacity: .7; cursor: wait; }

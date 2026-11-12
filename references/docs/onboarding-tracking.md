@@ -33,7 +33,7 @@ An answered question advances the exit to the next displayed question.
 Historical events without UUIDs are segmented at returns to intro/goals, quiz
 re-entry, or a change of question goal. Historical simultaneous tabs cannot be
 reconstructed perfectly. Exit percentages divide by abandoned paths, not visits.
-No individual identifiers are returned. Stage tables include at most 200 steps.
+Umami events stay anonymous. After a visitor verifies OTP, the app database stores that path id with the new user's phone. The admin session tables then show the phone; paths that never verified OTP stay blank. Stage tables include at most 200 steps.
 The admin view polls every five seconds while visible. Active visits have a
 foreground heartbeat within 25 seconds and no subsequent presence-end event.
 The client sends heartbeats every ten seconds until 60 seconds of inactivity.

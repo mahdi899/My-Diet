@@ -46,3 +46,13 @@ test('hidden time and prolonged inactivity are excluded from active duration',()
 test('DNT disables the tracker without touching the page',()=>{
   const b=browser(true);assert.equal(b.window.demoTracking,undefined);assert.equal(b.events.length,0);
 });
+test('the path id is readable and the phone never enters the event',()=>{
+  const b=browser();
+  const tracking=b.window.demoTracking as {journeyId:()=>string;registered:()=>void};
+  assert.match(tracking.journeyId(),/^[0-9a-f-]{36}$/i);
+  tracking.registered();
+  const registered=b.events.filter(event=>event.name==='phone_registered');
+  assert.equal(registered.length>0,true);
+  assert.equal(registered.at(-1)?.data.phone,undefined);
+  assert.equal(registered.at(-1)?.data.journey,tracking.journeyId());
+});

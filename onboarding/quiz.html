@@ -41,7 +41,7 @@
     };
   </script>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="theme.css?v=48">
+  <link rel="stylesheet" href="theme.css?v=51">
   <link rel="stylesheet" href="intro.css?v=2">
   <link rel="stylesheet" href="goals.css?v=6">
   <style>
@@ -605,9 +605,9 @@
   </div>
 
   <script src="tracking-config.js?v=1"></script>
-  <script src="tracking.js?v=4"></script>
+  <script src="tracking.js?v=5"></script>
   <script src="community-counter.js?v=1"></script>
-  <script src="questionnaire-data.js?v=13"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script>
+  <script src="questionnaire-data.js?v=13"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script><script src="wizard.js?v=1"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -763,7 +763,7 @@
     // =========================================================
     // PAGE 2: QUIZ RENDERING, LOCKED SCROLL & AUTO-ADVANCE
     // =========================================================
-    function selectGoalAndGoToPage2(goalId) {
+    function selectGoalAndGoToPage2(goalId, saved, quiet) {
       const found = GOALS_DATA.find(g => g.id === goalId) || GOALS_DATA[0];
       const questions = found.questions.filter(q => goalId !== 'pregnancy' || ![3, 32].includes(q.originalNumber)).map(q => ({ ...q }));
       if (goalId === 'pregnancy') {
@@ -777,11 +777,38 @@
       state.answers = {};
       state.maxUnlockedIndex = 0;
       state.focusedQuestionIndex = 0;
+      if (saved && saved.answersByNumber) restoreSavedAnswers(saved);
 
       document.getElementById('selectedGoalTitle').textContent = `هدف: ${found.title}`;
+      if (quiet) return;
 
       switchPage(2);
       renderQuizQuestions();
+    }
+
+    function restoreSavedAnswers(saved) {
+      const byNumber = saved.answersByNumber || {};
+      const noExercise = byNumber[17] === 0;
+      const stage = state.selectedGoal.id === 'pregnancy' ? byNumber[20] : null;
+      const questions = state.allGoalQuestions.filter(q => {
+        if (noExercise && [18, 19].includes(q.originalNumber)) return false;
+        if (stage === 0 && q.category === 'سؤالات مخصوص شیردهی') return false;
+        if (stage === 1 && q.category === 'سؤالات مخصوص بارداری') return false;
+        return true;
+      });
+      state.selectedGoal.questions = questions;
+      questions.forEach((q, i) => {
+        if (byNumber[q.originalNumber] !== undefined) state.answers[i] = byNumber[q.originalNumber];
+      });
+      const last = Math.max(0, questions.length - 1);
+      state.focusedQuestionIndex = Math.max(0, Math.min(saved.focused || 0, last));
+      state.maxUnlockedIndex = Math.max(state.focusedQuestionIndex, Math.min(saved.unlocked || 0, last));
+      state.userPhone = saved.phone || rememberedPhone();
+      state.submissionId = saved.submissionId || undefined;
+      state.submissionPhone = saved.submissionPhone || undefined;
+      if (Array.isArray(saved.specialists) && saved.specialists.length) state.specialistChoices = saved.specialists;
+      if (saved.specialistId) state.selectedSpecialist = (state.specialistChoices || []).find(person => person.id === saved.specialistId) || null;
+      if (saved.planId && PLANS_CATALOG[saved.planId]) state.selectedPlan = PLANS_CATALOG[saved.planId];
     }
 
     function followUpRequiredForChoice(q, optIdx) {
@@ -886,6 +913,22 @@
       }, delayMs);
     }
 
+    function isHeightQuestion(qItem) {
+      const sub = (qItem.subtitle || '').trim();
+      const q = qItem.q || '';
+      return sub.includes('سانتی') || q.includes('قدت');
+    }
+
+    function isWeightGaugeQuestion(qItem) {
+      if (isHeightQuestion(qItem)) return false;
+      const sub = (qItem.subtitle || '').trim();
+      const q = qItem.q || '';
+      if (sub.includes('هفته') || q.includes('هفته')) return false;
+      if (sub.includes('ماه') || q.includes('ماه')) return false;
+      if (sub.includes('سال') || q.includes('سال')) return false;
+      return sub.includes('کیلو') || q.includes('وزن');
+    }
+
     function getMetricSliderConfig(qItem) {
       if (qItem.slider) return qItem.slider;
       const sub = (qItem.subtitle || '').trim();
@@ -984,6 +1027,518 @@
             ثبت و ادامه
           </button>
         </div>`;
+    }
+
+    function buildHeightRulerHTML(qIdx, qItem) {
+      const cfg = getMetricSliderConfig(qItem);
+      const stored = state.answers[qIdx];
+      const numVal = clampMetric(Math.round(parseNumericAnswer(stored, cfg.default)), cfg.min, cfg.max);
+      let ticks = '';
+      for (let cm = cfg.min; cm <= cfg.max; cm += 1) {
+        const major = cm % 5 === 0 ? ' height-ruler-tick--major' : '';
+        const active = cm === numVal ? ' is-active' : '';
+        const digits = toPersianDigits(cm).split('').map((digit) => `<span class="height-ruler-digit">${digit}</span>`).join('');
+        ticks += `<div class="height-ruler-tick${major}${active}" dir="ltr" data-cm="${cm}"><span class="height-ruler-mark"></span><span class="height-ruler-num" dir="ltr">${digits}</span></div>`;
+      }
+      return `
+        <div class="metric-slider-card height-ruler-card">
+          <div class="height-ruler" data-height-ruler="${qIdx}" data-min="${cfg.min}" data-max="${cfg.max}" data-value="${numVal}">
+            <div class="height-ruler-scale">
+              <div
+                class="height-ruler-scroller"
+                tabindex="0"
+                role="slider"
+                aria-label="قد به سانتی‌متر"
+                aria-valuemin="${cfg.min}"
+                aria-valuemax="${cfg.max}"
+                aria-valuenow="${numVal}"
+                aria-valuetext="${toPersianDigits(numVal)} سانتی‌متر"
+                aria-orientation="vertical"
+              >
+                <div class="height-ruler-pad" aria-hidden="true"></div>
+                ${ticks}
+                <div class="height-ruler-pad" aria-hidden="true"></div>
+              </div>
+              <div class="height-ruler-indicator" aria-hidden="true"></div>
+            </div>
+            <div class="height-ruler-readout">
+              <span class="height-ruler-value" data-metric-value="${qIdx}">${toPersianDigits(numVal)}</span>
+              <span class="height-ruler-unit">سانتی‌متر</span>
+            </div>
+            <input type="hidden" data-field-index="${qIdx}" value="${numVal}" />
+          </div>
+          <button type="button" data-field-submit="${qIdx}"
+            class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4">
+            ثبت و ادامه
+          </button>
+        </div>`;
+    }
+
+    function bindHeightRulers(root) {
+      root.querySelectorAll('[data-height-ruler]').forEach((ruler) => {
+        const scroller = ruler.querySelector('.height-ruler-scroller');
+        const input = ruler.querySelector('input[data-field-index]');
+        const valueEl = ruler.querySelector('[data-metric-value]');
+        const min = Number(ruler.dataset.min);
+        const max = Number(ruler.dataset.max);
+        let current = clampMetric(Number(ruler.dataset.value), min, max);
+        let frame = 0;
+
+        const tickHeight = () => scroller.querySelector('.height-ruler-tick')?.offsetHeight || 0;
+
+        const paint = (cm, pop) => {
+          cm = clampMetric(Math.round(cm), min, max);
+          const changed = cm !== current || input.value !== String(cm);
+          current = cm;
+          input.value = String(cm);
+          ruler.dataset.value = String(cm);
+          scroller.setAttribute('aria-valuenow', String(cm));
+          scroller.setAttribute('aria-valuetext', `${toPersianDigits(cm)} سانتی‌متر`);
+          if (valueEl && valueEl.textContent !== toPersianDigits(cm)) {
+            valueEl.textContent = toPersianDigits(cm);
+            if (pop) {
+              valueEl.classList.remove('metric-value-pop');
+              void valueEl.offsetWidth;
+              valueEl.classList.add('metric-value-pop');
+            }
+          }
+          const active = scroller.querySelector('.height-ruler-tick.is-active');
+          if (active && Number(active.dataset.cm) !== cm) active.classList.remove('is-active');
+          const tick = scroller.querySelector(`[data-cm="${cm}"]`);
+          if (tick && !tick.classList.contains('is-active')) tick.classList.add('is-active');
+          return changed;
+        };
+
+        const readValue = () => {
+          const tickH = tickHeight();
+          if (!tickH) return current;
+          return clampMetric(min + Math.round(scroller.scrollTop / tickH), min, max);
+        };
+
+        const scrollToCm = (cm, behavior) => {
+          const tickH = tickHeight();
+          if (!tickH) return;
+          const top = (clampMetric(cm, min, max) - min) * tickH;
+          if (behavior === 'smooth') scroller.scrollTo({ top, behavior: 'smooth' });
+          else scroller.scrollTop = top;
+        };
+
+        const align = () => scrollToCm(current, 'auto');
+        align();
+        paint(current, false);
+        requestAnimationFrame(align);
+
+        scroller.addEventListener('scroll', () => {
+          cancelAnimationFrame(frame);
+          frame = requestAnimationFrame(() => paint(readValue(), false));
+        }, { passive: true });
+
+        scroller.addEventListener('keydown', (event) => {
+          let next = null;
+          if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') next = current + 1;
+          else if (event.key === 'ArrowUp' || event.key === 'ArrowRight') next = current - 1;
+          else if (event.key === 'PageDown') next = current + 5;
+          else if (event.key === 'PageUp') next = current - 5;
+          else if (event.key === 'Home') next = min;
+          else if (event.key === 'End') next = max;
+          else return;
+          event.preventDefault();
+          scrollToCm(next, 'smooth');
+        });
+
+        let pointerId = null;
+        let dragStartY = 0;
+        let dragStartTop = 0;
+        let dragged = false;
+
+        const maxScroll = () => {
+          const tickH = tickHeight();
+          return tickH ? (max - min) * tickH : 0;
+        };
+
+        const applyDrag = (clientY) => {
+          const dy = clientY - dragStartY;
+          if (Math.abs(dy) > 4) dragged = true;
+          if (!dragged) return;
+          const tickH = tickHeight();
+          if (!tickH) return;
+          const top = Math.min(maxScroll(), Math.max(0, dragStartTop - dy));
+          scroller.scrollTop = top;
+          paint(min + top / tickH, false);
+        };
+
+        const endPointer = (event) => {
+          if (pointerId == null) return;
+          if (event && event.pointerId != null && event.pointerId !== pointerId) return;
+          if (event && (event.type === 'pointerup' || event.type === 'pointercancel') && Number.isFinite(event.clientY)) {
+            applyDrag(event.clientY);
+          }
+          const id = pointerId;
+          pointerId = null;
+          scroller.classList.remove('is-dragging');
+          window.removeEventListener('pointermove', movePointer);
+          window.removeEventListener('pointerup', endPointer);
+          window.removeEventListener('pointercancel', endPointer);
+          try {
+            if (scroller.hasPointerCapture(id)) scroller.releasePointerCapture(id);
+          } catch (err) { /* capture already released */ }
+          const cm = readValue();
+          scrollToCm(cm, 'auto');
+          paint(cm, false);
+        };
+
+        const movePointer = (event) => {
+          if (pointerId == null || event.pointerId !== pointerId) return;
+          if (event.cancelable) event.preventDefault();
+          applyDrag(event.clientY);
+        };
+
+        scroller.addEventListener('pointerdown', (event) => {
+          if (pointerId != null) return;
+          if (event.pointerType === 'mouse' && event.button !== 0) return;
+          pointerId = event.pointerId;
+          dragStartY = event.clientY;
+          dragStartTop = scroller.scrollTop;
+          dragged = false;
+          scroller.classList.add('is-dragging');
+          try { scroller.setPointerCapture(event.pointerId); } catch (err) { /* untrusted or unsupported pointer */ }
+          window.addEventListener('pointermove', movePointer);
+          window.addEventListener('pointerup', endPointer);
+          window.addEventListener('pointercancel', endPointer);
+        });
+        scroller.addEventListener('pointermove', movePointer);
+        scroller.addEventListener('pointerup', endPointer);
+        scroller.addEventListener('pointercancel', endPointer);
+        scroller.addEventListener('lostpointercapture', endPointer);
+        scroller.addEventListener('touchmove', (event) => {
+          if (pointerId != null && event.cancelable) event.preventDefault();
+        }, { passive: false });
+        scroller.addEventListener('click', (event) => {
+          if (dragged) {
+            event.preventDefault();
+            return;
+          }
+          const tick = event.target.closest('.height-ruler-tick');
+          if (!tick || !scroller.contains(tick)) return;
+          scrollToCm(Number(tick.dataset.cm), 'smooth');
+        });
+      });
+    }
+
+    const WEIGHT_GAUGE = {
+      vbW: 340,
+      vbH: 154,
+      cx: 170,
+      cy: 304,
+      rArc: 256,
+      rTick: 256,
+      rLabel: 204,
+      degPerKg: 1.6,
+      needle: -90,
+      arc0: -126,
+      arc1: -54,
+    };
+
+    function buildWeightGaugeHTML(qIdx, qItem, disabled) {
+      const cfg = getMetricSliderConfig(qItem);
+      if (cfg.min > cfg.max) return '<p>با وزن فعلی، در بازهٔ این پرسش‌نامه وزن هدف قابل انتخاب نیست.</p>';
+      const stored = state.answers[qIdx];
+      const numVal = clampMetric(Math.round(parseNumericAnswer(stored, cfg.default)), cfg.min, cfg.max);
+      const off = disabled ? '1' : '0';
+      const needle = `${WEIGHT_GAUGE.cx},18 ${WEIGHT_GAUGE.cx - 5.5},56 ${WEIGHT_GAUGE.cx + 5.5},56`;
+      return `
+        <div class="metric-slider-card weight-gauge-card${disabled ? ' metric-slider-card--disabled' : ''}">
+          <div
+            class="weight-gauge"
+            data-weight-gauge="${qIdx}"
+            data-min="${cfg.min}"
+            data-max="${cfg.max}"
+            data-value="${numVal}"
+            data-disabled="${off}"
+            dir="ltr"
+            style="touch-action: none"
+            role="slider"
+            tabindex="${disabled ? -1 : 0}"
+            aria-label="وزن به کیلوگرم"
+            aria-orientation="horizontal"
+            aria-valuemin="${cfg.min}"
+            aria-valuemax="${cfg.max}"
+            aria-valuenow="${numVal}"
+            aria-valuetext="${toPersianDigits(numVal)} کیلوگرم"
+            aria-disabled="${disabled ? 'true' : 'false'}"
+          >
+            <div class="weight-gauge-stage" dir="ltr">
+              <svg class="weight-gauge-svg" viewBox="0 0 ${WEIGHT_GAUGE.vbW} ${WEIGHT_GAUGE.vbH}" dir="ltr" aria-hidden="true">
+                <path class="weight-gauge-arc"></path>
+                <g class="weight-gauge-ticks"></g>
+                <polygon class="weight-gauge-needle" points="${needle}"></polygon>
+              </svg>
+            </div>
+            <div class="weight-gauge-readout" dir="rtl">
+              <span class="weight-gauge-value" data-metric-value="${qIdx}">${toPersianDigits(numVal)}</span>
+              <span class="weight-gauge-unit">کیلوگرم</span>
+            </div>
+            <input type="hidden" data-field-index="${qIdx}" value="${numVal}" />
+          </div>
+          <button type="button" data-field-submit="${qIdx}" ${disabled ? 'disabled' : ''}
+            class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40 mt-4">
+            ثبت و ادامه
+          </button>
+        </div>`;
+    }
+
+    function bindWeightGauges(root) {
+      root.querySelectorAll('[data-weight-gauge]').forEach((gauge) => {
+        const svg = gauge.querySelector('.weight-gauge-svg');
+        const arc = gauge.querySelector('.weight-gauge-arc');
+        const ticksLayer = gauge.querySelector('.weight-gauge-ticks');
+        const input = gauge.querySelector('input[data-field-index]');
+        const valueEl = gauge.querySelector('[data-metric-value]');
+        const min = Number(gauge.dataset.min);
+        const max = Number(gauge.dataset.max);
+        let current = clampMetric(Number(gauge.dataset.value), min, max);
+        if (!Number.isFinite(current)) current = min;
+        const disabled = gauge.dataset.disabled === '1';
+        const NS = 'http://www.w3.org/2000/svg';
+        const tickByKg = new Map();
+        const labelByKg = new Map();
+        let pointerId = null;
+        let lastX = 0;
+        let moved = 0;
+        let dragged = false;
+        let pendingDx = 0;
+        let frame = 0;
+        let hotTick = null;
+        let hotLabel = null;
+
+        const polar = (deg, radius) => {
+          const rad = (deg * Math.PI) / 180;
+          return {
+            x: WEIGHT_GAUGE.cx + (radius * Math.cos(rad)),
+            y: WEIGHT_GAUGE.cy + (radius * Math.sin(rad)),
+          };
+        };
+
+        const edgeFade = (deg) => {
+          const span = 5;
+          const dist = Math.min(deg - WEIGHT_GAUGE.arc0, WEIGHT_GAUGE.arc1 - deg);
+          if (dist <= 0) return 0;
+          if (dist >= span) return 1;
+          return dist / span;
+        };
+
+        const pixelsPerKg = () => {
+          const width = svg.getBoundingClientRect().width;
+          const scale = width > 0 ? width / WEIGHT_GAUGE.vbW : 1;
+          return WEIGHT_GAUGE.rTick * scale * (WEIGHT_GAUGE.degPerKg * Math.PI / 180);
+        };
+
+        let arcD = '';
+        const arcSteps = 42;
+        for (let i = 0; i <= arcSteps; i += 1) {
+          const deg = WEIGHT_GAUGE.arc0 + ((WEIGHT_GAUGE.arc1 - WEIGHT_GAUGE.arc0) * i) / arcSteps;
+          const point = polar(deg, WEIGHT_GAUGE.rArc);
+          arcD += `${i ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+        }
+        arc.setAttribute('d', arcD);
+
+        const frag = document.createDocumentFragment();
+        for (let kg = min; kg <= max; kg += 1) {
+          const tenth = kg % 10 === 0;
+          const fifth = kg % 5 === 0;
+          const len = tenth ? 16 : fifth ? 11 : 6;
+          const line = document.createElementNS(NS, 'line');
+          line.dataset.kg = String(kg);
+          line.dataset.len = String(len);
+          line.setAttribute('class', tenth ? 'weight-gauge-tick weight-gauge-tick--10' : fifth ? 'weight-gauge-tick weight-gauge-tick--5' : 'weight-gauge-tick');
+          line.setAttribute('visibility', 'hidden');
+          frag.appendChild(line);
+          tickByKg.set(kg, line);
+          if (tenth) {
+            const text = document.createElementNS(NS, 'text');
+            text.dataset.kg = String(kg);
+            text.setAttribute('class', 'weight-gauge-label');
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'central');
+            text.setAttribute('direction', 'ltr');
+            text.textContent = toPersianDigits(kg);
+            text.setAttribute('visibility', 'hidden');
+            frag.appendChild(text);
+            labelByKg.set(kg, text);
+          }
+        }
+        ticksLayer.appendChild(frag);
+
+        const place = (el, deg, draw) => {
+          const fade = edgeFade(deg);
+          if (fade < 0.72) {
+            if (el.dataset.on !== '0') {
+              el.dataset.on = '0';
+              el.setAttribute('visibility', 'hidden');
+            }
+            return;
+          }
+          draw();
+          el.setAttribute('opacity', fade.toFixed(3));
+          if (el.dataset.on !== '1') {
+            el.dataset.on = '1';
+            el.removeAttribute('visibility');
+          }
+        };
+
+        const positionScale = (value) => {
+          tickByKg.forEach((line, kg) => {
+            const deg = WEIGHT_GAUGE.needle + ((kg - value) * WEIGHT_GAUGE.degPerKg);
+            place(line, deg, () => {
+              const len = Number(line.dataset.len);
+              const outer = polar(deg, WEIGHT_GAUGE.rTick);
+              const inner = polar(deg, WEIGHT_GAUGE.rTick - len);
+              line.setAttribute('x1', outer.x.toFixed(1));
+              line.setAttribute('y1', outer.y.toFixed(1));
+              line.setAttribute('x2', inner.x.toFixed(1));
+              line.setAttribute('y2', inner.y.toFixed(1));
+            });
+          });
+          labelByKg.forEach((text, kg) => {
+            const deg = WEIGHT_GAUGE.needle + ((kg - value) * WEIGHT_GAUGE.degPerKg);
+            place(text, deg, () => {
+              const point = polar(deg, WEIGHT_GAUGE.rLabel);
+              text.setAttribute('x', point.x.toFixed(1));
+              text.setAttribute('y', point.y.toFixed(1));
+            });
+          });
+        };
+
+        const highlight = (shown) => {
+          const tick = tickByKg.get(shown) || null;
+          if (hotTick !== tick) {
+            if (hotTick) hotTick.classList.remove('is-current');
+            if (tick) tick.classList.add('is-current');
+            hotTick = tick;
+          }
+          const label = shown % 10 === 0 ? (labelByKg.get(shown) || null) : null;
+          if (hotLabel !== label) {
+            if (hotLabel) hotLabel.classList.remove('is-current');
+            if (label) label.classList.add('is-current');
+            hotLabel = label;
+          }
+        };
+
+        const paint = (value, pop) => {
+          const shown = clampMetric(Math.round(value), min, max);
+          input.value = String(shown);
+          gauge.dataset.value = String(shown);
+          gauge.setAttribute('aria-valuenow', String(shown));
+          gauge.setAttribute('aria-valuetext', `${toPersianDigits(shown)} کیلوگرم`);
+          const text = toPersianDigits(shown);
+          if (valueEl && valueEl.textContent !== text) {
+            valueEl.textContent = text;
+            if (pop) {
+              valueEl.classList.remove('metric-value-pop');
+              void valueEl.offsetWidth;
+              valueEl.classList.add('metric-value-pop');
+            }
+          }
+          positionScale(value);
+          highlight(shown);
+        };
+
+        const applyPending = () => {
+          if (!pendingDx) return;
+          const dx = pendingDx;
+          pendingDx = 0;
+          const step = pixelsPerKg();
+          if (step > 0) current = clampMetric(current - (dx / step), min, max);
+        };
+
+        const endPointer = (event) => {
+          if (pointerId == null) return;
+          if (event && event.pointerId != null && event.pointerId !== pointerId) return;
+          const id = pointerId;
+          const swallowClick = Boolean(event && event.type === 'pointerup' && dragged);
+          pointerId = null;
+          dragged = false;
+          moved = 0;
+          gauge.classList.remove('is-dragging');
+          if (frame) {
+            cancelAnimationFrame(frame);
+            frame = 0;
+          }
+          applyPending();
+          current = clampMetric(Math.round(current), min, max);
+          paint(current, false);
+          try {
+            if (gauge.hasPointerCapture(id)) gauge.releasePointerCapture(id);
+          } catch (err) { /* capture already released */ }
+          if (swallowClick) {
+            const swallow = (clickEvent) => {
+              clickEvent.preventDefault();
+              clickEvent.stopPropagation();
+              window.removeEventListener('click', swallow, true);
+            };
+            window.addEventListener('click', swallow, true);
+            window.setTimeout(() => window.removeEventListener('click', swallow, true), 400);
+          }
+        };
+
+        const movePointer = (event) => {
+          if (pointerId == null || event.pointerId !== pointerId) return;
+          if (event.pointerType === 'mouse' && event.buttons === 0) {
+            endPointer(event);
+            return;
+          }
+          if (event.cancelable) event.preventDefault();
+          const dx = event.clientX - lastX;
+          lastX = event.clientX;
+          moved += Math.abs(dx);
+          if (moved > 3) dragged = true;
+          pendingDx += dx;
+          if (frame) return;
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            if (pointerId == null) return;
+            applyPending();
+            paint(current, false);
+          });
+        };
+
+        paint(current, false);
+        if (disabled) return;
+
+        gauge.addEventListener('pointerdown', (event) => {
+          if (pointerId != null) return;
+          if (event.pointerType === 'mouse' && event.button !== 0) return;
+          pointerId = event.pointerId;
+          lastX = event.clientX;
+          moved = 0;
+          dragged = false;
+          pendingDx = 0;
+          gauge.classList.add('is-dragging');
+          try { gauge.setPointerCapture(event.pointerId); } catch (err) { /* untrusted or unsupported pointer */ }
+        });
+        gauge.addEventListener('pointermove', movePointer, { passive: false });
+        gauge.addEventListener('pointerup', endPointer);
+        gauge.addEventListener('pointercancel', endPointer);
+        gauge.addEventListener('lostpointercapture', endPointer);
+        gauge.addEventListener('touchmove', (event) => {
+          if (pointerId != null && event.cancelable) event.preventDefault();
+        }, { passive: false });
+        gauge.addEventListener('contextmenu', (event) => event.preventDefault());
+        gauge.addEventListener('keydown', (event) => {
+          const shown = clampMetric(Math.round(current), min, max);
+          let next = null;
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = shown + 1;
+          else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = shown - 1;
+          else if (event.key === 'PageUp') next = shown + 5;
+          else if (event.key === 'PageDown') next = shown - 5;
+          else if (event.key === 'Home') next = min;
+          else if (event.key === 'End') next = max;
+          else return;
+          event.preventDefault();
+          current = clampMetric(next, min, max);
+          paint(current, true);
+        });
+      });
     }
 
     function buildImageOptionCardsHTML(qIdx, qItem, { listClass, cardClass, grid = false }) {
@@ -1224,6 +1779,10 @@
         bodyHTML = buildOptionCardsHTML(qIdx, qItem);
       } else if (qItem.ui === 'sleep-wake') {
         bodyHTML = buildSleepWakePickerHTML(qIdx, qItem);
+      } else if (qItem.type === 'number' && isHeightQuestion(qItem)) {
+        bodyHTML = buildHeightRulerHTML(qIdx, qItem);
+      } else if (qItem.type === 'number' && isWeightGaugeQuestion(qItem)) {
+        bodyHTML = buildWeightGaugeHTML(qIdx, qItem, false);
       } else if (qItem.type === 'number') {
         bodyHTML = buildMetricSliderHTML(qIdx, qItem, false);
       } else if (qItem.type === 'text') {
@@ -1310,6 +1869,8 @@
         syncMetricSlider(input);
         input.addEventListener('input', () => syncMetricSlider(input));
       });
+      bindHeightRulers(listEl);
+      bindWeightGauges(listEl);
 
       const submitSection = document.getElementById('submitAnswersSection');
       if (answeredCount === total) {
@@ -1323,6 +1884,7 @@
       if (detailInput) {
         setTimeout(() => detailInput.focus(), 80);
       }
+      noteStep();
     }
 
     function handleQuestionFieldSubmit(qIdx) {
@@ -1564,11 +2126,20 @@
       }
     }
 
-    function closePlanSelectionModal() {
-      if (state.verificationBusy) return;
+    function hidePlanModal() {
       const backdrop = document.getElementById('twoStepModalBackdrop');
       backdrop.classList.add('hidden');
       backdrop.classList.remove('flex');
+    }
+
+    function closePlanSelectionModal() {
+      if (state.verificationBusy) return;
+      const step = history.state && history.state.mydiet;
+      if (!applyingHistory && step && (step.stage === 'plans' || step.stage === 'phone' || step.stage === 'otp')) {
+        history.back();
+        return;
+      }
+      hidePlanModal();
       if (!document.getElementById('aiReadyPhase').classList.contains('hidden')) {
         window.demoTracking?.step('specialists');
       }
@@ -1590,6 +2161,7 @@
 
       document.getElementById('modalStep1Content').classList.remove('hidden');
       document.getElementById('modalStep2Content').classList.add('hidden');
+      noteStep();
     }
 
     function selectPlanDetails(planId, confirmSelection = true) {
@@ -1694,6 +2266,7 @@
       void wrapper.offsetWidth; // reflow
       wrapper.classList.add('input-morph-flash');
 
+      if (!state.userPhone) state.userPhone = rememberedPhone();
       if (mode === 'phone') {
         labelTextEl.textContent = 'شماره همراهت';
         subtitleEl.hidden = false;
@@ -1723,6 +2296,7 @@
         confirmBtnText.textContent = 'تأیید و ادامه';
         setTimeout(() => inputEl.focus(), 80);
       }
+      noteStep();
     }
 
     function normalizeDigits(str) {
@@ -1772,13 +2346,14 @@
           if(countAnsweredQuestions()!==state.selectedGoal.questions.length)throw new Error('ابتدا پرسش‌نامه را کامل کنید.');
           if(state.submissionPhone!==normalizedPhone){state.submissionId=crypto.randomUUID();state.submissionPhone=normalizedPhone;}
           const result=await fetch('/v1/onboarding/submissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:state.submissionId,phone:normalizedPhone,goal:state.selectedGoal.id,answers:state.selectedGoal.questions.map((q,i)=>Object.assign({question:q.q,answer:answerLabel(q,state.answers[i])},window.SabzineKeys?window.SabzineKeys.canonical(q,state.answers[i]):{}))}),signal:AbortSignal.timeout(15000)});
-          if(!result.ok)throw new Error('ذخیرهٔ اطلاعات انجام نشد؛ دوباره تلاش کنید.');
+          if(!result.ok)throw new Error(await window.mydietWizard.messageFromResponse(result, 'ذخیرهٔ اطلاعات انجام نشد. دوباره تلاش کنید.'));
           const sms=await fetch('/v1/auth/otp/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:normalizedPhone}),signal:AbortSignal.timeout(18000)});
-          if(!sms.ok){const problem=await sms.json().catch(()=>({}));throw new Error(problem.detail||'ارسال کد انجام نشد؛ دوباره تلاش کنید.');}
+          if(!sms.ok)throw new Error(await window.mydietWizard.messageFromResponse(sms, 'ارسال کد انجام نشد. کمی بعد دوباره تلاش کنید.'));
           window.demoTracking?.registered();
-        } catch(error) {errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}
+        } catch(error) {errorEl.textContent=window.mydietWizard.text(error, 'ارسال کد انجام نشد. کمی بعد دوباره تلاش کنید.');errorEl.classList.remove('hidden');return;}
         finally{saveButton.disabled=false;state.verificationBusy=false;inputEl.removeAttribute('aria-busy');document.getElementById('morphConfirmBtnText').textContent='دریافت کد تأیید';}
         state.userPhone = normalizedPhone;
+        rememberPhone(normalizedPhone);
 
         // Transform the phone input into the OTP input in-place!
         setMorphInputMode('otp');
@@ -1796,12 +2371,13 @@
         try{
           if(!state.smsSession||state.smsSession.phone!==state.userPhone){
             const response=await fetch('/v1/auth/otp/verify',{method:'POST',headers:{'Content-Type':'application/json','x-sabzine-client':'web'},body:JSON.stringify({phone:state.userPhone,code:rawVal,platform:'demo-web'}),signal:AbortSignal.timeout(15000)});
-            const session=await response.json();if(!response.ok||!session.accessToken||session.role!=='user')throw new Error(session.detail||'کد تأیید معتبر نیست.');
+            const session=await response.json().catch(()=>({}));if(!response.ok||!session.accessToken||session.role!=='user')throw new Error(window.mydietWizard.messageFromBody(session, 'کد تأیید درست نیست. کد پیامک‌شده را دوباره وارد کنید.'));
             state.smsSession={phone:state.userPhone,token:session.accessToken};
           }
-          const saved=await fetch('/v1/onboarding/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
-          if(!saved.ok)throw new Error('تأیید شماره ذخیره نشد؛ دوباره تلاش کنید.');
-        }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;state.verificationBusy=false;document.getElementById('morphConfirmBtnText').textContent='تأیید و ادامه';}
+          const journeyId=window.demoTracking?.journeyId?.()||null;
+          const saved=await fetch('/v1/onboarding/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token,'Content-Type':'application/json'},body:JSON.stringify(journeyId?{journeyId}:{}),signal:AbortSignal.timeout(15000)});
+          if(!saved.ok)throw new Error(await window.mydietWizard.messageFromResponse(saved, 'تأیید شماره ذخیره نشد. دوباره تلاش کنید.'));
+        }catch(error){errorEl.textContent=window.mydietWizard.text(error, 'کد تأیید درست نیست. کد پیامک‌شده را دوباره وارد کنید.');errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;state.verificationBusy=false;document.getElementById('morphConfirmBtnText').textContent='تأیید و ادامه';}
         // Success is displayed only after both server verification requests succeed.
         // The field collapses into a green circle and a white check draws inside it.
         state.inputMode = 'success';
@@ -1810,7 +2386,7 @@
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         await new Promise(resolve => setTimeout(resolve, reduceMotion ? 500 : 1500));
         if (state.inputMode !== 'success' || document.getElementById('twoStepModalBackdrop').classList.contains('hidden')) return;
-        closePlanSelectionModal();
+        hidePlanModal();
         populateAndShowPaymentPage();
       }
     }
@@ -1912,11 +2488,14 @@
       window.SabzineCommunityCounter?.start(counter).then(ticker => {
         communityTicker = ticker;
       }).catch(() => {});
+      noteStep();
     }
 
     function startAiPreparingFlow(options) {
-      state.specialistChoices = sampleOnboardingSpecialists();
-      state.selectedSpecialist = null;
+      if (!(options && options.keepTeam)) {
+        state.specialistChoices = sampleOnboardingSpecialists();
+        state.selectedSpecialist = null;
+      }
       window.demoTracking?.complete();
       window.demoTracking?.step('preparing');
       clearAiPreparingTimer();
@@ -1934,6 +2513,7 @@
       const wait = options && options.readyNow ? 0 : (options && options.fast ? 2200 : 20000);
       if (wait === 0) showAiReadyPhase();
       else state.aiPreparingTimer = setTimeout(showAiReadyPhase, wait);
+      noteStep();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -1961,6 +2541,110 @@
       }, 3600);
     }
 
+    const PROGRESS_KEY = 'mydiet.quiz.progress';
+    const PHONE_KEY = 'mydiet.phone';
+    let applyingHistory = false;
+
+    function rememberedPhone() {
+      try {
+        const value = localStorage.getItem(PHONE_KEY) || '';
+        return /^09\d{9}$/.test(value) ? value : '';
+      } catch { return ''; }
+    }
+
+    function rememberPhone(phone) {
+      try { localStorage.setItem(PHONE_KEY, phone); } catch { /* private mode can block storage */ }
+    }
+
+    function answersByNumber() {
+      const map = {};
+      (state.selectedGoal?.questions || []).forEach((question, index) => {
+        if (state.answers[index] !== undefined) map[question.originalNumber] = state.answers[index];
+      });
+      return map;
+    }
+
+    function readProgress() {
+      try { return JSON.parse(sessionStorage.getItem(PROGRESS_KEY) || 'null'); } catch { return null; }
+    }
+
+    function writeProgress(step) {
+      try {
+        sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({
+          goal: state.selectedGoal?.id,
+          answersByNumber: answersByNumber(),
+          focused: state.focusedQuestionIndex,
+          unlocked: state.maxUnlockedIndex,
+          planId: state.selectedPlan?.id || null,
+          phone: state.userPhone || rememberedPhone(),
+          submissionId: state.submissionId || null,
+          submissionPhone: state.submissionPhone || null,
+          specialistId: state.selectedSpecialist?.id || null,
+          specialists: state.specialistChoices || [],
+          step,
+        }));
+      } catch { /* the visible step still works without storage */ }
+    }
+
+    function detectStep() {
+      const modal = document.getElementById('twoStepModalBackdrop');
+      if (modal && !modal.classList.contains('hidden')) {
+        if (state.modalStep === 2 && state.inputMode === 'otp') return { stage: 'otp', index: 0 };
+        if (state.modalStep === 2) return { stage: 'phone', index: 0 };
+        return { stage: 'plans', index: 0 };
+      }
+      const preparing = document.getElementById('pageAiPreparingContainer');
+      if (preparing && !preparing.classList.contains('hidden')) {
+        const ready = document.getElementById('aiReadyPhase');
+        if (ready && !ready.classList.contains('hidden')) return { stage: 'specialists', index: 0 };
+        return { stage: 'preparing', index: 0 };
+      }
+      return { stage: 'question', index: state.focusedQuestionIndex || 0 };
+    }
+
+    function noteStep() {
+      if (applyingHistory || !state.selectedGoal) return;
+      const step = detectStep();
+      writeProgress(step);
+      const previous = history.state && history.state.mydiet;
+      const action = window.mydietWizard.historyAction(previous, step);
+      if (action === 'ignore') return;
+      const url = new URL(location.href);
+      url.searchParams.set('at', step.stage === 'question' ? 'q' + step.index : step.stage);
+      const data = { mydiet: step };
+      if (action === 'replace') history.replaceState(data, '', url);
+      else history.pushState(data, '', url);
+    }
+
+    function applyStep(step) {
+      applyingHistory = true;
+      window.clearTimeout(state.autoAdvanceTimer);
+      clearAiPreparingTimer();
+      hidePlanModal();
+      const planId = state.selectedPlan && state.selectedPlan.id;
+      try {
+        if (step.stage === 'question') {
+          const last = Math.max(0, state.selectedGoal.questions.length - 1);
+          const index = Math.max(0, Math.min(step.index || 0, last));
+          state.maxUnlockedIndex = Math.max(state.maxUnlockedIndex, index);
+          switchPage(2);
+          goToQuizQuestion(index);
+        } else if (step.stage === 'preparing') {
+          startAiPreparingFlow({ fast: true, keepTeam: true });
+        } else if (step.stage === 'specialists') {
+          startAiPreparingFlow({ readyNow: true, keepTeam: true });
+        } else if (step.stage === 'plans' || step.stage === 'phone' || step.stage === 'otp') {
+          startAiPreparingFlow({ readyNow: true, keepTeam: true });
+          openPlanSelectionModal(step.stage === 'plans' ? 1 : 2);
+          if (planId) selectPlanDetails(planId);
+          if (step.stage === 'otp') setMorphInputMode('otp');
+        }
+      } finally {
+        applyingHistory = false;
+        writeProgress(step);
+      }
+    }
+
     // =========================================================
     // INITIALIZATION & EVENT LISTENERS
     // =========================================================
@@ -1979,10 +2663,32 @@
           window.location.replace(`goals.html${window.location.search}`);
           return;
         }
-        selectGoalAndGoToPage2(goalId);
-        const preview = new URLSearchParams(window.location.search).get('preview');
-        if (preview === 'ready') startAiPreparingFlow({ readyNow: true });
-        else if (preview === 'analyze') startAiPreparingFlow({ fast: true });
+        const navigation = performance.getEntriesByType('navigation')[0];
+        const saved = readProgress();
+        const historyStep = history.state && history.state.mydiet;
+        const returning = navigation && (navigation.type === 'back_forward' || navigation.type === 'reload');
+        if (returning && (historyStep || (saved && saved.goal === goalId))) {
+          const step = historyStep || (saved && saved.goal === goalId && saved.step) || { stage: 'question', index: 0 };
+          applyingHistory = true;
+          selectGoalAndGoToPage2(goalId, saved && saved.goal === goalId ? saved : null, step.stage !== 'question');
+          applyStep(step);
+        } else {
+          try { sessionStorage.removeItem(PROGRESS_KEY); } catch { /* storage is optional */ }
+          selectGoalAndGoToPage2(goalId);
+          const preview = new URLSearchParams(window.location.search).get('preview');
+          if (preview === 'ready') startAiPreparingFlow({ readyNow: true });
+          else if (preview === 'analyze') startAiPreparingFlow({ fast: true });
+        }
+        window.addEventListener('popstate', (event) => {
+          const step = event.state && event.state.mydiet;
+          if (!step || !state.selectedGoal) return;
+          applyStep(step);
+        });
+        window.addEventListener('pageshow', (event) => {
+          if (!event.persisted || !state.selectedGoal) return;
+          const step = history.state && history.state.mydiet;
+          if (step) applyStep(step);
+        });
       } else {
         playSloganIntroEffect();
       }
@@ -2008,7 +2714,7 @@
       });
 
       document.getElementById('scrollPrevAnsweredBtn').addEventListener('click', () => {
-        goToQuizQuestion(state.focusedQuestionIndex - 1);
+        if (state.focusedQuestionIndex > 0) history.back();
       });
 
       document.getElementById('scrollNextUnlockedBtn').addEventListener('click', () => {
@@ -2053,7 +2759,9 @@
 
       // Modal Step 2: Top-left Back button returns to Step 1 (plan selection)
       document.getElementById('modalBackToPlansBtn').addEventListener('click', () => {
-        showModalStep1();
+        const step = history.state && history.state.mydiet;
+        if (step && (step.stage === 'phone' || step.stage === 'otp')) history.back();
+        else showModalStep1();
       });
 
       // Close modal button & backdrop click
@@ -2075,7 +2783,8 @@
 
       // Edit phone button while in OTP mode
       document.getElementById('editPhoneInOtpModeBtn').addEventListener('click', () => {
-        setMorphInputMode('phone');
+        if (history.state && history.state.mydiet && history.state.mydiet.stage === 'otp') history.back();
+        else setMorphInputMode('phone');
       });
 
       // Auto-fill test OTP button for smooth user testing

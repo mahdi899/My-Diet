@@ -6,7 +6,12 @@ function trackingStepLabel(step) {
   const parts=String(step||'').split(':');
   return parts[0]==='question' ? `سؤال ${number(parts[2])} · ${trackingGoals[parts[1]]||parts[1]}` : step;
 }
-async function liveTrackingPanel() {
+function localPhone(phone) {
+  if (!phone) return '—';
+  const value = String(phone);
+  return value.startsWith('+98') ? '0' + value.slice(3) : value;
+}
+async function liveTrackingPanel(onCampaignChange) {
   const links = await api('admin/campaign-links');
   const panel = element('section', null, 'card tracking-live');
   const controls = element('div', null, 'tracking-filters');
@@ -25,15 +30,39 @@ async function liveTrackingPanel() {
 
   const result = element('section', null, 'card tracking-live');
   const resultStatus = element('p', 'در حال دریافت نتیجهٔ نشست‌ها…', 'tracking-results-status');
-  result.append(sectionHead('نتیجهٔ نشست‌ها · آخرین محل ترک',
-    'تا ۲۰۰ نشست در ۲۴ ساعت اخیر برای لینک انتخاب‌شده. پس از ۲ دقیقه بدون رویداد نمایش داده می‌شود.'), resultStatus);
+  const rangeTools = element('div', null, 'tracking-results-tools');
+  const rangeLabel = element('label', 'بازهٔ زمانی');
+  const preset = element('select');
+  preset.setAttribute('aria-label', 'بازهٔ زمانی نتیجهٔ نشست‌ها');
+  for (const [value, text] of [['24h', '۲۴ ساعت اخیر'], ['7d', '۷ روز اخیر'], ['30d', '۳۰ روز اخیر'], ['custom', 'بازهٔ دلخواه']]) {
+    preset.append(Object.assign(element('option', text), { value }));
+  }
+  preset.value = '24h';
+  const fromField = SabzineJalali.dateTimeField('شروع بازه، به وقت تهران');
+  const toField = SabzineJalali.dateTimeField('پایان بازه، به وقت تهران');
+  const fromLabel = element('label', 'از');
+  const toLabel = element('label', 'تا');
+  fromLabel.append(fromField.wrap);
+  toLabel.append(toField.wrap);
+  const customRange = element('div', null, 'tracking-range');
+  customRange.hidden = true;
+  customRange.setAttribute('role', 'group');
+  customRange.setAttribute('aria-label', 'بازهٔ دلخواه به وقت تهران');
+  customRange.append(fromLabel, toLabel, element('span', 'وقت تهران', 'tracking-range-note'));
+  rangeLabel.append(preset);
+  rangeTools.append(rangeLabel, customRange);
+  const resultHead = sectionHead('نتیجهٔ نشست‌ها · آخرین محل ترک',
+    'حداکثر ۲۰۰ نشست در بازهٔ انتخاب‌شده، برای لینک انتخاب‌شده. پس از ۲ دقیقه بدون رویداد نمایش داده می‌شود.',
+    rangeTools);
+  resultHead.classList.add('tracking-results-head');
+  result.append(resultHead, resultStatus);
 
   function addTable(container, accessibleName, stepLabel) {
     const wrapper = element('div', null, 'tracking-live-table');
     const table = element('table');
     table.setAttribute('aria-label', accessibleName);
     const header = element('tr');
-    for (const title of ['نشست', 'لینک ورودی', 'صفحه', stepLabel, 'آخرین فعالیت']) {
+    for (const title of ['نشست', 'لینک ورودی', 'صفحه', stepLabel, 'شماره تلفن', 'آخرین فعالیت']) {
       const th = element('th', title);
       th.scope = 'col';
       header.append(th);
@@ -60,22 +89,56 @@ async function liveTrackingPanel() {
   const resultTime = new Intl.DateTimeFormat('fa-IR', { ...zone, dateStyle: 'short' });
   let selectionVersion = 0;
 
-  function startPolling(path, body, message, time, interval, emptyText, countLabel) {
-    let previous = null, latestRequest = 0;
+  function departureRange() {
+    if (preset.value !== 'custom') return { ok: true, within: preset.value };
+    const start = fromField.date();
+    const end = toField.date();
+    if (!start || !end) return { ok: false, message: 'شروع و پایان بازه را مشخص کنید.' };
+    if (start > end) return { ok: false, message: 'شروع بازه باید قبل از پایان آن باشد.' };
+    if (end.getTime() - start.getTime() > 90 * 24 * 60 * 60 * 1000) return { ok: false, message: 'بازهٔ زمانی حداکثر ۹۰ روز است.' };
+    if (end.getTime() > Date.now() + 60 * 1000) return { ok: false, message: 'پایان بازه نمی‌تواند در آینده باشد.' };
+    return { ok: true, from: start.toISOString(), to: new Date(end.getTime() + 60 * 1000).toISOString() };
+  }
+  function fillCustomRange() {
+    const now = new Date();
+    if (!fromField.date()) fromField.setDate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    if (!toField.date()) toField.setDate(now);
+  }
+  function startPolling(path, body, message, time, interval, emptyText, countLabel, rangeFor) {
+    let previous = null, latestRequest = 0, localVersion = 0;
     async function refresh() {
       const selection = selectionVersion;
+      const local = localVersion;
       const request = ++latestRequest;
-      const filter = select.value ? '?campaign=' + encodeURIComponent(select.value) : '';
+      const params = new URLSearchParams();
+      if (select.value) params.set('campaign', select.value);
+      if (rangeFor) {
+        const range = rangeFor();
+        if (!range.ok) {
+          if (selection === selectionVersion && local === localVersion && request === latestRequest) {
+            message.textContent = range.message;
+            const row = element('tr'), cell = element('td', range.message);
+            cell.colSpan = 6;
+            row.append(cell);
+            body.replaceChildren(row);
+          }
+          return;
+        }
+        if (range.within) params.set('within', range.within);
+        if (range.from) params.set('from', range.from);
+        if (range.to) params.set('to', range.to);
+      }
+      const query = params.toString();
       try {
-        const { sessions } = await api('admin/web-analytics/' + path + filter);
-        if (selection !== selectionVersion || request !== latestRequest) return;
+        const { sessions } = await api('admin/web-analytics/' + path + (query ? '?' + query : ''));
+        if (selection !== selectionVersion || local !== localVersion || request !== latestRequest) return;
         message.textContent = number(sessions.length) + ' ' + countLabel;
         const signature = JSON.stringify(sessions);
         if (signature === previous) return;
         previous = signature;
         if (!sessions.length) {
           const row = element('tr'), cell = element('td', emptyText);
-          cell.colSpan = 5;
+          cell.colSpan = 6;
           row.append(cell);
           body.replaceChildren(row);
           return;
@@ -84,24 +147,29 @@ async function liveTrackingPanel() {
           const row = element('tr');
           const id = element('td', session.id.slice(0, 8));
           id.dir = 'ltr';
+          const phone = element('td', localPhone(session.phone));
+          if (session.phone) phone.dir = 'ltr';
           row.append(id, element('td', names.get(session.campaign) || session.campaign || 'مستقیم / نامشخص'),
             element('td', pages[session.page] || session.page),
             element('td', trackingStepLabel(session.step) || '—'),
+            phone,
             element('td', time.format(new Date(session.lastSeen))));
           return row;
         }));
-      } catch {
-        if (selection === selectionVersion && request === latestRequest) {
-          message.textContent = 'دریافت اطلاعات ممکن نشد؛ دوباره بررسی می‌شود.';
+      } catch (error) {
+        if (selection === selectionVersion && local === localVersion && request === latestRequest) {
+          message.textContent = error instanceof Error && error.message ? error.message : 'دریافت اطلاعات ممکن نشد؛ دوباره بررسی می‌شود.';
         }
       }
     }
-    select.addEventListener('change', () => {
+    function invalidate() {
+      localVersion++;
       previous = null;
       body.replaceChildren();
       message.textContent = 'در حال دریافت…';
       void refresh();
-    });
+    }
+    select.addEventListener('change', invalidate);
     const poll = async () => {
       if (!root.isConnected) return;
       if (!document.hidden) await refresh();
@@ -109,14 +177,24 @@ async function liveTrackingPanel() {
     };
     setTimeout(poll, interval);
     void refresh();
+    return invalidate;
   }
 
   select.addEventListener('change', () => {
     selectionVersion++;
     selectedLink.textContent = select.value ? location.origin + '/go/' + select.value : 'همهٔ ورودی‌ها';
+    if (onCampaignChange) onCampaignChange(select.value);
   });
   startPolling('live', liveBody, status, liveTime, 1000, 'نشست فعالی برای این انتخاب وجود ندارد.', 'نشست فعال');
-  startPolling('departures', resultBody, resultStatus, resultTime, 10000, 'نشستی برای این انتخاب ثبت نشده است.', 'نشست در نتیجه');
+  const reloadDepartures = startPolling('departures', resultBody, resultStatus, resultTime, 10000, 'نشستی در این بازه ثبت نشده است.', 'نشست در نتیجه', departureRange);
+  preset.addEventListener('change', () => {
+    const custom = preset.value === 'custom';
+    customRange.hidden = !custom;
+    if (custom) fillCustomRange();
+    reloadDepartures();
+  });
+  fromField.onChange = reloadDepartures;
+  toField.onChange = reloadDepartures;
   return root;
 }
 
@@ -132,11 +210,16 @@ async function webAnalyticsPage() {
     'ریست گزارش',
     async () => { await api('admin/web-analytics/reset', 'POST', {}); notice('گزارش رهگیری ریست شد'); },
   ), { secondary: true, iconName: 'history' });
-  const live = await liveTrackingPanel();
-  root.append(live);
   const history = element('details', null, 'card tracking-history');
-  history.append(element('summary', 'گزارش تاریخی همهٔ ورودی‌ها'));
-  root.append(history);
+  const historySummary = element('summary', 'گزارش تاریخی همهٔ ورودی‌ها');
+  history.append(historySummary);
+  let campaign = '';
+  const live = await liveTrackingPanel(slug => {
+    campaign = slug || '';
+    historySummary.textContent = campaign ? 'گزارش تاریخی لینک انتخاب‌شده' : 'گزارش تاریخی همهٔ ورودی‌ها';
+    if (history.open) void paint();
+  });
+  root.append(live, history);
   range.value='7'; label.append(range); filters.append(label,reset); history.append(filters);
   const content=element('div',null,'report-stack'); history.append(content);
   let generation=0;
@@ -145,7 +228,9 @@ async function webAnalyticsPage() {
     if(!content.childElementCount)content.replaceChildren(skeleton());
     content.setAttribute('aria-busy','true');
     try {
-      const report=await api('admin/web-analytics?days='+range.value);
+      const params=new URLSearchParams({days:range.value});
+      if(campaign)params.set('campaign',campaign);
+      const report=await api('admin/web-analytics?'+params.toString());
       if(ticket!==generation)return;
       if(content.contains(document.activeElement))return;
       const stack=element('div',null,'report-stack'), cards=element('div',null,'metrics-grid');

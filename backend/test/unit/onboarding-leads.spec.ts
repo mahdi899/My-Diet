@@ -16,3 +16,32 @@ test('lead submission encrypts clinical answers and normalizes phone grouping',a
  assert.equal(JSON.parse(decryptText(String(writes[0][4]),env.FIELD_KEY)).length,27);
  await assert.rejects(controller.save({...body,answers:[]}));
 });
+test('verified otp links the analytics path to the registered user and ignores a missing path',async()=>{
+ const userId=crypto.randomUUID();
+ const submissionId=crypto.randomUUID();
+ const journeyId=crypto.randomUUID();
+ const sqls:string[]=[];
+ const values:unknown[][]=[];
+ const pool={query:async(sql:string,params:unknown[]=[])=>{
+  sqls.push(sql);values.push(params);
+  if(sql.includes('select phone_e164'))return {rows:[{phone_e164:'+989120000099'}]};
+  if(sql.includes('phone_verified=true'))return {rowCount:1,rows:[{id:submissionId}]};
+  return {rowCount:1,rows:[]};
+ }};
+ const env=loadEnv({DATABASE_URL:'postgres://unused',NODE_ENV:'test',FIELD_KEY:'independent-test-secret'});
+ let imported=0;
+ const controller=new OnboardingSubmissionsController(pool as never,env,{importVerifiedDemo:async()=>{imported+=1;return true;}} as never);
+ const request={user:{id:userId,role:'user',sessionId:crypto.randomUUID()}};
+ const linked=await controller.verify(submissionId,request as never,{journeyId});
+ assert.equal(linked.verified,true);
+ assert.equal(imported,1);
+ const insert=sqls.findIndex(sql=>sql.includes('onboarding_analytics_journeys'));
+ assert.notEqual(insert,-1);
+ assert.deepEqual(values[insert],[journeyId,userId,'+989120000099']);
+ const before=sqls.length;
+ await controller.verify(submissionId,request as never,{});
+ assert.equal(sqls.slice(before).some(sql=>sql.includes('onboarding_analytics_journeys')),false);
+ const after=sqls.length;
+ await assert.rejects(controller.verify(submissionId,request as never,{journeyId:'not-a-uuid'}));
+ assert.equal(sqls.length,after);
+});

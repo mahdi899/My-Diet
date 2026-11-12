@@ -3,7 +3,7 @@ import type { Request } from 'express';
 import { createHmac } from 'node:crypto';
 import type { Pool } from 'pg';
 import { Public, Roles, actor } from '../common/auth.js';
-import { requiredUuid } from '../common/parse.js';
+import { rejectUnknown, requiredUuid } from '../common/parse.js';
 import { ApiError } from '../common/errors.js';
 import { encryptText } from '../common/field-crypto.js';
 import { normalizeIranianMobile } from '../common/phone.js';
@@ -68,14 +68,26 @@ export class OnboardingSubmissionsController {
  constructor(@Inject(PG_POOL) private readonly pool:Pool,@Inject(ENV) private readonly env:Env,private readonly onboarding:OnboardingService){}
  @Roles('user')
  @Post(':id/verify')
- async verify(@Param('id') id:string,@Req() request:Request){
+ async verify(@Param('id') id:string,@Req() request:Request,@Body() body:unknown){
+  const journeyId=this.journeyId(body);
   const user=await this.pool.query<{phone_e164:string}>('select phone_e164 from users where id=$1',[actor(request).id]);
   if(!user.rows[0])throw new ApiError(401,'unauthorized','نشست معتبر نیست');
   const hash=createHmac('sha256',this.env.FIELD_KEY).update(user.rows[0].phone_e164).digest('hex');
   const result=await this.pool.query('update demo_lead_submissions set phone_verified=true where id=$1 and phone_hash=$2 returning id',[requiredUuid(id),hash]);
   if(!result.rowCount)throw new ApiError(404,'not_found','اطلاعات ثبت‌شده پیدا نشد');
   await this.onboarding.importVerifiedDemo(actor(request).id);
+  if(journeyId)await this.pool.query(`insert into onboarding_analytics_journeys(journey_id,user_id,phone_e164) values($1,$2,$3)
+    on conflict(journey_id) do update set user_id=excluded.user_id,phone_e164=excluded.phone_e164,verified_at=now()`,[journeyId,actor(request).id,user.rows[0].phone_e164]);
   return {verified:true};
+ }
+ /** The analytics path id is optional. A phone is linked only after OTP has already created the user. */
+ private journeyId(body:unknown){
+  if(body==null)return null;
+  if(typeof body!=='object'||Array.isArray(body))throw new ApiError(400,'validation','اطلاعات واردشده ناقص یا نادرست است');
+  const record=body as Record<string,unknown>;
+  rejectUnknown(record,['journeyId']);
+  if(record.journeyId==null||record.journeyId==='')return null;
+  return requiredUuid(record.journeyId);
  }
  @Public()
  @Post()

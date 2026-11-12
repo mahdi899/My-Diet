@@ -231,5 +231,220 @@
     return hidden;
   }
 
-  globalThis.SabzineJalali = { jalaliField, gregorianToJalali, jalaliToGregorian };
+  function tehranParts(date) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const pick = type => {
+      const found = parts.find(part => part.type === type);
+      return found ? found.value : '00';
+    };
+    return {
+      gy: Number(pick('year')), gm: Number(pick('month')), gd: Number(pick('day')),
+      hour: pick('hour') === '24' ? 0 : Number(pick('hour')), minute: Number(pick('minute')),
+    };
+  }
+
+  function dateTimeField(ariaLabel) {
+    const wrap = document.createElement('div');
+    wrap.className = 'jalali-field tracking-jalali';
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'jalali-trigger secondary';
+    trigger.setAttribute('aria-label', ariaLabel);
+    trigger.setAttribute('aria-haspopup', 'dialog');
+    trigger.setAttribute('aria-expanded', 'false');
+    const pop = document.createElement('div');
+    pop.className = 'jalali-pop';
+    pop.hidden = true;
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', ariaLabel);
+    const now = tehranParts(new Date());
+    const today = gregorianToJalali(now.gy, now.gm, now.gd);
+    const todayKey = today[0] * 10000 + today[1] * 100 + today[2];
+    let viewYear = today[0], viewMonth = today[1], yearPage = Math.max(1400, today[0] - 11), mode = 'days';
+    let picked = null, hour = now.hour, minute = now.minute, notify = () => {}, silent = false;
+
+    function key(year, month, day) { return year * 10000 + month * 100 + day; }
+    function caption() {
+      if (!picked) return 'انتخاب تاریخ';
+      return `${fa(picked[0])}/${fa(picked[1])}/${fa(picked[2])}  ${fa(pad(hour))}:${fa(pad(minute))}`;
+    }
+    function emit() {
+      trigger.textContent = caption();
+      if (!silent && picked) notify();
+    }
+    function date() {
+      if (!picked) return null;
+      const civil = jalaliToGregorian(picked[0], picked[1], picked[2]);
+      const value = new Date(`${iso(civil[0], civil[1], civil[2])}T${pad(hour)}:${pad(minute)}:00+03:30`);
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+    function setDate(value) {
+      const parts = tehranParts(value);
+      const jalali = gregorianToJalali(parts.gy, parts.gm, parts.gd);
+      silent = true;
+      picked = jalali;
+      hour = parts.hour;
+      minute = parts.minute;
+      viewYear = jalali[0];
+      viewMonth = jalali[1];
+      trigger.textContent = caption();
+      silent = false;
+    }
+    function step(text, disabled, run) {
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.className = 'secondary';
+      control.textContent = text;
+      control.disabled = disabled;
+      control.onclick = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!control.disabled) { run(); render(); }
+      };
+      return control;
+    }
+    function heading(text, nextMode) {
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.className = 'jalali-title';
+      control.textContent = text;
+      if (!nextMode) control.disabled = true;
+      control.onclick = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!nextMode) return;
+        mode = nextMode;
+        if (nextMode === 'years') yearPage = Math.min(Math.max(1400, viewYear - 11), Math.max(1400, today[0] - 11));
+        render();
+      };
+      return control;
+    }
+    function choice(text, selected, disabled, run) {
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.textContent = text;
+      control.disabled = disabled;
+      if (selected) control.className = 'is-picked';
+      control.onclick = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!control.disabled) run();
+      };
+      return control;
+    }
+    function timeSelect(max, current, change) {
+      const select = document.createElement('select');
+      for (let n = 0; n < max; n++) {
+        const option = document.createElement('option');
+        option.value = String(n);
+        option.textContent = fa(pad(n));
+        if (n === current) option.selected = true;
+        select.append(option);
+      }
+      select.addEventListener('change', () => change(Number(select.value)));
+      return select;
+    }
+    function render() {
+      pop.replaceChildren();
+      const head = document.createElement('div');
+      head.className = 'jalali-head';
+      if (mode === 'days') {
+        head.append(
+          step('قبل', viewYear < 1400 || (viewYear === 1400 && viewMonth === 1), () => {
+            if (viewMonth === 1) { viewMonth = 12; viewYear--; } else viewMonth--;
+          }),
+          heading(`${months[viewMonth - 1]} ${fa(viewYear)}`, 'months'),
+          step('بعد', viewYear > today[0] || (viewYear === today[0] && viewMonth >= today[1]), () => {
+            if (viewMonth === 12) { viewMonth = 1; viewYear++; } else viewMonth++;
+          }),
+        );
+      } else if (mode === 'months') {
+        head.append(
+          step('سال قبل', viewYear <= 1400, () => { viewYear--; }),
+          heading(fa(viewYear), 'years'),
+          step('سال بعد', viewYear >= today[0], () => { viewYear++; }),
+        );
+      } else {
+        const last = Math.min(today[0], yearPage + 11);
+        head.append(
+          step('قبل', yearPage <= 1400, () => { yearPage = Math.max(1400, yearPage - 12); }),
+          heading(`${fa(yearPage)} تا ${fa(last)}`),
+          step('بعد', last >= today[0], () => { yearPage = Math.min(Math.max(1400, today[0] - 11), yearPage + 12); }),
+        );
+      }
+      const body = document.createElement('div');
+      if (mode === 'months') {
+        body.className = 'jalali-months';
+        months.forEach((name, index) => {
+          const month = index + 1;
+          const futureMonth = viewYear > today[0] || (viewYear === today[0] && month > today[1]);
+          body.append(choice(name, picked && picked[0] === viewYear && picked[1] === month, futureMonth, () => {
+            viewMonth = month;
+            mode = 'days';
+            render();
+          }));
+        });
+      } else if (mode === 'years') {
+        body.className = 'jalali-years';
+        for (let year = yearPage; year < yearPage + 12; year++) {
+          body.append(choice(fa(year), viewYear === year, year > today[0] || year < 1400, () => {
+            viewYear = year;
+            if (viewYear === today[0] && viewMonth > today[1]) viewMonth = today[1];
+            mode = 'months';
+            render();
+          }));
+        }
+      } else {
+        body.className = 'jalali-days';
+        for (const name of week) {
+          const cell = document.createElement('span');
+          cell.textContent = name;
+          body.append(cell);
+        }
+        const [gy, gm, gd] = jalaliToGregorian(viewYear, viewMonth, 1);
+        const offset = (new Date(Date.UTC(gy, gm - 1, gd)).getUTCDay() + 1) % 7;
+        for (let i = 0; i < offset; i++) body.append(document.createElement('span'));
+        for (let day = 1; day <= monthLength(viewYear, viewMonth); day++) {
+          body.append(choice(fa(day), picked && key(...picked) === key(viewYear, viewMonth, day), key(viewYear, viewMonth, day) > todayKey, () => {
+            picked = [viewYear, viewMonth, day];
+            emit();
+            render();
+          }));
+        }
+        const time = document.createElement('div');
+        time.className = 'tracking-jalali-time';
+        const hourLabel = document.createElement('label');
+        hourLabel.append('ساعت', timeSelect(24, hour, value => { hour = value; emit(); }));
+        const minuteLabel = document.createElement('label');
+        minuteLabel.append('دقیقه', timeSelect(60, minute, value => { minute = value; emit(); }));
+        time.append(hourLabel, minuteLabel);
+        pop.append(head, body, time);
+        return;
+      }
+      pop.append(head, body);
+    }
+    function close() {
+      pop.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+    trigger.onclick = event => {
+      event.stopPropagation();
+      pop.hidden = !pop.hidden;
+      trigger.setAttribute('aria-expanded', String(!pop.hidden));
+      if (!pop.hidden) render();
+    };
+    pop.addEventListener('click', event => event.stopPropagation());
+    document.addEventListener('click', event => {
+      if (!event.target.isConnected || wrap.contains(event.target)) return;
+      close();
+    });
+    trigger.textContent = caption();
+    wrap.append(trigger, pop);
+    return { wrap, date, setDate, close, set onChange(fn) { notify = fn; } };
+  }
+
+  globalThis.SabzineJalali = { jalaliField, dateTimeField, gregorianToJalali, jalaliToGregorian };
 })();

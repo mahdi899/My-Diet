@@ -605,7 +605,7 @@
   </div>
 
   <script src="tracking-config.js?v=1"></script>
-  <script src="tracking.js?v=4"></script>
+  <script src="tracking.js?v=5"></script>
   <script src="community-counter.js?v=1"></script>
   <script src="questionnaire-data.js?v=12"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script>
   <script>
@@ -1762,7 +1762,8 @@
             const session=await response.json();if(!response.ok||!session.accessToken||session.role!=='user')throw new Error(session.detail||'کد تأیید معتبر نیست.');
             state.smsSession={phone:state.userPhone,token:session.accessToken};
           }
-          const saved=await fetch('/v1/onboarding/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token},signal:AbortSignal.timeout(15000)});
+          const journeyId=window.demoTracking?.journeyId?.()||null;
+          const saved=await fetch('/v1/onboarding/submissions/'+state.submissionId+'/verify',{method:'POST',headers:{Authorization:'Bearer '+state.smsSession.token,'Content-Type':'application/json'},body:JSON.stringify(journeyId?{journeyId}:{}),signal:AbortSignal.timeout(15000)});
           if(!saved.ok)throw new Error('تأیید شماره ذخیره نشد؛ دوباره تلاش کنید.');
         }catch(error){errorEl.textContent=error.message;errorEl.classList.remove('hidden');return;}finally{verifyButton.disabled=false;state.verificationBusy=false;document.getElementById('morphConfirmBtnText').textContent='تأیید و ادامه';}
         // Success is displayed only after both server verification requests succeed.

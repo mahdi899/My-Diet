@@ -49,14 +49,67 @@ export class WebAnalyticsController implements OnApplicationShutdown {
 
   @Get('departures')
   @Header('Cache-Control', 'private, no-store')
-  async departures(@Query('campaign') campaign?: string) {
-    return this.sessionPositions(campaign, true);
+  async departures(
+    @Query('campaign') campaign?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('within') within?: string,
+  ) {
+    const range = this.departureWindow(from, to, within);
+    return this.sessionPositions(campaign, true, range.since, range.until);
   }
 
-  private async sessionPositions(campaign: string | undefined, departed: boolean) {
-    if (campaign !== undefined && (typeof campaign !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(campaign) || campaign.length > 64)) {
+  /** `until` is exclusive. Omitted bounds keep the previous 24-hour departure window. */
+  private departureWindow(from?: string, to?: string, within?: string): { since: string | null; until: string | null } {
+    const hasFrom = typeof from === 'string' && from !== '';
+    const hasTo = typeof to === 'string' && to !== '';
+    const hasWithin = typeof within === 'string' && within !== '';
+    if (!hasFrom && !hasTo && !hasWithin) return { since: null, until: null };
+    if (hasWithin && (hasFrom || hasTo)) throw new ApiError(400, 'validation', 'بازهٔ زمانی معتبر نیست');
+    if (hasWithin) {
+      const hours = within === '24h' ? 24 : within === '7d' ? 7 * 24 : within === '30d' ? 30 * 24 : null;
+      if (hours === null) throw new ApiError(400, 'validation', 'بازهٔ زمانی معتبر نیست');
+      return { since: new Date(Date.now() - hours * 60 * 60 * 1000).toISOString(), until: null };
+    }
+    if (typeof from !== 'string' || typeof to !== 'string' || from === '' || to === '') {
+      throw new ApiError(400, 'validation', 'شروع و پایان بازه را با هم مشخص کنید');
+    }
+    const start = new Date(from);
+    const end = new Date(to);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new ApiError(400, 'validation', 'بازهٔ زمانی معتبر نیست');
+    }
+    if (start.getTime() >= end.getTime()) throw new ApiError(400, 'validation', 'شروع بازه باید قبل از پایان آن باشد');
+    if (end.getTime() - start.getTime() > 90 * 24 * 60 * 60 * 1000 + 60 * 1000) {
+      throw new ApiError(400, 'validation', 'بازهٔ زمانی حداکثر ۹۰ روز است');
+    }
+    if (end.getTime() > Date.now() + 5 * 60 * 1000) throw new ApiError(400, 'validation', 'پایان بازه نمی‌تواند در آینده باشد');
+    return { since: start.toISOString(), until: end.toISOString() };
+  }
+
+  /** Empty means every entry link. Slugs match the campaign-link path segment. */
+  private campaignSlug(campaign?: string): string | null {
+    if (campaign == null || campaign === '') return null;
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(campaign) || campaign.length > 64) {
       throw new ApiError(400, 'validation', 'لینک ورودی معتبر نیست');
     }
+    return campaign;
+  }
+
+  /** Phones exist only for paths whose OTP created a user. Unverified numbers stay absent. */
+  private async verifiedPhones(ids: string[]) {
+    const journeys = [...new Set(ids.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))];
+    if (!journeys.length) return new Map<string, string>();
+    const { rows } = await this.appPool.query<{ id: string; phone: string }>(
+      `select journey_id::text as id, phone_e164 as phone
+       from onboarding_analytics_journeys where journey_id = any($1::uuid[])`,
+      [journeys],
+    );
+    return new Map(rows.map(row => [row.id, row.phone]));
+  }
+
+  private async sessionPositions(campaign: string | undefined, departed: boolean, since: string | null = null, until: string | null = null) {
+    const slug = this.campaignSlug(campaign);
     if (!this.pool || !this.env.ANALYTICS_WEBSITE_ID) {
       throw new ApiError(503, 'analytics_unavailable', 'سرویس رهگیری هنوز متصل نشده است');
     }
@@ -68,7 +121,8 @@ export class WebAnalyticsController implements OnApplicationShutdown {
           from website_event e
           left join event_data j on j.website_event_id=e.event_id and j.data_key='journey'
           left join event_data s on s.website_event_id=e.event_id and s.data_key='step'
-          where e.website_id=$1 and e.created_at >= now() - (case when $4::boolean then interval '24 hours' else interval '90 seconds' end)
+          where e.website_id=$1
+            and e.created_at >= coalesce($5::timestamptz, now() - (case when $4::boolean then interval '24 hours' else interval '90 seconds' end))
             and ($2::timestamptz is null or e.created_at >= $2::timestamptz)
             and e.tag is distinct from 'qa'
             and e.event_name in ('step_view', 'active_heartbeat', 'presence_end')
@@ -82,14 +136,20 @@ export class WebAnalyticsController implements OnApplicationShutdown {
         select journey as id, url_path as page, step, utm_campaign as campaign, created_at as "lastSeen"
         from latest
         where (case when $4::boolean
-          then created_at < now()-interval '2 minutes' and step is distinct from 'payment_success'
+          then created_at < now()-interval '2 minutes'
+            and ($6::timestamptz is null or created_at < $6::timestamptz)
+            and step is distinct from 'payment_success'
           else step='preparing' or (event_name <> 'presence_end' and created_at >= now()-interval '25 seconds')
         end)
           and ($3::text is null or utm_campaign=$3)
         order by created_at desc, journey
         limit (case when $4::boolean then 200 else null end)
-      `, [this.env.ANALYTICS_WEBSITE_ID, await this.resetTime(), campaign ?? null, departed]);
-      return { sessions: rows, generatedAt: new Date().toISOString() };
+      `, [this.env.ANALYTICS_WEBSITE_ID, await this.resetTime(), slug, departed, since, until]);
+      const phones = await this.verifiedPhones(rows.map(row => String(row.id)));
+      return {
+        sessions: rows.map(row => ({ ...row, phone: phones.get(String(row.id)) ?? null })),
+        generatedAt: new Date().toISOString(),
+      };
     } catch {
       throw new ApiError(503, 'analytics_unavailable', departed
         ? 'دریافت نتیجهٔ نشست‌ها ممکن نشد'
@@ -98,16 +158,17 @@ export class WebAnalyticsController implements OnApplicationShutdown {
   }
 
   @Get()
-  async report(@Query('days') raw = '7') {
+  async report(@Query('days') raw = '7', @Query('campaign') campaign?: string) {
     const days = Number(raw);
     if (![1,7,30,90].includes(days)) throw new ApiError(400,'validation','بازهٔ گزارش معتبر نیست');
+    const slug = this.campaignSlug(campaign);
     if (!this.pool || !this.env.ANALYTICS_WEBSITE_ID) throw new ApiError(503,'analytics_unavailable','سرویس رهگیری هنوز متصل نشده است');
-    const prefix = `with e as (select * from website_event where website_id=$1 and created_at >= now()-($2 * interval '1 day') and ($3::timestamptz is null or created_at >= $3::timestamptz) and tag is distinct from 'qa'),
+    const prefix = `with e as (select * from website_event where website_id=$1 and created_at >= now()-($2 * interval '1 day') and ($3::timestamptz is null or created_at >= $3::timestamptz) and ($4::text is null or utm_campaign=$4) and tag is distinct from 'qa'),
       d as (select d.* from event_data d join e on e.event_id=d.website_event_id),
       steps as (select e.*,d.string_value as step from e join d on d.website_event_id=e.event_id and d.data_key='step' where e.event_name='step_view') `;
     try {
       const resetAt = await this.resetTime();
-      const query = (text: string) => this.pool!.query(prefix + text, [this.env.ANALYTICS_WEBSITE_ID, days, resetAt]).then(r => r.rows);
+      const query = (text: string) => this.pool!.query(prefix + text, [this.env.ANALYTICS_WEBSITE_ID, days, resetAt, slug]).then(r => r.rows);
       const [summary,events,goals,stages,exits,sources,daily,active] = await Promise.all([
         query(`select count(*) filter(where event_type=1)::int as pageviews,count(distinct session_id)::int as visitors,count(distinct visit_id)::int as visits,count(distinct visit_id) filter(where event_name='questionnaire_completed')::int as completed from e`),
         query(`select event_name as name,count(*)::int as count,count(distinct visit_id)::int as visits from e where event_type=2 group by event_name order by count(*) desc limit 50`),

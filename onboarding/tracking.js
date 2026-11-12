@@ -51,6 +51,7 @@
     },
     complete(){event('questionnaire_completed');},
     registered(){event('phone_registered');},
+    journeyId(){return journey;},
   };
   window.mydietBeforeSend=(type,payload)=>{
     if(type!=='event')return false;

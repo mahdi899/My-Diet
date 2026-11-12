@@ -40,7 +40,7 @@
       throw new Error('نشست پرداخت منقضی شده است. برای ادامه، به آنبوردینگ برگردید و شماره همراه را دوباره تأیید کنید.');
     }
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || data.messageFa || 'ارتباط با سرویس پرداخت برقرار نشد؛ دوباره تلاش کنید.');
+    if (!response.ok) throw new Error(window.mydietWizard.messageFromBody(data, 'ارتباط با سرویس پرداخت برقرار نشد. دوباره تلاش کنید.'));
     return data;
   }
 
@@ -79,7 +79,7 @@
       render();
     } catch (error) {
       status.hidden = false;
-      status.textContent = error.message;
+      status.textContent = window.mydietWizard.text(error, 'ارتباط با سرویس پرداخت برقرار نشد. دوباره تلاش کنید.');
       if (!order) byId('checkout-return').hidden = false;
     } finally {
       creating = false;
@@ -102,22 +102,48 @@
     }
     render();
   });
+  const gatewayRetryMs = 8000;
+  let gatewayRetry;
+  function showPayError(message) {
+    status.hidden = false;
+    status.textContent = message;
+    const inline = byId('gateway-status');
+    inline.hidden = false;
+    inline.textContent = message;
+  }
+  function releaseGatewayButton(button) {
+    window.clearTimeout(gatewayRetry);
+    gatewayRetry = window.setTimeout(() => {
+      startingGateway = false;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.textContent = 'پرداخت';
+    }, gatewayRetryMs);
+  }
   byId('pay-gateway').addEventListener('click', async () => {
     if (!order || creating || startingGateway) return;
     startingGateway = true;
     const button = byId('pay-gateway');
     button.disabled = true;
-    const label = button.innerHTML;
-    button.textContent = 'در حال اتصال به زیبال…';
+    button.setAttribute('aria-busy', 'true');
+    byId('gateway-status').hidden = true;
+    button.textContent = 'در حال اتصال به درگاه…';
     try {
       const payment = await request('/' + encodeURIComponent(order.id) + '/zibal', {});
-      location.assign(payment.url);
+      const url = typeof payment.url === 'string' ? payment.url : '';
+      if (!/^https:\/\/gateway\.zibal\.ir\/start\/\d{1,20}$/.test(url)) {
+        throw new Error('درگاه لینک ورود نداد. چند ثانیه بعد یک بار دیگر تلاش کنید.');
+      }
+      location.assign(url);
+      window.setTimeout(() => {
+        if (location.hostname.endsWith('zibal.ir')) return;
+        showPayError('به درگاه منتقل نشدید. دکمهٔ پرداخت چند ثانیه غیرفعال می‌ماند.');
+        releaseGatewayButton(button);
+      }, 4000);
     } catch (error) {
-      status.hidden = false;
-      status.textContent = error.message;
-      startingGateway = false;
-      button.disabled = false;
-      button.innerHTML = label;
+      const fallback = 'ارتباط با درگاه برقرار نشد. چند ثانیه بعد یک بار دیگر تلاش کنید.';
+      showPayError(window.mydietWizard ? window.mydietWizard.text(error, fallback) : fallback);
+      releaseGatewayButton(button);
     }
   });
   byId('checkout-plan').addEventListener('submit', event => {
@@ -163,7 +189,7 @@
       render();
     }).catch(error => {
       status.hidden = false;
-      status.textContent = error.message;
+      status.textContent = window.mydietWizard.text(error, 'ارتباط با سرویس پرداخت برقرار نشد. دوباره تلاش کنید.');
       byId('checkout-return').hidden = false;
     });
   } else {
