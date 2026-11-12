@@ -2064,6 +2064,39 @@ body:has(#page2Container:not(.hidden)) main { padding-top: 10px !important; }
   .quiz-question-hero::after { background: linear-gradient(180deg, rgba(245,248,239,.97) 0%, rgba(236,244,226,.86) 38%, rgba(210,228,198,.58) 72%, rgba(186,214,176,.4) 100%) !important; }
   #questionsVerticalList h3 { min-height: 76px; }
   #quizScrollViewport, #questionsVerticalList { min-height: calc(100svh - 150px) !important; }
+
+  /* Center short questions below the header; let longer questions grow and scroll. */
+  body:has(#page2Container:not(.hidden)) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+  body:has(#page2Container:not(.hidden)) header { flex-shrink: 0; }
+  body:has(#page2Container:not(.hidden)) main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    padding-block: 0 !important;
+  }
+  #page2Container:not(.hidden),
+  #page2Container > .relative,
+  #page2Container #quizScrollViewport {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    min-height: 0 !important;
+  }
+  #page2Container #quizScrollViewport { height: auto; }
+  #page2Container #questionsVerticalList {
+    flex: 1;
+    width: 100%;
+    min-height: 0 !important;
+    justify-content: center !important;
+    padding-block: 24px !important;
+  }
+  #page2Container .question-card { flex-shrink: 0; }
 }
 
 body:has(#page1Container:not(.hidden)) {
