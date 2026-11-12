@@ -57,7 +57,7 @@ class SingleChoice extends StatelessWidget {
         index: i,
         child: OptionCard(
           label: o.label,
-          photoKey: o.code,
+          photoKey: o.image ?? o.code,
           selected: value == o.code,
           onTap: () => onChanged(o.code),
         ),
@@ -109,7 +109,7 @@ class MultiChoice extends StatelessWidget {
             index: i,
             child: OptionCard(
               label: question.options[i].label,
-              photoKey: question.options[i].code,
+              photoKey: question.options[i].image ?? question.options[i].code,
               multi: true,
               selected: value.contains(question.options[i].code),
               onTap: () => _toggle(question.options[i]),

@@ -7,6 +7,7 @@ import '../../presentation/widgets/kit/kit.dart';
 import '../coach/coach_launcher.dart';
 import 'goal_math.dart';
 import 'meal_detail_page.dart';
+import 'consume_sheet.dart';
 
 class PlanMealCard extends StatefulWidget {
   const PlanMealCard({super.key, required this.date, required this.index});
@@ -23,14 +24,12 @@ class _PlanMealCardState extends State<PlanMealCard> {
 
   Future<void> _toggle(DemoStore store) async {
     if (!canLogMeal(store, widget.date)) return;
-    final eaten = store.mealEaten(widget.date, widget.index);
-    if (!eaten) {
+    if (store.mealEaten(widget.date, widget.index)) return;
+    final saved = await showConsumeSheet(context, widget.date, widget.index);
+    if (saved && mounted) {
       Haptics.success();
       setState(() => _burst++);
-    } else {
-      Haptics.tick();
     }
-    await store.setMealEaten(widget.date, widget.index, !eaten);
   }
 
   void _open() {
@@ -96,12 +95,14 @@ class _PlanMealCardState extends State<PlanMealCard> {
               const SizedBox(width: 8),
               Expanded(
                 child: PillButton(
-                  label: eaten ? 'ثبت شد' : 'انجام شد',
+                  label: record != null || eaten ? 'ثبت شد' : 'انجام شد',
                   icon: Icons.check_rounded,
                   variant: eaten ? PillVariant.lime : PillVariant.primary,
                   height: 46,
                   loading: store.savingMeal,
-                  onPressed: logging ? () => _toggle(store) : null,
+                  onPressed: logging && !eaten && record == null
+                      ? () => _toggle(store)
+                      : null,
                 ),
               ),
             ],

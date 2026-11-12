@@ -308,9 +308,14 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
                       ),
                   child: const Text('بازخورد هفته'),
                 ),
-              TextButton(
-                onPressed: () => showPlanChange(context),
-                child: const Text('تغییر برنامه'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: PillButton(
+                  label: 'درخواست اصلاح برنامه',
+                  icon: Icons.edit_note_rounded,
+                  variant: PillVariant.soft,
+                  onPressed: () => showPlanChange(context),
+                ),
               ),
               if (!store.serverAuthEnabled)
                 const Text(

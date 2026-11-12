@@ -8,6 +8,18 @@ import 'package:sabzine_flutter/presentation/widgets/meal_logging.dart';
 import 'nutrition_test.dart' show LogMemory;
 
 void main() {
+  test('A recorded meal cannot be toggled after its day has ended', () async {
+    var now = DateTime(2026, 11, 1, 12);
+    final store = DemoStore(clock: () => now)..loginDemoUser();
+    addTearDown(store.dispose);
+    store.approveActiveUserRequest();
+    final day = now;
+    await store.recordMeal(day, 0, 'according');
+    now = now.add(const Duration(days: 1));
+    await store.setMealEaten(day, 0, false);
+    expect(store.mealEaten(day, 0), isTrue);
+    expect(store.mealRecordOn(day, 0)!['mode'], 'according');
+  });
   final date = DateTime(2026, 11, 1, 12);
   DemoStore ready([LogMemory? storage]) {
     final s = DemoStore(nutritionStorage: storage, clock: () => date)

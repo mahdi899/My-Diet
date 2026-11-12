@@ -19,11 +19,21 @@
     health: 'سوالات هدف سلامت و پاکسازی بدن',
   };
 
-  /** یک بنر ثابت غذای رژیمی برای همهٔ سؤال‌ها */
+  /** تصویر مرتبط با موضوع سؤال، از بانک محلی تصاویر. */
   const QUESTION_HERO_IMAGE = 'assets/quiz-hero-diet.jpg';
 
   function applyHeroImages(questions) {
-    return questions.map((q) => ({ ...q, heroImage: QUESTION_HERO_IMAGE }));
+    return questions.map((q) => {
+      const title = q.q || '';
+      let heroImage = QUESTION_HERO_IMAGE;
+      if (/باردار|بارداری|جنین|سه‌ماهه/.test(title)) heroImage = 'assets/goal-maternal.jpg';
+      else if (/ورزش|تمرین|فعالیت بدنی/.test(title)) heroImage = 'assets/sport-strength.jpg';
+      else if (/شغل|کار روزانه|فعالیت روزانه/.test(title)) heroImage = 'assets/activity-mixed.jpg';
+      else if (/گیاه|وگان|سبزی/.test(title)) heroImage = 'assets/diet-vegan.jpg';
+      else if (/بیماری|دارو|آزمایش|پزشک/.test(title)) heroImage = 'assets/intro-specialist.jpg';
+      else if (/افزایش وزن|اشتها/.test(title)) heroImage = 'assets/goal-gain.jpg';
+      return { ...q, heroImage };
+    });
   }
 
   function withGeneral(goalQuestions) {

@@ -126,7 +126,10 @@ class _MessagingScreenState extends State<MessagingScreen> {
   String? error, conversationId;
   List<ConversationMessage> liveMessages = [], outbox = [];
   ChatAttachment? attachment;
-  bool loading = false, recordingNow = false, startingRecording = false, sending = false;
+  bool loading = false,
+      recordingNow = false,
+      startingRecording = false,
+      sending = false;
   bool? photo;
   int seconds = 0, visibleCount = 30, operation = 0;
   bool get live => store!.serverAuthEnabled;
@@ -865,7 +868,14 @@ Future<void> showPlanChange(BuildContext context) async {
         return;
       }
     } catch (e) {
-      if (context.mounted) showToast(context, '$e');
+      if (context.mounted) {
+        showToast(
+          context,
+          e is TimeoutException
+              ? 'اتصال کند است؛ درخواست ارسال نشد. دوباره تلاش کن.'
+              : 'اتصال به سرویس برقرار نیست؛ درخواست ارسال نشد. دوباره تلاش کن.',
+        );
+      }
       return;
     }
   } else if (!store.hasUserRequest || !store.userRequest.isPublished) {
@@ -873,6 +883,7 @@ Future<void> showPlanChange(BuildContext context) async {
     return;
   }
   final details = TextEditingController(), selected = <String>{};
+  var submitted = false;
   String? error;
   final route = ModalBottomSheetRoute<void>(
     isScrollControlled: true,
@@ -1001,7 +1012,10 @@ Future<void> showPlanChange(BuildContext context) async {
                 PrimaryButton(
                   'ارسال درخواست',
                   onPressed: store.serverAuthEnabled
-                      ? null
+                      ? () => update(
+                          () => error =
+                              'ارسال درخواست در این نسخه به سرویس سرور متصل نیست؛ درخواست ارسال نشد.',
+                        )
                       : () {
                           try {
                             store.messaging.submit(
@@ -1013,6 +1027,7 @@ Future<void> showPlanChange(BuildContext context) async {
                               selected.join('، '),
                               details.text.trim(),
                             );
+                            submitted = true;
                             Navigator.pop(sheet);
                           } catch (e) {
                             update(() => error = '$e');
@@ -1033,4 +1048,12 @@ Future<void> showPlanChange(BuildContext context) async {
   await Navigator.of(context).push<void>(route);
   await route.completed;
   details.dispose();
+  if (submitted && context.mounted) {
+    showToast(
+      context,
+      store.serverAuthEnabled
+          ? 'درخواست شما ارسال شد.'
+          : 'درخواست شما در نسخهٔ نمایشی ثبت شد.',
+    );
+  }
 }

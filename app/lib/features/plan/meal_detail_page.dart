@@ -37,18 +37,6 @@ class _MealDetailPageState extends State<MealDetailPage> {
   String _selected(DemoStore store) =>
       _choice ?? store.selectedOptionOn(widget.date, widget.index);
 
-  Future<void> _toggle(DemoStore store) async {
-    if (!canLogMeal(store, widget.date)) return;
-    final eaten = store.mealEaten(widget.date, widget.index);
-    if (!eaten) {
-      Haptics.success();
-      setState(() => _burst++);
-    } else {
-      Haptics.tick();
-    }
-    await store.setMealEaten(widget.date, widget.index, !eaten);
-  }
-
   Future<void> _precise() async {
     final saved = await showConsumeSheet(context, widget.date, widget.index);
     if (saved && mounted) {
@@ -131,6 +119,7 @@ class _MealDetailPageState extends State<MealDetailPage> {
     final meal = meals[widget.index];
     final eaten = store.mealEaten(widget.date, widget.index);
     final logging = canLogMeal(store, widget.date);
+    final recorded = store.mealRecordOn(widget.date, widget.index) != null || eaten;
     final macros = macrosFor(meal.calories, meal.name);
     final original = store.originalMealOn(widget.date, widget.index);
     final alternatives = store.alternativesOn(widget.date, widget.index);
@@ -415,15 +404,11 @@ class _MealDetailPageState extends State<MealDetailPage> {
               SparkleBurst(
                 trigger: _burst,
                 child: PillButton(
-                  label: eaten ? 'ثبت شد' : 'انجام شد',
+                  label: recorded ? 'ثبت شد' : 'انجام شد',
                   icon: Icons.check_rounded,
                   loading: store.savingMeal,
-                  onPressed: logging ? () => _toggle(store) : null,
+                  onPressed: logging && !recorded ? _precise : null,
                 ),
-              ),
-              TextButton(
-                onPressed: logging ? _precise : null,
-                child: const Text('ثبت دقیق'),
               ),
             ],
           ),

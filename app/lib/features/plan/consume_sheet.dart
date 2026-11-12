@@ -177,7 +177,7 @@ class _ConsumeSheetState extends State<ConsumeSheet> {
           ],
           const SizedBox(height: 16),
           PillButton(
-            label: 'ذخیره',
+            label: 'انجام شد',
             loading: _busy,
             onPressed: _busy ? null : _save,
           ),

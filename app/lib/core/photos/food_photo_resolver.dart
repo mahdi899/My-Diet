@@ -100,6 +100,7 @@ class FoodPhotoResolver {
     List<String> ingredients = const [],
     String? mealType,
     int limit = 6,
+    bool matchesOnly = false,
   }) {
     final meal = normalizeMealType(mealType);
     final pool = meal == 'ingredient' ? _ingredients : _food;
@@ -175,6 +176,7 @@ class FoodPhotoResolver {
       return _hash('$seed${a.$1.id}').compareTo(_hash('$seed${b.$1.id}'));
     });
     final out = [for (final s in scored) s.$1];
+    if (matchesOnly) return out.length > limit ? out.sublist(0, limit) : out;
 
     // Deterministic fallback inside the meal-type pool, stable per title.
     final fallbackPool = (meal == null || meal == 'ingredient')
@@ -190,6 +192,22 @@ class FoodPhotoResolver {
     }
     if (out.isEmpty) out.addAll(manifest.items);
     return out.length > limit ? out.sublist(0, limit) : out;
+  }
+
+  /// A real keyword match, or null when the title is not about a known photo.
+  PhotoEntry? bestMatch({
+    String? title,
+    List<String> ingredients = const [],
+    String? mealType,
+  }) {
+    final hits = rank(
+      title: title,
+      ingredients: ingredients,
+      mealType: mealType,
+      limit: 1,
+      matchesOnly: true,
+    );
+    return hits.isEmpty ? null : hits.first;
   }
 
   /// A nutritionist portrait, stable per [seed].
@@ -250,8 +268,12 @@ class FoodPhotoResolver {
   /// Lowercase, unify Arabic/Persian letters & digits, ZWNJ -> space,
   /// strip diacritics and punctuation.
   static String normalize(String s) {
+    // «قهوه‌ای» is brown. A ZWNJ must not split it into the word «قهوه».
+    final protected = s
+        .replaceAll('قهوه‌ای', 'قهوهای')
+        .replaceAll('قهوه\u200cای', 'قهوهای');
     final b = StringBuffer();
-    for (final r in s.toLowerCase().runes) {
+    for (final r in protected.toLowerCase().runes) {
       if (r == 0x64A) {
         b.writeCharCode(0x6CC); // ي -> ی
       } else if (r == 0x649) {
@@ -288,7 +310,11 @@ class FoodPhotoResolver {
         if (t.endsWith(suf)) return t.substring(0, t.length - suf.length);
       }
     }
-    if (t.length > 3 && t.endsWith('ی')) return t.substring(0, t.length - 1);
+    if (t.length > 3 && t.endsWith('ی')) {
+      final stem = t.substring(0, t.length - 1);
+      if (stem == 'قهوه' || stem == 'قهوهای') return 'قهوهای';
+      return stem;
+    }
     if (t.length > 3 && t.endsWith('s') && RegExp(r'^[a-z]+$').hasMatch(t)) {
       return t.substring(0, t.length - 1);
     }

@@ -151,8 +151,7 @@ class _TrackCard extends StatelessWidget {
             children: [
               DecorPhoto(
                 label: track.title,
-                id: track.id,
-                lifestyle: true,
+                id: track.image.isNotEmpty ? track.image : track.id,
                 icon: trackIcon(track.id),
                 width: 64,
                 height: 64,
