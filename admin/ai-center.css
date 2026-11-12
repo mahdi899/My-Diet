@@ -37,4 +37,12 @@
 .check{display:inline-flex;align-items:center;gap:8px;font-weight:400}
 .check input{width:18px;height:18px;min-height:0;margin:0}
 .food-form{display:block}
+.food-photo{border:1px solid var(--line);border-radius:14px;padding:14px 16px 8px;margin:0 0 18px;display:grid;gap:10px}
+.food-photo legend{font-size:13px;font-weight:700;padding:0 6px}
+.food-photo img{width:160px;height:160px;object-fit:cover;border-radius:14px;background:#eef3e8}
+.food-photo img[hidden]{display:none}
+.food-photo input[type=file]{margin:0}
+.food-thumb{width:56px;height:56px;object-fit:cover;border-radius:12px;background:#eef3e8;display:block}
+.food-thumb[hidden]{display:none}
+td.food-thumb-cell{width:72px}
 @media(max-width:760px){.ai-row{padding:14px 16px}.ob-bar{grid-template-columns:1fr;gap:6px}.ai-pool-settings{padding:16px 16px 0}}

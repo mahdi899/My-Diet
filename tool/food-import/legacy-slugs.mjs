@@ -1,0 +1,20 @@
+// Keep the dish identifiers used by saved onboarding preferences and plans.
+export const legacySlugs = {
+  54: 'omelet_gojeh', 55: 'nan_paneer_gerdoo', 56: 'adasi', 57: 'halim',
+  58: 'nimroo', 59: 'oatmeal_moz', 64: 'nargesi_esfenaj', 65: 'kuku_sibzamini',
+  71: 'borani_esfenaj_nan', 74: 'kabab_koobideh', 75: 'zereshk_polo_morgh',
+  76: 'ghormeh_sabzi', 77: 'gheymeh', 78: 'gheymeh_bademjan', 79: 'adas_polo',
+  80: 'sabzi_polo_mahi', 81: 'loobia_polo', 82: 'fesenjan', 84: 'albaloo_polo_morgh',
+  85: 'tahchin_morgh', 87: 'estamboli_polo', 88: 'kalam_polo', 90: 'khoresh_bamieh',
+  91: 'khoresh_karafs', 92: 'khoresh_alu_esfenaj', 94: 'joojeh_kabab',
+  99: 'khoresh_kadoo', 101: 'havij_polo_morgh', 102: 'kashk_bademjan',
+  103: 'mirza_ghasemi', 104: 'kuku_sabzi', 105: 'dizi', 106: 'koofteh_tabrizi',
+  107: 'tas_kabab', 108: 'lobia_chiti_khorak', 109: 'dolme_barg', 110: 'dolme_felfel',
+  111: 'khorak_morgh_sabzijat', 118: 'ash_reshteh', 119: 'ash_jo', 120: 'ash_doogh',
+  121: 'soup_jo_morgh', 126: 'salad_shirazi', 127: 'mast_khiar', 128: 'mast_musir',
+  130: 'zeytoon_parvardeh', 131: 'sabzi_khordan', 132: 'salad_fasl',
+  135: 'makhloot_ajil', 137: 'anar', 143: 'doogh', 144: 'sekanjabin',
+  148: 'chai_sabz', 151: 'kabab_tabei', 152: 'baghala_ghatogh', 153: 'torsh_tareh',
+  154: 'ghalieh_mahi', 168: 'salad_olivieh', 171: 'kabab_barg',
+  177: 'sholeh_zard_small', 178: 'faloodeh_small',
+};

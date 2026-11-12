@@ -12,7 +12,7 @@ describe('food catalogue', { concurrency: 1, timeout: 240_000 }, () => {
 
   before(async () => {
     app = await bootApp();
-    await app.pool.query(`insert into users (id, phone_e164, role) values ($1,'+989180000077','admin')`, [uuidv7()]);
+    await app.pool.query(`insert into users (id, phone_e164, role, status) values ($1,'+989180000077','admin','active')`, [uuidv7()]);
     const session = await loginAdmin(app.api, app.pool, '09180000077');
     admin = { Authorization: `Bearer ${session.accessToken}` };
   });
@@ -87,5 +87,36 @@ describe('food catalogue', { concurrency: 1, timeout: 240_000 }, () => {
     assert.match(rejected.body.messageFa, /خط/);
     const untouched = await http().get('/v1/admin/foods/ghormeh_sabzi').set(admin);
     assert.equal(untouched.body.category, 'main');
+  });
+
+  it('replaces atomically, keeps a recoverable snapshot and never reseeds retired foods', async () => {
+    const snapshot = await http().get('/v1/admin/foods/export.json').set(admin);
+    const revision = await http().get('/v1/admin/foods/revision').set(admin);
+    const food = { ...SEED_FOODS[0]!, active: true, image: '/assets/foods/test_food.jpg', nutrition: null };
+    const body = { foods: [food], operationId: uuidv7(), expectedRevision: revision.body.revision };
+    assert.equal((await http().post('/v1/admin/foods/replace').send(body)).status, 401);
+    assert.equal((await http().post('/v1/admin/foods/replace').set(admin).send({ ...body, expectedRevision: '0'.repeat(32) })).status, 409);
+    assert.equal((await http().post('/v1/admin/foods/replace').set(admin).send({ ...body, foods: [food, food] })).status, 400);
+    const invalid = await http().post('/v1/admin/foods/replace').set(admin).send({ ...body, foods: [food, { ...food, slug: 'invalid_image', image: 'javascript:alert(1)' }] });
+    assert.equal(invalid.status, 400);
+    const unchanged = await http().get('/v1/admin/foods/revision').set(admin);
+    assert.equal(unchanged.body.revision, revision.body.revision);
+    const result = await http().post('/v1/admin/foods/replace').set(admin).send(body);
+    assert.equal(result.status, 201, JSON.stringify(result.body));
+    assert.equal(result.body.replaced, 1);
+    const backup = await http().get('/v1/admin/foods/backups/' + result.body.backupId).set(admin);
+    assert.deepEqual(backup.body.foods, snapshot.body.foods);
+    const duplicate = await http().post('/v1/admin/foods/replace').set(admin).send(body);
+    assert.equal(duplicate.body.duplicate, true);
+    const { FoodService } = await import('../../dist/food/food.service.js');
+    assert.equal(await app.api.get(FoodService).seed(), 0);
+    const current = await http().get('/v1/admin/foods').set(admin);
+    assert.equal(current.body.items.length, 1);
+    assert.equal(current.body.items[0].image, food.image);
+    const csv = await http().get('/v1/admin/foods/export.csv').set(admin);
+    const imported = await http().post('/v1/admin/foods/import').set(admin).send({ csv: csv.text });
+    assert.equal(imported.status, 201);
+    const updated = await http().get('/v1/admin/foods/' + food.slug).set(admin);
+    assert.equal(updated.body.image, food.image);
   });
 });

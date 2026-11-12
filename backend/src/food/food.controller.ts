@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Header, Param, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Put, Query, Req, StreamableFile } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { actor, Roles } from '../common/auth.js';
+import { actor, Public, Roles } from '../common/auth.js';
 import { ApiError } from '../common/errors.js';
 import { bodyRecord } from '../common/parse.js';
 import { FoodService } from './food.service.js';
@@ -28,6 +28,15 @@ export class FoodController {
   @Post('catalog/compose')
   compose(@Body() body: unknown) {
     return this.foods.compose(body);
+  }
+
+  @Public()
+  @Get('public/food-images/:file')
+  @Header('Cache-Control', 'public, max-age=86400')
+  async image(@Param('file') file: string) {
+    const bytes = await this.foods.imageBytes(file);
+    if (!bytes) throw new ApiError(404, 'not_found', 'عکس غذا پیدا نشد');
+    return new StreamableFile(bytes, { type: 'image/jpeg' });
   }
 
   @Roles('admin')
@@ -63,6 +72,30 @@ export class FoodController {
     const csv = bodyRecord(body).csv;
     if (typeof csv !== 'string') throw new ApiError(400, 'validation', 'محتوای فایل ارسال نشده است');
     return this.foods.importCsv(actor(req).id, csv);
+  }
+
+  @Roles('admin')
+  @Get('admin/foods/revision')
+  async revision() {
+    return { revision: await this.foods.revision() };
+  }
+
+  @Roles('admin')
+  @Get('admin/foods/export.json')
+  exportFullJson() {
+    return this.foods.exportJson();
+  }
+
+  @Roles('admin')
+  @Post('admin/foods/replace')
+  replace(@Req() req: Request, @Body() body: unknown) {
+    return this.foods.replace(actor(req).id, body);
+  }
+
+  @Roles('admin')
+  @Get('admin/foods/backups/:id')
+  backup(@Param('id') id: string) {
+    return this.foods.backup(id);
   }
 
   @Roles('admin')

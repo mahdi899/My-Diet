@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import type { Pool } from 'pg';
+import { createHash } from 'node:crypto';
+import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import { ApiError } from '../common/errors.js';
 import { uuidv7 } from '../common/id.js';
@@ -23,6 +24,28 @@ const ingredientSchema = z.object({
   category: z.enum(GROUPS),
 });
 
+const nutritionSchema = z.object({
+  method: z.literal('recipe_estimate'),
+  reference: z.string().min(1).max(300),
+  sourceUrl: z.url().max(500).refine(value => value.startsWith('https://')),
+  originalPromptKcal: z.number().int().min(0).max(3000).optional(),
+  notes: z.string().max(2000),
+  ingredients: z.array(z.object({
+    ingredient: z.string().min(1).max(160),
+    grams: z.number().positive().max(100000),
+    fdcId: z.number().int().positive(),
+    description: z.string().min(1).max(500),
+    nutrientsPer100G: z.object({
+      kcal: z.number().min(0).max(1000),
+      proteinG: z.number().min(0).max(100),
+      carbsG: z.number().min(0).max(100),
+      fatG: z.number().min(0).max(100),
+      fiberG: z.number().min(0).max(100),
+      fiberAssumedZero: z.boolean().optional(),
+    }),
+  })).min(1).max(30),
+});
+
 export const foodInputSchema = z.object({
   slug: z.string().trim().regex(/^[a-z][a-z0-9_]{1,63}$/),
   nameFa: z.string().trim().min(2).max(120),
@@ -43,6 +66,8 @@ export const foodInputSchema = z.object({
   prepMinutes: z.number().int().min(0).max(1440),
   ingredients: z.array(ingredientSchema).min(1).max(30),
   active: z.boolean().default(true),
+  image: z.string().max(240).regex(/^(\/assets\/foods\/[a-z0-9_-]+\.jpg|\/v1\/public\/food-images\/[a-z][a-z0-9_]{1,63}\.jpg)$/).nullable().optional(),
+  nutrition: nutritionSchema.nullable().optional(),
 });
 export type FoodInput = z.infer<typeof foodInputSchema>;
 
@@ -69,6 +94,7 @@ export interface FoodRow {
   image: string | null;
   active: boolean;
   source: string;
+  nutrition: z.infer<typeof nutritionSchema> | null;
 }
 
 export interface FoodView {
@@ -94,10 +120,11 @@ export interface FoodView {
   image: string | null;
   active: boolean;
   source: string;
+  nutrition: z.infer<typeof nutritionSchema> | null;
 }
 
 const COLUMNS = `id, slug, name_fa, category, meal_types, serving_label, serving_g, kcal, protein_g::text, carbs_g::text,
-  fat_g::text, fiber_g::text, allergens, tags, regions, seasons, cost_tier, prep_minutes, ingredients, image, active, source`;
+  fat_g::text, fiber_g::text, allergens, tags, regions, seasons, cost_tier, prep_minutes, ingredients, image, active, source, nutrition`;
 
 export function viewOf(row: FoodRow): FoodView {
   return {
@@ -123,6 +150,7 @@ export function viewOf(row: FoodRow): FoodView {
     image: row.image,
     active: row.active,
     source: row.source,
+    nutrition: row.nutrition ?? null,
   };
 }
 
@@ -158,16 +186,21 @@ export class FoodService implements OnModuleInit {
 
   /** Inserts the missing seed rows. Rows edited by an admin are never overwritten. */
   async seed(): Promise<number> {
-    const existing = await this.pool.query<{ slug: string }>('select slug from food_catalog');
-    const have = new Set(existing.rows.map((row) => row.slug));
-    const missing = SEED_FOODS.filter((food) => !have.has(food.slug));
-    for (const food of missing) await this.insertSeed(food);
-    if (missing.length) this.logger.log(`seeded ${missing.length} catalog foods`);
-    return missing.length;
+    return withTransaction(this.pool, async client => {
+      await client.query('lock table food_catalog in share row exclusive mode');
+      const replaced = await client.query('select 1 from food_catalog_replacements limit 1');
+      if (replaced.rowCount) return 0;
+      const existing = await client.query<{ slug: string }>('select slug from food_catalog');
+      const have = new Set(existing.rows.map((row) => row.slug));
+      const missing = SEED_FOODS.filter((food) => !have.has(food.slug));
+      for (const food of missing) await this.insertSeed(food, client);
+      if (missing.length) this.logger.log(`seeded ${missing.length} catalog foods`);
+      return missing.length;
+    });
   }
 
-  private async insertSeed(food: SeedFood): Promise<void> {
-    await this.pool.query(
+  private async insertSeed(food: SeedFood, client: PoolClient): Promise<void> {
+    await client.query(
       `insert into food_catalog
         (id, slug, name_fa, category, meal_types, serving_label, serving_g, kcal, protein_g, carbs_g, fat_g, fiber_g,
          allergens, tags, regions, seasons, cost_tier, prep_minutes, ingredients, source)
@@ -311,7 +344,9 @@ export class FoodService implements OnModuleInit {
   }
 
   async create(adminId: string, body: unknown): Promise<FoodView> {
+    const photo = jpegOf(body);
     const food = this.parse(body);
+    if (photo) food.image = publicFoodImage(food.slug);
     await withTransaction(this.pool, async (client) => {
       const inserted = await client.query(
         `insert into food_catalog
@@ -323,18 +358,36 @@ export class FoodService implements OnModuleInit {
       );
       if (!inserted.rowCount) throw new ApiError(409, 'conflict', 'غذایی با این شناسه وجود دارد');
       await audit(client, adminId, 'food_created', 'food_catalog', null, { slug: food.slug });
+      await client.query(METADATA_SQL, [food.slug, food.image !== undefined, food.image ?? null, food.nutrition !== undefined, JSON.stringify(food.nutrition ?? null)]);
+      if (photo) await client.query('update food_catalog set image_bytes=$2 where slug=$1', [food.slug, photo]);
     });
     return this.get(food.slug);
   }
 
   async update(adminId: string, slug: string, body: unknown): Promise<FoodView> {
+    const photo = jpegOf(body);
     const food = this.parse({ ...(body as object), slug });
+    if (photo) food.image = publicFoodImage(slug);
+    if (photo === null && food.image?.startsWith('/v1/public/food-images/')) food.image = null;
     await withTransaction(this.pool, async (client) => {
       const updated = await client.query(`${UPDATE_SQL} returning id`, [food.slug, ...this.fields(food)]);
       if (!updated.rowCount) throw new ApiError(404, 'not_found', 'غذا پیدا نشد');
+      await client.query(METADATA_SQL, [food.slug, food.image !== undefined, food.image ?? null, food.nutrition !== undefined, JSON.stringify(food.nutrition ?? null)]);
+      if (photo) await client.query('update food_catalog set image_bytes=$2 where slug=$1', [slug, photo]);
+      if (photo === null) await client.query('update food_catalog set image_bytes=null where slug=$1', [slug]);
       await audit(client, adminId, 'food_updated', 'food_catalog', null, { slug });
     });
     return this.get(slug);
+  }
+
+  async imageBytes(file: string): Promise<Buffer | null> {
+    const slug = file.endsWith('.jpg') ? file.slice(0, -4) : '';
+    if (!/^[a-z][a-z0-9_]{1,63}$/.test(slug)) return null;
+    const { rows } = await this.pool.query<{ image_bytes: Buffer | null }>(
+      'select image_bytes from food_catalog where slug=$1',
+      [slug],
+    );
+    return rows[0]?.image_bytes ?? null;
   }
 
   async setActive(adminId: string, slug: string, active: boolean): Promise<FoodView> {
@@ -355,6 +408,54 @@ export class FoodService implements OnModuleInit {
 
   // ----------------------------------------------------------------- CSV
 
+  async revision(): Promise<string> {
+    const result = await this.pool.query<{ revision: string }>(REVISION_SQL);
+    return result.rows[0]!.revision;
+  }
+
+  async exportJson() {
+    const { rows } = await this.pool.query<FoodRow>(`select ${COLUMNS} from food_catalog order by slug`);
+    return { version: 1, foods: rows.map(viewOf) };
+  }
+
+  async replace(adminId: string, body: unknown) {
+    const parsed = z.object({
+      operationId: z.uuid(),
+      expectedRevision: z.string().regex(/^[a-f0-9]{32}$/),
+      foods: z.array(foodInputSchema).min(1).max(1000),
+    }).safeParse(body);
+    if (!parsed.success) throw new ApiError(400, 'validation', 'فایل جایگزینی معتبر نیست');
+    const { foods, operationId, expectedRevision } = parsed.data;
+    if (new Set(foods.map(food => food.slug)).size !== foods.length) throw new ApiError(400, 'validation', 'شناسهٔ غذای تکراری در فایل وجود دارد');
+    return withTransaction(this.pool, async client => {
+      await client.query('lock table food_catalog in share row exclusive mode');
+      const duplicate = await client.query('select replacement_count from food_catalog_replacements where id=$1', [operationId]);
+      if (duplicate.rows[0]) return { replaced: duplicate.rows[0].replacement_count, backupId: operationId, duplicate: true };
+      const revision = await client.query<{ revision: string }>(REVISION_SQL);
+      if (revision.rows[0]!.revision !== expectedRevision) throw new ApiError(409, 'catalog_changed', 'کاتالوگ تغییر کرده است؛ پیش‌نمایش را دوباره باز کن');
+      const previous = await client.query<FoodRow>(`select ${COLUMNS} from food_catalog order by slug`);
+      await client.query('insert into food_catalog_replacements (id, actor_id, previous_foods, replacement_count) values ($1,$2,$3::jsonb,$4)', [operationId, adminId, JSON.stringify(previous.rows.map(viewOf)), foods.length]);
+      await client.query('delete from food_catalog');
+      for (const food of foods) {
+        await client.query(
+          `insert into food_catalog (id,slug,name_fa,category,meal_types,serving_label,serving_g,kcal,protein_g,carbs_g,fat_g,fiber_g,allergens,tags,regions,seasons,cost_tier,prep_minutes,ingredients,active,source)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb,$20,'admin')`,
+          [uuidv7(), food.slug, ...this.fields(food)],
+        );
+        await client.query(METADATA_SQL, [food.slug, true, food.image ?? null, true, JSON.stringify(food.nutrition ?? null)]);
+      }
+      await audit(client, adminId, 'food_catalog_replaced', 'food_catalog', null, { backupId: operationId, previousCount: previous.rows.length, count: foods.length, digest: createHash('sha256').update(JSON.stringify(foods)).digest('hex') });
+      return { replaced: foods.length, removed: previous.rows.length, backupId: operationId };
+    });
+  }
+
+  async backup(id: string) {
+    if (!z.uuid().safeParse(id).success) throw new ApiError(400, 'validation', 'شناسهٔ پشتیبان معتبر نیست');
+    const result = await this.pool.query('select previous_foods from food_catalog_replacements where id=$1', [id]);
+    if (!result.rows[0]) throw new ApiError(404, 'not_found', 'نسخهٔ پشتیبان پیدا نشد');
+    return { version: 1, foods: result.rows[0].previous_foods };
+  }
+
   /** One header line, then one food per line. Arrays use `|`, ingredients use `name:qty:unit:group|...`. */
   async exportCsv(): Promise<string> {
     const { rows } = await this.pool.query<FoodRow>(`select ${COLUMNS} from food_catalog order by slug`);
@@ -365,7 +466,7 @@ export class FoodService implements OnModuleInit {
         food.slug, food.nameFa, food.category, food.mealTypes.join('|'), food.servingLabel, food.servingG ?? '', food.kcal,
         food.proteinG, food.carbsG, food.fatG, food.fiberG, food.allergens.join('|'), food.tags.join('|'),
         food.regions.join('|'), food.seasons.join('|'), food.costTier, food.prepMinutes,
-        food.ingredients.map((item) => `${item.name}:${item.quantity}:${item.unit}:${item.category}`).join('|'), food.active,
+        food.ingredients.map((item) => `${item.name}:${item.quantity}:${item.unit}:${item.category}`).join('|'), food.active, food.image ?? '', food.nutrition ? JSON.stringify(food.nutrition) : '',
       ].map(csvCell).join(',');
     });
     return `\uFEFF${[header, ...lines].join('\r\n')}\r\n`;
@@ -376,7 +477,7 @@ export class FoodService implements OnModuleInit {
     if (text.length > 2_000_000) throw new ApiError(400, 'validation', 'فایل بیش از حد بزرگ است');
     const rows = parseCsv(text);
     const header = rows[0]?.map((cell) => cell.trim());
-    if (!header || CSV_COLUMNS.some((column, index) => header[index] !== column)) {
+    if (!header || CSV_COLUMNS.slice(0, 19).some((column, index) => header[index] !== column) || header.slice(19).some((column, index) => column !== CSV_COLUMNS[index + 19])) {
       throw new ApiError(400, 'validation', 'سرستون‌های فایل با قالب استاندارد نمی‌خواند');
     }
     if (rows.length > 1001) throw new ApiError(400, 'validation', 'حداکثر هزار غذا در هر فایل مجاز است');
@@ -406,6 +507,7 @@ export class FoodService implements OnModuleInit {
           );
           created += 1;
         }
+        await client.query(METADATA_SQL, [food.slug, food.image !== undefined, food.image ?? null, food.nutrition !== undefined, JSON.stringify(food.nutrition ?? null)]);
       }
       await audit(client, adminId, 'food_csv_import', 'food_catalog', null, { created, updated });
     });
@@ -418,9 +520,30 @@ const UPDATE_SQL = `update food_catalog set name_fa=$2, category=$3, meal_types=
   cost_tier=$16, prep_minutes=$17, ingredients=$18::jsonb, active=$19, source='admin', updated_at=now()
   where slug = $1`;
 
+export function publicFoodImage(slug: string) {
+  return `/v1/public/food-images/${slug}.jpg`;
+}
+
+/** `undefined` leaves the stored photo, `null` removes it, a buffer replaces it. */
+export function jpegOf(body: unknown): Buffer | null | undefined {
+  if (!body || typeof body !== 'object' || !('imageData' in body)) return undefined;
+  const raw = (body as { imageData?: unknown }).imageData;
+  if (raw == null || raw === '') return null;
+  if (typeof raw !== 'string') throw new ApiError(400, 'validation', 'عکس غذا معتبر نیست');
+  const bytes = Buffer.from(raw.replace(/^data:image\/jpeg;base64,/, ''), 'base64');
+  if (bytes.length < 32 || bytes.length > 1_200_000 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
+    throw new ApiError(400, 'validation', 'عکس باید JPEG و کوچک‌تر از ۱٫۲ مگابایت باشد');
+  }
+  return bytes;
+}
+
+const METADATA_SQL = `update food_catalog set image=case when $2 then $3 else image end,
+  nutrition=case when $4 then $5::jsonb else nutrition end where slug=$1`;
+const REVISION_SQL = `select md5(coalesce(jsonb_agg(to_jsonb(f) order by slug)::text,'[]')) as revision from food_catalog f`;
+
 const CSV_COLUMNS = [
   'slug', 'name_fa', 'category', 'meal_types', 'serving_label', 'serving_g', 'kcal', 'protein_g', 'carbs_g', 'fat_g',
-  'fiber_g', 'allergens', 'tags', 'regions', 'seasons', 'cost_tier', 'prep_minutes', 'ingredients', 'active',
+  'fiber_g', 'allergens', 'tags', 'regions', 'seasons', 'cost_tier', 'prep_minutes', 'ingredients', 'active', 'image', 'nutrition',
 ] as const;
 
 const list = (cell: string | undefined) => (cell ?? '').split('|').map((item) => item.trim()).filter(Boolean);
@@ -450,5 +573,7 @@ function csvToFood(cells: string[]): unknown {
       return { name, quantity: num(quantity), unit, category };
     }),
     active: (cells[18] ?? 'true').trim().toLowerCase() !== 'false',
+    image: cells[19] === undefined ? undefined : cells[19] || null,
+    nutrition: cells[20] === undefined ? undefined : cells[20] ? JSON.parse(cells[20]) : null,
   };
 }
