@@ -44,6 +44,10 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
     final store = DemoScope.of(context);
     final auth = store.customerAuth;
     if (auth == null) {
+      if (const bool.fromEnvironment('USE_DEMO')) {
+        store.loginDemoUser();
+        return;
+      }
       setState(() => _error = 'سرویس ورود در دسترس نیست.');
       return;
     }

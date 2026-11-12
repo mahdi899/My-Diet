@@ -851,11 +851,13 @@ class DemoStore extends ChangeNotifier {
     update();
   }
 
+  ExpertRecord? liveAssignedDoctor;
+
   ExpertRecord? get assignedDoctor {
+    if (liveAssignedDoctor != null) return liveAssignedDoctor;
     if (userRequestId == null) return experts.firstOrNull;
     return experts.where((e) => e.name == userRequest.specialist).firstOrNull;
   }
-
   final chatThreads = <ChatThread>[
     ChatThread('user-main', 'سارا احمدی'),
     ChatThread('patient-amir', 'امیر حسینی'),
@@ -1592,6 +1594,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> setMealEaten(DateTime date, int index, bool eaten) async {
+    if (dateKey(date) != dateKey(today)) return;
     if (savingMeal || savingSubstitution || savingShopping) return;
     final meals = mealsOn(date);
     if (index < 0 || index >= meals.length) return;

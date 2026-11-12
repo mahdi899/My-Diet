@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/motion/motion.dart';
 import '../../../core/photos/photos.dart';
+import '../../../core/photos/topic_photos.dart';
 import '../../../core/theme/tokens.dart';
 
 /// Decorative photo for an option. Keyed by [id] or [label].
@@ -63,24 +64,23 @@ class _DecorPhotoState extends State<DecorPhoto> {
     }
   }
 
-  bool get _lifestyle =>
-      widget.lifestyle || looksLikeLifestyle(widget.id ?? '', widget.label);
-
   PhotoEntry? _pick(FoodPhotoResolver resolver) {
     try {
       if (resolver.manifest.items.isEmpty) return null;
+      final pinned = resolver.byId(
+        topicPhotoId(id: widget.id, label: widget.label),
+      );
+      if (pinned != null) return pinned;
       final seed = (widget.id ?? widget.label).trim();
       if (widget.expert) {
         final portraits = resolver.manifest.ofKind('expert');
         if (portraits.isNotEmpty) return resolver.expert(seed);
       }
-      if (_lifestyle) {
-        final life = resolver.manifest.ofKind('lifestyle');
-        if (life.isNotEmpty) return resolver.lifestyle(seed);
-      }
       final title = widget.label.trim().isEmpty ? seed : widget.label.trim();
-      if (title.isEmpty) return resolver.manifest.items.first;
-      return resolver.resolve(title: title);
+      if (title.isEmpty) return null;
+      // A real food name keeps its plate. An unrelated label gets the icon
+      // tile instead of a random drink or dessert.
+      return resolver.bestMatch(title: title);
     } catch (_) {
       return null;
     }
@@ -129,27 +129,6 @@ class _DecorPhotoState extends State<DecorPhoto> {
       ),
     ),
   );
-}
-
-/// Activity / sleep / movement labels, so we don't decorate them with a meal.
-bool looksLikeLifestyle(String id, String label) {
-  final s = '$id $label'.toLowerCase();
-  const keys = [
-    'نشسته',
-    'فعالیت',
-    'ورزش',
-    'خواب',
-    'پیاده',
-    'شیفت',
-    'باردار',
-    'activity',
-    'sleep',
-    'walk',
-    'exercise',
-    'lifestyle',
-    'pregnancy',
-  ];
-  return keys.any(s.contains);
 }
 
 /// Overlapping food tiles for the intro. Static: no looping motion.
