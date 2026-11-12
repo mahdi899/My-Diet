@@ -46,6 +46,7 @@ const health = {
   other: 'شرایط دیگر',
   gestational_diabetes: 'دیابت بارداری تشخیص‌داده‌شده',
   high_risk_pregnancy: 'بارداری پرخطر با نظر پزشک',
+  unintentional_weight_loss: 'کاهش وزن ناخواسته',
 };
 const activity = {
   sedentary: 'بیشتر نشسته',
@@ -86,7 +87,7 @@ const cooking = {
   flexible: 'محدودیت ندارم',
 };
 
-export const AI_SKIP_FLAGS = ['eating_disorder_history', 'high_risk_pregnancy', 'kidney'] as const;
+export const AI_SKIP_FLAGS = ['eating_disorder_history', 'high_risk_pregnancy', 'kidney', 'unintentional_weight_loss'] as const;
 
 export interface StoredAnswers {
   name: string;
@@ -322,6 +323,7 @@ export function validateSubmission(input: unknown): {
   if (healthCodes.includes('eating_disorder')) riskFlags.push('eating_disorder_history');
   if (healthCodes.includes('high_risk_pregnancy')) riskFlags.push('high_risk_pregnancy');
   if (healthCodes.includes('kidney')) riskFlags.push('kidney');
+  if (healthCodes.includes('unintentional_weight_loss')) riskFlags.push('unintentional_weight_loss');
   const bmi = Math.round((weightKg / (heightCm / 100) ** 2) * 10) / 10;
   return { answers, riskFlags, bmi };
 }

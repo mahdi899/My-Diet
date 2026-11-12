@@ -242,6 +242,10 @@ export function canonicalToSubmission(track: TrackId, a: CanonicalAnswers): Reco
   if (takesMeds) health.add('medication');
 
   if (str(a.binge_history) === 'yes') health.add('eating_disorder');
+  if (['little', 'significant'].includes(str(a.unintended_loss))) {
+    health.add('unintentional_weight_loss');
+    notes.push(`کاهش وزن ناخواسته: ${labelsOf('unintended_loss', [str(a.unintended_loss)]).join('، ')}؛ بررسی پزشک پیش از تنظیم برنامه لازم است`);
+  }
   for (const code of list(a.preg_conditions)) {
     if (code === 'gestational_diabetes') health.add('gestational_diabetes');
     else if (code === 'preeclampsia') {

@@ -223,10 +223,11 @@ export interface SafetyResult {
   flags: string[];
 }
 
-const DOCTOR_ONLY_FLAGS = ['eating_disorder_history', 'high_risk_pregnancy', 'kidney', 'underweight_loss', 'diabetes_on_medication', 'target_bmi_low'];
+const DOCTOR_ONLY_FLAGS = ['eating_disorder_history', 'high_risk_pregnancy', 'kidney', 'underweight_loss', 'diabetes_on_medication', 'target_bmi_low', 'unintentional_weight_loss'];
 
 export function assessSafety(input: SafetyInput): SafetyResult {
   const flags = new Set(input.riskFlags);
+  if (input.health.includes('unintentional_weight_loss')) flags.add('unintentional_weight_loss');
   if (input.track === 'weight_loss' && input.bmi < 18.5) flags.add('underweight_loss');
   if (input.health.includes('diabetes') && input.health.includes('medication')) flags.add('diabetes_on_medication');
   if (input.track === 'weight_loss' && input.targetWeightKg && bmiOf(input.targetWeightKg, input.heightCm) < 18.5) {

@@ -1,0 +1,34 @@
+{
+  "status": "partially_applied",
+  "created": "2026-11-13",
+  "tool": "built-in image_gen",
+  "replacementPolicy": "The user approved proposal 3 only. Proposals 1 and 2 are not selected and their application assets remain unchanged.",
+  "proposals": [
+    {
+      "id": "questionnaire",
+      "title": "۱ ـ پس‌زمینهٔ عمومی سؤال‌ها",
+      "target": "onboarding/assets/quiz-hero-diet.jpg",
+      "prompt": "Use case: photorealistic-natural. Asset type: candidate replacement for the general background of an Iranian nutrition questionnaire website, My Diet. Generate ONE high quality widescreen 16:9 natural editorial lifestyle photograph. Subject: a fictional relatable Iranian adult woman about 32 preparing a balanced Persian home lunch in a bright warm kitchen. IMPORTANT STRICT MODEST DRESS: she wears a neatly secured opaque matte sage HIJAB fully covering ALL hair, ears and entire neck, with absolutely no visible loose hair at forehead, temples or under scarf; the scarf drapes over the chest. Loose opaque long-sleeved cream tunic covers torso and arms fully to the wrists, high neckline, not fitted, not see-through, no exposed forearms or cleavage. Her ENTIRE FACE remains uncovered, clearly visible in three-quarter view and comfortably framed, with natural brown eyes, realistic skin pores, normal face proportions, subtle relaxed smile. Show head to waist. She gently serves a modest portion of saffron rice, grilled chicken and Shirazi salad on an ivory ceramic plate; fresh herbs, a small piece of sangak bread and a glass of water are secondary details. Woman and plate toward the left third, large quiet clean pale ivory wall and softly blurred kitchen across center-right for readable website questionnaire text. Warm window daylight, forest green #205638 and ivory #f7f8f0 accents, realistic candid photography, believable hands and anatomy. Consistent understated premium photographic brand mood. Avoid glamour posing, artificial plastic skin, restaurant banquet, excessive food, weight-loss body comparisons, logos, text, watermark, UI, collage or any other people. A full new photograph, no illustration or CGI.",
+      "candidate": "01-questionnaire.png",
+      "status": "not_selected"
+    },
+    {
+      "id": "consultation",
+      "title": "۲ ـ بخش نظارت متخصص",
+      "target": "onboarding/assets/intro-specialist.jpg",
+      "prompt": "Use case: photorealistic-natural. Asset type: candidate replacement for a Persian nutrition website's nutrition-specialist supervision feature image. Generate ONE high quality landscape 3:2 realistic editorial photograph. Two fictional Iranian adults in a welcoming nutrition consultation: a female dietitian around 38, and male client around 35, seated across the corner of a small pale wood desk, both complete FACES clearly visible and well lit in three-quarter view, with believable eye contact and calm friendly expressions. IMPORTANT STRICT MODEST DRESS: female dietitian wears an opaque forest-green fitted-in-place maqnaeh-style HIJAB covering ALL hair, ears and entire neck, securely enclosed around her face, absolutely no exposed hair strands; loose opaque cream professional tunic with high neckline and long sleeves covering arms to the wrists, no exposed forearms or cleavage and no tight clothing. Her face is not covered. Male client wears a fully buttoned loose sage long-sleeve shirt, short dark hair and neat short beard. Both heads entirely inside frame. Simple open blank nutrition notebook, a small bowl of fruit and a plain water glass on the desk, muted houseplant and ivory wall in background, natural window light, forest green and warm cream palette consistent with a premium Iranian nutrition brand. No stethoscope, no visible medical diagnosis, no lab equipment, no unreadable artificial lettering, no text, logos or watermark. Real skin texture, realistic adult anatomy and hands, not a fashion photo, not CGI. Framing should keep both faces and food-planning context visible when used as a small landscape website card.",
+      "candidate": "02-consultation.png",
+      "status": "not_selected"
+    },
+    {
+      "id": "weight-gain",
+      "title": "۳ ـ بخش افزایش وزن",
+      "target": "onboarding/assets/goal-gain.jpg",
+      "prompt": "Use case: photorealistic-natural. Asset type: candidate replacement for the healthy weight-gain goal card on an Iranian personalized nutrition website. Generate ONE premium high-resolution square 1:1 natural lifestyle PHOTOGRAPH. A fictional Iranian adult man about 29 with short dark hair, light short beard, brown eyes and an ordinary naturally lean adult build is seated at a home dining table, looking down toward his food with a small relaxed smile. His ENTIRE FACE and head are clearly visible in a well-lit three-quarter view, no face or head cropped, frame head through upper torso and the tabletop. He wears an opaque loose sage-green long-sleeved shirt with a modest closed neckline, no exposed torso, no gym posing or display of muscles. In front is one balanced generous but realistic meal: modest bowl of saffron rice with chicken, a little yogurt, some walnuts, cucumber and tomato, fresh Persian herbs, a small piece of sangak bread and water, all in tasteful ivory ceramics. Show practical everyday nourishment rather than a banquet or a physique transformation. Warm contemporary Iranian home, ivory background, restrained forest-green accents, gentle window daylight, natural realistic skin texture and hands, candid editorial photography consistent with a premium Persian nutrition brand. No women or additional people. No weight scale, body measurement, before/after, body-shaming imagery, text, logos, watermark, UI or collage. Ensure the face is prominent enough to remain identifiable as a human expression in a small card.",
+      "candidate": "03-weight-gain.png",
+      "status": "applied",
+      "approval": "فقط گزینه سوم رو عوض کن",
+      "appliedAsset": "onboarding/assets/goal-gain-v2.png"
+    }
+  ]
+}

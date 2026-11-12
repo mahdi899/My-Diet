@@ -875,6 +875,10 @@ button[data-field-submit]:disabled {
   display: block;
 }
 
+.quiz-question-hero img[src$="goal-gain-v2.png"] {
+  object-position: center bottom;
+}
+
 .question-step-enter {
   animation: questionStepIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -1117,6 +1121,7 @@ button[data-field-submit]:disabled {
   align-items: center;
   justify-content: center;
   width: 100%;
+  touch-action: pan-x;
 }
 
 .swp-value {
@@ -1124,6 +1129,94 @@ button[data-field-submit]:disabled {
   font-weight: 800;
   color: #233c2d !important;
   letter-spacing: -0.03em;
+}
+
+.swp-hour-input {
+  width: 100%;
+  min-width: 0;
+  height: 3.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-family: inherit;
+  text-align: center;
+  direction: ltr;
+  touch-action: pan-x;
+}
+
+.swp-hour-input:focus-visible {
+  outline: 2px solid #205638;
+  outline-offset: -3px;
+}
+
+.swp-help {
+  margin: 0.65rem 0 0;
+  color: #586b50;
+  font-size: 11px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.weight-guidance {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid #d9e4cf;
+  border-radius: 14px;
+  background: #f7f8f0;
+  color: #233c2d;
+  direction: rtl;
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.weight-guidance-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  color: #205638;
+}
+
+.weight-guidance p {
+  margin: 0.5rem 0;
+}
+
+.weight-guidance small {
+  display: block;
+  color: #586b50;
+  font-size: 11px;
+}
+
+.weight-guidance-suggestion {
+  margin: 0.7rem 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid #d9e4cf;
+}
+
+.weight-guidance-suggestion button {
+  width: 100%;
+  margin: 0.4rem 0;
+  padding: 0.7rem;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.loss-pace-description {
+  display: block;
+  margin-top: 0.45rem;
+  color: #586b50;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.9;
+}
+
+.loss-pace-note {
+  margin: 0.9rem 0 0;
+  color: #405f43;
+  font-size: 12px;
+  line-height: 1.9;
 }
 
 .swp-nudge {

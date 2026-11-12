@@ -31,7 +31,7 @@
       else if (/شغل|کار روزانه|فعالیت روزانه/.test(title)) heroImage = 'assets/activity-mixed.jpg';
       else if (/گیاه|وگان|سبزی/.test(title)) heroImage = 'assets/diet-vegan.jpg';
       else if (/بیماری|دارو|آزمایش|پزشک/.test(title)) heroImage = 'assets/intro-specialist.jpg';
-      else if (/افزایش وزن|اشتها/.test(title)) heroImage = 'assets/goal-gain.jpg';
+      else if (/افزایش وزن|اشتها/.test(title)) heroImage = 'assets/goal-gain-v2.png';
       return { ...q, heroImage };
     });
   }
@@ -72,8 +72,9 @@
       multi: true,
       options: [O('بدون حساسیت'), O('لبنیات'), O('آجیل'), O('تخم‌مرغ'), O('گلوتن'), O('سایر')],
       followUpText: true,
-      followUpWhenLabel: 'سایر',
-      followUpPlaceholder: 'نوع حساسیت را بنویسید',
+      followUpWhenLabel: ['لبنیات', 'آجیل', 'تخم‌مرغ', 'گلوتن', 'سایر'],
+      followUpLabel: 'دقیقاً به کدام خوراکی‌ها حساسیت داری؟',
+      followUpPlaceholder: 'مثلاً لبنیات: فقط شیر؛ آجیل: بادام',
     },
     {
       category: CAT.general,
@@ -174,8 +175,14 @@
     {
       category: CAT.loss,
       q: 'ترجیح می‌دی با چه سرعتی وزن کم کنی؟',
+      ui: 'loss-pace',
       subtitle: 'سرعت ایمن را سیستم بر اساس شرایط تو پیشنهاد می‌دهد',
-      options: [O('آهسته و تدریجی'), O('متعادل و پایدار'), O('می‌خوام زودتر به نتیجه برسم'), O('نمی‌دونم، خود برنامه پیشنهاد بده')],
+      options: [
+        O('آهسته و تدریجی', '•', { pace: 'slow' }),
+        O('متعادل و پایدار', '•', { pace: 'balanced' }),
+        O('می‌خوام زودتر به نتیجه برسم', '•', { pace: 'fast' }),
+        O('نمی‌دونم، خود برنامه پیشنهاد بده', '•', { pace: 'auto' }),
+      ],
     },
     {
       category: CAT.loss,
@@ -243,6 +250,7 @@
     {
       category: CAT.gain,
       q: 'آیا اخیراً بدون اینکه بخواهی وزن کم کردی؟',
+      medicalReviewWhenLabels: ['بله، کمی', 'بله، به مقدار قابل‌توجه'],
       options: [O('خیر'), O('بله، کمی'), O('بله، به مقدار قابل‌توجه')],
     },
     {
@@ -440,7 +448,7 @@
       title: 'افزایش وزن',
       badge: 'افزایش سالم',
       icon: '🥑',
-      image: 'assets/goal-gain.jpg',
+      image: 'assets/goal-gain-v2.png',
       desc: 'رسیدن به وزن سالم با تغذیه متعادل',
       calories: '۲,۶۵۰ کیلوکالری در روز',
       questions: withGeneral(GAIN_QUESTIONS),

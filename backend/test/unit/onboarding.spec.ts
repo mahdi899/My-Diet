@@ -14,7 +14,7 @@ import {
   type CanonicalAnswers,
   type TrackId,
 } from '../../src/onboarding/spec.js';
-import { validateSubmission } from '../../src/questionnaire/schema.js';
+import { AI_SKIP_FLAGS, validateSubmission } from '../../src/questionnaire/schema.js';
 
 const FIXED: Record<string, AnswerValue> = {
   name: 'مهدی',
@@ -92,9 +92,61 @@ describe('onboarding spec', () => {
     assert.equal(preg.includes('target_weight_kg'), false);
     assert.equal(preg[preg.indexOf('pregnancy_week') + 1], 'pre_pregnancy_weight_kg');
   });
+
+  it('skips all exercise follow-ups for non-exercising weight-gain users', () => {
+    const followUps = ['exercise_duration', 'sport_type', 'gain_sport'];
+    const noExercise = activeQuestions('weight_gain', { exercise_days: '0' }).map(question => question.key);
+    for (const key of followUps) assert.equal(noExercise.includes(key), false, key);
+
+    const answers = fill('weight_gain', { exercise_days: '0', target_weight_kg: 90 });
+    for (const key of followUps) delete answers[key];
+    assert.deepEqual(missingRequired('weight_gain', answers), []);
+
+    for (const days of ['1', '7']) {
+      const exercising = activeQuestions('weight_gain', { exercise_days: days }).map(question => question.key);
+      for (const key of followUps) assert.equal(exercising.includes(key), true, `${days}: ${key}`);
+      assert.equal(missingRequired('weight_gain', { ...answers, exercise_days: days }).includes('gain_sport'), true);
+    }
+  });
+
+  it('requires specific foods for every allergy category except none', () => {
+    const base = fill('weight_loss');
+    for (const code of ['dairy', 'nuts', 'egg', 'gluten', 'other']) {
+      const answers: CanonicalAnswers = { ...base, allergies: [code] };
+      delete answers.allergies_text;
+      assert.equal(missingRequired('weight_loss', answers).includes('allergies'), true, code);
+      assert.equal(missingRequired('weight_loss', { ...answers, allergies_text: 'لبنیات: فقط شیر' }).includes('allergies'), false, code);
+    }
+    assert.equal(missingRequired('weight_loss', { ...base, allergies: ['none'] }).includes('allergies'), false);
+  });
 });
 
 describe('canonical answers to the stored submission', () => {
+  it('sends either positive unintentional-loss answer to the doctor and skips automatic drafting', () => {
+    for (const answer of ['little', 'significant']) {
+      const answers = fill('weight_gain', { target_weight_kg: 90, unintended_loss: answer });
+      const submission = canonicalToSubmission('weight_gain', answers);
+      const { answers: stored, riskFlags } = validateSubmission(submission);
+      assert.ok(riskFlags.includes('unintentional_weight_loss'), answer);
+      assert.ok(riskFlags.some(flag => (AI_SKIP_FLAGS as readonly string[]).includes(flag)), answer);
+      assert.ok(stored.healthDetails.includes('بررسی پزشک'), answer);
+      const profile = deriveProfile({ track: 'weight_gain', stored, riskFlags, preferences: profilePreferences('weight_gain', answers), canonical: answers });
+      assert.equal(profile.safety.tier, 'doctor_only', answer);
+      assert.ok(profile.safety.reasons.includes('unintentional_weight_loss'), answer);
+    }
+  });
+
+  it('does not infer unintentional loss from a no answer or from missing legacy data', () => {
+    for (const answer of ['no', undefined]) {
+      const answers = fill('weight_gain', { target_weight_kg: 90 });
+      if (answer) answers.unintended_loss = answer;
+      else delete answers.unintended_loss;
+      const { answers: stored, riskFlags } = validateSubmission(canonicalToSubmission('weight_gain', answers));
+      assert.equal(riskFlags.includes('unintentional_weight_loss'), false);
+      assert.equal(deriveProfile({ track: 'weight_gain', stored, riskFlags }).safety.tier, 'ai_ok');
+    }
+  });
+
   for (const track of ['weight_loss', 'weight_gain', 'pregnancy', 'detox'] as const) {
     it(`validates a complete ${track} profile`, () => {
       const answers = fill(track, track === 'weight_gain' ? { target_weight_kg: 90 } : {});
@@ -123,6 +175,17 @@ describe('canonical answers to the stored submission', () => {
 });
 
 describe('legacy demo answers', () => {
+  it('retains specific allergy foods in canonical answers and the stored submission', () => {
+    const { answers } = legacyToCanonical('weight_loss', [{
+      question: 'به چه غذاهایی حساسیت داری؟',
+      answer: 'لبنیات، آجیل — لبنیات: فقط شیر؛ آجیل: بادام',
+      key: 'allergies', codes: ['dairy', 'nuts'],
+    }]);
+    assert.deepEqual(answers.allergies, ['dairy', 'nuts']);
+    assert.equal(answers.allergies_text, 'لبنیات: فقط شیر؛ آجیل: بادام');
+    assert.ok(String(canonicalToSubmission('weight_loss', answers).allergies).includes('لبنیات: فقط شیر؛ آجیل: بادام'));
+  });
+
   it('maps label based demo answers by question text and option label', () => {
     const { track, answers } = legacyToCanonical('weight_loss', [
       { question: 'اسم شما چیست؟', answer: 'سارا' },

@@ -4,7 +4,7 @@ const SabzineOnboarding = (() => {
   const tierNames = { ai_ok: 'مناسب پیش‌نویس AI', doctor_only: 'فقط پزشک' };
   const sourceNames = { app: 'اپلیکیشن', demo: 'آنبوردینگ وب' };
   const dietNames = { omnivore: 'همه‌چیزخوار', vegetarian: 'گیاه‌خوار', vegan: 'وگان' };
-  const flagNames = { diabetes: 'دیابت', pregnancy: 'بارداری', eating_disorder: 'اختلال خوردن', kidney: 'کلیه', thyroid: 'تیروئید', underweight: 'کم‌وزنی', minor: 'زیر ۱۸ سال', rapid_loss: 'کاهش وزن سریع', heart: 'قلب' };
+  const flagNames = { unintentional_weight_loss: 'کاهش وزن ناخواسته؛ نیازمند بررسی پزشک', diabetes: 'دیابت', pregnancy: 'بارداری', eating_disorder: 'اختلال خوردن', kidney: 'کلیه', thyroid: 'تیروئید', underweight: 'کم‌وزنی', minor: 'زیر ۱۸ سال', rapid_loss: 'کاهش وزن سریع', heart: 'قلب' };
   const label = (map, key) => map[key] || key;
   const stat = (name, value, note, tone = 'green') => {
     const card = element('section', null, 'card metric-card'), top = element('div', null, 'metric-top');

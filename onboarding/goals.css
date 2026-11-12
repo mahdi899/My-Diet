@@ -41,6 +41,10 @@ body:has(#goalSelectionStage:not(.hidden)) main { padding-top: 28px !important; 
   position: relative;
   z-index: 0;
 }
+
+.goal-card-photo[src$="goal-gain-v2.png"] {
+  object-position: center bottom;
+}
 #goalsGrid .goal-card::after {
   content: '';
   position: absolute;

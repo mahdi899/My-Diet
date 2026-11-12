@@ -41,9 +41,9 @@
     };
   </script>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="theme.css?v=51">
+  <link rel="stylesheet" href="theme.css?v=56">
   <link rel="stylesheet" href="intro.css?v=2">
-  <link rel="stylesheet" href="goals.css?v=6">
+  <link rel="stylesheet" href="goals.css?v=8">
   <style>
     :root {
       --emerald-glow: rgba(16, 185, 129, 0.35);
@@ -430,6 +430,7 @@
             <p class="community-hero-copy">نفری هستی که عضو<br>جامعه رژیم من میشی</p>
           </div>
           <p class="matching-section-lead">۲ پروفایل نمونهٔ تغذیه</p>
+          <p id="medicalReviewSummary" class="weight-guidance" hidden>با توجه به کاهش وزن ناخواسته، پیش از دریافت برنامهٔ غذایی به بررسی پزشک نیاز داری. انتخاب پلن جایگزین مشاوره و علت‌یابی پزشکی نیست.</p>
           <div id="specialistList" class="specialist-list" role="group" aria-label="انتخاب متخصص"></div>
           <button id="aiReadyGoBtn" type="button" class="quiz-green-btn w-full py-3.5 rounded-2xl font-black text-base cursor-pointer"><span>انتخاب پلن و ادامه</span><span aria-hidden="true">←</span></button>
         </div>
@@ -607,7 +608,10 @@
   <script src="tracking-config.js?v=1"></script>
   <script src="tracking.js?v=5"></script>
   <script src="community-counter.js?v=1"></script>
-  <script src="questionnaire-data.js?v=13"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script><script src="wizard.js?v=1"></script>
+  <script src="sleep-wake-picker.js?v=1"></script>
+  <script src="loss-pace.js?v=1"></script>
+  <script src="weight-guidance.js?v=1"></script>
+  <script src="questionnaire-data.js?v=17"></script><script src="onboarding-keys.js?v=1"></script><script src="questionnaire-settings.js?v=1"></script><script src="wizard.js?v=1"></script>
   <script>
     // =========================================================
     // DATA: GOALS, TAILORED QUIZ QUESTIONS & PLANS
@@ -791,7 +795,8 @@
       const noExercise = byNumber[17] === 0;
       const stage = state.selectedGoal.id === 'pregnancy' ? byNumber[20] : null;
       const questions = state.allGoalQuestions.filter(q => {
-        if (noExercise && [18, 19].includes(q.originalNumber)) return false;
+        if (noExercise && ([18, 19].includes(q.originalNumber) ||
+            (state.selectedGoal.id === 'weight_gain' && q.originalNumber === 25))) return false;
         if (stage === 0 && q.category === 'سؤالات مخصوص شیردهی') return false;
         if (stage === 1 && q.category === 'سؤالات مخصوص بارداری') return false;
         return true;
@@ -811,6 +816,11 @@
       if (saved.planId && PLANS_CATALOG[saved.planId]) state.selectedPlan = PLANS_CATALOG[saved.planId];
     }
 
+    function requiresMedicalReview(question, answer) {
+      const choice = answer && typeof answer === 'object' ? answer.choice : answer;
+      return (question.medicalReviewWhenLabels || []).includes(question.options?.[choice]?.label);
+    }
+
     function followUpRequiredForChoice(q, optIdx) {
       if (!q.followUpText || optIdx === undefined || optIdx === null) return false;
       const label = q.options?.[optIdx]?.label;
@@ -824,6 +834,28 @@
     function detailAttribute(value) {
       return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')
         .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function buildFollowUpInputHTML(qIdx, question, detail) {
+      const id = `question-detail-${qIdx}`;
+      const escape = value => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return `
+        <label for="${id}" class="block text-sm font-bold text-[#205638] mb-2">${escape(question.followUpLabel || question.followUpPlaceholder || 'جزئیات را بنویسید')}</label>
+        <input type="text" id="${id}" data-detail-index="${qIdx}" required aria-describedby="${id}-error"
+          class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d]"
+          placeholder="${escape(question.followUpPlaceholder || 'جزئیات را بنویسید')}" value="${escape(detail)}" />
+        <p id="${id}-error" data-detail-error hidden role="alert" class="text-sm text-[#205638] mt-2">لطفاً جزئیات حساسیت یا پاسخ خود را بنویسید.</p>`;
+    }
+
+    function bindFollowUpValidation(root) {
+      root.querySelectorAll('input[data-detail-index]').forEach(input => {
+        input.oninput = () => {
+          if (!input.value.trim()) return;
+          input.removeAttribute('aria-invalid');
+          const error = document.getElementById(`${input.id}-error`);
+          if (error) error.hidden = true;
+        };
+      });
     }
 
     function isQuestionAnswered(qIdx) {
@@ -861,7 +893,8 @@
       const stageAnswer = answersByQuestion.get(20);
       const stage = state.selectedGoal.id === 'pregnancy' ? stageAnswer : null;
       const questions = state.allGoalQuestions.filter(q => {
-        if (noExercise && [18, 19].includes(q.originalNumber)) return false;
+        if (noExercise && ([18, 19].includes(q.originalNumber) ||
+            (state.selectedGoal.id === 'weight_gain' && q.originalNumber === 25))) return false;
         if (stage === 0 && q.category === 'سؤالات مخصوص شیردهی') return false;
         if (stage === 1 && q.category === 'سؤالات مخصوص بارداری') return false;
         return true;
@@ -936,9 +969,9 @@
       if (sub.includes('کیلو') || q.includes('وزن')) {
         const weight = currentWeight();
         return {
-          min: qItem.metric === 'target-gain' && weight != null ? weight + 1 : 35,
-          max: qItem.metric === 'target-loss' && weight != null ? weight - 1 : 240,
-          step: 1, default: 68, unit: 'کیلوگرم',
+          min: qItem.metric === 'target-gain' && weight != null ? weight : 35,
+          max: qItem.metric === 'target-loss' && weight != null ? weight - 1 : qItem.metric === 'target-gain' ? 300 : 240,
+          step: 1, default: qItem.metric === 'target-gain' && weight != null ? weight : 68, unit: 'کیلوگرم',
         };
       }
       if (sub.includes('سانتی') || q.includes('قدت')) {
@@ -961,10 +994,36 @@
       return parseNumericAnswer(state.answers[index], null);
     }
 
+    function switchToWeightGain(weight) {
+      window.clearTimeout(state.autoAdvanceTimer);
+      const questions = state.selectedGoal.questions;
+      const shared = {};
+      questions.forEach((q, index) => {
+        if (q.originalNumber <= 19 && state.answers[index] !== undefined) shared[q.originalNumber] = state.answers[index];
+      });
+      shared[5] = String(weight);
+      const sharedCount = questions.filter(q => q.originalNumber <= 19).length;
+      const saved = {
+        answersByNumber: shared,
+        focused: Math.min(state.focusedQuestionIndex, sharedCount),
+        unlocked: Math.min(state.maxUnlockedIndex, sharedCount),
+        phone: state.userPhone,
+      };
+      const url = new URL(location.href);
+      url.searchParams.set('goal', 'weight_gain');
+      history.replaceState(null, '', url);
+      state.submissionId = undefined;
+      state.submissionPhone = undefined;
+      state.selectedSpecialist = null;
+      state.specialistChoices = [];
+      selectGoalAndGoToPage2('weight_gain', saved);
+    }
+
     function validTargetWeight(question, raw) {
       const weight = parseNumericAnswer(raw, null);
       const { min, max } = getMetricSliderConfig(question);
-      return weight != null && weight >= min && weight <= max;
+      return weight != null && weight >= min && weight <= max &&
+        (question.metric !== 'target-gain' || weight > currentWeight());
     }
 
     function parseNumericAnswer(raw, fallback) {
@@ -1245,7 +1304,7 @@
       const stored = state.answers[qIdx];
       const numVal = clampMetric(Math.round(parseNumericAnswer(stored, cfg.default)), cfg.min, cfg.max);
       const off = disabled ? '1' : '0';
-      const needle = `${WEIGHT_GAUGE.cx},18 ${WEIGHT_GAUGE.cx - 5.5},56 ${WEIGHT_GAUGE.cx + 5.5},56`;
+      const needle = `${WEIGHT_GAUGE.cx},56 ${WEIGHT_GAUGE.cx - 5.5},18 ${WEIGHT_GAUGE.cx + 5.5},18`;
       return `
         <div class="metric-slider-card weight-gauge-card${disabled ? ' metric-slider-card--disabled' : ''}">
           <div
@@ -1426,7 +1485,9 @@
 
         const paint = (value, pop) => {
           const shown = clampMetric(Math.round(value), min, max);
+          const changed = input.value !== String(shown);
           input.value = String(shown);
+          if (changed) input.dispatchEvent(new Event('input', { bubbles: true }));
           gauge.dataset.value = String(shown);
           gauge.setAttribute('aria-valuenow', String(shown));
           gauge.setAttribute('aria-valuetext', `${toPersianDigits(shown)} کیلوگرم`);
@@ -1621,7 +1682,11 @@
             <div class="swp-slot">
               <button type="button" class="swp-nudge" data-swp-target="sleep" data-swp-delta="1" aria-label="یک ساعت بعدتر">▲</button>
               <div class="swp-value-box">
-                <span class="swp-value metric-value-pop" data-swp-display="sleep">${toPersianDigits(defaults.sleep)}</span>
+                <input type="text" inputmode="numeric" maxlength="2" autocomplete="off"
+                  class="swp-value swp-hour-input" data-swp-display="sleep"
+                  role="spinbutton" aria-label="ساعت خواب" aria-valuemin="0" aria-valuemax="23"
+                  aria-valuenow="${defaults.sleep}" aria-describedby="swp-help-${qIdx}"
+                  value="${toPersianDigits(defaults.sleep)}" />
               </div>
               <button type="button" class="swp-nudge" data-swp-target="sleep" data-swp-delta="-1" aria-label="یک ساعت زودتر">▼</button>
               <input type="hidden" data-sleep-hour-index="${qIdx}" value="${defaults.sleep}" />
@@ -1629,12 +1694,17 @@
             <div class="swp-slot">
               <button type="button" class="swp-nudge" data-swp-target="wake" data-swp-delta="1" aria-label="یک ساعت بعدتر">▲</button>
               <div class="swp-value-box">
-                <span class="swp-value metric-value-pop" data-swp-display="wake">${toPersianDigits(defaults.wake)}</span>
+                <input type="text" inputmode="numeric" maxlength="2" autocomplete="off"
+                  class="swp-value swp-hour-input" data-swp-display="wake"
+                  role="spinbutton" aria-label="ساعت بیداری" aria-valuemin="0" aria-valuemax="23"
+                  aria-valuenow="${defaults.wake}" aria-describedby="swp-help-${qIdx}"
+                  value="${toPersianDigits(defaults.wake)}" />
               </div>
               <button type="button" class="swp-nudge" data-swp-target="wake" data-swp-delta="-1" aria-label="یک ساعت زودتر">▼</button>
               <input type="hidden" data-wake-hour-index="${qIdx}" value="${defaults.wake}" />
             </div>
           </div>
+          <p id="swp-help-${qIdx}" class="swp-help" dir="rtl">برای تنظیم، روی عدد بالا و پایین بکش یا آن را لمس کن و بنویس (۰ تا ۲۳).</p>
           <button type="button" data-sleep-wake-submit="${qIdx}"
             class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4">
             ثبت و ادامه
@@ -1643,34 +1713,7 @@
     }
 
     function bindSleepWakePicker(root, qIdx) {
-      const picker = root.querySelector(`[data-sleep-wake-picker="${qIdx}"]`);
-      if (!picker) return;
-
-      const sleepInput = picker.querySelector(`input[data-sleep-hour-index="${qIdx}"]`);
-      const wakeInput = picker.querySelector(`input[data-wake-hour-index="${qIdx}"]`);
-      const sleepDisplay = picker.querySelector('[data-swp-display="sleep"]');
-      const wakeDisplay = picker.querySelector('[data-swp-display="wake"]');
-
-      function bump(target, delta) {
-        const input = target === 'sleep' ? sleepInput : wakeInput;
-        const display = target === 'sleep' ? sleepDisplay : wakeDisplay;
-        let v = (parseInt(input.value, 10) + delta + 24) % 24;
-        input.value = String(v);
-        display.textContent = toPersianDigits(v);
-        display.classList.remove('metric-value-pop');
-        void display.offsetWidth;
-        display.classList.add('metric-value-pop');
-      }
-
-      picker.querySelectorAll('.swp-nudge').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          bump(btn.dataset.swpTarget, parseInt(btn.dataset.swpDelta, 10));
-        });
-      });
-
-      picker.querySelector(`[data-sleep-wake-submit="${qIdx}"]`)?.addEventListener('click', () => {
-        handleSleepWakeSubmit(qIdx);
-      });
+      window.mydietSleepWake.bind(root, qIdx, handleSleepWakeSubmit);
     }
 
     function handleSleepWakeSubmit(qIdx) {
@@ -1796,6 +1839,9 @@
             ? state.answers[qIdx].choice === optIdx
             : state.answers[qIdx] === optIdx;
           const baseClasses = selected ? 'is-selected' : '';
+          const paceDescription = qItem.ui === 'loss-pace'
+            ? window.mydietLossPace.describe(opt.pace, state.selectedGoal.questions, state.answers)
+            : '';
           const thumb = opt.image
             ? `<span class="quiz-option-thumb-wrap"><img class="quiz-option-thumb" src="${opt.image}" alt="" loading="lazy" /></span>`
             : '';
@@ -1804,24 +1850,28 @@
                 ${locked && !selected ? 'disabled' : ''}
                 style="animation-delay: ${optIdx * 45}ms"
                 class="quiz-option-btn quiz-option-enter w-full text-right p-3.5 sm:p-4 rounded-2xl border-2 flex items-center justify-between gap-3 cursor-pointer ${baseClasses}">
-                <span class="text-xs sm:text-sm font-bold leading-snug flex-1">${opt.label}</span>
+                <span class="text-xs sm:text-sm font-bold leading-snug flex-1">${opt.label}${paceDescription ? `<small class="loss-pace-description">${paceDescription}</small>` : ''}</span>
                 <span class="quiz-choice-dot" aria-hidden="true">${selected ? CHECK_ICON : ''}</span>
                 ${thumb}
               </button>`;
         });
         const compactChoices = qItem.options.length >= 6;
         bodyHTML = `<div class="${compactChoices ? 'quiz-choice-grid quiz-choice-grid--compact' : 'grid grid-cols-1 sm:grid-cols-2 gap-2.5'}">${optionsHTML}</div>`;
+        if (qItem.ui === 'loss-pace') bodyHTML += '<p class="loss-pace-note">زمان‌ها برای رسیدن از وزن فعلی به وزن هدف محاسبه شده‌اند و فقط برآورد اولیه‌اند. شرایط بدنی، محدودیت کالری و روند واقعی کاهش وزن می‌تواند این زمان را بیشتر کند. در گزینهٔ پیشنهاد برنامه، سرعت نهایی پس از بررسی شرایطت تعیین می‌شود.</p>';
         const ans = state.answers[qIdx];
         const needsDetail = qItem.followUpText && typeof ans === 'object' && (qItem.multi ? (ans.choices || []).some(i => followUpRequiredForChoice(qItem, i)) : followUpRequiredForChoice(qItem, ans.choice));
         if (needsDetail) {
           bodyHTML += `
             <div class="mt-3 space-y-2 quiz-followup-panel">
-              <input type="text" data-detail-index="${qIdx}" class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d]"
-                placeholder="${qItem.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${detailAttribute(ans.detail)}" />
+              ${buildFollowUpInputHTML(qIdx, qItem, ans.detail)}
               ${qItem.multi ? '' : `<button type="button" data-detail-submit="${qIdx}" class="quiz-green-btn w-full py-2.5 rounded-xl font-bold text-sm">ثبت و ادامه</button>`}
             </div>`;
         }
         if (qItem.multi) bodyHTML += `<button type="button" data-multi-submit="${qIdx}" class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3">ثبت انتخاب‌ها و ادامه</button>`;
+      }
+
+      if (requiresMedicalReview(qItem, state.answers[qIdx])) {
+        bodyHTML += `<div class="weight-guidance" role="alert"><strong>پیش از برنامهٔ غذایی، بررسی پزشک لازم است</strong><p>کاهش وزن ناخواسته باید توسط پزشک بررسی شود. پیش از دریافت برنامهٔ غذایی، برای علت‌یابی با پزشک مشورت کن. این پاسخ برای بررسی پزشک در پرونده ثبت می‌شود.</p><button type="button" data-medical-review-continue="${qIdx}" class="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3">متوجه شدم؛ ادامهٔ پرسش‌نامه</button></div>`;
       }
 
       const showAgeTitle = qItem.ui === 'age-range' || qItem.ui === 'option-cards';
@@ -1840,6 +1890,8 @@
       listEl.appendChild(card);
 
       bindSleepWakePicker(listEl, qIdx);
+      listEl.querySelector('[data-medical-review-continue]')?.addEventListener('click', () => advanceAfterAnswer(qIdx, false));
+      bindFollowUpValidation(listEl);
 
       listEl.querySelectorAll('.quiz-option-btn, .age-range-card, .quiz-option-card').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1849,6 +1901,17 @@
       listEl.querySelectorAll('[data-field-submit]').forEach(btn => {
         btn.addEventListener('click', () => handleQuestionFieldSubmit(parseInt(btn.dataset.fieldSubmit, 10)));
       });
+      if (qItem.originalNumber === 1) {
+        const nameInput = listEl.querySelector(`input[data-field-index="${qIdx}"]`);
+        if (nameInput) {
+          nameInput.enterKeyHint = 'next';
+          nameInput.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' || event.isComposing || event.repeat) return;
+            event.preventDefault();
+            handleQuestionFieldSubmit(qIdx);
+          });
+        }
+      }
       listEl.querySelectorAll('[data-detail-submit]').forEach(btn => {
         btn.addEventListener('click', () => handleQuestionDetailSubmit(parseInt(btn.dataset.detailSubmit, 10)));
       });
@@ -1856,7 +1919,16 @@
         const index = Number(btn.dataset.multiSubmit);
         const detail = listEl.querySelector(`input[data-detail-index="${index}"]`);
         if (detail) state.answers[index].detail = detail.value.trim();
-        if (!isQuestionAnswered(index)) { showToast('گزینه‌ها و توضیحات لازم را کامل کن', '⚠️'); return; }
+        if (!isQuestionAnswered(index)) {
+          if (detail && !detail.value.trim()) {
+            detail.setAttribute('aria-invalid', 'true');
+            const error = document.getElementById(`${detail.id}-error`);
+            if (error) error.hidden = false;
+            detail.focus();
+          }
+          showToast('گزینه‌ها و توضیحات لازم را کامل کن', '⚠️');
+          return;
+        }
         advanceAfterAnswer(index, false);
       }));
       listEl.querySelectorAll('[data-skip-index]').forEach(btn => btn.addEventListener('click', () => {
@@ -1871,6 +1943,10 @@
       });
       bindHeightRulers(listEl);
       bindWeightGauges(listEl);
+      window.mydietWeightGuidance.attach(listEl, {
+        question: qItem, questions: state.selectedGoal.questions, answers: state.answers,
+        goal: state.selectedGoal.id, onSwitch: switchToWeightGain,
+      });
 
       const submitSection = document.getElementById('submitAnswersSection');
       if (answeredCount === total) {
@@ -1901,7 +1977,7 @@
       }
       const question = state.selectedGoal.questions[qIdx];
       if (question.metric?.startsWith('target-') && !validTargetWeight(question, raw)) {
-        showToast('وزن هدف را در بازهٔ مجاز انتخاب کن', '⚠️');
+        showToast(question.metric === 'target-gain' ? 'وزن هدف باید بیشتر از وزن فعلی باشد' : 'وزن هدف را در بازهٔ مجاز انتخاب کن', '⚠️');
         return;
       }
       const total = state.selectedGoal.questions.length;
@@ -1961,8 +2037,7 @@
       if (needsDetail && !panel) {
         const markup = `
             <div class="mt-3 space-y-2 quiz-followup-panel">
-              <input type="text" data-detail-index="${qIdx}" class="quiz-detail w-full px-4 py-3 rounded-xl bg-[#f7f8f0] border border-[#dee5d5] text-[#233c2d]"
-                placeholder="${q.followUpPlaceholder || 'جزئیات را بنویسید'}" value="${detailAttribute(ans.detail)}" />
+              ${buildFollowUpInputHTML(qIdx, q, ans.detail)}
             </div>`;
         const submitBtn = card.querySelector('[data-multi-submit]');
         if (submitBtn) submitBtn.insertAdjacentHTML('beforebegin', markup);
@@ -1972,6 +2047,7 @@
         panel.remove();
         if (state.answers[qIdx]?.detail) state.answers[qIdx].detail = '';
       }
+      bindFollowUpValidation(card);
     }
 
     function handleQuestionOptionSelect(qIdx, optIdx) {
@@ -2001,6 +2077,11 @@
         return;
       }
       state.answers[qIdx] = optIdx;
+      if (requiresMedicalReview(q, optIdx)) {
+        window.clearTimeout(state.autoAdvanceTimer);
+        renderQuizQuestions();
+        return;
+      }
       const currentIndex = [17, 20].includes(q.originalNumber) ? updateConditionalQuestions(q) : qIdx;
       if (currentIndex !== qIdx) renderQuizQuestions();
       if (currentIndex === state.focusedQuestionIndex && currentIndex < state.selectedGoal.questions.length - 1) {
@@ -2483,6 +2564,7 @@
       const ready = document.getElementById('aiReadyPhase');
       ready.classList.remove('hidden');
       ready.classList.add('ai-prep-phase--enter');
+      document.getElementById('medicalReviewSummary').hidden = !state.selectedGoal.questions.some((q, i) => requiresMedicalReview(q, state.answers[i]));
       renderSpecialistChoices();
       window.demoTracking?.step('specialists');
       window.SabzineCommunityCounter?.start(counter).then(ticker => {
@@ -2642,6 +2724,9 @@
       } finally {
         applyingHistory = false;
         writeProgress(step);
+        const url = new URL(location.href);
+        url.searchParams.set('goal', state.selectedGoal.id);
+        history.replaceState(history.state, '', url);
       }
     }
 
