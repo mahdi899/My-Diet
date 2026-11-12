@@ -36,8 +36,9 @@ class _HomeTabState extends State<HomeTab> {
     _loadedPhoto = true;
     final previous = store.profilePhoto;
     auth.api('me/personal-details').then<void>((response) {
-      if (!mounted || !store.userSignedIn || previous != store.profilePhoto)
+      if (!mounted || !store.userSignedIn || previous != store.profilePhoto) {
         return;
+      }
       final photo = response is Map && response['details'] is Map
           ? response['details']['photo']
           : null;

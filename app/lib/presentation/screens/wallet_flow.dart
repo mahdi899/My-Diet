@@ -159,8 +159,9 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
         );
       }
       final packages = (await commerce.catalog()).topups;
-      if (packages.isEmpty)
+      if (packages.isEmpty) {
         throw const ApiException('بستهٔ شارژ آزمایشی موجود نیست.');
+      }
       final package = packages.reduce(
         (a, b) => a.amountToman >= b.amountToman ? a : b,
       );
@@ -168,18 +169,20 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
         package.code,
         gateway: 'sandbox',
       );
-      if (payment.gateway != 'sandbox')
+      if (payment.gateway != 'sandbox') {
         throw const ApiException('درگاه آزمایشی در دسترس نیست.');
+      }
       store.walletBalance = (await commerce.completeSandbox(
         payment.paymentId,
       )).total;
       store.update();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('موجودی آزمایشی اضافه شد.')),
         );
+      }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -187,6 +190,7 @@ class _WalletDebugPanelState extends State<WalletDebugPanel> {
             ),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => toppingUp = false);
     }

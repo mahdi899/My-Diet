@@ -86,8 +86,9 @@ class _PersonalDetailsState extends State<PersonalDetails> {
       for (var i = 0; i < fields.length; i++) {
         fields[i].text = values[i] as String;
       }
-      if (data['photo'] case final String encoded)
+      if (data['photo'] case final String encoded) {
         photo = base64Decode(encoded);
+      }
     } catch (_) {
       if (mounted) notice('خواندن اطلاعات ذخیره‌شده ممکن نشد.');
     } finally {
@@ -302,11 +303,13 @@ class _ChangeGoalState extends State<ChangeGoal> {
       body: FutureBuilder(
         future: options,
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return const Center(child: Text('دریافت هدف‌ها ممکن نشد.'));
+          }
           final flow = snapshot.data;
-          if (flow == null)
+          if (flow == null) {
             return const Center(child: CircularProgressIndicator());
+          }
           final current = flow.state.profile?.track;
           return ListView(
             padding: const EdgeInsets.all(20),
