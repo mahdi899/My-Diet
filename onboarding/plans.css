@@ -110,9 +110,21 @@
   opacity: .55;
   cursor: default;
 }
-.plan-option-card[aria-pressed="true"] .plan-heading > strong::after {
-  content: " ✓";
-  color: var(--tier-color, #24563c);
+/* Keep the selected state clear even without the accent color. */
+.plan-tier:has(> .plan-option-card[aria-pressed="true"]) {
+  border-color: #205638;
+  box-shadow: 0 0 0 2px #205638, 0 8px 20px #173b281c;
+}
+.plan-option-card[aria-pressed="true"]::after {
+  content: "✓ انتخاب شد";
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #205638;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.7;
 }
 
 .plans-buy {
