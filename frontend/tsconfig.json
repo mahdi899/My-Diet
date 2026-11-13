@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["packages/shared/src/*"]
+    },
+    "noEmit": true,
+    "types": ["vite/client", "node"]
+  },
+  "include": ["apps", "packages", "vite", "vite-env.d.ts"]
+}

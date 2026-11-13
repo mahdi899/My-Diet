@@ -1,0 +1,147 @@
+import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { assetUrl, faDigits, isAnswered, answerOf, questionnaireGoals } from '../../engine'
+import { useWizard } from '../../stores/wizard'
+import { CheckoutStage } from './stages/CheckoutStage'
+import { GoalsStage } from './stages/GoalsStage'
+import { IntroStage } from './stages/IntroStage'
+import { PreparingStage } from './stages/PreparingStage'
+import { QuizStage } from './stages/QuizStage'
+import { SpecialistsStage } from './stages/SpecialistsStage'
+import { VerifyStage } from './stages/VerifyStage'
+import '../../styles/onboarding.css'
+
+function loadScript(src: string) {
+  const existing = document.querySelector<HTMLScriptElement>(`script[data-src="${src}"]`)
+  if (existing?.dataset.loaded === '1') return Promise.resolve()
+  return new Promise<void>((resolve, reject) => {
+    const script = existing ?? document.createElement('script')
+    const finish = () => {
+      script.dataset.loaded = '1'
+      resolve()
+    }
+    if (existing && existing.dataset.loaded === '1') {
+      resolve()
+      return
+    }
+    script.addEventListener('load', finish, { once: true })
+    script.addEventListener('error', () => reject(new Error(src)), { once: true })
+    if (!existing) {
+      script.src = src
+      script.dataset.src = src
+      document.body.appendChild(script)
+    }
+  })
+}
+
+export function WizardPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const wizard = useWizard()
+  const [ready, setReady] = useState(Boolean(window.SABZINE_QUESTIONNAIRE?.goals?.length))
+  const [error, setError] = useState('')
+  const showPreparing = useCallback(() => {
+    if (useWizard.getState().stage === 'preparing') useWizard.getState().setStage('specialists')
+  }, [])
+
+  useEffect(() => {
+    if (window.SABZINE_QUESTIONNAIRE?.goals?.length) {
+      setReady(true)
+      return
+    }
+    Promise.all([
+      loadScript('/legacy/questionnaire-data.js'),
+      loadScript('/legacy/onboarding-keys.js'),
+    ]).then(() => {
+      if (!window.SABZINE_QUESTIONNAIRE?.goals?.length) setError('پرسش‌نامه بارگذاری نشد.')
+      else setReady(true)
+    }).catch(() => setError('پرسش‌نامه بارگذاری نشد.'))
+  }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    const path = location.pathname.replace(/\/$/, '')
+    const goalId = new URLSearchParams(location.search).get('goal')
+    const state = useWizard.getState()
+    if (path.endsWith('/payment')) {
+      if (state.stage !== 'checkout' && state.stage !== 'verify') state.setStage('checkout')
+      return
+    }
+    if (path.endsWith('/quiz')) {
+      const goals = questionnaireGoals()
+      if (goalId && state.goal?.id !== goalId) {
+        const goal = goals.find((item) => item.id === goalId)
+        if (goal) state.chooseGoal(goal)
+      } else if (state.goal && (state.stage === 'intro' || state.stage === 'goals')) {
+        state.setStage('quiz')
+      }
+      return
+    }
+    if (path.endsWith('/goals')) {
+      if (state.stage === 'intro') state.setStage('goals')
+      return
+    }
+    if (path.endsWith('/onboarding') && state.stage !== 'intro' && state.stage !== 'verify' && state.stage !== 'preparing' && state.stage !== 'specialists') {
+      state.setStage('intro')
+    }
+  }, [ready, location.pathname, location.search])
+
+  const answered = wizard.questions.filter((item) => isAnswered(item, answerOf(item, wizard.answers))).length
+  const progress = wizard.questions.length ? Math.round((answered / wizard.questions.length) * 100) : 0
+
+  if (!ready) {
+    return <main className="onboarding-shell grid min-h-screen place-items-center">{error || 'در حال بارگذاری پرسش‌نامه…'}</main>
+  }
+
+  return (
+    <div className="onboarding-shell" dir="rtl">
+      <div className="ambient-orb" style={{ width: 320, height: 320, top: -64, right: -64 }} />
+      <div className="ambient-orb" style={{ width: 380, height: 380, bottom: -96, left: -80, animationDelay: '-5s' }} />
+      <header>
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+          <button id="appLogoHomeBtn" type="button" className="header-logo-btn" onClick={() => { wizard.setStage('intro'); navigate('/onboarding') }}>
+            <img className="app-logo-img" src={assetUrl('assets/logo.png')} alt="" width={40} height={40} />
+            <span>رژیم من</span>
+          </button>
+          <div id="headerQuizProgress" aria-label="پیشرفت پرسشنامه">
+            <span id="headerQuestionChip">{wizard.stage === 'quiz' && wizard.questions.length ? `${faDigits(wizard.index + 1)} / ${faDigits(wizard.questions.length)}` : 'شروع'}</span>
+            <div className="header-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+              <div id="headerProgressFill" style={{ width: progress + '%' }} />
+            </div>
+          </div>
+          <div id="headerQuizActions">
+            <button id="scrollPrevAnsweredBtn" type="button" aria-label="سوال قبلی" disabled={wizard.index === 0} onClick={() => wizard.setIndex(wizard.index - 1)}>
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
+            </button>
+            <button id="scrollNextUnlockedBtn" type="button" aria-label="سوال بعدی" disabled={wizard.index >= wizard.maxUnlocked} onClick={() => wizard.setIndex(wizard.index + 1)}>
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+            </button>
+          </div>
+        </div>
+      </header>
+      <main className="relative z-10 max-w-4xl mx-auto px-4 py-6">
+        {(wizard.stage === 'intro' || wizard.stage === 'goals') && (
+          <section id="page1Container" className="min-h-[78vh] flex flex-col justify-center items-center">
+            {wizard.stage === 'intro'
+              ? <IntroStage onStart={() => { wizard.setStage('goals'); navigate('/onboarding/goals') }} />
+              : <GoalsStage />}
+          </section>
+        )}
+        {wizard.stage === 'quiz' && (
+          <QuizStage onSubmit={() => wizard.setStage('preparing')} />
+        )}
+        {(wizard.stage === 'preparing' || wizard.stage === 'specialists') && (
+          <section id="pageAiPreparingContainer">
+            <div className="ai-prep-card w-full max-w-md rounded-3xl border-2 p-8 text-center shadow-xl">
+              {wizard.stage === 'preparing'
+                ? <PreparingStage onDone={showPreparing} />
+                : <SpecialistsStage onContinue={() => wizard.setStage('verify')} />}
+            </div>
+          </section>
+        )}
+        {wizard.stage === 'verify' && <VerifyStage />}
+        {wizard.stage === 'checkout' && <CheckoutStage />}
+      </main>
+    </div>
+  )
+}
