@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
-import { assetUrl } from '../../../engine'
+import { assetUrl, faDigits } from '../../../engine'
 
 export function PreparingStage({ onDone }: { onDone: () => void }) {
-  const [progress, setProgress] = useState(8)
+  const [progress, setProgress] = useState(0)
+  const phases = ['شناخت هدف و شرایط تو', 'بررسی عادت‌های غذایی', 'آماده‌سازی پیشنهاد متخصص']
+  const phase = Math.min(2, Math.floor(progress / 34))
 
   useEffect(() => {
+    const started = performance.now()
     const timer = window.setInterval(() => {
-      setProgress((value) => Math.min(100, value + 4))
-    }, 110)
-    const done = window.setTimeout(onDone, 3000)
+      setProgress(Math.min(100, Math.floor((performance.now() - started) / 80)))
+    }, 80)
+    const done = window.setTimeout(onDone, 8000)
     return () => {
       window.clearInterval(timer)
       window.clearTimeout(done)
@@ -29,6 +32,13 @@ export function PreparingStage({ onDone }: { onDone: () => void }) {
         <span className="analysis-core"><img src={assetUrl('assets/logo.png')} alt="" width={58} height={58} /></span>
       </div>
       <h2 className="ai-prep-title">اطلاعات شما<br />در حال آنالیز است</h2>
+      <p id="analysisPercent">{faDigits(progress)}٪</p>
+      <p id="analysisStatus">{phases[phase] ?? phases[2]}</p>
+      <div className="analysis-steps">
+        {phases.map((label, index) => (
+          <span key={label} className={index === phase ? 'is-active' : index < phase ? 'is-done' : undefined}>{label}</span>
+        ))}
+      </div>
       <div className="ai-prep-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="پیشرفت آنالیز">
         <div id="aiPrepProgressFill" className="ai-prep-progress-fill" style={{ width: progress + '%' }} />
       </div>

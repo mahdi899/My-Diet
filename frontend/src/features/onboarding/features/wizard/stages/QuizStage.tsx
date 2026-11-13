@@ -6,13 +6,17 @@ import {
   faDigits,
   followUpRequired,
   isAnswered,
+  isHeightQuestion,
+  isWeightQuestion,
   lossPaceText,
+  metricConfig,
   needsMedicalReview,
   visibleQuestions,
   type AnswerValue,
   type QuizQuestion,
 } from '../../../engine'
 import { useWizard } from '../../../stores/wizard'
+import { HeightRuler, WeightGauge, WeightGuidance } from '../metrics'
 
 function CheckIcon() {
   return (
@@ -218,9 +222,21 @@ function QuestionBody({
   }
 
   if (question.type === 'number') {
-    const slider = question.slider ?? { min: 0, max: 200, step: 1, default: 70, unit: '' }
+    const slider = metricConfig(question, answers, questions)
     const value = typeof answer === 'string' || typeof answer === 'number' ? Number(answer) : slider.default
     const safe = Number.isFinite(value) ? value : slider.default
+    if (slider.max < slider.min) return <p>با وزن فعلی، در بازهٔ این پرسش‌نامه وزن هدف قابل انتخاب نیست.</p>
+    if (isHeightQuestion(question)) {
+      return <HeightRuler min={slider.min} max={slider.max} value={safe} onChange={(next) => onValue(String(next))} onContinue={() => { onValue(String(safe)); onContinue() }} />
+    }
+    if (isWeightQuestion(question)) {
+      return (
+        <>
+          <WeightGauge min={slider.min} max={slider.max} value={safe} onChange={(next) => onValue(String(Math.round(next)))} onContinue={() => { onValue(String(safe)); onContinue() }} />
+          <WeightGuidance question={question} questions={questions} answers={answers} value={safe} />
+        </>
+      )
+    }
     const fill = slider.max === slider.min ? 0 : ((safe - slider.min) / (slider.max - slider.min)) * 100
     return (
       <div className="metric-slider-card">

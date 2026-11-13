@@ -1,130 +1,237 @@
-﻿import { useState } from 'react'
-import { publicRequest, StaffError } from '@shared/api/staff-session'
-import { plans } from '../../../engine'
+﻿import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { StaffError, publicRequest } from '@shared/api/staff-session'
+import { plans, type PlanId } from '../../../engine'
 import { useWizard } from '../../../stores/wizard'
 
-const descriptions: Record<string, string> = {
-  weekly: 'شروع مسیر با برنامهٔ غذایی ۱۵ روزه',
-  monthly: 'همراهی یک‌ماهه و بررسی متخصص',
-  quarterly: 'مسیر کامل ۹۰ روزه با پشتیبانی',
+interface TransferOrder {
+  id: string
+  plan: PlanId
+  amount_toman: number
+  expires_at: string
+  confirmed_at?: string | null
+  gateway_started?: boolean
+}
+
+function readSession() {
+  try {
+    const raw = sessionStorage.getItem('mydiet.checkout')
+    const parsed = raw ? JSON.parse(raw) as { token?: string; submissionId?: string; plan?: PlanId } : null
+    if (parsed?.token && parsed.submissionId) return parsed
+  } catch { /* private mode */ }
+  return null
+}
+
+function clock(seconds: number) {
+  const left = Math.max(0, seconds)
+  return [Math.floor(left / 60), left % 60].map((part) => String(part).padStart(2, '0')).join(':')
 }
 
 export function CheckoutStage() {
   const wizard = useWizard()
+  const [params] = useSearchParams()
+  const [order, setOrder] = useState<TransferOrder | null>(null)
+  const [method, setMethod] = useState<'gateway' | 'transfer'>('gateway')
+  const [plan, setPlan] = useState<PlanId>(wizard.plan)
+  const [status, setStatus] = useState('در حال بررسی نشست پرداخت…')
+  const [gatewayNote, setGatewayNote] = useState('')
+  const [copied, setCopied] = useState('')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [copied, setCopied] = useState(false)
-  const [method, setMethod] = useState<'gateway' | 'transfer'>('transfer')
-  const [order, setOrder] = useState<{ id: string; amount_toman: number; expires_at: string; confirmed_at?: string | null } | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+  const [token, setToken] = useState(wizard.token)
+  const gatewayResult = params.get('gateway')
 
-  async function createOrder(plan: string) {
-    if (!wizard.token) {
-      setError('اول شماره را تأیید کن.')
+  async function refreshToken(current: string) {
+    const response = await fetch('/v1/auth/refresh', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'x-sabzine-client': 'web' },
+      body: '{}',
+    })
+    const data = await response.json() as { accessToken?: string; role?: string }
+    if (!response.ok || !data.accessToken || data.role !== 'user') return current
+    const saved = readSession()
+    if (saved) sessionStorage.setItem('mydiet.checkout', JSON.stringify({ ...saved, token: data.accessToken }))
+    wizard.setToken(data.accessToken)
+    setToken(data.accessToken)
+    return data.accessToken
+  }
+
+  async function call<T>(path: string, body?: unknown, current = token): Promise<T> {
+    try {
+      return await publicRequest<T>('me/onboarding-transfers' + path, body ? 'POST' : 'GET', body, current)
+    } catch (cause) {
+      if (cause instanceof StaffError && cause.status === 401) {
+        const next = await refreshToken(current)
+        if (next !== current) return publicRequest<T>('me/onboarding-transfers' + path, body ? 'POST' : 'GET', body, next)
+      }
+      throw cause
+    }
+  }
+
+  useEffect(() => {
+    const saved = readSession()
+    const access = wizard.token || saved?.token || ''
+    const submissionId = wizard.submissionId || saved?.submissionId || ''
+    const initialPlan = (saved?.plan ?? wizard.plan) as PlanId
+    if (!access || !submissionId) {
+      setStatus('برای ورود به صفحه پرداخت، ابتدا شماره همراه را تأیید کنید.')
       return
     }
-    setBusy(true)
-    setError('')
-    try {
-      const created = await publicRequest<NonNullable<typeof order>>('me/onboarding-transfers', 'POST', {
-        plan,
-        submissionId: wizard.submissionId,
-      }, wizard.token)
+    setToken(access)
+    setPlan(initialPlan)
+    const returned = params.get('order')
+    const run = returned
+      ? call<TransferOrder>('/' + encodeURIComponent(returned), undefined, access)
+      : call<TransferOrder>('', { plan: initialPlan, submissionId }, access)
+    run.then((created) => {
       setOrder(created)
-      wizard.setPlan(plan as typeof wizard.plan)
+      setPlan(created.plan)
+      setStatus('')
+    }).catch((cause) => {
+      setStatus(cause instanceof StaffError ? cause.message : 'ارتباط با سرویس پرداخت برقرار نشد. دوباره تلاش کنید.')
+    })
+    // The order is created once for this checkout visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!order || order.confirmed_at) return
+    const timer = window.setInterval(() => {
+      call<TransferOrder>('/' + encodeURIComponent(order.id)).then((fresh) => {
+        if (fresh.confirmed_at) setOrder(fresh)
+      }).catch(() => {})
+    }, 8000)
+    return () => window.clearInterval(timer)
+  }, [order?.id, order?.confirmed_at])
+
+  const remaining = order ? Math.max(0, Math.ceil((Date.parse(order.expires_at) - now) / 1000)) : 0
+  const payable = Boolean(order && !order.confirmed_at && (remaining > 0 || order.gateway_started))
+  const price = order ? order.amount_toman.toLocaleString('fa-IR') + ' تومان' : ''
+
+  useEffect(() => {
+    if (!order) return
+    if (order.confirmed_at) setStatus('پرداخت شما تأیید شد.')
+    else if (gatewayResult === 'cancelled') setStatus('پرداخت آنلاین تکمیل نشد. می‌توانید دوباره به درگاه بروید.')
+    else if (gatewayResult === 'pending') setStatus('پرداخت هنوز تأیید نشده است. اگر مبلغ کسر شده، به پشتیبانی پیام دهید.')
+    else if (order.gateway_started) setStatus('منتظر تکمیل پرداخت در زیبال')
+    else if (remaining && method === 'transfer') setStatus('منتظر واریز و بررسی پشتیبانی')
+    else if (!remaining) setStatus('مهلت واریز تمام شد. اگر واریز کرده‌اید با پشتیبانی تماس بگیرید.')
+  }, [order, gatewayResult, remaining, method])
+
+  async function changePlan(next: PlanId) {
+    const saved = readSession()
+    if (!saved?.submissionId || busy) return
+    setBusy(true)
+    setPlan(next)
+    wizard.setPlan(next)
+    try {
+      const created = await call<TransferOrder>('', { plan: next, submissionId: saved.submissionId })
+      setOrder(created)
+      sessionStorage.setItem('mydiet.checkout', JSON.stringify({ ...saved, plan: created.plan, token }))
     } catch (cause) {
-      setError(cause instanceof StaffError ? cause.message : 'ساخت سفارش انجام نشد.')
+      setStatus(cause instanceof StaffError ? cause.message : 'تغییر پلن انجام نشد.')
     } finally {
       setBusy(false)
     }
   }
 
   async function payOnline() {
-    if (!order || !wizard.token) return
+    if (!order || busy) return
     setBusy(true)
-    setError('')
+    setGatewayNote('')
     try {
-      const payment = await publicRequest<{ url?: string }>('me/onboarding-transfers/' + order.id + '/zibal', 'POST', {}, wizard.token)
-      if (!payment.url) throw new StaffError('درگاه لینک ورود نداد.', 502)
+      const payment = await call<{ url?: string }>('/' + encodeURIComponent(order.id) + '/zibal', {})
+      if (!payment.url || !/^https:\/\/gateway\.zibal\.ir\/start\/\d{1,20}$/.test(payment.url)) {
+        throw new StaffError('درگاه لینک ورود نداد. چند ثانیه بعد یک بار دیگر تلاش کنید.')
+      }
       window.location.assign(payment.url)
     } catch (cause) {
-      setError(cause instanceof StaffError ? cause.message : 'ارتباط با درگاه برقرار نشد.')
+      const message = cause instanceof StaffError ? cause.message : 'ارتباط با درگاه برقرار نشد. چند ثانیه بعد یک بار دیگر تلاش کنید.'
+      setStatus(message)
+      setGatewayNote(message)
       setBusy(false)
     }
   }
 
-  function copyCard() {
-    navigator.clipboard.writeText('5859831818609595')
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
+  async function copy(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(label)
+    } catch {
+      setStatus('کپی خودکار ممکن نیست. مقدار را دستی وارد کنید.')
+    }
+  }
+
+  if (!order) {
+    return (
+      <main className="checkout-page">
+        <section className="checkout-panel">
+          <p role="status">{status}</p>
+          <Link id="checkout-return" to="/onboarding">بازگشت به آنبوردینگ</Link>
+        </section>
+      </main>
+    )
   }
 
   return (
-    <div id="twoStepModalBackdrop">
-      <div id="twoStepModalCard" data-plan={wizard.plan}>
-        <div className="modal-topbar"><span id="modalHeaderTitle">انتخاب پلن</span></div>
-        <div className="modal-scroll-body">
-          <div id="modalStep1Content">
-            <div className="plans-intro">
-              <h2>یک قدم تا شروع مسیرت</h2>
-              <p>پلنی را انتخاب کن. بعد می‌توانی آنلاین یا کارت‌به‌کارت پرداخت کنی.</p>
-            </div>
-            <div className="plans-stack">
-              {plans.map((plan) => {
-                const open = wizard.plan === plan.id
-                return (
-                  <article key={plan.id} className={'plan-tier' + (open ? ' is-open' : '')} data-tier={plan.id}>
-                    {plan.id === 'monthly' && <span className="plan-recommendation">پیشنهاد برنامه</span>}
-                    <button type="button" className="plan-option-card" onClick={() => wizard.setPlan(plan.id)}>
-                      <span className="plan-heading">
-                        <strong>{plan.title}</strong>
-                        <span className="plan-duration">{plan.days}</span>
-                        <span className="plan-chevron" aria-hidden="true">⌄</span>
-                      </span>
-                      <span className="plan-description">{descriptions[plan.id]}</span>
-                    </button>
-                    <div className="plan-purchase">
-                      <span className="plan-price"><strong>{plan.price}</strong><span>تومان</span></span>
-                      <button type="button" className="plan-continue" disabled={busy || !wizard.token} onClick={() => createOrder(plan.id)}>
-                        {order && wizard.plan === plan.id ? 'سفارش ساخته شد' : 'ادامهٔ خرید'}
-                        <span>←</span>
-                      </button>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-
-            {order && (
-              <div className="checkout-panel" style={{ marginTop: 28 }}>
-                <p className="checkout-timer">مهلت واریز تا <b>{new Date(order.expires_at).toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}</b></p>
-                <p style={{ textAlign: 'center', fontWeight: 900, fontSize: 22, margin: '14px 0' }}>{order.amount_toman.toLocaleString('fa-IR')} تومان</p>
-                {order.confirmed_at ? <p style={{ textAlign: 'center' }}>پرداخت شما تأیید شد.</p> : (
-                  <>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
-                      <button type="button" className="quiz-green-btn px-4 py-2 rounded-xl" onClick={() => setMethod('transfer')} style={{ opacity: method === 'transfer' ? 1 : 0.55 }}>کارت‌به‌کارت</button>
-                      <button type="button" className="quiz-green-btn px-4 py-2 rounded-xl" onClick={() => setMethod('gateway')} style={{ opacity: method === 'gateway' ? 1 : 0.55 }}>پرداخت آنلاین</button>
-                    </div>
-                    {method === 'gateway' ? (
-                      <button type="button" className="quiz-green-btn w-full py-3 rounded-xl font-bold" disabled={busy} onClick={payOnline}>پرداخت</button>
-                    ) : (
-                      <div className="transfer-card">
-                        <div className="transfer-card-top"><span>رژیم من</span><span>پرداخت کارت‌به‌کارت</span></div>
-                        <span className="transfer-chip" />
-                        <button type="button" className="transfer-number" onClick={copyCard}>
-                          <b>5859 8318 1860 9595</b>
-                          <span>{copied ? 'شماره کارت کپی شد' : 'برای کپی لمس کن'}</span>
-                        </button>
-                        <div className="transfer-owner"><small>به نام</small><strong>بهرام رستمی</strong></div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-            {error && <p id="morphErrorText">{error}</p>}
+    <main className="checkout-page">
+      <section className="checkout-panel">
+        <p id="checkout-status" role="status" hidden={!status}>{status}</p>
+        <section className="checkout-video-panel" aria-labelledby="checkout-video-title">
+          <h1 id="checkout-video-title" className="checkout-video-note">قبل پرداخت ویدیو زیر رو ببین <span aria-hidden="true">👇</span></h1>
+          <video className="transfer-video" controls playsInline preload="metadata" aria-label="راهنمای پرداخت">
+            <source src="/onboarding/payment-guide.mp4" type="video/mp4" />
+          </video>
+        </section>
+        <p className="checkout-timer">مهلت واریز <b dir="ltr">{clock(remaining)}</b></p>
+        <dl className="checkout-summary">
+          <div><dt>هدف</dt><dd>{wizard.goal?.title ?? 'برنامهٔ غذایی'}</dd></div>
+          <div><dt>پلن</dt><dd>{plans.find((item) => item.id === plan)?.title}</dd></div>
+          <div><dt>مبلغ</dt><dd>{price}</dd></div>
+        </dl>
+        <div id="checkout-methods" role="group" aria-label="روش پرداخت" hidden={!payable || order.gateway_started}>
+          <button type="button" aria-pressed={method === 'gateway'} onClick={() => setMethod('gateway')}>پرداخت آنلاین</button>
+          <button type="button" aria-pressed={method === 'transfer'} onClick={() => setMethod('transfer')}>کارت‌به‌کارت</button>
+        </div>
+        <div id="checkout-gateway" hidden={!payable || (!order.gateway_started && method !== 'gateway')}>
+          <p className="checkout-total"><span>مبلغ پرداخت</span><strong>{price}</strong></p>
+          <p><strong>قبل از ورود به درگاه VPN خود را خاموش کنید.</strong></p>
+          <button type="button" className="checkout-action" disabled={busy} onClick={payOnline}>{busy ? 'در حال اتصال به درگاه…' : 'پرداخت'}</button>
+          <p className="gateway-status" hidden={!gatewayNote}>{gatewayNote}</p>
+        </div>
+        <div id="checkout-transfer" hidden={!payable || Boolean(order.gateway_started) || method !== 'transfer'}>
+          <button id="copy-amount" type="button" className="checkout-action" onClick={() => copy(String(order.amount_toman), 'amount')}>
+            {price} · {copied === 'amount' ? 'کپی شد' : 'کپی مبلغ'}
+          </button>
+          <p>مبلغ را دقیقاً تا آخرین رقم واریز کنید تا پشتیبانی پرداخت را با سفارش تطبیق دهد.</p>
+          <div className="transfer-card">
+            <div className="transfer-card-top"><span>رژیم من</span><span>پرداخت کارت‌به‌کارت</span></div>
+            <span className="transfer-chip" aria-hidden="true" />
+            <button type="button" className="transfer-number" aria-label="کپی شماره کارت" onClick={() => copy('5859831818609595', 'card')}>
+              <b dir="ltr">5859 8318 1860 9595</b>
+              <span>{copied === 'card' ? 'شماره کارت کپی شد' : 'برای کپی شماره کارت لمس کنید'}</span>
+            </button>
+            <div className="transfer-owner"><small>به نام</small><strong>بهرام رستمی</strong></div>
           </div>
         </div>
-      </div>
-    </div>
+        <form id="checkout-plan" hidden={Boolean(order.confirmed_at)} onSubmit={(event) => { event.preventDefault(); void changePlan(plan) }}>
+          <label htmlFor="checkout-plan-choice">تغییر پلن</label>
+          <select id="checkout-plan-choice" value={plan} onChange={(event) => setPlan(event.target.value as PlanId)}>
+            {plans.map((item) => <option key={item.id} value={item.id}>{item.title} · {item.days}</option>)}
+          </select>
+          <button className="checkout-action checkout-secondary" type="submit" disabled={busy}>تأیید پلن</button>
+        </form>
+        <footer>
+          <p>اگر پرداخت شما تأیید نشد، در تلگرام به پشتیبانی پیام دهید.</p>
+          <a href="https://t.me/hale_a" target="_blank" rel="noopener noreferrer">پیام به پشتیبانی در تلگرام</a>
+        </footer>
+      </section>
+    </main>
   )
 }

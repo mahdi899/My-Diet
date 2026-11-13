@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { specialists } from '../../../engine'
+import { useEffect, useState } from 'react'
+import { needsMedicalReview, specialists, answerOf } from '../../../engine'
 import { useWizard } from '../../../stores/wizard'
 
 function portraitStyle(id: string) {
@@ -11,7 +11,39 @@ export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
   const offered = useWizard((state) => state.offered)
   const specialistId = useWizard((state) => state.specialistId)
   const setSpecialist = useWizard((state) => state.setSpecialist)
-  const [memberCount] = useState(() => 1000 + Math.floor(Math.random() * 180))
+  const questions = useWizard((state) => state.questions)
+  const answers = useWizard((state) => state.answers)
+  const needsReview = questions.some((question) => needsMedicalReview(question, answerOf(question, answers)))
+  const [memberCount, setMemberCount] = useState(1000)
+
+  useEffect(() => {
+    let target = 1622
+    let timer = 0
+    let cancelled = false
+    const started = performance.now()
+    fetch('/v1/public/onboarding/community-join', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data: { count?: number } | null) => {
+        const count = Number(data?.count)
+        if (Number.isFinite(count) && count > 0) target = count
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (cancelled) return
+        const span = Math.min(120, Math.max(24, Math.round(target * 0.04)))
+        const from = Math.max(1, target - span)
+        setMemberCount(from)
+        timer = window.setInterval(() => {
+          const t = Math.min(1, (performance.now() - started) / 1400)
+          setMemberCount(Math.round(from + (target - from) * (1 - (1 - t) ** 3)))
+          if (t === 1) window.clearInterval(timer)
+        }, 40)
+      })
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [])
 
   return (
     <div id="aiReadyPhase" className="ai-prep-phase ai-prep-phase--ready">
@@ -20,6 +52,11 @@ export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
         <p className="community-hero-copy">نفری هستی که عضو<br />جامعه رژیم من میشی</p>
       </div>
       <p className="matching-section-lead">۲ پروفایل نمونهٔ تغذیه</p>
+      {needsReview && (
+        <p id="medicalReviewSummary" className="weight-guidance">
+          با توجه به کاهش وزن ناخواسته، پیش از دریافت برنامهٔ غذایی به بررسی پزشک نیاز داری. انتخاب پلن جایگزین مشاوره و علت‌یابی پزشکی نیست.
+        </p>
+      )}
       <div id="specialistList" className="specialist-list" role="group" aria-label="انتخاب متخصص">
         {offered.map((person) => {
           const selected = specialistId === person.id

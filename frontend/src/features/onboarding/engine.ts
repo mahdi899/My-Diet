@@ -225,7 +225,96 @@ export function sampleSpecialists() {
 }
 
 export const plans = [
-  { id: 'weekly', title: 'شروع', days: '۱۵ روزه', price: '۱٬۲۹۰٬۰۰۰' },
-  { id: 'monthly', title: 'همراه', days: '۳۰ روزه', price: '۱٬۹۹۰٬۰۰۰' },
-  { id: 'quarterly', title: 'VIP', days: '۹۰ روزه', price: '۸٬۹۹۰٬۰۰۰' },
+  {
+    id: 'weekly',
+    title: 'شروع',
+    days: '۱۵ روزه',
+    price: '۱٬۲۹۰٬۰۰۰',
+    description: 'یک شروع مشخص، متناسب با تو',
+    features: [
+      'برنامه تغذیه اختصاصی با {doctor}',
+      'جایگزین‌های غذایی متناسب با سلیقه‌ات',
+      'لیست خرید برنامه',
+    ],
+  },
+  {
+    id: 'monthly',
+    title: 'همراه',
+    days: '۳۰ روزه',
+    price: '۱٬۹۹۰٬۰۰۰',
+    description: 'زمان بیشتر، همراهی نزدیک‌تر',
+    features: [
+      'همه امکانات پلن شروع با {doctor}',
+      '۲ نوبت بازبینی و اصلاح برنامه',
+      'پیگیری هفتگی روند و اجرای برنامه',
+      'پشتیبانی متنی در طول دوره',
+    ],
+  },
+  {
+    id: 'quarterly',
+    title: 'VIP',
+    days: '۹۰ روزه',
+    price: '۸٬۹۹۰٬۰۰۰',
+    description: 'همراهی خصوصی و پیوسته',
+    features: [
+      'برنامه اختصاصی و همراهی {doctor}',
+      '۶ نوبت بازبینی و اصلاح برنامه',
+      '۳ جلسه آنلاین با متخصص منتخب',
+      'پیگیری هفتگی و پشتیبانی اولویت‌دار',
+      'برنامه حفظ عادت‌ها در پایان دوره',
+    ],
+  },
 ] as const
+
+export type PlanId = (typeof plans)[number]['id']
+
+export function isHeightQuestion(question: QuizQuestion) {
+  const subtitle = (question.subtitle ?? '').trim()
+  return subtitle.includes('سانتی') || question.q.includes('قدت')
+}
+
+export function isWeightQuestion(question: QuizQuestion) {
+  if (isHeightQuestion(question)) return false
+  const subtitle = (question.subtitle ?? '').trim()
+  if (subtitle.includes('هفته') || question.q.includes('هفته')) return false
+  if (subtitle.includes('ماه') || question.q.includes('ماه')) return false
+  if (subtitle.includes('سال') || question.q.includes('سال')) return false
+  return subtitle.includes('کیلو') || question.q.includes('وزن')
+}
+
+export function metricConfig(question: QuizQuestion, answers: Record<number, AnswerValue | undefined>, questions: QuizQuestion[]) {
+  if (question.slider) return question.slider
+  const subtitle = (question.subtitle ?? '').trim()
+  const weightQuestion = questions.find((item) => item.metric === 'current-weight')
+  const weight = weightQuestion ? numeric(answers[weightQuestion.originalNumber ?? -1]) : Number.NaN
+  if (subtitle.includes('کیلو') || question.q.includes('وزن')) {
+    return {
+      min: question.metric === 'target-gain' && Number.isFinite(weight) ? weight : 35,
+      max: question.metric === 'target-loss' && Number.isFinite(weight) ? weight - 1 : question.metric === 'target-gain' ? 300 : 240,
+      step: 1,
+      default: question.metric === 'target-gain' && Number.isFinite(weight) ? weight : 68,
+      unit: 'کیلوگرم',
+    }
+  }
+  if (isHeightQuestion(question)) return { min: 120, max: 230, step: 1, default: 165, unit: 'سانتی‌متر' }
+  if (question.q.includes('سال')) return { min: 15, max: 90, step: 1, default: 28, unit: 'سال' }
+  if (subtitle.includes('هفته') || question.q.includes('هفته')) return { min: 4, max: 42, step: 1, default: 12, unit: 'هفته' }
+  if (question.q.includes('ماه') || subtitle.includes('ماه')) return { min: 0, max: 24, step: 1, default: 4, unit: 'ماه' }
+  return { min: 0, max: 100, step: 1, default: 50, unit: subtitle || 'عدد' }
+}
+
+export function bmiGuidance(height: unknown, weight: unknown, goalId: string) {
+  const centimeters = numeric(height)
+  const kilograms = numeric(weight)
+  if (goalId === 'pregnancy' || !Number.isFinite(centimeters) || !Number.isFinite(kilograms) || centimeters <= 0 || kilograms <= 0) return null
+  const squared = (centimeters / 100) ** 2
+  const bmi = kilograms / squared
+  return {
+    bmi,
+    weight: kilograms,
+    low: Math.ceil(18.5 * squared * 10) / 10,
+    high: Math.floor(24.9 * squared * 10) / 10,
+    category: bmi < 18.5 ? 'کمبود وزن' : bmi < 25 ? 'محدودهٔ سالم' : bmi < 30 ? 'اضافه‌وزن' : 'چاقی',
+    suggestGain: goalId === 'weight_loss' && bmi < 18.5,
+  }
+}

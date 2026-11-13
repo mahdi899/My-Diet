@@ -5,6 +5,7 @@ import { useWizard } from '../../stores/wizard'
 import { CheckoutStage } from './stages/CheckoutStage'
 import { GoalsStage } from './stages/GoalsStage'
 import { IntroStage } from './stages/IntroStage'
+import { PlansStage } from './stages/PlansStage'
 import { PreparingStage } from './stages/PreparingStage'
 import { QuizStage } from './stages/QuizStage'
 import { SpecialistsStage } from './stages/SpecialistsStage'
@@ -81,7 +82,7 @@ export function WizardPage() {
       if (state.stage === 'intro') state.setStage('goals')
       return
     }
-    if (path.endsWith('/onboarding') && state.stage !== 'intro' && state.stage !== 'verify' && state.stage !== 'preparing' && state.stage !== 'specialists') {
+    if (path.endsWith('/onboarding') && !['intro', 'verify', 'plans', 'preparing', 'specialists', 'checkout'].includes(state.stage)) {
       state.setStage('intro')
     }
   }, [ready, location.pathname, location.search])
@@ -97,7 +98,7 @@ export function WizardPage() {
     <div className="onboarding-shell" dir="rtl">
       <div className="ambient-orb" style={{ width: 320, height: 320, top: -64, right: -64 }} />
       <div className="ambient-orb" style={{ width: 380, height: 380, bottom: -96, left: -80, animationDelay: '-5s' }} />
-      <header>
+      {wizard.stage !== 'plans' && wizard.stage !== 'verify' && wizard.stage !== 'checkout' && <header>
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <button id="appLogoHomeBtn" type="button" className="header-logo-btn" onClick={() => { wizard.setStage('intro'); navigate('/onboarding') }}>
             <img className="app-logo-img" src={assetUrl('assets/logo.png')} alt="" width={40} height={40} />
@@ -118,7 +119,7 @@ export function WizardPage() {
             </button>
           </div>
         </div>
-      </header>
+      </header>}
       <main className="relative z-10 max-w-4xl mx-auto px-4 py-6">
         {(wizard.stage === 'intro' || wizard.stage === 'goals') && (
           <section id="page1Container" className="min-h-[78vh] flex flex-col justify-center items-center">
@@ -135,10 +136,11 @@ export function WizardPage() {
             <div className="ai-prep-card w-full max-w-md rounded-3xl border-2 p-8 text-center shadow-xl">
               {wizard.stage === 'preparing'
                 ? <PreparingStage onDone={showPreparing} />
-                : <SpecialistsStage onContinue={() => wizard.setStage('verify')} />}
+                : <SpecialistsStage onContinue={() => wizard.setStage('plans')} />}
             </div>
           </section>
         )}
+        {wizard.stage === 'plans' && <PlansStage onBuy={() => wizard.setStage('verify')} />}
         {wizard.stage === 'verify' && <VerifyStage />}
         {wizard.stage === 'checkout' && <CheckoutStage />}
       </main>

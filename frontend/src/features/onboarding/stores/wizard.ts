@@ -2,12 +2,13 @@ import { create } from 'zustand'
 import {
   prepareQuestions,
   sampleSpecialists,
+  visibleQuestions,
   type AnswerValue,
   type QuizGoal,
   type QuizQuestion,
 } from '../engine'
 
-export type Stage = 'intro' | 'goals' | 'quiz' | 'preparing' | 'specialists' | 'verify' | 'checkout'
+export type Stage = 'intro' | 'goals' | 'quiz' | 'preparing' | 'specialists' | 'plans' | 'verify' | 'checkout'
 
 interface WizardStore {
   stage: Stage
@@ -34,6 +35,7 @@ interface WizardStore {
   setSpecialist: (id: string) => void
   setPlan: (plan: WizardStore['plan']) => void
   resetSubmission: (phone: string) => void
+  replaceGoal: (goal: QuizGoal, answers: Record<number, AnswerValue | undefined>) => void
 }
 
 export const useWizard = create<WizardStore>((set, get) => ({
@@ -73,5 +75,12 @@ export const useWizard = create<WizardStore>((set, get) => ({
   resetSubmission: (phone) => {
     if (get().phone === phone) return
     set({ phone, submissionId: crypto.randomUUID() })
+  },
+  replaceGoal: (goal, answers) => {
+    const allQuestions = prepareQuestions(goal)
+    const questions = visibleQuestions(goal.id, allQuestions, answers)
+    const weight = questions.find((question) => question.metric === 'current-weight')
+    const index = Math.max(0, weight ? questions.indexOf(weight) : 0)
+    set({ goal, allQuestions, questions, answers, index, maxUnlocked: index, stage: 'quiz' })
   },
 }))
