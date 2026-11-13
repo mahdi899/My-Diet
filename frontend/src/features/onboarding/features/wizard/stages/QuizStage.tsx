@@ -125,7 +125,7 @@ export function QuizStage({ onSubmit }: { onSubmit: () => void }) {
     <section id="page2Container">
       <div>
         <div className="flex items-center justify-between gap-3">
-          <button type="button" className="quiz-green-btn px-3 py-2 rounded-xl text-xs" onClick={() => { wizard.setStage('goals'); navigate('/onboarding/goals') }}>
+          <button id="backToGoalsBtn" type="button" className="quiz-green-btn px-3 py-2 rounded-xl text-xs" onClick={() => { wizard.setStage('goals'); navigate('/onboarding/goals') }}>
             تغییر هدف
           </button>
           <strong className="text-sm">هدف: {wizard.goal.title}</strong>
@@ -216,7 +216,7 @@ function QuestionBody({
           <HourSlot label="ساعت بیداری" value={wake} onChange={(value) => set({ sleep, wake: value })} />
         </div>
         <p className="swp-help" dir="rtl">برای تنظیم، روی عدد بالا و پایین بزن.</p>
-        <button type="button" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={() => { set({ sleep, wake }); onContinue() }}>ثبت و ادامه</button>
+        <button type="button" data-field-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={() => { set({ sleep, wake }); onContinue() }}>ثبت و ادامه</button>
       </div>
     )
   }
@@ -258,7 +258,7 @@ function QuestionBody({
             onChange={(event) => onValue(event.target.value)}
           />
         </div>
-        <button type="button" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={() => { onValue(String(safe)); onContinue() }}>ثبت و ادامه</button>
+        <button type="button" data-field-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={() => { onValue(String(safe)); onContinue() }}>ثبت و ادامه</button>
       </div>
     )
   }
@@ -275,9 +275,9 @@ function QuestionBody({
           onChange={(event) => onValue(event.target.value)}
           onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onContinue() } }}
         />
-        <button type="button" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3" onClick={onContinue}>ثبت و ادامه</button>
+        <button type="button" data-field-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3" onClick={onContinue}>ثبت و ادامه</button>
         {question.optional && (
-          <button type="button" className="quiz-skip-btn w-full py-3 text-sm" onClick={() => { onValue('__skipped__'); onContinue() }}>رد شدن از این سؤال</button>
+          <button type="button" data-skip-index="" className="quiz-skip-btn w-full py-3 text-sm" onClick={() => { onValue('__skipped__'); onContinue() }}>رد شدن از این سؤال</button>
         )}
       </div>
     )
@@ -289,7 +289,7 @@ function QuestionBody({
         {question.options?.map((option, index) => {
           const selected = selectedIndex(question, answer, index)
           return (
-            <button key={option.label} type="button" className={'age-range-card' + (selected ? ' age-range-card--selected' : '')} onClick={() => onOption(index)}>
+            <button key={option.label} type="button" data-q-index={index} className={'age-range-card' + (selected ? ' age-range-card--selected' : '')} onClick={() => onOption(index)}>
               <span className="age-range-radio" aria-hidden="true"><span className="age-range-radio-mark">{selected ? <CheckIcon /> : null}</span></span>
               <span className="age-range-label">{option.label}</span>
               <span className="age-range-photo-wrap"><img className="age-range-photo" src={assetUrl(option.image || 'assets/vegetables.jpg')} alt="" /></span>
@@ -306,7 +306,7 @@ function QuestionBody({
         {question.options?.map((option, index) => {
           const selected = selectedIndex(question, answer, index)
           return (
-            <button key={option.label} type="button" className={'quiz-option-card quiz-flash-card' + (selected ? ' quiz-option-card--selected' : '')} onClick={() => onOption(index)}>
+            <button key={option.label} type="button" data-q-index={index} className={'quiz-option-card quiz-flash-card' + (selected ? ' quiz-option-card--selected' : '')} onClick={() => onOption(index)}>
               <span className="quiz-flash-photo"><img src={assetUrl(option.image || 'assets/vegetables.jpg')} alt="" /></span>
               <span className="quiz-flash-foot">
                 <span className="quiz-flash-label">{option.label}</span>
@@ -331,7 +331,7 @@ function QuestionBody({
         {question.options?.map((option, index) => {
           const selected = selectedIndex(question, answer, index)
           return (
-            <button key={option.label} type="button" className={'quiz-option-btn w-full text-right p-3.5 rounded-2xl border-2 flex items-center justify-between gap-3' + (selected ? ' is-selected' : '')} onClick={() => onOption(index)}>
+            <button key={option.label} type="button" data-q-index={index} className={'quiz-option-btn w-full text-right p-3.5 rounded-2xl border-2 flex items-center justify-between gap-3' + (selected ? ' is-selected' : '')} onClick={() => onOption(index)}>
               <span className="text-sm font-bold leading-snug flex-1">
                 {option.label}
                 {question.ui === 'loss-pace' && option.pace && <small className="loss-pace-description">{lossPaceText(option.pace, questions, answers)}</small>}
@@ -349,7 +349,7 @@ function QuestionBody({
         </label>
       )}
       {(question.multi || needsDetail) && (
-        <button type="button" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3" onClick={onContinue}>ثبت و ادامه</button>
+        <button type="button" data-multi-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-3" onClick={onContinue}>ثبت و ادامه</button>
       )}
     </div>
   )

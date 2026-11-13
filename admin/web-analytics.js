@@ -80,8 +80,10 @@ async function liveTrackingPanel(onCampaignChange) {
   root.append(panel, result);
 
   const pages = {
-    '/onboarding/': 'شروع', '/onboarding/index.html': 'شروع', '/onboarding/goals.html': 'اهداف',
-    '/onboarding/quiz.html': 'پرسش‌نامه', '/onboarding/payment.html': 'پرداخت',
+    '/onboarding/': 'شروع', '/onboarding': 'شروع', '/onboarding/index.html': 'شروع',
+    '/onboarding/goals.html': 'اهداف', '/onboarding/goals': 'اهداف',
+    '/onboarding/quiz.html': 'پرسش‌نامه', '/onboarding/quiz': 'پرسش‌نامه',
+    '/onboarding/payment.html': 'پرداخت', '/onboarding/payment': 'پرداخت',
   };
   const names = new Map(links.map(link => [link.slug, link.name]));
   const zone = { timeStyle: 'medium', timeZone: 'Asia/Tehran' };

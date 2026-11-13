@@ -116,6 +116,15 @@ export function CheckoutStage() {
 
   useEffect(() => {
     if (!order) return
+    const tracking = window.demoTracking
+    if (!tracking) return
+    if (order.confirmed_at) tracking.step('payment_success')
+    else if (order.gateway_started || method === 'gateway') tracking.step('payment_gateway')
+    else tracking.step('payment_transfer')
+  }, [order, method])
+
+  useEffect(() => {
+    if (!order) return
     if (order.confirmed_at) setStatus('پرداخت شما تأیید شد.')
     else if (gatewayResult === 'cancelled') setStatus('پرداخت آنلاین تکمیل نشد. می‌توانید دوباره به درگاه بروید.')
     else if (gatewayResult === 'pending') setStatus('پرداخت هنوز تأیید نشده است. اگر مبلغ کسر شده، به پشتیبانی پیام دهید.')

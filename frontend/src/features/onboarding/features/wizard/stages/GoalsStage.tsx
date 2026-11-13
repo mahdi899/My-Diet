@@ -18,6 +18,7 @@ export function GoalsStage() {
             key={goal.id}
             type="button"
             className="goal-card"
+            data-tracking-goal={goal.id}
             onClick={() => {
               chooseGoal(goal)
               navigate('/onboarding/quiz?goal=' + goal.id)

@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { publicRequest, StaffError } from '@shared/api/staff-session'
 import { toEnglishDigits } from '@shared/utils'
@@ -17,6 +17,10 @@ export function VerifyStage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const plan = plans.find((item) => item.id === wizard.plan) ?? plans[1]
+
+  useEffect(() => {
+    window.demoTracking?.step(mode === 'otp' ? 'otp' : 'contact')
+  }, [mode])
 
   async function sendPhone(event: FormEvent) {
     event.preventDefault()
@@ -44,6 +48,7 @@ export function VerifyStage() {
         answers,
       })
       await publicRequest('auth/otp/request', 'POST', { phone })
+      window.demoTracking?.registered()
       wizard.setPhone(phone)
       setMode('otp')
     } catch (cause) {
@@ -69,7 +74,8 @@ export function VerifyStage() {
         platform: 'demo-web',
       })
       if (!session.accessToken || session.role !== 'user') throw new StaffError(session.detail || 'کد تأیید معتبر نیست.', 400)
-      await publicRequest('onboarding/submissions/' + wizard.submissionId + '/verify', 'POST', {}, session.accessToken)
+      const journeyId = window.demoTracking?.journeyId() || null
+      await publicRequest('onboarding/submissions/' + wizard.submissionId + '/verify', 'POST', journeyId ? { journeyId } : {}, session.accessToken)
       wizard.setToken(session.accessToken)
       sessionStorage.setItem('mydiet.checkout', JSON.stringify({
         token: session.accessToken,

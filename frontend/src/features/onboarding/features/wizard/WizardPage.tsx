@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { assetUrl, faDigits, isAnswered, answerOf, questionnaireGoals } from '../../engine'
+import { installAudienceTracking } from '../../infrastructure/audience-tracking'
 import { useWizard } from '../../stores/wizard'
 import { CheckoutStage } from './stages/CheckoutStage'
 import { GoalsStage } from './stages/GoalsStage'
@@ -41,9 +42,36 @@ export function WizardPage() {
   const wizard = useWizard()
   const [ready, setReady] = useState(Boolean(window.SABZINE_QUESTIONNAIRE?.goals?.length))
   const [error, setError] = useState('')
+  const questionnaireCompleted = useRef(false)
   const showPreparing = useCallback(() => {
     if (useWizard.getState().stage === 'preparing') useWizard.getState().setStage('specialists')
   }, [])
+
+  useEffect(() => { installAudienceTracking() }, [])
+
+  useEffect(() => {
+    const tracking = window.demoTracking
+    if (!tracking) return
+    if (wizard.stage === 'preparing') {
+      if (!questionnaireCompleted.current) {
+        questionnaireCompleted.current = true
+        tracking.complete()
+      }
+      tracking.step('preparing')
+      return
+    }
+    if (wizard.stage === 'quiz' && wizard.goal) {
+      const question = wizard.questions[wizard.index]
+      tracking.step('question', { goal: wizard.goal.id, question: question?.originalNumber ?? wizard.index + 1 })
+      return
+    }
+    const named = wizard.stage === 'goals' ? 'goals'
+      : wizard.stage === 'specialists' ? 'specialists'
+        : wizard.stage === 'plans' ? 'plans'
+          : wizard.stage === 'checkout' ? 'payment'
+            : wizard.stage === 'intro' ? 'intro' : ''
+    if (named) tracking.step(named)
+  }, [wizard.stage, wizard.index, wizard.goal, wizard.questions])
 
   useEffect(() => {
     if (window.SABZINE_QUESTIONNAIRE?.goals?.length) {

@@ -89,7 +89,7 @@ export function HeightRuler({
           <span className="height-ruler-unit">سانتی‌متر</span>
         </div>
       </div>
-      <button type="button" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={onContinue}>ثبت و ادامه</button>
+      <button type="button" data-field-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={onContinue}>ثبت و ادامه</button>
     </div>
   )
 }
@@ -218,7 +218,7 @@ export function WeightGauge({
           <span className="weight-gauge-unit">کیلوگرم</span>
         </div>
       </div>
-      <button type="button" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={onContinue}>ثبت و ادامه</button>
+      <button type="button" data-field-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={onContinue}>ثبت و ادامه</button>
     </div>
   )
 }
