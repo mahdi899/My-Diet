@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { historyAction, pathFor, readProgress, stepOf, writeProgress } from '../../domain/progress'
 import { assetUrl, faDigits, isAnswered, answerOf, questionnaireGoals } from '../../engine'
 import { installAudienceTracking } from '../../infrastructure/audience-tracking'
 import { useWizard } from '../../stores/wizard'
@@ -43,6 +44,8 @@ export function WizardPage() {
   const [ready, setReady] = useState(Boolean(window.SABZINE_QUESTIONNAIRE?.goals?.length))
   const [error, setError] = useState('')
   const questionnaireCompleted = useRef(false)
+  const booted = useRef(false)
+  const applyingHistory = useRef(false)
   const showPreparing = useCallback(() => {
     if (useWizard.getState().stage === 'preparing') useWizard.getState().setStage('specialists')
   }, [])
@@ -79,8 +82,8 @@ export function WizardPage() {
       return
     }
     Promise.all([
-      loadScript('/legacy/questionnaire-data.js'),
-      loadScript('/legacy/onboarding-keys.js'),
+      loadScript('/onboarding/questionnaire-data.js'),
+      loadScript('/onboarding/onboarding-keys.js'),
     ]).then(() => {
       if (!window.SABZINE_QUESTIONNAIRE?.goals?.length) setError('پرسش‌نامه بارگذاری نشد.')
       else setReady(true)
@@ -88,7 +91,59 @@ export function WizardPage() {
   }, [])
 
   useEffect(() => {
-    if (!ready) return
+    if (!ready || booted.current) return
+    booted.current = true
+    const saved = readProgress()
+    if (!saved) return
+    const restored = useWizard.getState().hydrate(saved)
+    if (!restored) return
+    const next = pathFor(useWizard.getState().stage)
+    if (location.pathname.replace(/\/$/, '') !== next) navigate(next, { replace: true })
+  }, [ready, location.pathname, navigate])
+
+  useEffect(() => {
+    if (!ready || !booted.current) return
+    const state = useWizard.getState()
+    const step = stepOf(state.stage, state.index, state.contactMode)
+    writeProgress({
+      goal: state.goal?.id,
+      answersByNumber: state.answers,
+      focused: state.index,
+      unlocked: state.maxUnlocked,
+      planId: state.plan,
+      phone: state.phone,
+      submissionId: state.submissionId,
+      specialistId: state.specialistId,
+      specialistIds: state.offered.map((person) => person.id),
+      step,
+    })
+    if (applyingHistory.current) {
+      applyingHistory.current = false
+      return
+    }
+    const previous = (history.state as { mydiet?: { stage: string; index: number } } | null)?.mydiet ?? null
+    const action = historyAction(previous, step)
+    if (action === 'ignore') return
+    const url = new URL(window.location.href)
+    url.searchParams.set('at', step.stage === 'question' ? 'q' + step.index : step.stage)
+    const data = { mydiet: step }
+    if (action === 'replace') history.replaceState(data, '', url)
+    else history.pushState(data, '', url)
+  }, [ready, wizard.stage, wizard.index, wizard.contactMode, wizard.answers, wizard.plan, wizard.specialistId, wizard.goal])
+
+  useEffect(() => {
+    const onPop = (event: PopStateEvent) => {
+      const step = (event.state as { mydiet?: { stage: string; index: number } } | null)?.mydiet
+      if (!step) return
+      applyingHistory.current = true
+      useWizard.getState().applyHistory(step)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  useEffect(() => {
+    if (!ready || !booted.current) return
     const path = location.pathname.replace(/\/$/, '')
     const goalId = new URLSearchParams(location.search).get('goal')
     const state = useWizard.getState()
@@ -108,10 +163,6 @@ export function WizardPage() {
     }
     if (path.endsWith('/goals')) {
       if (state.stage === 'intro') state.setStage('goals')
-      return
-    }
-    if (path.endsWith('/onboarding') && !['intro', 'verify', 'plans', 'preparing', 'specialists', 'checkout'].includes(state.stage)) {
-      state.setStage('intro')
     }
   }, [ready, location.pathname, location.search])
 

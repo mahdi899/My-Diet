@@ -17,14 +17,14 @@ const credentials=JSON.parse(fs.readFileSync('backend/.env.local-admin.json','ut
     page.on('response',r=>{if(r.url().includes('/insights/api/send'))responses.push(r.status());});
     await page.goto('https://my-diet.ir/onboarding/?utm_source=tracking_qa&utm_medium=test&utm_campaign=smoke&phone=PRIVATE_MARKER');
     await page.waitForFunction(()=>!!window.umami&&!!window.demoTracking);
-    await page.locator('#letsGoBtn').click();await page.waitForURL('**/goals.html*');
-    await page.locator('#goalsGrid .goal-card').first().click();await page.waitForURL('**/quiz.html*');
+    await page.locator('#letsGoBtn').click();await page.waitForURL('**/onboarding/goals*');
+    await page.locator('#goalsGrid .goal-card').first().click();await page.waitForURL('**/onboarding/quiz*');
     await page.locator('input[data-field-index]').fill('PRIVATE_MEDICAL_MARKER');
     await page.locator('[data-field-submit]').click();
     await page.locator('[data-q-index]').first().waitFor();
     await page.waitForTimeout(11000);
     await page.locator('[data-q-index]').first().click();await page.waitForTimeout(700);
-    await page.goBack();await page.waitForURL('**/goals.html*');await page.waitForTimeout(1000);
+    await page.goBack();await page.waitForURL('**/onboarding/goals*');await page.waitForTimeout(1000);
     assert(!JSON.stringify(bodies).includes('PRIVATE_'),'Input/query data leaked into telemetry');
     for(const event of ['goal_selected','step_view','question_interacted','step_time'])assert(bodies.some(b=>b.payload.name===event),'Missing event '+event);
     assert(responses.length>0&&responses.every(s=>s===200),'Collector rejected requests: '+responses.join(','));

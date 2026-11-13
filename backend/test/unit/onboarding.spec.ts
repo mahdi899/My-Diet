@@ -258,7 +258,7 @@ describe('nutrition engine', () => {
 });
 
 describe('demo keys file', () => {
-  const source = readFileSync(new URL('../../../onboarding/onboarding-keys.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../../../frontend/public/onboarding/onboarding-keys.js', import.meta.url), 'utf8');
   const sandbox: { window?: unknown; SabzineKeys?: { canonical(q: unknown, a: unknown): { key?: string; codes?: string[] } } } = {};
   sandbox.window = sandbox;
   runInNewContext(source, sandbox);

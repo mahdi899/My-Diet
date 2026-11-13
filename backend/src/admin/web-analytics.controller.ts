@@ -126,8 +126,10 @@ export class WebAnalyticsController implements OnApplicationShutdown {
             and ($2::timestamptz is null or e.created_at >= $2::timestamptz)
             and e.tag is distinct from 'qa'
             and e.event_name in ('step_view', 'active_heartbeat', 'presence_end')
-            and e.url_path in ('/onboarding/', '/onboarding/index.html', '/onboarding/goals.html',
-              '/onboarding/quiz.html', '/onboarding/payment.html')
+            and e.url_path in ('/onboarding', '/onboarding/', '/onboarding/index.html',
+              '/onboarding/goals', '/onboarding/goals.html',
+              '/onboarding/quiz', '/onboarding/quiz.html',
+              '/onboarding/payment', '/onboarding/payment.html')
         ),
         latest as (
           select distinct on (journey) * from recent

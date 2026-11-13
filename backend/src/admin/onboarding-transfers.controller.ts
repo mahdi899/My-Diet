@@ -89,9 +89,9 @@ export class OnboardingTransfersController {
   @Public()
   @Header('Cache-Control', 'no-store')
   @Get('me/onboarding-transfers/zibal/return')
-  @Redirect('/onboarding/payment.html', 303)
+  @Redirect('/onboarding/payment', 303)
   async gatewayReturn(@Query('trackId') trackId: string, @Query('success') success: string) {
-    const url = '/onboarding/payment.html';
+    const url = '/onboarding/payment';
     if (typeof trackId !== 'string' || !/^\d{1,20}$/.test(trackId)) return { url };
     const row = (await this.pool.query(
       'select id, amount_toman, confirmed_at from onboarding_transfers where zibal_track_id=$1', [trackId],
