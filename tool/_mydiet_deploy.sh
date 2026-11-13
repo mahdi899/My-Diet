@@ -11,7 +11,7 @@ chmod 600 /root/.ssh/authorized_keys
 cd /opt/sabzine
 if [[ ! -f /tmp/mydiet-src.done ]]; then
   tar -xzf /tmp/mydiet-src.tar.gz -C /opt/sabzine
-  test -f /opt/sabzine/onboarding/quiz.html
+  test -f /opt/sabzine/frontend/public/onboarding/questionnaire-data.js
   test -f /opt/sabzine/backend/package.json
 
   # Marketing site (keep server-specific demo tracking config)
@@ -22,7 +22,7 @@ if [[ ! -f /tmp/mydiet-src.done ]]; then
   mkdir -p /var/www/my-diet/onboarding
   rsync -a --delete \
     --exclude 'tracking-config.js' \
-    onboarding/ /var/www/my-diet/onboarding/
+    frontend/public/onboarding/ /var/www/my-diet/onboarding/
 
   chown -R www-data:www-data /var/www/my-diet
   find /var/www/my-diet -type f -exec chmod 644 {} +

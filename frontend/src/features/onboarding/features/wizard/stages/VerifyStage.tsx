@@ -12,13 +12,14 @@ function canonical(question: QuizQuestion, answer: AnswerValue | undefined) {
 export function VerifyStage() {
   const navigate = useNavigate()
   const wizard = useWizard()
-  const [mode, setMode] = useState<'phone' | 'otp'>('phone')
+  const [mode, setMode] = useState<'phone' | 'otp'>(wizard.contactMode)
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const plan = plans.find((item) => item.id === wizard.plan) ?? plans[1]
 
   useEffect(() => {
+    if (useWizard.getState().contactMode !== mode) useWizard.getState().setContactMode(mode)
     window.demoTracking?.step(mode === 'otp' ? 'otp' : 'contact')
   }, [mode])
 

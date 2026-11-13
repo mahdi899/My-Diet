@@ -12,7 +12,7 @@ type TrackingWindow = {
   demoTracking?:unknown;
 };
 
-const source=readFileSync(new URL('../../../onboarding/tracking.js',import.meta.url),'utf8');
+const source=readFileSync(new URL('../../../frontend/public/onboarding/tracking.js',import.meta.url),'utf8');
 function browser(disabled=false) {
   let now=0;
   const events: Array<{name:unknown;data:Record<string,unknown>}> = [];

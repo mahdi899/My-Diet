@@ -2,7 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
-const source=fs.readFileSync(require('node:path').join(__dirname,'../onboarding/tracking.js'),'utf8');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../frontend/public/onboarding/tracking.js'),'utf8');
 let sequence=0;
 function load(path,storage=new Map()) {
   const events=[],listeners={};

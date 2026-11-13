@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const root = path.resolve(__dirname, '../onboarding');
+const root = path.resolve(__dirname, '../frontend/public/onboarding');
 const context = { window: {} };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, 'weight-guidance.js'), 'utf8'), context);
@@ -35,35 +35,4 @@ test('pregnancy and missing or invalid measurements have no adult weight recomme
   for (const [height, weight] of [[null, 50], [170, null], ['', 50], [0, 50], [170, -1], ['invalid', 50]]) {
     assert.equal(assess(height, weight, 'weight_loss'), null);
   }
-});
-
-const source = fs.readFileSync(path.join(root, 'quiz.html'), 'utf8');
-for (const name of ['getMetricSliderConfig', 'currentWeight', 'validTargetWeight', 'parseNumericAnswer']) {
-  const start = source.indexOf(`    function ${name}(`);
-  const end = source.indexOf('\n    }', start) + '\n    }'.length;
-  vm.runInContext(source.slice(start, end), context);
-}
-context.state = { selectedGoal: { questions: [{ metric: 'current-weight' }] }, answers: { 0: '68' } };
-
-test('weight gain starts at current weight and needs a higher target before submission', () => {
-  const question = { q: 'وزن هدف', metric: 'target-gain' };
-  for (const weight of [40, 68, 90, 240]) {
-    context.state.answers[0] = String(weight);
-    const config = context.getMetricSliderConfig(question);
-    assert.equal(config.min, weight);
-    assert.equal(config.default, weight);
-    assert.ok(config.max > weight);
-    assert.equal(context.validTargetWeight(question, weight), false);
-    assert.equal(context.validTargetWeight(question, weight - 1), false);
-    assert.equal(context.validTargetWeight(question, weight + 1), true);
-  }
-});
-
-test('weight-loss targets stay strictly below current weight after editing the current weight', () => {
-  const question = { q: 'وزن هدف', metric: 'target-loss' };
-  context.state.answers[0] = '68';
-  assert.equal(context.validTargetWeight(question, 67), true);
-  assert.equal(context.validTargetWeight(question, 68), false);
-  context.state.answers[0] = '60';
-  assert.equal(context.validTargetWeight(question, 67), false);
 });
