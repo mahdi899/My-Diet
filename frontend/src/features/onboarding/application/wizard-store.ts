@@ -1,16 +1,16 @@
 import { create } from 'zustand'
 import {
   prepareQuestions,
-  questionnaireGoals,
   sampleSpecialists,
   specialists,
   visibleQuestions,
   type AnswerValue,
   type QuizGoal,
   type QuizQuestion,
-} from '../engine'
+} from '../domain/questionnaire'
+import type { Stage } from '../domain/progress'
 
-export type Stage = 'intro' | 'goals' | 'quiz' | 'preparing' | 'specialists' | 'plans' | 'verify' | 'checkout'
+export type { Stage }
 
 interface WizardStore {
   stage: Stage
@@ -51,7 +51,7 @@ interface WizardStore {
     specialistId?: string | null
     specialistIds?: string[]
     step?: { stage: string; index: number }
-  }) => boolean
+  }, goals: QuizGoal[]) => boolean
   applyHistory: (step: { stage: string; index: number }) => void
 }
 
@@ -102,8 +102,8 @@ export const useWizard = create<WizardStore>((set, get) => ({
     const index = Math.max(0, weight ? questions.indexOf(weight) : 0)
     set({ goal, allQuestions, questions, answers, index, maxUnlocked: index, stage: 'quiz' })
   },
-  hydrate: (saved) => {
-    const goal = questionnaireGoals().find((item) => item.id === saved.goal)
+  hydrate: (saved, goals) => {
+    const goal = goals.find((item) => item.id === saved.goal)
     if (!goal) return false
     const answers = saved.answersByNumber ?? {}
     const typed: Record<number, AnswerValue | undefined> = {}

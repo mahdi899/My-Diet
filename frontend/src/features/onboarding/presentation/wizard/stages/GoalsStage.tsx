@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { assetUrl, questionnaireGoals } from '../../../engine'
-import { useWizard } from '../../../stores/wizard'
+import { questionnaireGoals } from '../../../composition'
+import { assetUrl } from '../../../domain/questionnaire'
+import { useWizard } from '../../../application/wizard-store'
 
 export function GoalsStage() {
   const navigate = useNavigate()

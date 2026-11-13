@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { historyAction, pathFor, readProgress, stepOf, writeProgress } from '../../domain/progress'
-import { assetUrl, faDigits, isAnswered, answerOf, questionnaireGoals } from '../../engine'
-import { installAudienceTracking } from '../../infrastructure/audience-tracking'
-import { useWizard } from '../../stores/wizard'
+import { historyAction, pathFor, stepOf } from '../../domain/progress'
+import { assetUrl, faDigits, isAnswered, answerOf } from '../../domain/questionnaire'
+import { audience, loadQuestionnaireCatalog, onboarding, questionnaireGoals, readProgress, writeProgress } from '../../composition'
+import { useWizard } from '../../application/wizard-store'
 import { CheckoutStage } from './stages/CheckoutStage'
 import { GoalsStage } from './stages/GoalsStage'
 import { IntroStage } from './stages/IntroStage'
@@ -14,34 +14,11 @@ import { SpecialistsStage } from './stages/SpecialistsStage'
 import { VerifyStage } from './stages/VerifyStage'
 import '../../styles/onboarding.css'
 
-function loadScript(src: string) {
-  const existing = document.querySelector<HTMLScriptElement>(`script[data-src="${src}"]`)
-  if (existing?.dataset.loaded === '1') return Promise.resolve()
-  return new Promise<void>((resolve, reject) => {
-    const script = existing ?? document.createElement('script')
-    const finish = () => {
-      script.dataset.loaded = '1'
-      resolve()
-    }
-    if (existing && existing.dataset.loaded === '1') {
-      resolve()
-      return
-    }
-    script.addEventListener('load', finish, { once: true })
-    script.addEventListener('error', () => reject(new Error(src)), { once: true })
-    if (!existing) {
-      script.src = src
-      script.dataset.src = src
-      document.body.appendChild(script)
-    }
-  })
-}
-
 export function WizardPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const wizard = useWizard()
-  const [ready, setReady] = useState(Boolean(window.SABZINE_QUESTIONNAIRE?.goals?.length))
+  const [ready, setReady] = useState(questionnaireGoals().length > 0)
   const [error, setError] = useState('')
   const questionnaireCompleted = useRef(false)
   const booted = useRef(false)
@@ -50,22 +27,20 @@ export function WizardPage() {
     if (useWizard.getState().stage === 'preparing') useWizard.getState().setStage('specialists')
   }, [])
 
-  useEffect(() => { installAudienceTracking() }, [])
+  useEffect(() => { onboarding.installTracking() }, [])
 
   useEffect(() => {
-    const tracking = window.demoTracking
-    if (!tracking) return
     if (wizard.stage === 'preparing') {
       if (!questionnaireCompleted.current) {
         questionnaireCompleted.current = true
-        tracking.complete()
+        audience.complete()
       }
-      tracking.step('preparing')
+      audience.step('preparing')
       return
     }
     if (wizard.stage === 'quiz' && wizard.goal) {
       const question = wizard.questions[wizard.index]
-      tracking.step('question', { goal: wizard.goal.id, question: question?.originalNumber ?? wizard.index + 1 })
+      audience.step('question', { goal: wizard.goal.id, question: question?.originalNumber ?? wizard.index + 1 })
       return
     }
     const named = wizard.stage === 'goals' ? 'goals'
@@ -73,21 +48,15 @@ export function WizardPage() {
         : wizard.stage === 'plans' ? 'plans'
           : wizard.stage === 'checkout' ? 'payment'
             : wizard.stage === 'intro' ? 'intro' : ''
-    if (named) tracking.step(named)
+    if (named) audience.step(named)
   }, [wizard.stage, wizard.index, wizard.goal, wizard.questions])
 
   useEffect(() => {
-    if (window.SABZINE_QUESTIONNAIRE?.goals?.length) {
+    if (questionnaireGoals().length) {
       setReady(true)
       return
     }
-    Promise.all([
-      loadScript('/onboarding/questionnaire-data.js'),
-      loadScript('/onboarding/onboarding-keys.js'),
-    ]).then(() => {
-      if (!window.SABZINE_QUESTIONNAIRE?.goals?.length) setError('پرسش‌نامه بارگذاری نشد.')
-      else setReady(true)
-    }).catch(() => setError('پرسش‌نامه بارگذاری نشد.'))
+    loadQuestionnaireCatalog().then(() => setReady(true)).catch(() => setError('پرسش‌نامه بارگذاری نشد.'))
   }, [])
 
   useEffect(() => {
@@ -95,7 +64,7 @@ export function WizardPage() {
     booted.current = true
     const saved = readProgress()
     if (!saved) return
-    const restored = useWizard.getState().hydrate(saved)
+    const restored = useWizard.getState().hydrate(saved, questionnaireGoals())
     if (!restored) return
     const next = pathFor(useWizard.getState().stage)
     if (location.pathname.replace(/\/$/, '') !== next) navigate(next, { replace: true })

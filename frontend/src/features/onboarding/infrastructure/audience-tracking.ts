@@ -198,3 +198,13 @@ export function installAudienceTracking() {
   script.onerror = () => { queue.length = 0 }
   document.head.append(script)
 }
+
+export const audience = {
+  install: installAudienceTracking,
+  step(name: string, data?: { goal?: string; question?: number }) {
+    window.demoTracking?.step(name, data)
+  },
+  complete() { window.demoTracking?.complete() },
+  registered() { window.demoTracking?.registered() },
+  journeyId() { return window.demoTracking?.journeyId() ?? '' },
+}

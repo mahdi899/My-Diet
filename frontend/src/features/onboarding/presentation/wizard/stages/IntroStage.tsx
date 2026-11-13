@@ -1,4 +1,4 @@
-import { assetUrl } from '../../../engine'
+import { assetUrl } from '../../../domain/questionnaire'
 
 const features = [
   ['intro-specialist.jpg', 'نظارت متخصص'],

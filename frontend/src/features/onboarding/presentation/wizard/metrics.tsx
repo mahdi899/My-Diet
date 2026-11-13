@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { bmiGuidance, faDigits, questionnaireGoals, type AnswerValue, type QuizQuestion } from '../../engine'
-import { useWizard } from '../../stores/wizard'
+import { questionnaireGoals } from '../../composition'
+import { bmiGuidance, faDigits, type AnswerValue, type QuizQuestion } from '../../domain/questionnaire'
+import { useWizard } from '../../application/wizard-store'
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { needsMedicalReview, specialists, answerOf } from '../../../engine'
-import { useWizard } from '../../../stores/wizard'
+import { needsMedicalReview, specialists, answerOf } from '../../../domain/questionnaire'
+import { onboarding } from '../../../composition'
+import { useWizard } from '../../../application/wizard-store'
 
 function portraitStyle(id: string) {
   const sprite = specialists.find((person) => person.id === id)?.sprite ?? 0
@@ -21,11 +22,9 @@ export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
     let timer = 0
     let cancelled = false
     const started = performance.now()
-    fetch('/v1/public/onboarding/community-join', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-      .then((response) => response.ok ? response.json() : null)
-      .then((data: { count?: number } | null) => {
-        const count = Number(data?.count)
-        if (Number.isFinite(count) && count > 0) target = count
+    onboarding.communityCount()
+      .then((count) => {
+        if (count) target = count
       })
       .catch(() => {})
       .finally(() => {

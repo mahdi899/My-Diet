@@ -1,4 +1,4 @@
-import type { Stage } from '../stores/wizard'
+export type Stage = 'intro' | 'goals' | 'quiz' | 'preparing' | 'specialists' | 'plans' | 'verify' | 'checkout'
 
 export interface HistoryStep {
   stage: string
@@ -18,27 +18,12 @@ export interface SavedProgress {
   step?: HistoryStep
 }
 
-const PROGRESS_KEY = 'mydiet.quiz.progress'
-
 export function historyAction(previous: HistoryStep | null, next: HistoryStep | null) {
   if (!next?.stage) return 'ignore'
   if (previous && previous.stage === next.stage && previous.index === next.index) return 'ignore'
   if (!previous) return 'replace'
   if (next.stage === 'specialists' && previous.stage === 'preparing') return 'replace'
   return 'push'
-}
-
-export function readProgress(): SavedProgress | null {
-  try {
-    const parsed = JSON.parse(sessionStorage.getItem(PROGRESS_KEY) || 'null') as SavedProgress | null
-    return parsed && typeof parsed === 'object' ? parsed : null
-  } catch {
-    return null
-  }
-}
-
-export function writeProgress(progress: SavedProgress) {
-  try { sessionStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)) } catch { /* private mode */ }
 }
 
 export function stepOf(stage: Stage, index: number, contactMode: 'phone' | 'otp'): HistoryStep {

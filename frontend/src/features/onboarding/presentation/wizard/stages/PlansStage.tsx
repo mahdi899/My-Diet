@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { plans, specialists, type PlanId } from '../../../engine'
-import { useWizard } from '../../../stores/wizard'
+import { plans, specialists, type PlanId } from '../../../domain/questionnaire'
+import { useWizard } from '../../../application/wizard-store'
 
 function Feature({ text, doctor }: { text: string; doctor: string }) {
   const [before, after] = text.split('{doctor}')
