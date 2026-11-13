@@ -7,10 +7,9 @@ const root = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
-  publicDir: resolve(root, 'apps/site/public'),
   resolve: {
     alias: {
-      '@shared': resolve(root, 'packages/shared/src'),
+      '@shared': resolve(root, 'src/shared'),
     },
   },
   server: {

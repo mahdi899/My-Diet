@@ -1,18 +1,18 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
-import SiteLayout from '../apps/site/src/App'
-import HomePage from '../apps/site/src/pages/HomePage'
-import ArticlesPage from '../apps/site/src/pages/ArticlesPage'
-import ArticlePage from '../apps/site/src/pages/ArticlePage'
-import PricingPage from '../apps/site/src/pages/PricingPage'
-import AboutPage from '../apps/site/src/pages/AboutPage'
-import ContactPage from '../apps/site/src/pages/ContactPage'
-import TermsPage from '../apps/site/src/pages/TermsPage'
-import RefundPage from '../apps/site/src/pages/RefundPage'
+import SiteLayout from './features/site/App'
+import HomePage from './features/site/pages/HomePage'
+import ArticlesPage from './features/site/pages/ArticlesPage'
+import ArticlePage from './features/site/pages/ArticlePage'
+import PricingPage from './features/site/pages/PricingPage'
+import AboutPage from './features/site/pages/AboutPage'
+import ContactPage from './features/site/pages/ContactPage'
+import TermsPage from './features/site/pages/TermsPage'
+import RefundPage from './features/site/pages/RefundPage'
 
-const AdminApp = lazy(() => import('../apps/admin/src/App'))
-const DoctorApp = lazy(() => import('../apps/doctor/src/App'))
-const OnboardingApp = lazy(() => import('../apps/onboarding/src/App'))
+const AdminApp = lazy(() => import('./features/admin/App'))
+const DoctorApp = lazy(() => import('./features/doctor/App'))
+const OnboardingApp = lazy(() => import('./features/onboarding/App'))
 
 export default function App() {
   return (

@@ -1,12 +1,28 @@
-# رژیم من — فرانت React
+# رژیم من — یک سایت
 
-یک سایت، یک بیلد، یک `node_modules`.
+فرانت وب یک برنامهٔ React است. سایت، پرسش‌نامه، پنل مدیریت و پنل پزشک مسیرهای همین برنامه هستند و به اپ موبایل (`app/`) وصل نیستند.
+
+```text
+frontend/src/
+  main.tsx              ورود برنامه
+  App.tsx               مسیرها
+  features/
+    site/               صفحات عمومی
+    onboarding/         پرسش‌نامه
+    admin/              پنل مدیریت
+    doctor/             پنل پزشک
+  shared/
+    api/                نشست و درخواست
+    ui/                 پوستهٔ مشترک پنل‌ها
+    hooks/
+    utils/
+public/                 تصویر، فونت عمومی، مجله
+```
 
 ```powershell
 cd frontend
 npm install
 npm run dev
-npm run build
 ```
 
 توسعه: http://localhost:3001
@@ -14,17 +30,8 @@ npm run build
 | مسیر | بخش |
 |---|---|
 | `/` | سایت |
-| `/admin` | پنل مدیریت |
 | `/onboarding` | پرسش‌نامه |
+| `/admin` | پنل مدیریت |
 | `/doctor` | پنل پزشک |
-
-خروجی تولید در `frontend/dist` است. سرور باید هر مسیری که فایل نیست را به `index.html` بدهد.
-
-```nginx
-location / {
-  root /app/frontend;
-  try_files $uri $uri/ /index.html;
-}
-```
 
 API در توسعه به `http://127.0.0.1:3000` پروکسی می‌شود.

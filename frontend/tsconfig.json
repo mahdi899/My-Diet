@@ -3,10 +3,10 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["packages/shared/src/*"]
+      "@shared/*": ["src/shared/*"]
     },
     "noEmit": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["apps", "packages", "vite", "vite-env.d.ts"]
+  "include": ["src", "vite-env.d.ts"]
 }

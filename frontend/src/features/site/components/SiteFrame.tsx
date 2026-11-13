@@ -35,9 +35,14 @@ export function SiteFrame({ children }: { children: ReactNode }) {
               </NavLink>
             ))}
           </nav>
-          <button type="button" className="rounded-xl bg-pine px-5 py-3 text-sm font-bold text-white" onClick={() => setDownload(true)}>
-            دانلود اپلیکیشن
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/onboarding" className="rounded-xl bg-pine px-5 py-3 text-sm font-bold text-white">
+              شروع پرسش‌نامه
+            </Link>
+            <button type="button" className="hidden rounded-xl border border-pine/15 px-4 py-3 text-sm font-bold text-pine lg:inline-flex" onClick={() => setDownload(true)}>
+              دانلود اپ
+            </button>
+          </div>
           <button type="button" className="md:hidden" aria-label="منو" onClick={() => setOpen((value) => !value)}>منو</button>
         </div>
       </header>
@@ -52,6 +57,9 @@ export function SiteFrame({ children }: { children: ReactNode }) {
             {links.map(([to, label]) => <Link key={to} to={to}>{label}</Link>)}
             <Link to="/terms.html">شرایط خرید</Link>
             <Link to="/refund.html">لغو و بازگشت وجه</Link>
+            <Link to="/onboarding">پرسش‌نامه</Link>
+            <Link to="/doctor">ورود پزشک</Link>
+            <Link to="/admin">ورود مدیریت</Link>
           </div>
           <p className="w-full border-t border-white/20 pt-4 text-[10px] text-[#a9be9e]">طراحی شده با عشق توسط آکادمی رستمی</p>
         </div>
