@@ -1,26 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { StaffError, publicRequest } from '@shared/api/staff-session'
-import { plans, type PlanId } from '../../../engine'
-import { useWizard } from '../../../stores/wizard'
-
-interface TransferOrder {
-  id: string
-  plan: PlanId
-  amount_toman: number
-  expires_at: string
-  confirmed_at?: string | null
-  gateway_started?: boolean
-}
-
-function readSession() {
-  try {
-    const raw = sessionStorage.getItem('mydiet.checkout')
-    const parsed = raw ? JSON.parse(raw) as { token?: string; submissionId?: string; plan?: PlanId } : null
-    if (parsed?.token && parsed.submissionId) return parsed
-  } catch { /* private mode */ }
-  return null
-}
+import type { TransferOrder } from '../../../application/ports'
+import { plans, type PlanId } from '../../../domain/questionnaire'
+import { audience, onboarding, readCheckoutSession, writeCheckoutSession } from '../../../composition'
+import { useWizard } from '../../../application/wizard-store'
 
 function clock(seconds: number) {
   const left = Math.max(0, seconds)
@@ -38,39 +21,10 @@ export function CheckoutStage() {
   const [copied, setCopied] = useState('')
   const [busy, setBusy] = useState(false)
   const [now, setNow] = useState(() => Date.now())
-  const [token, setToken] = useState(wizard.token)
   const gatewayResult = params.get('gateway')
 
-  async function refreshToken(current: string) {
-    const response = await fetch('/v1/auth/refresh', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'x-sabzine-client': 'web' },
-      body: '{}',
-    })
-    const data = await response.json() as { accessToken?: string; role?: string }
-    if (!response.ok || !data.accessToken || data.role !== 'user') return current
-    const saved = readSession()
-    if (saved) sessionStorage.setItem('mydiet.checkout', JSON.stringify({ ...saved, token: data.accessToken }))
-    wizard.setToken(data.accessToken)
-    setToken(data.accessToken)
-    return data.accessToken
-  }
-
-  async function call<T>(path: string, body?: unknown, current = token): Promise<T> {
-    try {
-      return await publicRequest<T>('me/onboarding-transfers' + path, body ? 'POST' : 'GET', body, current)
-    } catch (cause) {
-      if (cause instanceof StaffError && cause.status === 401) {
-        const next = await refreshToken(current)
-        if (next !== current) return publicRequest<T>('me/onboarding-transfers' + path, body ? 'POST' : 'GET', body, next)
-      }
-      throw cause
-    }
-  }
-
   useEffect(() => {
-    const saved = readSession()
+    const saved = readCheckoutSession()
     const access = wizard.token || saved?.token || ''
     const submissionId = wizard.submissionId || saved?.submissionId || ''
     const initialPlan = (saved?.plan ?? wizard.plan) as PlanId
@@ -78,18 +32,17 @@ export function CheckoutStage() {
       setStatus('برای ورود به صفحه پرداخت، ابتدا شماره همراه را تأیید کنید.')
       return
     }
-    setToken(access)
     setPlan(initialPlan)
     const returned = params.get('order')
     const run = returned
-      ? call<TransferOrder>('/' + encodeURIComponent(returned), undefined, access)
-      : call<TransferOrder>('', { plan: initialPlan, submissionId }, access)
+      ? onboarding.readTransfer(access, returned)
+      : onboarding.createTransfer(access, initialPlan, submissionId)
     run.then((created) => {
       setOrder(created)
       setPlan(created.plan)
       setStatus('')
     }).catch((cause) => {
-      setStatus(cause instanceof StaffError ? cause.message : 'ارتباط با سرویس پرداخت برقرار نشد. دوباره تلاش کنید.')
+      setStatus(cause instanceof Error ? cause.message : 'ارتباط با سرویس پرداخت برقرار نشد. دوباره تلاش کنید.')
     })
     // The order is created once for this checkout visit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,7 +56,7 @@ export function CheckoutStage() {
   useEffect(() => {
     if (!order || order.confirmed_at) return
     const timer = window.setInterval(() => {
-      call<TransferOrder>('/' + encodeURIComponent(order.id)).then((fresh) => {
+      onboarding.readTransfer(readCheckoutSession()?.token || wizard.token, order.id).then((fresh) => {
         if (fresh.confirmed_at) setOrder(fresh)
       }).catch(() => {})
     }, 8000)
@@ -116,11 +69,9 @@ export function CheckoutStage() {
 
   useEffect(() => {
     if (!order) return
-    const tracking = window.demoTracking
-    if (!tracking) return
-    if (order.confirmed_at) tracking.step('payment_success')
-    else if (order.gateway_started || method === 'gateway') tracking.step('payment_gateway')
-    else tracking.step('payment_transfer')
+    if (order.confirmed_at) audience.step('payment_success')
+    else if (order.gateway_started || method === 'gateway') audience.step('payment_gateway')
+    else audience.step('payment_transfer')
   }, [order, method])
 
   useEffect(() => {
@@ -134,17 +85,17 @@ export function CheckoutStage() {
   }, [order, gatewayResult, remaining, method])
 
   async function changePlan(next: PlanId) {
-    const saved = readSession()
+    const saved = readCheckoutSession()
     if (!saved?.submissionId || busy) return
     setBusy(true)
     setPlan(next)
     wizard.setPlan(next)
     try {
-      const created = await call<TransferOrder>('', { plan: next, submissionId: saved.submissionId })
+      const created = await onboarding.createTransfer(saved.token, next, saved.submissionId)
       setOrder(created)
-      sessionStorage.setItem('mydiet.checkout', JSON.stringify({ ...saved, plan: created.plan, token }))
+      writeCheckoutSession({ ...saved, plan: created.plan })
     } catch (cause) {
-      setStatus(cause instanceof StaffError ? cause.message : 'تغییر پلن انجام نشد.')
+      setStatus(cause instanceof Error ? cause.message : 'تغییر پلن انجام نشد.')
     } finally {
       setBusy(false)
     }
@@ -155,13 +106,13 @@ export function CheckoutStage() {
     setBusy(true)
     setGatewayNote('')
     try {
-      const payment = await call<{ url?: string }>('/' + encodeURIComponent(order.id) + '/zibal', {})
+      const payment = await onboarding.startGateway(readCheckoutSession()?.token || wizard.token, order.id)
       if (!payment.url || !/^https:\/\/gateway\.zibal\.ir\/start\/\d{1,20}$/.test(payment.url)) {
-        throw new StaffError('درگاه لینک ورود نداد. چند ثانیه بعد یک بار دیگر تلاش کنید.')
+        throw new Error('درگاه لینک ورود نداد. چند ثانیه بعد یک بار دیگر تلاش کنید.')
       }
       window.location.assign(payment.url)
     } catch (cause) {
-      const message = cause instanceof StaffError ? cause.message : 'ارتباط با درگاه برقرار نشد. چند ثانیه بعد یک بار دیگر تلاش کنید.'
+      const message = cause instanceof Error ? cause.message : 'ارتباط با درگاه برقرار نشد. چند ثانیه بعد یک بار دیگر تلاش کنید.'
       setStatus(message)
       setGatewayNote(message)
       setBusy(false)

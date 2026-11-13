@@ -1,5 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
-import { WizardPage } from './features/wizard/WizardPage'
+import { WizardPage } from './presentation/wizard/WizardPage'
 
 export default function App() {
   return (

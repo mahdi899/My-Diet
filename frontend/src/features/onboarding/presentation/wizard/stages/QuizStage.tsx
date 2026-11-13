@@ -14,8 +14,8 @@ import {
   visibleQuestions,
   type AnswerValue,
   type QuizQuestion,
-} from '../../../engine'
-import { useWizard } from '../../../stores/wizard'
+} from '../../../domain/questionnaire'
+import { useWizard } from '../../../application/wizard-store'
 import { HeightRuler, WeightGauge, WeightGuidance } from '../metrics'
 
 function CheckIcon() {

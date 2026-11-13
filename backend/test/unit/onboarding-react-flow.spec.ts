@@ -13,7 +13,7 @@ import {
   type AnswerValue,
   type QuizGoal,
   type QuizQuestion,
-} from '../../../frontend/src/features/onboarding/engine.ts'
+} from '../../../frontend/src/features/onboarding/domain/questionnaire.ts'
 
 const sandbox = { window: {} as { SABZINE_QUESTIONNAIRE?: { goals: QuizGoal[] } } }
 vm.runInNewContext(

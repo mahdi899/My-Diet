@@ -1,13 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { publicRequest, StaffError } from '@shared/api/staff-session'
-import { toEnglishDigits } from '@shared/utils'
-import { answerLabel, answerOf, faDigits, plans, type AnswerValue, type QuizQuestion } from '../../../engine'
-import { useWizard } from '../../../stores/wizard'
-
-function canonical(question: QuizQuestion, answer: AnswerValue | undefined) {
-  return window.SabzineKeys?.canonical(question, answer) ?? {}
-}
+import { answerLabel, answerOf, faDigits, iranianMobile, otpCode, plans } from '../../../domain/questionnaire'
+import { audience, canonicalAnswer, onboarding, writeCheckoutSession } from '../../../composition'
+import { useWizard } from '../../../application/wizard-store'
 
 export function VerifyStage() {
   const navigate = useNavigate()
@@ -20,15 +15,14 @@ export function VerifyStage() {
 
   useEffect(() => {
     if (useWizard.getState().contactMode !== mode) useWizard.getState().setContactMode(mode)
-    window.demoTracking?.step(mode === 'otp' ? 'otp' : 'contact')
+    audience.step(mode === 'otp' ? 'otp' : 'contact')
   }, [mode])
 
   async function sendPhone(event: FormEvent) {
     event.preventDefault()
     if (!wizard.goal) return
-    let phone = toEnglishDigits(wizard.phone).replace(/\D/g, '')
-    if (phone.length === 10 && phone.startsWith('9')) phone = '0' + phone
-    if (!/^09\d{9}$/.test(phone)) {
+    const phone = iranianMobile(wizard.phone)
+    if (!phone) {
       setError('لطفاً یک شماره موبایل معتبر ۱۱ رقمی (شروع با ۰۹) وارد کنید.')
       return
     }
@@ -39,21 +33,20 @@ export function VerifyStage() {
       const state = useWizard.getState()
       const answers = state.questions.map((item) => {
         const value = answerOf(item, state.answers)
-        return { question: item.q, answer: answerLabel(item, value), ...canonical(item, value) }
+        return { question: item.q, answer: answerLabel(item, value), ...canonicalAnswer(item, value) }
       })
-      await publicRequest('onboarding/submissions', 'POST', {
-        id: state.submissionId,
+      await onboarding.requestSms({
         phone,
-        goal: state.goal?.id,
+        submissionId: state.submissionId,
+        goalId: state.goal?.id,
         specialistId: state.specialistId,
         answers,
       })
-      await publicRequest('auth/otp/request', 'POST', { phone })
-      window.demoTracking?.registered()
+      audience.registered()
       wizard.setPhone(phone)
       setMode('otp')
     } catch (cause) {
-      setError(cause instanceof StaffError ? cause.message : 'ارسال کد انجام نشد.')
+      setError(cause instanceof Error ? cause.message : 'ارسال کد انجام نشد.')
     } finally {
       setBusy(false)
     }
@@ -61,32 +54,26 @@ export function VerifyStage() {
 
   async function verifyCode(event: FormEvent) {
     event.preventDefault()
-    const value = toEnglishDigits(code).replace(/\D/g, '')
-    if (!/^\d{6}$/.test(value)) {
+    const value = otpCode(code)
+    if (!value) {
       setError('کد شش‌رقمی پیامک‌شده را وارد کنید.')
       return
     }
     setBusy(true)
     setError('')
     try {
-      const session = await publicRequest<{ accessToken?: string; role?: string; detail?: string }>('auth/otp/verify', 'POST', {
+      const token = await onboarding.confirmSms({
         phone: wizard.phone,
         code: value,
-        platform: 'demo-web',
-      })
-      if (!session.accessToken || session.role !== 'user') throw new StaffError(session.detail || 'کد تأیید معتبر نیست.', 400)
-      const journeyId = window.demoTracking?.journeyId() || null
-      await publicRequest('onboarding/submissions/' + wizard.submissionId + '/verify', 'POST', journeyId ? { journeyId } : {}, session.accessToken)
-      wizard.setToken(session.accessToken)
-      sessionStorage.setItem('mydiet.checkout', JSON.stringify({
-        token: session.accessToken,
         submissionId: wizard.submissionId,
-        plan: wizard.plan,
-      }))
+        journeyId: audience.journeyId(),
+      })
+      wizard.setToken(token)
+      writeCheckoutSession({ token, submissionId: wizard.submissionId, plan: wizard.plan })
       wizard.setStage('checkout')
       navigate('/onboarding/payment')
     } catch (cause) {
-      setError(cause instanceof StaffError ? cause.message : 'تأیید شماره ذخیره نشد.')
+      setError(cause instanceof Error ? cause.message : 'تأیید شماره ذخیره نشد.')
     } finally {
       setBusy(false)
     }

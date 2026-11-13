@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { assetUrl, faDigits } from '../../../engine'
+import { assetUrl, faDigits } from '../../../domain/questionnaire'
 
 export function PreparingStage({ onDone }: { onDone: () => void }) {
   const [progress, setProgress] = useState(0)

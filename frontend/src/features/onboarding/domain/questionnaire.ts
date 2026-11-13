@@ -51,23 +51,27 @@ export type AnswerValue =
   | { choices: number[]; detail?: string }
   | { sleep: number; wake: number }
 
-declare global {
-  interface Window {
-    SABZINE_QUESTIONNAIRE?: { goals: QuizGoal[] }
-    SabzineKeys?: {
-      canonical: (question: QuizQuestion, answer: unknown) => Record<string, unknown>
-    }
-  }
-}
-
-export function questionnaireGoals() {
-  return window.SABZINE_QUESTIONNAIRE?.goals ?? []
-}
-
 export function assetUrl(path?: string) {
   if (!path) return ''
   if (path.startsWith('http') || path.startsWith('/')) return path
   return '/onboarding/' + path.replace(/^\.\//, '')
+}
+
+function latinDigits(raw: string) {
+  return String(raw)
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+}
+
+export function iranianMobile(raw: string) {
+  const digits = latinDigits(raw).replace(/\D/g, '')
+  const phone = digits.length === 10 && digits.startsWith('9') ? '0' + digits : digits
+  return /^09\d{9}$/.test(phone) ? phone : null
+}
+
+export function otpCode(raw: string) {
+  const digits = latinDigits(raw).replace(/\D/g, '')
+  return /^\d{6}$/.test(digits) ? digits : null
 }
 
 export function faDigits(value: string | number) {
