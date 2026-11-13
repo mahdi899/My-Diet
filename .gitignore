@@ -69,11 +69,8 @@ backend/dist/
 backend/coverage/
 backend/.pgdata/
 
-# Machine-local Android artifacts at the repo root.
-# The Flutter project lives in app/android, which already ignores these.
-/android/.gradle/
-/android/local.properties
-/android/**/GeneratedPluginRegistrant.java
+# Flutter Android lives in app/android. A root android/ folder is leftover.
+/android/
 
 # Raw photo originals (kept out of the Flutter asset bundle)
 /app/_originals_photo/

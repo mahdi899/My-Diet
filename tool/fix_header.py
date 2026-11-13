@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-catalog_file = r"d:\New folder (21)\my-diet\My-Diet\IRANIAN_1000_FOOD_PROMPTS_MASTER.md"
+catalog_file = r"d:\New folder (21)\my-diet\My-Diet\references\prompts\IRANIAN_1000_FOOD_PROMPTS_MASTER.md"
 
 header = """# 🍽️ دانشنامه مستر پرامپت ۱۰۰۰ غذای ایرانی — نانو بنانا (Nano Banana Master Food Prompts)
 > **اختصاصی اپلیکیشن «رژیم من»** | ویرایش ویژه: **تمرکز صددرصدی بر خود غذا (Hero-Centric)، حذف شلوغی‌های اطراف، زاویه تعارف و پیشنهاد به کاربر (Appetizing & Inviting)، و اصالت کاملاً ایرانیزه**.

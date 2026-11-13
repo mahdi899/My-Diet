@@ -1,0 +1,14 @@
+---
+description: Git commit author on this machine (mahdi899)
+alwaysApply: true
+---
+
+# Git identity (this repo)
+
+Commits and pushes from this workspace use **mahdi899** / GitHub [@mahdi899](https://github.com/mahdi899).
+
+- Repository-local config: `user.name=mahdi899`, `user.email=w.m.akbari@gmail.com`.
+- Remote `origin`: `https://github.com/mahdi899/My-Diet`.
+- When committing, use normal `git commit` (do **not** override author to another account).
+- Do **not** run `git config --global`.
+- Push to `origin` only when the user asks; use GitHub credentials for **mahdi899** on this PC (sign out of other GitHub accounts in Git Credential Manager if pushes attach the wrong user).
