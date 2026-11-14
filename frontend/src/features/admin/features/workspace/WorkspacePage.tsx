@@ -1,12 +1,18 @@
 import { FormEvent, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { StaffError } from '@shared/api/staff-session'
 import { Button, Card, CardBody, DataTable, DefinitionList, Input } from '@shared/ui'
+import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { asRecord, asRows, formatFaNumber } from '@shared/utils'
 import { staff } from '../../session'
 import { adminSectionPath } from '../../nav'
+import { UsersTable } from '../users/UsersTable'
+import { SpecialistsPage } from '../specialists/SpecialistsPage'
+import { adminPreviewEnabled, previewSection } from '../../data/preview'
 
 async function loadSection(section: string) {
+  if (adminPreviewEnabled()) return previewSection(section)
   if (section === 'settings') return { kind: 'settings' as const }
   if (section === 'dashboard') {
     const [stats, payments] = await Promise.all([staff.api('admin/dashboard'), staff.api('admin/payments')])
@@ -28,16 +34,10 @@ async function loadSection(section: string) {
   return record ? { kind: 'object' as const, value: record } : { kind: 'table' as const, rows: [] }
 }
 
-function Metric({ label, value, note }: { label: string; value: unknown; note: string }) {
+function Metric({ label, value, note, icon, tone, unit }: { label: string; value: unknown; note: string; icon: string; tone: string; unit?: string }) {
   const shown = typeof value === 'number' ? formatFaNumber(value) : String(value ?? '—')
   return (
-    <Card>
-      <CardBody>
-        <p className="text-xs text-muted">{label}</p>
-        <div className="my-2 text-3xl font-bold">{shown}</div>
-        <p className="border-t border-[#edf0e8] pt-3 text-[11px] text-muted">{note}</p>
-      </CardBody>
-    </Card>
+    <section className="card metric-card"><div className="metric-top"><p>{label}</p><span className={`icon-tile tone-${tone}`}><Icon name={icon} className="icon" /></span></div><div className="metric-value">{shown}{unit && <small>{unit}</small>}</div><div className="metric-foot">{note}</div></section>
   )
 }
 
@@ -105,7 +105,7 @@ function SettingsForm() {
   )
 }
 
-function SpecialistForm({ onCreated }: { onCreated: () => void }) {
+export function SpecialistForm({ onCreated }: { onCreated: () => void }) {
   const [error, setError] = useState('')
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -162,10 +162,10 @@ function ReviewActions({ id, onDone }: { id: string; onDone: () => void }) {
   )
 }
 
-export function WorkspacePage({ section }: { section: string }) {
+export function WorkspacePage({ section, createSpecialist = false, onCloseCreate = () => {} }: { section: string; createSpecialist?: boolean; onCloseCreate?: () => void }) {
   const queryClient = useQueryClient()
   const query = useQuery({
-    queryKey: ['admin', section],
+    queryKey: ['admin', section, adminPreviewEnabled() ? 'preview' : 'live'],
     queryFn: () => loadSection(section),
   })
 
@@ -190,17 +190,20 @@ export function WorkspacePage({ section }: { section: string }) {
   if (data.kind === 'dashboard') {
     const stats = asRecord(data.stats) ?? {}
     return (
-      <div className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Metric label="کاربران" value={stats.users} note={`${formatFaNumber(Number(stats.newUsers ?? 0))} عضو جدید در ۷ روز اخیر`} />
-          <Metric label="درآمد ۳۰ روز اخیر" value={stats.revenueToman} note={`${formatFaNumber(Number(stats.paidOrders ?? 0))} خرید پکیج`} />
-          <Metric label="پیام‌های خوانده‌نشده" value={stats.unreadMessages} note="پیام‌های پشتیبانی در انتظار بررسی" />
-          <Metric label="درخواست‌های امروز AI" value={stats.aiToday} note="تلاش‌های ثبت‌شده امروز · وقت تهران" />
+      <div className="dashboard-page">
+        <section className="dashboard-hero"><div className="hero-copy"><span className="eyebrow">هر روز، یک قدم به سلامت نزدیک‌تر</span><h2>رژیم من را با یک نگاه مدیریت کنید.</h2><p>از پیگیری درخواست‌ها تا ارتباط با کاربران؛ همهٔ مسیرهای مهم، همین‌جا در دسترس شماست.</p><Link className="hero-action" to="/admin/requests">مشاهده درخواست‌ها <Icon name="arrow" className="icon" /></Link></div><div className="hero-decoration" aria-hidden="true"><Icon name="leaf" className="icon" /></div></section>
+        <div className="metrics-grid">
+          <Metric icon="users" tone="green" label="کاربران" value={stats.users} note={`${formatFaNumber(Number(stats.newUsers ?? 0))} عضو جدید در ۷ روز اخیر`} />
+          <Metric icon="wallet" tone="amber" unit="تومان" label="درآمد ۳۰ روز اخیر" value={stats.revenueToman} note={`${formatFaNumber(Number(stats.paidOrders ?? 0))} خرید پکیج`} />
+          <Metric icon="message" tone="blue" label="پیام‌های خوانده‌نشده" value={stats.unreadMessages} note="پیام‌های پشتیبانی در انتظار بررسی" />
+          <Metric icon="sparkles" tone="rose" label="درخواست‌های امروز AI" value={stats.aiToday} note="تلاش‌های ثبت‌شده امروز · وقت تهران" />
         </div>
-        <Card>
-          <h2 className="border-b border-line px-6 py-4 text-base font-bold">آخرین پرداخت‌ها</h2>
+        <div className="dashboard-lower"><section className="card">
+          <div className="section-head"><div><h2>آخرین پرداخت‌ها</h2><p>پنج خرید اخیر پکیج</p></div><Link to="/admin/payments">همه پرداخت‌ها <Icon name="arrow" className="icon" /></Link></div>
           <DataTable rows={data.payments.slice(0, 5)} />
-        </Card>
+        </section><section className="card quick-panel"><div className="section-head"><div><h2>دسترسی سریع</h2><p>از کجا شروع می‌کنید؟</p></div></div><div className="quick-links">{[
+          ['users', 'کاربران', 'حساب‌ها و اطلاعات کاربران', 'users'], ['payments', 'پرداخت‌ها', 'خرید پکیج‌ها', 'wallet'], ['messages', 'پیام‌ها', 'گفت‌وگو با کاربران', 'message'], ['tickets', 'تیکت‌ها', 'درخواست‌های پشتیبانی', 'headphones'],
+        ].map(([id, title, description, icon]) => <Link className="quick-link" key={id} to={`/admin/${id}`}><span className="icon-tile"><Icon name={icon!} className="icon" /></span><div><strong>{title}</strong><small>{description}</small></div><Icon name="arrow" className="icon" /></Link>)}</div></section></div>
       </div>
     )
   }
@@ -222,10 +225,11 @@ export function WorkspacePage({ section }: { section: string }) {
     return <Card><DefinitionList value={data.value} /></Card>
   }
   if (data.kind === 'empty') return null
+  if (section === 'users') return <UsersTable rows={data.rows} onChanged={refresh} />
+  if (section === 'specialists') return <SpecialistsPage rows={data.rows} onChanged={refresh} creating={createSpecialist} onCloseCreate={onCloseCreate} />
 
   return (
     <div>
-      {section === 'specialists' && <SpecialistForm onCreated={refresh} />}
       <Card>
         <DataTable rows={data.rows} />
         {section === 'reviews' && (

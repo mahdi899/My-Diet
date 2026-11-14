@@ -176,6 +176,7 @@ class OnboardingController extends ChangeNotifier {
   void back() {
     if (isFirst) return;
     index -= 1;
+    _schedule(step: true);
     notifyListeners();
   }
 
@@ -201,7 +202,7 @@ class OnboardingController extends ChangeNotifier {
     if (!hasUnsynced && !_stepDirty) return true;
     _flushing = true;
     final patch = Map<String, Object?>.from(_pending);
-    final step = current.id.startsWith('_') ? null : current.id;
+      final step = current.id;
     try {
       _version = await repository.saveDraft(
         track: track,

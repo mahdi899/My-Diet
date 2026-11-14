@@ -8,6 +8,7 @@ import 'widgets/number_inputs.dart';
 import 'widgets/plan_theater.dart';
 import 'widgets/sleep_dial.dart';
 import 'widgets/steps.dart';
+import '../../core/format/digits.dart';
 import '../../core/theme/tokens.dart';
 
 /// The spec-driven questionnaire. It renders whatever the server's spec says, so adding or
@@ -19,11 +20,18 @@ class OnboardingFlow extends StatefulWidget {
     required this.onDone,
     this.onExit,
     this.exitBeforeTrack = false,
+    this.releaseWithoutSubmit = false,
+    this.onQuestionnaireDone,
   });
   final OnboardingController controller;
   final ValueChanged<ProfileSummary> onDone;
   final VoidCallback? onExit;
   final bool exitBeforeTrack;
+
+  /// Signup keeps the answers and continues to analysis, specialists and plans
+  /// before any account or submit call.
+  final bool releaseWithoutSubmit;
+  final VoidCallback? onQuestionnaireDone;
 
   @override
   State<OnboardingFlow> createState() => _OnboardingFlowState();
@@ -53,6 +61,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Future<void> _next() async {
     forward = true;
     if (c.isLast) {
+      if (widget.releaseWithoutSubmit) {
+        final saved = await c.flush();
+        if (!mounted || !saved) return;
+        widget.onQuestionnaireDone?.call();
+        return;
+      }
       final profile = await c.submit();
       if (profile != null && mounted) widget.onDone(profile);
       return;
@@ -158,6 +172,39 @@ class _QuestionView extends StatelessWidget {
   final SpecQuestion question;
   final ValueChanged<String> onSingleChoice;
 
+  /// Loss cannot reach or pass the current weight. Gain cannot stay at or below it.
+  (double, double) _kgBounds(SpecQuestion q) {
+    var min = q.min ?? 0;
+    var max = q.max ?? 300;
+    if (q.key != 'target_weight_kg') return (min, max);
+    final current = controller.answer('weight_kg');
+    if (current is! num) return (min, max);
+    final step = q.step ?? 0.5;
+    final weight = current.toDouble();
+    if (controller.track == 'weight_loss') {
+      max = weight - step;
+    } else if (controller.track == 'weight_gain') {
+      min = weight + step;
+    }
+    if (min > max) min = max;
+    return (min, max);
+  }
+
+  String? _targetHint() {
+    final current = controller.answer('weight_kg');
+    if (question.key != 'target_weight_kg' || current is! num) return null;
+    final kilos = fa(
+      current == current.roundToDouble() ? current.round() : current,
+    );
+    if (controller.track == 'weight_loss') {
+      return 'باید کمتر از $kilos کیلوگرم باشد';
+    }
+    if (controller.track == 'weight_gain') {
+      return 'باید بیشتر از $kilos کیلوگرم باشد';
+    }
+    return null;
+  }
+
   /// Same wording as the website. The gain path uses its own target-weight question.
   String get _title {
     if (question.key == 'target_weight_kg' &&
@@ -221,36 +268,56 @@ class _QuestionView extends StatelessWidget {
           ),
         );
       case QuestionKind.number:
+        final bounds = _kgBounds(q);
+        final fallback = (q.defaultValue ?? (bounds.$1 + bounds.$2) / 2)
+            .clamp(bounds.$1, bounds.$2)
+            .toDouble();
         body = _Defaulted(
           questionKey: q.key,
           value: raw,
-          fallback: q.defaultValue ?? ((q.min ?? 0) + (q.max ?? 100)) / 2,
+          fallback: q.key == 'height_cm'
+              ? (q.defaultValue ?? 165)
+              : fallback,
           controller: controller,
-          builder: (v) => q.key == 'height_cm'
-              ? RulerPicker(
-                  value: (v as num).toDouble(),
-                  min: q.min ?? 120,
-                  max: q.max ?? 230,
-                  unit: q.unit ?? '',
-                  onChanged: (n) => controller.setAnswer(q.key, n),
-                )
-              : q.key.endsWith('_kg')
-              ? WeightDial(
-                  value: (v as num).toDouble(),
-                  min: q.min ?? 0,
-                  max: q.max ?? 100,
-                  step: q.step ?? 1,
-                  unit: q.unit ?? '',
-                  onChanged: (n) => controller.setAnswer(q.key, n),
-                )
-              : BigNumberPicker(
-                  value: (v as num).toDouble(),
-                  min: q.min ?? 0,
-                  max: q.max ?? 100,
-                  step: q.step ?? 1,
-                  unit: q.unit ?? '',
-                  onChanged: (n) => controller.setAnswer(q.key, n),
-                ),
+          builder: (v) {
+            final chosen = (v as num).toDouble();
+            final shown = chosen.clamp(bounds.$1, bounds.$2).toDouble();
+            if (q.key == 'target_weight_kg' && shown != chosen) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (controller.answer(q.key) != shown) {
+                  controller.setAnswer(q.key, shown);
+                }
+              });
+            }
+            if (q.key == 'height_cm') {
+              return RulerPicker(
+                value: chosen,
+                min: q.min ?? 120,
+                max: q.max ?? 230,
+                unit: q.unit ?? '',
+                onChanged: (n) => controller.setAnswer(q.key, n),
+              );
+            }
+            if (q.key.endsWith('_kg')) {
+              return WeightDial(
+                value: shown,
+                min: bounds.$1,
+                max: bounds.$2,
+                step: q.step ?? 1,
+                unit: q.unit ?? '',
+                hint: _targetHint(),
+                onChanged: (n) => controller.setAnswer(q.key, n),
+              );
+            }
+            return BigNumberPicker(
+              value: chosen,
+              min: q.min ?? 0,
+              max: q.max ?? 100,
+              step: q.step ?? 1,
+              unit: q.unit ?? '',
+              onChanged: (n) => controller.setAnswer(q.key, n),
+            );
+          },
         );
       case QuestionKind.sleepWake:
         final map = raw is Map ? raw : const {'sleep': 23, 'wake': 7};

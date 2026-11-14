@@ -168,7 +168,13 @@ export function WizardPage() {
           </div>
         </div>
       </header>}
-      <main className="relative z-10 max-w-4xl mx-auto px-4 py-6">
+      <main
+        className={
+          wizard.stage === 'quiz' || wizard.stage === 'plans' || wizard.stage === 'verify' || wizard.stage === 'checkout'
+            ? 'relative z-10 w-full max-w-none px-0 py-0'
+            : 'relative z-10 max-w-4xl mx-auto px-4 py-6'
+        }
+      >
         {(wizard.stage === 'intro' || wizard.stage === 'goals') && (
           <section id="page1Container" className="min-h-[78vh] flex flex-col justify-center items-center">
             {wizard.stage === 'intro'

@@ -58,6 +58,9 @@ class _LiveEntryState extends State<LiveEntry> {
           await _enter();
         case NextStep.consent:
           if (mounted) setState(() => stage = _Stage.consent);
+        case NextStep.resume || NextStep.gaps when state.missing.isEmpty:
+          profile = await services.onboarding.submit(patch: _legalTarget(state));
+          await _enter();
         case NextStep.start || NextStep.resume || NextStep.gaps:
           final spec = await services.onboarding.spec();
           controller?.dispose();
@@ -84,6 +87,26 @@ class _LiveEntryState extends State<LiveEntry> {
 
   Future<void> _enter() async {
     await refreshLive(widget.store, profile: profile);
+  }
+
+  /// A finished questionnaire must not be shown again at login.
+  /// An illegal target is pulled just inside the server rule so submit can finish.
+  Map<String, Object?> _legalTarget(OnboardingState state) {
+    final answers = state.draft?.answers;
+    final weight = answers?['weight_kg'];
+    final target = answers?['target_weight_kg'];
+    if (weight is! num || target is! num) return const {};
+    if (state.track == 'weight_loss' && target >= weight) {
+      return {
+        'target_weight_kg': double.parse((weight - 0.5).toStringAsFixed(1)),
+      };
+    }
+    if (state.track == 'weight_gain' && target <= weight) {
+      return {
+        'target_weight_kg': double.parse((weight + 0.5).toStringAsFixed(1)),
+      };
+    }
+    return const {};
   }
 
   @override

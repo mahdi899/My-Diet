@@ -59,7 +59,7 @@ class _CoachPageState extends State<CoachPage> {
     if (_controller.sessionExpired && !_endingSession) {
       _endingSession = true;
       final store = DemoScope.of(context);
-      if (store.serverAuthEnabled) {
+      if (store.serverAuthEnabled && store.customerAuth?.session != null) {
         unawaited(() async {
           try {
             await store.signOutCustomer();

@@ -67,7 +67,7 @@
 #pageAiPreparingContainer .specialist-mark{width:21px;height:21px}
 #pageAiPreparingContainer .specialist-card.is-selected .specialist-mark{background:#24543a;border-color:#24543a;display:grid;place-items:center}
 #pageAiPreparingContainer .specialist-card.is-selected .specialist-mark:after{content:'✓';color:#fff;font-size:12px}
-#pageAiPreparingContainer #aiReadyGoBtn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff!important;background-image:none!important;color:#143528!important;border:0;border-radius:16px;padding:17px 20px;font-size:16px;box-shadow:0 10px 28px #00000022}
+#pageAiPreparingContainer #aiReadyGoBtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;background:#fff!important;background-image:none!important;color:#143528!important;border:0;border-radius:16px;padding:17px 20px;font-size:16px;box-shadow:0 10px 28px #00000022}
 #pageAiPreparingContainer #aiReadyGoBtn>span{flex:0 0 auto}
 #pageAiPreparingContainer #aiReadyGoBtn>span:last-child{font-size:22px;line-height:1}
 #pageAiPreparingContainer button:focus-visible{outline:3px solid #bddca0;outline-offset:4px}

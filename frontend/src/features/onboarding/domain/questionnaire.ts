@@ -78,8 +78,15 @@ export function faDigits(value: string | number) {
   return String(value).replace(/[0-9]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit)
 }
 
+function enrichQuestion(question: QuizQuestion): QuizQuestion {
+  if (question.multi && question.q === 'به چه غذاهایی حساسیت داری؟' && !question.exclusiveLabels?.length) {
+    return { ...question, exclusiveLabels: ['بدون حساسیت'] }
+  }
+  return question
+}
+
 export function prepareQuestions(goal: QuizGoal) {
-  let questions = goal.questions.map((question) => ({
+  let questions = goal.questions.map((question) => enrichQuestion({
     ...question,
     options: question.options?.map((option) => ({ ...option })),
   }))

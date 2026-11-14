@@ -30,6 +30,7 @@ flutter:
     - assets/photo/expert/
     - assets/photo/lifestyle/
     - assets/photo/ingredient/
+    - assets/images/analysis/scan_hologram.png
   fonts:
     - family: Vazirmatn
       fonts:
