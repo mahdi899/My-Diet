@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<meta charset="utf-8">
+<title>ویرایش پرسشنامه</title>
+<style>
+  body { font-family: sans-serif; margin: 2rem; }
+  textarea, input { width: 100%; box-sizing: border-box; }
+  textarea { min-height: 24rem; }
+  pre { white-space: pre-wrap; }
+</style>
+<h1>ویرایش پرسشنامه</h1>
+<p>توکن مدیر را بگذار، سازگاری را بررسی کن، بعد پیش‌نویس را ذخیره و منتشر کن. حذف سؤال ثابت رد می‌شود.</p>
+<label>توکن دسترسی <input id="token" autocomplete="off"></label>
+<p><button id="load" type="button">بارگذاری نسخهٔ منتشرشده</button>
+<button id="check" type="button">بررسی سازگاری</button>
+<button id="save" type="button">ذخیرهٔ پیش‌نویس</button>
+<button id="publish" type="button">انتشار</button></p>
+<textarea id="document"></textarea>
+<pre id="result"></pre>
+<script>
+const token = document.querySelector('#token');
+const documentBox = document.querySelector('#document');
+const result = document.querySelector('#result');
+let draftVersion = null;
+async function call(path, options) {
+  const response = await fetch(path, {
+    ...options,
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token.value.trim(), ...(options && options.headers) }
+  });
+  const body = await response.json().catch(() => ({}));
+  result.textContent = JSON.stringify(body, null, 2);
+  if (!response.ok) throw new Error('request failed');
+  return body;
+}
+document.querySelector('#load').onclick = async () => {
+  const schema = await call('/v1/questionnaire/schema', { headers: {} });
+  documentBox.value = JSON.stringify({ questions: schema.questions }, null, 2);
+};
+document.querySelector('#check').onclick = () => call('/v1/admin/questionnaire/compatibility', { method: 'POST', body: documentBox.value });
+document.querySelector('#save').onclick = async () => {
+  const saved = await call('/v1/admin/questionnaire/schemas', { method: 'POST', body: documentBox.value });
+  draftVersion = saved.version;
+};
+document.querySelector('#publish').onclick = () => {
+  if (!draftVersion) { result.textContent = 'ابتدا پیش‌نویس را ذخیره کن'; return; }
+  return call('/v1/admin/questionnaire/schemas/' + draftVersion + '/publish', { method: 'POST', body: '{}' });
+};
+</script>
+</html>

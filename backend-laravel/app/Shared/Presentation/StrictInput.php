@@ -16,25 +16,27 @@ final class StrictInput
         } catch (JsonException) {
             throw self::invalid();
         }
-        if (!$object instanceof \stdClass) {
+        if (! $object instanceof \stdClass) {
             throw self::invalid();
         }
         $body = (array) $object;
         if (array_diff(array_keys($body), $keys)) {
             throw new Problem(400, 'validation', 'فیلد اضافی پذیرفته نیست');
         }
+
         return $body;
     }
 
     public static function string(array $body, string $key, int $max): string
     {
-        if (!isset($body[$key]) || !is_string($body[$key])) {
+        if (! isset($body[$key]) || ! is_string($body[$key])) {
             throw self::invalid();
         }
         $trimmed = preg_replace('/^[\s\p{Z}\x{FEFF}]+|[\s\p{Z}\x{FEFF}]+$/u', '', $body[$key]);
         if ($trimmed === '' || self::length($trimmed) > $max) {
             throw self::invalid();
         }
+
         return $trimmed;
     }
 
@@ -50,10 +52,11 @@ final class StrictInput
 
     public static function uuid(string $value): string
     {
-        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iD', $value)) {
+        if (! preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iD', $value)) {
             throw new Problem(400, 'validation', 'شناسه معتبر نیست');
         }
-        return $value;
+
+        return strtolower($value);
     }
 
     public static function phone(string $input): string
@@ -77,18 +80,20 @@ final class StrictInput
         } else {
             throw new Problem(400, 'invalid_phone', 'شمارهٔ موبایل معتبر نیست');
         }
-        if (!preg_match('/^9[0-9]{9}$/D', $national)) {
+        if (! preg_match('/^9[0-9]{9}$/D', $national)) {
             throw new Problem(400, 'invalid_phone', 'شمارهٔ موبایل معتبر نیست');
         }
+
         return '+98'.$national;
     }
 
     public static function code(array $body, string $message): string
     {
         $code = self::string($body, 'code', 6);
-        if (!preg_match('/^[0-9]{6}$/D', $code)) {
+        if (! preg_match('/^[0-9]{6}$/D', $code)) {
             throw new Problem(401, 'unauthorized', $message);
         }
+
         return $code;
     }
 

@@ -1,0 +1,452 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "name",
+      "title": "نام و نام خانوادگی",
+      "kind": "text",
+      "options": []
+    },
+    {
+      "id": "age",
+      "title": "سن / سال",
+      "kind": "number",
+      "options": []
+    },
+    {
+      "id": "sex",
+      "title": "جنسیت زیستی",
+      "kind": "single",
+      "options": [
+        {
+          "code": "female",
+          "label": "زن"
+        },
+        {
+          "code": "male",
+          "label": "مرد"
+        },
+        {
+          "code": "unspecified",
+          "label": "ترجیح می‌دهم نگویم"
+        }
+      ]
+    },
+    {
+      "id": "heightCm",
+      "title": "قد / سانتی‌متر",
+      "kind": "number",
+      "options": []
+    },
+    {
+      "id": "weightKg",
+      "title": "وزن / کیلوگرم",
+      "kind": "number",
+      "options": []
+    },
+    {
+      "id": "goal",
+      "title": "هدف اصلی تغذیه",
+      "kind": "single",
+      "options": [
+        {
+          "code": "weight_loss",
+          "label": "کاهش وزن"
+        },
+        {
+          "code": "weight_gain",
+          "label": "افزایش وزن"
+        },
+        {
+          "code": "weight_maintenance",
+          "label": "تثبیت وزن"
+        },
+        {
+          "code": "healthy_eating",
+          "label": "تغذیهٔ سالم"
+        },
+        {
+          "code": "sports_nutrition",
+          "label": "تغذیهٔ ورزشی"
+        },
+        {
+          "code": "medical_condition",
+          "label": "رژیم برای شرایط پزشکی"
+        }
+      ]
+    },
+    {
+      "id": "lifeStage",
+      "title": "وضعیت بارداری یا شیردهی",
+      "kind": "single",
+      "options": [
+        {
+          "code": "none",
+          "label": "هیچ‌کدام"
+        },
+        {
+          "code": "trying_to_conceive",
+          "label": "در حال اقدام به بارداری"
+        },
+        {
+          "code": "pregnant",
+          "label": "باردار هستم"
+        },
+        {
+          "code": "breastfeeding",
+          "label": "شیرده هستم"
+        },
+        {
+          "code": "not_applicable",
+          "label": "ارتباطی ندارد"
+        }
+      ]
+    },
+    {
+      "id": "pregnancyWeek",
+      "title": "هفتهٔ بارداری",
+      "kind": "number",
+      "options": []
+    },
+    {
+      "id": "prePregnancyWeightKg",
+      "title": "وزن پیش از بارداری / کیلوگرم",
+      "kind": "number",
+      "options": []
+    },
+    {
+      "id": "babies",
+      "title": "تعداد جنین",
+      "kind": "single",
+      "options": [
+        {
+          "code": "singleton",
+          "label": "تک‌قلو"
+        },
+        {
+          "code": "multiple",
+          "label": "دوقلو یا بیشتر"
+        },
+        {
+          "code": "unknown",
+          "label": "هنوز مشخص نیست"
+        }
+      ]
+    },
+    {
+      "id": "nursingAge",
+      "title": "سن کودک",
+      "kind": "single",
+      "options": [
+        {
+          "code": "under_6m",
+          "label": "کمتر از ۶ ماه"
+        },
+        {
+          "code": "6_to_12m",
+          "label": "۶ تا ۱۲ ماه"
+        },
+        {
+          "code": "over_12m",
+          "label": "بیشتر از ۱۲ ماه"
+        }
+      ]
+    },
+    {
+      "id": "targetWeightKg",
+      "title": "وزن هدف / کیلوگرم",
+      "kind": "number",
+      "options": []
+    },
+    {
+      "id": "previousDiet",
+      "title": "تجربهٔ قبلی رژیم",
+      "kind": "single",
+      "options": [
+        {
+          "code": "none",
+          "label": "نداشته‌ام"
+        },
+        {
+          "code": "kept",
+          "label": "نتیجه گرفتم و حفظ کردم"
+        },
+        {
+          "code": "regained",
+          "label": "وزن دوباره برگشته"
+        },
+        {
+          "code": "hard",
+          "label": "ادامه‌دادن برایم سخت بود"
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "بیماری یا شرایط تشخیص‌داده‌شده",
+      "kind": "multiple",
+      "options": [
+        {
+          "code": "none",
+          "label": "موردی ندارم"
+        },
+        {
+          "code": "diabetes",
+          "label": "دیابت"
+        },
+        {
+          "code": "hypertension",
+          "label": "فشار خون"
+        },
+        {
+          "code": "thyroid",
+          "label": "اختلال تیروئید"
+        },
+        {
+          "code": "kidney",
+          "label": "بیماری کلیه"
+        },
+        {
+          "code": "liver",
+          "label": "بیماری کبد"
+        },
+        {
+          "code": "digestive",
+          "label": "مشکل گوارشی"
+        },
+        {
+          "code": "eating_disorder",
+          "label": "سابقهٔ اختلال خوردن"
+        },
+        {
+          "code": "food_allergy",
+          "label": "حساسیت غذایی دارم"
+        },
+        {
+          "code": "medication",
+          "label": "دارو مصرف می‌کنم"
+        },
+        {
+          "code": "other",
+          "label": "شرایط دیگر"
+        },
+        {
+          "code": "gestational_diabetes",
+          "label": "دیابت بارداری تشخیص‌داده‌شده"
+        },
+        {
+          "code": "high_risk_pregnancy",
+          "label": "بارداری پرخطر با نظر پزشک"
+        },
+        {
+          "code": "unintentional_weight_loss",
+          "label": "کاهش وزن ناخواسته"
+        }
+      ]
+    },
+    {
+      "id": "healthDetails",
+      "title": "توضیح شرایط و محدودیت‌های پزشک",
+      "kind": "text",
+      "options": []
+    },
+    {
+      "id": "allergies",
+      "title": "نام مادهٔ حساسیت‌زا و نوع واکنش",
+      "kind": "text",
+      "options": []
+    },
+    {
+      "id": "medicines",
+      "title": "نام داروها و مکمل‌ها و مقدار مصرف",
+      "kind": "text",
+      "options": []
+    },
+    {
+      "id": "activity",
+      "title": "میزان فعالیت روزانه",
+      "kind": "single",
+      "options": [
+        {
+          "code": "sedentary",
+          "label": "بیشتر نشسته"
+        },
+        {
+          "code": "light",
+          "label": "فعالیت سبک"
+        },
+        {
+          "code": "moderate",
+          "label": "فعالیت متوسط"
+        },
+        {
+          "code": "high",
+          "label": "فعالیت زیاد"
+        }
+      ]
+    },
+    {
+      "id": "exercise",
+      "title": "تعداد جلسهٔ ورزش در هفته",
+      "kind": "single",
+      "options": [
+        {
+          "code": "none",
+          "label": "ورزش نمی‌کنم"
+        },
+        {
+          "code": "1_2",
+          "label": "۱ تا ۲ جلسه"
+        },
+        {
+          "code": "3_4",
+          "label": "۳ تا ۴ جلسه"
+        },
+        {
+          "code": "5_plus",
+          "label": "۵ جلسه یا بیشتر"
+        }
+      ]
+    },
+    {
+      "id": "sleep",
+      "title": "خواب معمول شبانه",
+      "kind": "single",
+      "options": [
+        {
+          "code": "under_5",
+          "label": "کمتر از ۵ ساعت"
+        },
+        {
+          "code": "5_to_7",
+          "label": "۵ تا ۷ ساعت"
+        },
+        {
+          "code": "7_to_9",
+          "label": "۷ تا ۹ ساعت"
+        },
+        {
+          "code": "over_9",
+          "label": "بیشتر از ۹ ساعت"
+        }
+      ]
+    },
+    {
+      "id": "mealPattern",
+      "title": "الگوی معمول غذاخوردن",
+      "kind": "single",
+      "options": [
+        {
+          "code": "regular",
+          "label": "سه وعدهٔ منظم"
+        },
+        {
+          "code": "skipped",
+          "label": "بیشتر وعده‌ها را حذف می‌کنم"
+        },
+        {
+          "code": "grazing",
+          "label": "ریزه‌خواری دارم"
+        },
+        {
+          "code": "night",
+          "label": "غذاخوردن شبانه"
+        },
+        {
+          "code": "shift",
+          "label": "به‌دلیل شیفت کاری نامنظم است"
+        }
+      ]
+    },
+    {
+      "id": "water",
+      "title": "آب معمول در روز",
+      "kind": "single",
+      "options": [
+        {
+          "code": "under_4",
+          "label": "کمتر از ۴ لیوان"
+        },
+        {
+          "code": "4_to_6",
+          "label": "۴ تا ۶ لیوان"
+        },
+        {
+          "code": "7_to_9",
+          "label": "۷ تا ۹ لیوان"
+        },
+        {
+          "code": "10_plus",
+          "label": "۱۰ لیوان یا بیشتر"
+        }
+      ]
+    },
+    {
+      "id": "preference",
+      "title": "الگوی غذای مورد علاقه",
+      "kind": "single",
+      "options": [
+        {
+          "code": "iranian",
+          "label": "غذای ایرانی"
+        },
+        {
+          "code": "mixed",
+          "label": "ترکیبی"
+        },
+        {
+          "code": "vegetarian",
+          "label": "گیاه‌خواری"
+        },
+        {
+          "code": "vegan",
+          "label": "وگان"
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "title": "بودجهٔ تهیهٔ غذا",
+      "kind": "single",
+      "options": [
+        {
+          "code": "low",
+          "label": "اقتصادی"
+        },
+        {
+          "code": "medium",
+          "label": "متوسط"
+        },
+        {
+          "code": "open",
+          "label": "آزاد"
+        }
+      ]
+    },
+    {
+      "id": "cooking",
+      "title": "زمان معمول آشپزی",
+      "kind": "single",
+      "options": [
+        {
+          "code": "under_30",
+          "label": "کمتر از ۳۰ دقیقه"
+        },
+        {
+          "code": "30_to_60",
+          "label": "۳۰ تا ۶۰ دقیقه"
+        },
+        {
+          "code": "flexible",
+          "label": "محدودیت ندارم"
+        }
+      ]
+    },
+    {
+      "id": "dislikes",
+      "title": "غذاهای نامطلوب (اختیاری)",
+      "kind": "text",
+      "options": []
+    }
+  ]
+}

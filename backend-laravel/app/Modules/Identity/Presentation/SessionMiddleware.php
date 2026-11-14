@@ -14,14 +14,15 @@ final class SessionMiddleware
 
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!preg_match('/^Bearer\\s+(\\S+)$/iD', $request->header('authorization', ''), $matches)) {
+        if (! preg_match('/^Bearer\\s+(\\S+)$/iD', $request->header('authorization', ''), $matches)) {
             throw new Problem(401, 'unauthorized', 'نشست معتبر نیست');
         }
         $actor = $this->identity->authenticate($matches[1]);
-        if ($roles && !in_array($actor['role'], $roles, true)) {
+        if ($roles && ! in_array($actor['role'], $roles, true)) {
             throw new Problem(403, 'forbidden', 'اجازهٔ این کار را ندارید');
         }
         $request->attributes->set('actor', $actor);
+
         return $next($request);
     }
 }

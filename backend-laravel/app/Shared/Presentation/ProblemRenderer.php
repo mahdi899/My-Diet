@@ -27,6 +27,7 @@ final class ProblemRenderer
             default => ['internal', 'خطای داخلی رخ داد'],
         };
         $problem = new Problem($status, $code, $message);
+
         return response()->json($problem->body(), $status);
     }
 }

@@ -29,22 +29,24 @@ final class IdentityController
         $body = Input::body($request, ['username', 'password']);
         if ($role === 'specialist') {
             $password = $body['password'] ?? null;
-            if (!is_string($password) || $password === '' || Input::length($password) > 256) {
+            if (! is_string($password) || $password === '' || Input::length($password) > 256) {
                 throw new Problem(401, 'unauthorized', 'نام کاربری یا رمز عبور نادرست است');
             }
         } else {
             $password = Input::string($body, 'password', 256);
         }
+
         return $this->present($request, $this->identity->staffLogin($role, Input::string($body, 'username', 80), $password));
     }
 
     public function requestOtp(Request $request): JsonResponse
     {
         $body = Input::body($request, ['phone', 'existingAccountOnly']);
-        if (array_key_exists('existingAccountOnly', $body) && !is_bool($body['existingAccountOnly'])) {
+        if (array_key_exists('existingAccountOnly', $body) && ! is_bool($body['existingAccountOnly'])) {
             throw new Problem(400, 'validation', 'نوع درخواست معتبر نیست');
         }
         $result = $this->identity->requestOtp(Input::phone(Input::string($body, 'phone', 32)), substr($request->ip() ?: 'unknown', 0, 64), $body['existingAccountOnly'] ?? false);
+
         return response()->json($result, 201);
     }
 
@@ -52,6 +54,7 @@ final class IdentityController
     {
         $body = Input::body($request, ['phone', 'code', 'deviceLabel', 'platform']);
         $code = Input::code($body, 'کد واردشده درست نیست');
+
         return $this->present($request, $this->identity->verifyOtp(
             Input::phone(Input::string($body, 'phone', 32)), $code,
             Input::optional($body, 'deviceLabel', 80), Input::optional($body, 'platform', 40)));
@@ -61,6 +64,7 @@ final class IdentityController
     {
         $body = Input::body($request, ['totpToken', 'code']);
         $code = Input::code($body, 'کد ورود دومرحله‌ای درست نیست');
+
         return $this->present($request, $this->identity->completeTotp(Input::string($body, 'totpToken', 200), $code));
     }
 
@@ -78,19 +82,21 @@ final class IdentityController
         if ($token === '') {
             throw new Problem(401, 'unauthorized', 'نشست معتبر نیست');
         }
+
         return $this->present($request, $this->identity->refresh($token));
     }
 
     public function latest(Request $request): array
     {
         $phone = $request->query('phone');
-        if ($this->settings->environment !== 'development' || !is_string($phone) || $phone === '') {
+        if ($this->settings->environment !== 'development' || ! is_string($phone) || $phone === '') {
             throw new Problem(404, 'not_found', 'یافت نشد');
         }
         $code = $this->sms->latest(Input::phone($phone));
         if ($code === null) {
             throw new Problem(404, 'not_found', 'یافت نشد');
         }
+
         return ['code' => $code];
     }
 
@@ -98,24 +104,28 @@ final class IdentityController
     {
         $actor = $request->attributes->get('actor');
         $this->identity->logout($actor['id'], $actor['sessionId']);
+
         return response()->json(['ok' => true], 201)->header('Set-Cookie', $this->cookie('', 0));
     }
 
     public function sessions(Request $request): array
     {
         $actor = $request->attributes->get('actor');
+
         return $this->identity->sessions($actor['id'], $actor['sessionId']);
     }
 
     public function revoke(Request $request, string $id): array
     {
         $this->identity->revokeSession($request->attributes->get('actor')['id'], Input::uuid($id));
+
         return ['ok' => true];
     }
 
     public function profile(Request $request): array
     {
         $actor = $request->attributes->get('actor');
+
         return $this->identity->profile($actor['id'], $actor['role']);
     }
 
@@ -123,6 +133,7 @@ final class IdentityController
     {
         $body = Input::body($request, ['displayName']);
         $actor = $request->attributes->get('actor');
+
         return $this->identity->rename($actor['id'], $actor['role'], Input::string($body, 'displayName', 80));
     }
 
@@ -140,20 +151,21 @@ final class IdentityController
         $photo = $body['photo'] ?? null;
         $number = fn (mixed $v): bool => (is_int($v) || is_float($v)) && is_finite((float) $v);
         $invalid = fn (): Problem => new Problem(400, 'validation', 'اطلاعات فردی معتبر نیست.');
-        if (!$number($age) || floor($age) !== (float) $age || $age < 1 || $age > 130 ||
-            !$number($height) || $height <= 0 || $height > 300 || !$number($weight) || $weight <= 0 || $weight > 700 ||
-            !array_key_exists('photo', $body)) {
+        if (! $number($age) || floor($age) !== (float) $age || $age < 1 || $age > 130 ||
+            ! $number($height) || $height <= 0 || $height > 300 || ! $number($weight) || $weight <= 0 || $weight > 700 ||
+            ! array_key_exists('photo', $body)) {
             throw $invalid();
         }
         if ($photo !== null) {
-            if (!is_string($photo) || strlen($photo) > 450000 || !preg_match('/^[A-Za-z0-9+\/]+={0,2}$/D', $photo)) {
+            if (! is_string($photo) || strlen($photo) > 450000 || ! preg_match('/^[A-Za-z0-9+\/]+={0,2}$/D', $photo)) {
                 throw $invalid();
             }
             $bytes = base64_decode($photo);
-            if (!str_starts_with($bytes, hex2bin('ffd8ff')) && !str_starts_with($bytes, hex2bin('89504e470d0a1a0a'))) {
+            if (! str_starts_with($bytes, hex2bin('ffd8ff')) && ! str_starts_with($bytes, hex2bin('89504e470d0a1a0a'))) {
                 throw $invalid();
             }
         }
+
         return $this->identity->savePersonalDetails($request->attributes->get('actor')['id'], [
             'name' => Input::string($body, 'name', 80), 'contactPhone' => Input::phone(Input::string($body, 'contactPhone', 32)),
             'age' => $age, 'height' => $height, 'weight' => $weight, 'photo' => $photo,
@@ -170,12 +182,14 @@ final class IdentityController
         $actor = $request->attributes->get('actor');
         $result = $this->identity->setupTotp($actor['id']);
         $result['otpauthUrl'] = 'otpauth://totp/Sabzine:'.$actor['role'].'?secret='.$result['secret'].'&issuer=Sabzine&digits=6&period=30';
+
         return response()->json($result, 201);
     }
 
     public function confirmTotp(Request $request): JsonResponse
     {
         $body = Input::body($request, ['code']);
+
         return response()->json($this->identity->confirmTotp($request->attributes->get('actor')['id'], Input::code($body, 'کد ورود دومرحله‌ای درست نیست')), 201);
     }
 
@@ -188,6 +202,7 @@ final class IdentityController
         $maxAge = max(0, (int) floor((float) (new \DateTimeImmutable($issued['sessionExpiresAt']))->format('U.u') - microtime(true)));
         $response->header('Set-Cookie', $this->cookie($issued['refreshToken'], $maxAge));
         unset($issued['refreshToken']);
+
         return $response->setData($issued);
     }
 

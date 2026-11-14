@@ -63,7 +63,7 @@ final class LegacyCryptoTest extends TestCase
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root));
         foreach ($iterator as $file) {
             $path = str_replace('\\', '/', $file->getPathname());
-            if (!$file->isFile() || !preg_match('~/(Domain|Application)/~', $path)) {
+            if (! $file->isFile() || ! preg_match('~/(Domain|Application)/~', $path)) {
                 continue;
             }
             $source = file_get_contents($path);

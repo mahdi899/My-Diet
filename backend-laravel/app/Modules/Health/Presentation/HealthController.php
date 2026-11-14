@@ -17,6 +17,7 @@ final class HealthController
     {
         try {
             $db->select('select 1');
+
             return ['status' => 'ok', 'database' => 'up'];
         } catch (Throwable) {
             throw new Problem(503, 'dependency_outage', 'پایگاه داده در دسترس نیست');

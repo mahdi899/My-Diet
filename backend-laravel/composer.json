@@ -12,9 +12,9 @@
     "php": "^8.4",
     "laravel/framework": "^13.17",
     "laravel/tinker": "^3.0",
-    "ext-pdo_pgsql": "*",
     "ext-sodium": "*",
-    "ext-openssl": "*"
+    "ext-openssl": "*",
+    "ext-pdo_mysql": "*"
   },
   "require-dev": {
     "fakerphp/faker": "^1.23",
@@ -83,5 +83,8 @@
     }
   },
   "minimum-stability": "stable",
-  "prefer-stable": true
+  "prefer-stable": true,
+  "suggest": {
+    "ext-pdo_pgsql": "Only needed for read-only PostgreSQL migration preflight, not by the Laravel API."
+  }
 }

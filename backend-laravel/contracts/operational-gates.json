@@ -1,4 +1,5 @@
 [
+  {"gate": "Complete MySQL schema, PostgreSQL data conversion and per-table count/checksum reconciliation verified", "verified": false},
   {"gate": "All HTTP contracts and provider failure cases verified", "verified": false},
   {"gate": "Outbox, pg-boss backlog, retries and consumer idempotency migrated", "verified": false},
   {"gate": "Payment callbacks and money/plan transactions verified under concurrency", "verified": false},

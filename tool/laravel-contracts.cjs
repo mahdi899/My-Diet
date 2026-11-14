@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('../backend/node_modules/typescript');
+const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const methods = new Set(['Get', 'Post', 'Put', 'Patch', 'Delete', 'Head', 'Options', 'All']);
 function decorators(node) {
@@ -61,3 +62,15 @@ if (process.argv.includes('--check')) {
   fs.writeFileSync(target, output);
 }
 console.log(`${routes.length} Nest HTTP contracts ${process.argv.includes('--check') ? 'verified' : 'recorded'}.`);
+const sourceDirectory = path.join(root, 'backend/migrations');
+const snapshotDirectory = path.join(root, 'backend-laravel/contracts/postgres-source');
+const manifest = JSON.parse(fs.readFileSync(path.join(snapshotDirectory, 'manifest.json'), 'utf8'));
+const sqlFiles = fs.readdirSync(sourceDirectory).filter(f => f.endsWith('.sql')).sort();
+if (JSON.stringify(sqlFiles) !== JSON.stringify(Object.keys(manifest).sort())) throw new Error('PostgreSQL migration inventory is stale.');
+for (const name of sqlFiles) {
+  for (const directory of [sourceDirectory, snapshotDirectory]) {
+    const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(directory, name))).digest('hex');
+    if (hash !== manifest[name]) throw new Error('PostgreSQL source snapshot mismatch: ' + name);
+  }
+}
+console.log(`${sqlFiles.length} PostgreSQL source snapshots verified (reference only; not executed on MySQL).`);

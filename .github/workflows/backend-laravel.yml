@@ -1,0 +1,94 @@
+name: backend-laravel
+
+on:
+  push:
+    paths:
+      - 'backend-laravel/**'
+      - 'backend/**'
+      - 'tool/laravel-*.cjs'
+      - 'tool/test-laravel.cjs'
+      - '.github/workflows/backend-laravel.yml'
+  pull_request:
+    paths:
+      - 'backend-laravel/**'
+      - 'backend/**'
+      - 'tool/laravel-*.cjs'
+      - 'tool/test-laravel.cjs'
+      - '.github/workflows/backend-laravel.yml'
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root_test_only
+          MYSQL_DATABASE: sabzine_test
+          MYSQL_USER: sabzine_test
+          MYSQL_PASSWORD: test_only
+        ports:
+          - 33306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      NODE_ENV: development
+      APP_ROLE: api
+      DATABASE_URL: mysql://sabzine_test:test_only@127.0.0.1:33306/sabzine_test
+      MYSQL_TEST_URL: mysql://sabzine_test:test_only@127.0.0.1:33306/sabzine_test
+      MYSQL_FULL_TEST_URL: mysql://sabzine_test:test_only@127.0.0.1:33306/sabzine_full_test
+      PLAYWRIGHT_MODULE: ../.tools/browser-tests/node_modules/playwright
+      DB_CONNECTION: mysql
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      SMS_PROVIDER: console
+      OTP_FIXED_CODE: '123456'
+      JWT_SECRET: test-only-cross-runtime-jwt-secret
+      OTP_PEPPER: test-only-cross-runtime-otp-pepper
+      FIELD_KEY: test-only-cross-runtime-field-key
+      PHP_BINARY: php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, pdo_pgsql, sodium, mbstring, openssl
+          coverage: none
+          tools: composer:v2
+      - run: npm ci
+        working-directory: backend
+      - run: npm run build
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run typecheck && npm run build
+        working-directory: frontend
+      - run: npm install --prefix .tools/browser-tests --no-save --package-lock=false playwright
+      - run: node .tools/browser-tests/node_modules/playwright/cli.js install --with-deps chromium
+      - run: node tool/laravel-contracts.cjs --check
+      - run: composer install --no-interaction --prefer-dist
+        working-directory: backend-laravel
+      - run: php artisan migrate --force --no-interaction
+        working-directory: backend-laravel
+        env:
+          DATABASE_URL: mysql://root:root_test_only@127.0.0.1:33306/sabzine_test
+      - run: php vendor/bin/phpunit
+        working-directory: backend-laravel
+      - run: mysql --host=127.0.0.1 --port=33306 --user=root --password=root_test_only --execute="create database sabzine_full_test character set utf8mb4 collate utf8mb4_0900_bin; grant all privileges on sabzine_full_test.* to 'sabzine_test'@'%';"
+      - run: php artisan migrate --force --no-interaction
+        working-directory: backend-laravel
+        env:
+          DATABASE_URL: mysql://root:root_test_only@127.0.0.1:33306/sabzine_full_test
+          MIGRATION_SKIP_PRODUCT_SEEDS: 'true'
+      - run: node --import tsx --test --test-concurrency=1 test/compatibility/laravel.spec.ts test/compatibility/product-import.spec.ts
+        working-directory: backend

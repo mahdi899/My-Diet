@@ -1,58 +1,119 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# بک‌اند Laravel سبزینه
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+مقصد مهاجرت: Laravel 13، PHP 8.4 و MySQL. نسخهٔ سرور مقصد هنوز تعیین نشده؛ فعلاً MySQL 8.4 LTS مبنای توسعه و تست است.
 
-## About Laravel
+این پوشه فعلاً جایگزین کامل سرویس Node نیست. Identity، Health، Questionnaire، Food، Publishing و Money منتقل شده‌اند؛ بخشی از خواندن برنامه و پنل مدیر هم پیاده شده است. تعداد دقیق مسیرهای ثبت‌شده از ۲۷۱ قرارداد را `migration:status` نشان می‌دهد. بک‌اند فعال و تنظیمات انتشار همچنان از `backend/` استفاده می‌کنند.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## ساختار
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- `app/Modules/*/Application`: سناریوها و پورت‌ها، مستقل از Laravel و SQL.
+- `app/Modules/*/Infrastructure`: مخزن MySQL و آداپترهای بیرونی.
+- `app/Modules/*/Presentation`: HTTP، کوکی، اعتبارسنجی و کنترل دسترسی.
+- `app/Shared/Domain`: خطا و سازگاری JWT، scrypt، AES-GCM و TOTP.
+- `app/Providers/AppServiceProvider.php`: اتصال وابستگی‌ها.
+- `contracts/nest-routes.json`: مسیر، نقش، عمومی بودن، وضعیت پیش‌فرض و محل هر handler در Node.
+- `contracts/postgres-source/`: کپی مرجع ۴۴ migration مبدأ همراه SHA-256؛ این SQLها روی MySQL اجرا نمی‌شوند.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## وضعیت و مراحل بعدی
 
-## Learning Laravel
+| مرحله | وضعیت |
+|---|---|
+| اسکلت ماژولار، قرارداد HTTP و رمزنگاری سازگار با Node | پیاده شده |
+| Identity، نشست، پروفایل، OTP و TOTP روی MySQL | پیاده شده؛ تست‌های PHP و مقایسه با Node در مخزن موجود است |
+| schema محصول | ۱۱۷ جدول PostgreSQL روی MySQL ساخته می‌شود؛ CHECK، FK، unique شرطی و معادل triggerها نصب می‌شوند |
+| انتقال آزمایشی تمام جدول‌های محصول با count/checksum | پیاده شده؛ دادهٔ مصنوعی، مبلغ بزرگ، JSON، آرایه، تصویر و تاریخ میکروثانیه‌ای بررسی شده‌اند |
+| پرسش‌نامه، کاتالوگ غذا، مقاله و رضایت‌نامه | پیاده شده؛ اعتبارسنجی، نسخه‌بندی، CSV، پشتیبان کاتالوگ و دسترسی نقش‌ها تست می‌شوند |
+| Money و Orders | شارژ، callback، برداشت، تکرار امن و refund پیاده شده؛ sandbox و خطاهای Zarinpal با آداپتر تست بررسی می‌شوند |
+| Plans و Rewards | خواندن برنامه و درخواست و صف پزشک شروع شده؛ تولید، ویرایش و انتشار و پاداش هنوز کامل نیست |
+| پنل مدیر/پزشک | خواندن داشبورد، پرداخت‌ها، متخصصان، تاریخچه و غذا/مقاله پیاده شده؛ بقیهٔ عملیات باقی مانده |
+| Onboarding، پیام‌ها، گزارش‌ها، حریم خصوصی، مربی، پیگیری و خرید | باقی مانده |
+| AI، SSE، outbox، worker، retry و jobs زمان‌بندی‌شده | باقی مانده |
+| انتقال کامل داده، تمرین cutover و rollback و آزمون بار | باقی مانده |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+FK مکالمه به درخواست برنامه نصب شده است. واردکنندهٔ جزئی Identity همچنان مکالمهٔ مرتبط با برنامه را رد می‌کند؛ برای دادهٔ کامل، واردکنندهٔ محصول لازم است. هشت index عملکردی PostgreSQL هنوز معادل بهینه‌شدهٔ MySQL ندارند؛ در `contracts/mysql-schema.json` با `performanceIndexesPending` مشخص شده‌اند. آزمون بار کامل انجام نشده است.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## راه‌اندازی توسعه
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+PHP 8.4 با `pdo_mysql`، `sodium`، `openssl` و `mbstring` لازم است. Composer از `composer.lock` نصب می‌کند. MySQL باید InnoDB، UTC و `utf8mb4_0900_bin` داشته باشد. حساب اجرای migration باید مجوز ساخت trigger داشته باشد؛ با binary logging فعال، الزامات مدیریت trigger در MySQL هم باید برقرار باشد.
 
-## Agentic Development
+در همین پوشه:
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```sh
+composer install
+cp .env.example .env
+php artisan key:generate
+# DATABASE_URL را روی یک دیتابیس MySQL مخصوص توسعه تنظیم کن.
+php artisan migrate
+php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+در PowerShell به‌جای `cp` می‌توان `Copy-Item .env.example .env` زد. در این دستگاه PHP سازگار در `../.tools/php84/php.exe` آماده شده؛ PHP مربوط به XAMPP نسخهٔ قدیمی‌تری دارد.
 
-## Contributing
+`JWT_SECRET`، `OTP_PEPPER` و `FIELD_KEY` باید هنگام مهاجرت همان مقادیر قبلی بمانند. `APP_KEY` کلید Laravel است و جای این سه مقدار را نمی‌گیرد. HTTP فعلی همان `/v1` است؛ prefix جدید `/api` اضافه نشده. کوکی وب همان `sabzine_refresh` با Path، HttpOnly و SameSite قبلی است.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+OTP کنسولی فقط برای توسعه/تست است. در production از Melipayamak با تنظیمات موجود استفاده می‌شود. تست‌ها هیچ پیامک واقعی نمی‌فرستند. کد OTP در log نوشته نمی‌شود؛ مسیر latest فقط در development قابل استفاده است و cache آن ۱۲۰ ثانیه عمر دارد. `OTP_FIXED_CODE` فقط در development اثر دارد.
 
-## Code of Conduct
+## کنترل آمادگی
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+از ریشهٔ مخزن:
 
-## Security Vulnerabilities
+```sh
+node tool/laravel-contracts.cjs --check
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+در این پوشه:
 
-## License
+```sh
+php artisan migration:status
+php artisan migration:status --json
+php artisan migration:status --require-ready
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+دستور آخر تا تکمیل مسیرها و gateهای عملیاتی با exit code ناموفق تمام می‌شود. ثبت route به‌تنهایی اثبات برابری رفتار نیست. اکنون این نسخه آمادهٔ تعویض سرویس فعال نیست و worker هم هنوز پیاده نشده است.
+
+## انتقال دادهٔ آزمایشی
+
+برای ابزار انتقال، `pdo_pgsql` هم لازم است. `POSTGRES_SOURCE_URL` را با حساب مبدأ دارای دسترسی SELECT تنظیم کن و `DATABASE_URL` را به یک MySQL خالی مخصوص تمرین بده. عملیات مبدأ در snapshot تراکنشی read-only انجام می‌شود.
+
+```sh
+php artisan migration:preflight
+php artisan migration:import-identity
+php artisan migration:import-identity --execute
+```
+
+preflight جدول‌ها، UUID، timestamptz، JSONB، آرایه‌ها، triggerها، functionها و indexهای شرطی را گزارش می‌کند. import-identity فقط برش احراز هویت را با FK فعال منتقل می‌کند.
+
+برای تمرین همهٔ جدول‌های محصول، ابتدا یک دیتابیس تازه بساز. **پیش از اولین `migrate`** مقدار `MIGRATION_SKIP_PRODUCT_SEEDS=true` را تنظیم کن تا دادهٔ پیش‌فرض در مقصد نوشته نشود؛ سپس:
+
+```sh
+php artisan migrate --force
+php artisan migration:import-product
+php artisan migration:import-product --execute
+```
+
+واردکنندهٔ محصول schema مبدأ را با نسخهٔ بررسی‌شده تطبیق می‌دهد، مقصد غیرخالی را رد می‌کند و همهٔ ۱۱۷ جدول را در یک تراکنش مقصد کپی می‌کند. برای وابستگی دوری و محتوای منتشرشده، فقط در نشست importer، triggerها و بررسی فوری FK کنار گذاشته می‌شوند؛ **پیش از commit** همهٔ FKها، پایان اعتبار نشست، تعداد ردیف‌ها و checksum هر جدول کنترل می‌شوند. خطا باعث rollback کل مقصد می‌شود و تنظیمات همان نشست به حالت عادی برمی‌گردد. عدد اعشاری خارج از ظرفیت، متن طولانی و تاریخ غیرقابل نمایش رد می‌شوند؛ برش یا گردکردن پنهان انجام نمی‌شود.
+
+صف عملیاتی pg-boss، دیتابیس آنالیتیکس مستقل و فایل‌های رسانه‌ای بیرون از DB در این importer نیستند. ابزار هنوز مخصوص تمرین آفلاین است و اجرای production تا تکمیل gateها مسدود می‌ماند.
+
+این واردکننده برای تمرین است؛ در production اجازهٔ اجرای انتقال جزئی ندارد. انتقال کامل باید با توقف نوشتن یا یک طرح مشخص CDC انجام شود. بعد از شروع نوشتن در MySQL، برگرداندن صرفِ ترافیک به PostgreSQL rollback معتبر محسوب نمی‌شود؛ داده‌های جدید هم باید تعیین تکلیف شوند.
+
+## تست
+
+تست‌های بدون دیتابیس:
+
+```sh
+php vendor/bin/phpunit tests/Unit tests/Feature/HttpFoundationTest.php
+```
+
+تست کامل محلی از ریشهٔ مخزن، با یک MySQL موقت و PostgreSQL موقت:
+
+```sh
+npm --prefix backend run build
+node tool/test-laravel.cjs --cross-runtime
+```
+
+روی Windows، runner از ابزارهای محلی `.tools/` استفاده می‌کند. روی محیط دیگر، `PHP_BINARY` و `MYSQL_HOME` را به PHP 8.4 و توزیع MySQL 8.4 بده. runner دیتابیس تست مستقل می‌سازد و به DATABASE_URL فایل .env وصل نمی‌شود. تست‌های دیتابیس PHP بدون `MYSQL_TEST_URL` صریح، skipped می‌شوند.
+
+مقایسه با Node شامل نشست و رمز قبلی، AES-GCM در هر دو جهت، مبلغ بزرگ‌تر از محدودهٔ امن Number در JavaScript، قرارداد خطا، پرسش‌نامه، غذا و رقابت دو پردازش PHP است. تست مرورگر، React واقعی را بدون پاسخ ساختگی API به Laravel/MySQL وصل می‌کند: مقاله، ورود مدیر، refresh بعد از reload، غذا، مقالهٔ مدیر و خروج. برای اجرای محلی مرورگر `PLAYWRIGHT_MODULE` را به بستهٔ Playwright نصب‌شده بده؛ در این دستگاه `.tools/browser-tests/node_modules/playwright` خودکار پیدا می‌شود. تست مرورگر در نبود این وابستگی skipped می‌شود و نباید به عنوان تأیید اتصال شمرده شود.
+
+فرانت React با `SABZINE_API_TARGET=http://127.0.0.1:8000 npm run dev` به Laravel متصل می‌شود؛ هدف پیش‌فرض توسعه همچنان پورت ۳۰۰۰ بک‌اند فعلی است. در PowerShell مقدار را با `$env:SABZINE_API_TARGET='http://127.0.0.1:8000'` تنظیم کن. دریافت مقالهٔ React از API انجام می‌شود؛ نسخهٔ استاتیک قدیمی `site/` همچنان فایل مجلهٔ خودش را دارد. تست اتصال React به معنی آماده بودن تمام بخش‌های Flutter، پزشک یا آنبوردینگ نیست.

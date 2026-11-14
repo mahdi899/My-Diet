@@ -1,0 +1,350 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,63}$"
+    },
+    "nameFa": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 120
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "breakfast",
+        "main",
+        "side",
+        "soup",
+        "salad",
+        "protein",
+        "carb",
+        "dairy",
+        "fruit",
+        "snack",
+        "drink",
+        "dessert"
+      ]
+    },
+    "mealTypes": {
+      "minItems": 1,
+      "maxItems": 4,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "breakfast",
+          "lunch",
+          "dinner",
+          "snack"
+        ]
+      }
+    },
+    "servingLabel": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 160
+    },
+    "servingG": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 5000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "kcal": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3000
+    },
+    "proteinG": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 300
+    },
+    "carbsG": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 500
+    },
+    "fatG": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 300
+    },
+    "fiberG": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "allergens": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 40
+      }
+    },
+    "tags": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 40
+      }
+    },
+    "regions": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 40
+      }
+    },
+    "seasons": {
+      "maxItems": 4,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "spring",
+          "summer",
+          "autumn",
+          "winter"
+        ]
+      }
+    },
+    "costTier": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "prepMinutes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1440
+    },
+    "ingredients": {
+      "minItems": 1,
+      "maxItems": 30,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "quantity": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100000
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "g",
+              "kg",
+              "ml",
+              "l",
+              "piece",
+              "serving",
+              "cup",
+              "tbsp",
+              "tsp"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "produce",
+              "dairy",
+              "protein",
+              "grains",
+              "pantry",
+              "other"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "quantity",
+          "unit",
+          "category"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "active": {
+      "default": true,
+      "type": "boolean"
+    },
+    "image": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 240,
+          "pattern": "^(\\/assets\\/foods\\/[a-z0-9_-]+\\.jpg|\\/v1\\/public\\/food-images\\/[a-z][a-z0-9_]{1,63}\\.jpg)$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nutrition": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "const": "recipe_estimate"
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "sourceUrl": {
+              "type": "string",
+              "maxLength": 500,
+              "format": "uri"
+            },
+            "originalPromptKcal": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3000
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "ingredients": {
+              "minItems": 1,
+              "maxItems": 30,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ingredient": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "grams": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 100000
+                  },
+                  "fdcId": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "nutrientsPer100G": {
+                    "type": "object",
+                    "properties": {
+                      "kcal": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000
+                      },
+                      "proteinG": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "carbsG": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "fatG": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "fiberG": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "fiberAssumedZero": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "kcal",
+                      "proteinG",
+                      "carbsG",
+                      "fatG",
+                      "fiberG"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "ingredient",
+                  "grams",
+                  "fdcId",
+                  "description",
+                  "nutrientsPer100G"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "method",
+            "reference",
+            "sourceUrl",
+            "notes",
+            "ingredients"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "slug",
+    "nameFa",
+    "category",
+    "mealTypes",
+    "servingLabel",
+    "servingG",
+    "kcal",
+    "proteinG",
+    "carbsG",
+    "fatG",
+    "fiberG",
+    "allergens",
+    "tags",
+    "regions",
+    "seasons",
+    "costTier",
+    "prepMinutes",
+    "ingredients",
+    "active"
+  ],
+  "additionalProperties": false
+}

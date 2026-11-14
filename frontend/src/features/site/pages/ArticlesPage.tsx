@@ -12,7 +12,7 @@ interface ArticleItem {
 }
 
 async function loadMagazine() {
-  const response = await fetch('/magazine.json')
+  const response = await fetch('/v1/public/articles')
   if (!response.ok) throw new Error('دریافت مقالات ممکن نشد.')
   const body = (await response.json()) as { items?: ArticleItem[] }
   return body.items ?? []

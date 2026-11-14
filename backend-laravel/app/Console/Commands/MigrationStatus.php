@@ -31,12 +31,12 @@ class MigrationStatus extends Command
             $modules[$contract['module']] ??= ['implemented' => 0, 'total' => 0];
             $modules[$contract['module']]['total']++;
             $modules[$contract['module']]['implemented'] += (int) $implemented;
-            if (!$implemented) {
+            if (! $implemented) {
                 $missing[] = $contract['method'].' '.$contract['path'];
             }
         }
         $gates = json_decode(file_get_contents(base_path('contracts/operational-gates.json')), true, 512, JSON_THROW_ON_ERROR);
-        $ready = !$missing && !in_array(false, array_column($gates, 'verified'), true);
+        $ready = ! $missing && ! in_array(false, array_column($gates, 'verified'), true);
         $result = ['readyForReplacement' => $ready, 'implementedRoutes' => count($contracts) - count($missing),
             'totalRoutes' => count($contracts), 'modules' => $modules, 'missingRoutes' => $missing, 'operationalGates' => $gates];
         if ($this->option('json')) {
@@ -46,6 +46,7 @@ class MigrationStatus extends Command
             $this->line('Registered routes do not imply verified behavioral parity.');
             $this->line($ready ? 'Ready for replacement.' : 'Not ready for replacement. See --json for outstanding routes and operational gates.');
         }
-        return $this->option('require-ready') && !$ready ? self::FAILURE : self::SUCCESS;
+
+        return $this->option('require-ready') && ! $ready ? self::FAILURE : self::SUCCESS;
     }
 }

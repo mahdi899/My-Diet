@@ -15,10 +15,11 @@ final class IdentityService
         $outcome = $this->store->transaction(function () use ($role, $username, $password): ?array {
             $row = $this->store->credential($role, mb_strtolower(trim($username)));
             $valid = Crypto::verifyPassword($password, $row['password_hash'] ?? str_repeat('0', 32).':'.str_repeat('00', 64));
-            if (!$row || !$valid || $row['status'] !== 'active' || ($row['locked_until'] && strtotime($row['locked_until']) > time())) {
+            if (! $row || ! $valid || $row['status'] !== 'active' || ($row['locked_until'] && strtotime($row['locked_until']) > time())) {
                 if ($row) {
                     $this->store->recordLogin($role, $row['user_id'], false);
                 }
+
                 return null;
             }
             $this->store->recordLogin($role, $row['user_id'], true);
@@ -26,11 +27,13 @@ final class IdentityService
             if ($this->store->totpSecret($row['user_id'], true)) {
                 return $this->challenge($row['user_id'], $label, 'web');
             }
+
             return $this->issue($row['user_id'], $role, $label, 'web');
         });
         if ($outcome === null) {
             throw new Problem(401, 'unauthorized', 'نام کاربری یا رمز عبور نادرست است یا ورود موقتاً مسدود شده است');
         }
+
         return $outcome;
     }
 
@@ -68,6 +71,7 @@ final class IdentityService
                 throw new Problem(503, 'sms_unavailable', 'ارسال کد ممکن نشد. کمی بعد دوباره تلاش کن');
             }
         });
+
         return ['expiresInSeconds' => 120, 'resendAfterSeconds' => 60];
     }
 
@@ -75,7 +79,7 @@ final class IdentityService
     {
         $outcome = $this->store->transaction(function () use ($phone, $code, $label, $platform): array|Problem {
             $row = $this->store->lockOtp($phone);
-            if (!$row || $row['consumed_at'] || $row['superseded_at'] || $row['locked_at']) {
+            if (! $row || $row['consumed_at'] || $row['superseded_at'] || $row['locked_at']) {
                 throw new Problem(401, 'unauthorized', 'کد واردشده درست نیست');
             }
             if ($row['expired']) {
@@ -83,11 +87,11 @@ final class IdentityService
             }
             $valid = hash_equals($row['code_hmac'], $this->otpHmac($row['id'], $code));
             $this->store->consumeOtp($row['id'], $valid);
-            if (!$valid) {
+            if (! $valid) {
                 return new Problem(401, 'unauthorized', $row['attempts'] + 1 >= 5 ? 'کد دیگر معتبر نیست. کد جدید بگیرید' : 'کد واردشده درست نیست');
             }
             $user = $this->store->lockUser($phone);
-            if (!$user) {
+            if (! $user) {
                 $id = Crypto::uuid();
                 $this->store->createCustomer($id, Crypto::uuid(), $phone);
                 $user = ['id' => $id, 'role' => 'user', 'status' => 'pending'];
@@ -104,8 +108,10 @@ final class IdentityService
             if ($user['role'] !== 'user' && $this->store->totpSecret($user['id'], true)) {
                 return $this->challenge($user['id'], $label, $platform);
             }
+
             return $this->issue($user['id'], $user['role'], $label, $platform);
         });
+
         return $this->committedOutcome($outcome);
     }
 
@@ -113,19 +119,21 @@ final class IdentityService
     {
         $outcome = $this->store->transaction(function () use ($token, $code): array|Problem {
             $row = $this->store->lockTotpChallenge(hash('sha256', $token));
-            if (!$row || $row['consumed_at'] || $row['expired']) {
+            if (! $row || $row['consumed_at'] || $row['expired']) {
                 throw new Problem(401, 'unauthorized', 'ورود دومرحله‌ای منقضی شده است');
             }
-            if ($row['status'] !== 'active' || !in_array($row['role'], ['admin', 'specialist'], true)) {
+            if ($row['status'] !== 'active' || ! in_array($row['role'], ['admin', 'specialist'], true)) {
                 throw new Problem(403, 'suspended', 'این حساب غیرفعال است');
             }
             $valid = Crypto::totpMatches($this->secretBytes($row['secret_encrypted']), $code);
             $this->store->consumeTotpChallenge($row['id'], $valid);
-            if (!$valid) {
+            if (! $valid) {
                 return new Problem(401, 'unauthorized', $row['attempts'] + 1 >= 5 ? 'کد دیگر معتبر نیست' : 'کد ورود دومرحله‌ای درست نیست');
             }
+
             return $this->issue($row['user_id'], $row['role'], $row['device_label'], $row['platform']);
         });
+
         return $this->committedOutcome($outcome);
     }
 
@@ -141,22 +149,24 @@ final class IdentityService
         }
         $secret = random_bytes(20);
         $this->store->saveTotp($userId, Crypto::encrypt(Crypto::base64url($secret), $this->settings->fieldKey));
+
         return ['secret' => Crypto::base32($secret)];
     }
 
     public function confirmTotp(string $userId, string $code): array
     {
         $row = $this->store->totpSecret($userId);
-        if (!$row) {
+        if (! $row) {
             throw new Problem(409, 'totp_missing', 'ابتدا ورود دومرحله‌ای را راه‌اندازی کن');
         }
         if ($row['confirmed_at']) {
             throw new Problem(409, 'totp_enabled', 'ورود دومرحله‌ای قبلاً فعال شده است');
         }
-        if (!Crypto::totpMatches($this->secretBytes($row['secret_encrypted']), $code)) {
+        if (! Crypto::totpMatches($this->secretBytes($row['secret_encrypted']), $code)) {
             throw new Problem(401, 'unauthorized', 'کد ورود دومرحله‌ای درست نیست');
         }
         $this->store->confirmTotp($userId);
+
         return ['enabled' => true];
     }
 
@@ -164,11 +174,12 @@ final class IdentityService
     {
         $outcome = $this->store->transaction(function () use ($token): array|Problem {
             $row = $this->store->lockRefresh(hash('sha256', $token));
-            if (!$row) {
+            if (! $row) {
                 throw new Problem(401, 'unauthorized', 'نشست معتبر نیست');
             }
             if ($row['used_at']) {
                 $this->store->revoke($row['user_id'], $row['session_id'], 'refresh_reuse');
+
                 return new Problem(401, 'unauthorized', 'نشست پایان یافته است');
             }
             if ($row['revoked_at'] || $row['expired']) {
@@ -183,8 +194,10 @@ final class IdentityService
             $this->store->useRefresh($row['id'], $row['session_id']);
             $refresh = Crypto::base64url(random_bytes(32));
             $expires = $this->store->addRefresh(Crypto::uuid(), $row['session_id'], hash('sha256', $refresh), $row['id']);
+
             return $this->tokens($row['user_id'], $row['session_id'], $row['role'], $expires, $refresh);
         });
+
         return $this->committedOutcome($outcome);
     }
 
@@ -192,7 +205,7 @@ final class IdentityService
     {
         $claims = Crypto::verify($token, $this->settings->jwtSecret);
         $row = $this->store->authenticatedSession($claims['sub'], $claims['sid']);
-        if (!$row || $row['revoked_at']) {
+        if (! $row || $row['revoked_at']) {
             throw new Problem(401, 'unauthorized', 'نشست پایان یافته است');
         }
         if ($row['status'] === 'deleted') {
@@ -202,6 +215,7 @@ final class IdentityService
             ($row['role'] === 'specialist' && $row['specialist_active'] !== true)) {
             throw new Problem(403, 'suspended', 'این حساب غیرفعال است');
         }
+
         return ['id' => $claims['sub'], 'role' => $row['role'], 'sessionId' => $claims['sid']];
     }
 
@@ -232,12 +246,14 @@ final class IdentityService
     public function rename(string $userId, string $role, string $name): array
     {
         $this->store->rename($userId, $name);
+
         return $this->profile($userId, $role);
     }
 
     public function personalDetails(string $userId): array
     {
         $encrypted = $this->store->personalDetails($userId);
+
         return ['details' => $encrypted === null ? null : json_decode(Crypto::decrypt($encrypted, $this->settings->fieldKey), false, 512, JSON_THROW_ON_ERROR)];
     }
 
@@ -245,6 +261,7 @@ final class IdentityService
     {
         $encrypted = Crypto::encrypt(json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), $this->settings->fieldKey);
         $this->store->savePersonalDetails($userId, $details['name'], $encrypted);
+
         return ['details' => $details];
     }
 
@@ -257,6 +274,7 @@ final class IdentityService
     {
         $token = Crypto::base64url(random_bytes(32));
         $this->store->createTotpChallenge(Crypto::uuid(), $id, hash('sha256', $token), $label, $platform);
+
         return ['totpRequired' => true, 'totpToken' => $token];
     }
 
@@ -271,6 +289,7 @@ final class IdentityService
         if ($outcome instanceof Problem) {
             throw $outcome;
         }
+
         return $outcome;
     }
 
@@ -280,6 +299,7 @@ final class IdentityService
         $expires = $this->store->createSession($sessionId, $userId, $label, $platform);
         $refresh = Crypto::base64url(random_bytes(32));
         $this->store->addRefresh(Crypto::uuid(), $sessionId, hash('sha256', $refresh), null);
+
         return $this->tokens($userId, $sessionId, $role, $expires, $refresh);
     }
 
@@ -287,6 +307,7 @@ final class IdentityService
     {
         $iat = time();
         $exp = min($iat + 600, strtotime($expires));
+
         return ['accessToken' => Crypto::sign(['sub' => $userId, 'sid' => $sessionId, 'role' => $role, 'iat' => $iat, 'exp' => $exp], $this->settings->jwtSecret),
             'refreshToken' => $refresh, 'accessExpiresAt' => gmdate('Y-m-d\TH:i:s', $exp).'.000Z',
             'sessionExpiresAt' => Crypto::iso($expires), 'role' => $role];

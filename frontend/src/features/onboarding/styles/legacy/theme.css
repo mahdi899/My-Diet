@@ -2044,7 +2044,7 @@ button[data-field-submit]:disabled {
   color: #fff !important;
 }
 #headerQuestionChip { font-size: 12px; font-weight: 700; white-space: nowrap; padding: 7px 12px; border-radius: 99px; background: #e7eee1; color: #205638; font-variant-numeric: tabular-nums; }
-..onboarding-shell header-progress-track { height: 4px; border-radius: 99px; background: #dce5d5; flex: 1; overflow: hidden; }
+.onboarding-shell .header-progress-track { height: 4px; border-radius: 99px; background: #dce5d5; flex: 1; overflow: hidden; }
 #headerProgressFill { height: 100%; width: 0; background: #205638; border-radius: inherit; transition: width .3s ease; }
 .onboarding-shell:has(#page2Container:not(.hidden)) main { padding-top: 10px !important; }
 #page2Container > div:first-child { margin-bottom: 0 !important; padding-block: 0 !important; }

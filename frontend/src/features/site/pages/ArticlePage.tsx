@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom'
-import { useMagazine } from './ArticlesPage'
+import { useQuery } from '@tanstack/react-query'
 
 const photos = ['salad.jpg', 'vegetables.jpg', 'breakfast.jpg', 'bowl.jpg']
 
@@ -13,7 +13,7 @@ interface FullArticle {
   title: string
   category: string
   image: number
-  time: number
+  time: string
   intro: string
   sections: Section[]
 }
@@ -21,11 +21,21 @@ interface FullArticle {
 export default function ArticlePage() {
   const [params] = useSearchParams()
   const slug = params.get('id') ?? ''
-  const query = useMagazine()
-  const article = query.data?.find((item) => item.id === slug) as FullArticle | undefined
+  const validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
+  const query = useQuery({
+    queryKey: ['article', slug],
+    enabled: validSlug,
+    queryFn: async (): Promise<FullArticle> => {
+      const response = await fetch('/v1/public/articles/' + encodeURIComponent(slug))
+      if (!response.ok) throw new Error('دریافت مقاله ممکن نشد.')
+      return response.json() as Promise<FullArticle>
+    },
+    staleTime: 60_000,
+  })
+  const article = query.data
 
   if (query.isLoading) return <p className="p-8">در حال بارگذاری…</p>
-  if (!article || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+  if (!article || !validSlug) {
     return <p className="p-8">مقاله پیدا نشد. <Link to="/articles.html">بازگشت</Link></p>
   }
 
