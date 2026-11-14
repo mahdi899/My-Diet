@@ -6,6 +6,20 @@ interface MoneyStore
 {
     public function catalog(): array;
 
+    public function checkout(string $id, bool $lock = false): ?array;
+
+    public function priorCheckout(string $user, string $key): ?array;
+
+    public function pendingCheckout(string $user): ?array;
+
+    public function createCheckout(array $checkout): void;
+
+    public function updateCheckout(string $id, array $changes): void;
+
+    public function subscription(string $user): ?array;
+
+    public function orders(string $user): array;
+
     public function wallet(string $user, bool $lock = false): ?array;
 
     public function ledger(string $user): array;

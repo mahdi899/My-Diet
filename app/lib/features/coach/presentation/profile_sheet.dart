@@ -159,11 +159,6 @@ class _SignedIn extends StatelessWidget {
                 onTap: () => _open(context, const DoctorDetailsScreen()),
               ),
               MenuRow(
-                'برنامه‌های قبلی',
-                Icons.history,
-                onTap: () => _open(context, const HistoryScreen()),
-              ),
-              MenuRow(
                 'سفارش‌ها و پرداخت‌ها',
                 Icons.credit_card_outlined,
                 onTap: () => _open(context, const OrdersScreen()),

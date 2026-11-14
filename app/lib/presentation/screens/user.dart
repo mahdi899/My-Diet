@@ -1164,12 +1164,6 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 if (!expert)
                   MenuRow(
-                    'برنامه‌های قبلی',
-                    Icons.history,
-                    onTap: () => pushPage(context, const HistoryScreen()),
-                  ),
-                if (!expert)
-                  MenuRow(
                     'سفارش‌ها و پرداخت‌ها',
                     Icons.credit_card_outlined,
                     onTap: () => pushPage(context, const OrdersScreen()),

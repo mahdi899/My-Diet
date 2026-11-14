@@ -38,6 +38,52 @@ final class MySqlMoney implements MoneyStore
         return $this->row(($lock ? $q->lockForUpdate() : $q)->first());
     }
 
+    public function checkout(string $id, bool $lock = false): ?array
+    {
+        $query = $this->db->table('plan_checkouts')->where('id', $id);
+
+        return $this->row(($lock ? $query->lockForUpdate() : $query)->first());
+    }
+
+    public function priorCheckout(string $user, string $key): ?array
+    {
+        return $this->row($this->db->table('plan_checkouts')->where(['user_id' => $user, 'idempotency_key' => $key])->first());
+    }
+
+    public function pendingCheckout(string $user): ?array
+    {
+        return $this->row($this->db->table('plan_checkouts')->where('user_id', $user)->where('status', 'pending')->first());
+    }
+
+    public function createCheckout(array $checkout): void
+    {
+        $this->db->table('plan_checkouts')->insert($checkout);
+    }
+
+    public function updateCheckout(string $id, array $changes): void
+    {
+        $this->db->table('plan_checkouts')->where('id', $id)->update($changes);
+    }
+
+    public function orders(string $user): array
+    {
+        return array_map(fn ($row) => (array) $row, $this->db->table('orders as o')->join('services as s', 's.code', '=', 'o.service_code')->where('o.user_id', $user)->select('o.*', 's.title_fa')->orderByDesc('o.created_at')->limit(100)->get()->all());
+    }
+
+    public function subscription(string $user): ?array
+    {
+        $access = $this->db->table('user_service_access as a')->join('services as s', 's.code', '=', 'a.service_code')->where('a.user_id', $user)->select('a.service_code', 's.title_fa', 'a.ends_at')->first();
+        if ($access !== null && new \DateTimeImmutable($access->ends_at) > new \DateTimeImmutable('now', new \DateTimeZone('UTC'))) {
+            return ['serviceCode' => $access->service_code, 'title' => $access->title_fa, 'status' => 'active', 'endsAt' => Crypto::iso($access->ends_at)];
+        }
+        $order = $this->db->table('orders as o')->join('services as s', 's.code', '=', 'o.service_code')->join('plan_requests as r', 'r.order_id', '=', 'o.id')->where('o.user_id', $user)->where('o.service_code', 'new_plan')->where('o.status', 'paid')->where('r.status', '<>', 'cancelled')->orderByDesc('o.created_at')->select('o.*', 's.title_fa', 'r.status as request_status')->first();
+        if ($order !== null) {
+            return ['serviceCode' => $order->service_code, 'title' => $order->title_fa, 'status' => 'active', 'requestStatus' => $order->request_status, 'startedAt' => Crypto::iso($order->created_at), 'endsAt' => null];
+        }
+
+        return $access === null ? null : ['serviceCode' => $access->service_code, 'title' => $access->title_fa, 'status' => 'expired', 'endsAt' => Crypto::iso($access->ends_at)];
+    }
+
     public function ledger(string $user): array
     {
         return array_map(fn ($r) => (array) $r, $this->db->table('wallet_ledger')->where('user_id', $user)->orderByDesc('created_at')->limit(100)->get()->all());
@@ -117,7 +163,7 @@ final class MySqlMoney implements MoneyStore
         return ['open' => $this->db->table('plan_requests')->where('user_id', $user)->whereIn('status', ['queued', 'generating', 'in_review', 'awaiting_user', 'response_received'])->exists(),
             'submission' => $this->db->table('questionnaire_submissions')->where('user_id', $user)->orderByDesc('submitted_at')->value('id'),
             'consented' => $profile === null || $profile->consented_at !== null, 'parentPublished' => $parentPublished,
-            'includedChanges' => $this->db->table('payments')->where('user_id', $user)->where('status', 'credited')->exists() || $this->db->table('user_service_access')->where('user_id', $user)->where('ends_at', '>', $this->db->raw('current_timestamp(6)'))->exists()];
+            'includedChanges' => $this->db->table('payments')->where('user_id', $user)->where('status', 'credited')->exists() || $this->db->table('orders')->where('user_id', $user)->where('service_code', 'new_plan')->where('status', 'paid')->exists() || $this->db->table('user_service_access')->where('user_id', $user)->where('ends_at', '>', $this->db->raw('current_timestamp(6)'))->exists()];
     }
 
     public function price(string $service): int
