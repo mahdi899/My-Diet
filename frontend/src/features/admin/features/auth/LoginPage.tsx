@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { StaffError } from '@shared/api/staff-session'
-import { Button, Input } from '@shared/ui'
+import { AdminIcon as Icon } from '../../components/AdminIcon'
+import { AdminBrand } from '../../components/AdminShell'
 import { staff } from '../../session'
 
 export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
@@ -38,39 +39,38 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <section className="grid min-h-screen bg-cream lg:grid-cols-2">
-      <div className="hidden bg-forest p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="text-2xl font-bold">رژیم من<small className="mt-2 block text-xs font-normal text-[#bdd0be]">پنل مدیریت</small></div>
-        <div>
-          <p className="text-sm text-[#c3d0bb]">مراقبت، با نگاهی دقیق‌تر</p>
-          <h2 className="mt-3 text-4xl font-bold leading-relaxed">رشد رژیم من، از اینجا شروع می‌شود.</h2>
-        </div>
-        <p className="text-xs text-[#a9be9e]">یک فضای منظم برای تصمیم‌های بهتر</p>
+    <section id="login" className="login-layout" aria-label="ورود به پنل مدیریت">
+      <div className="login-story">
+        <AdminBrand />
+        <div className="login-story-copy"><span className="eyebrow">مراقبت، با نگاهی دقیق‌تر</span><h2>رشد رژیم من،<br />از اینجا شروع می‌شود.</h2><p>کاربران، برنامه‌ها و ارتباطات را در یک فضای یکپارچه مدیریت کنید.</p></div>
+        <div className="botanical-art" aria-hidden="true"><div className="art-orbit" /><div className="art-orbit second" /><Icon name="leaf" className="icon" /></div>
+        <span className="login-story-footer">یک فضای منظم برای تصمیم‌های بهتر</span>
       </div>
-      <form onSubmit={submit} className="mx-auto flex w-full max-w-md flex-col justify-center px-6 py-12">
-        <h1 className="mb-2 text-3xl font-bold">{totpToken ? 'ورود دومرحله‌ای' : 'خوش برگشتید'}</h1>
-        <p className="mb-6 text-sm text-muted">{totpToken ? 'کد شش‌رقمی برنامه احراز هویت را وارد کنید.' : 'برای ادامه، وارد حساب مدیریت خود شوید.'}</p>
+      <div className="login-form-area"><div className="login-form-wrap">
+        <span className="login-lock icon-tile"><Icon name="lock" className="icon" /></span><span className="eyebrow">پنل مدیریت رژیم من</span>
+        <h1>{totpToken ? 'ورود دومرحله‌ای' : 'خوش برگشتید'}</h1>
+        <p className="login-intro">{totpToken ? 'کد شش‌رقمی برنامه احراز هویت را وارد کنید.' : 'برای ادامه، وارد حساب مدیریت خود شوید.'}</p>
+      <form onSubmit={submit}>
         {!totpToken && (
           <>
-            <label className="text-sm font-semibold">نام کاربری
-              <Input className="mt-2" dir="ltr" autoComplete="username" required maxLength={80} value={username} onChange={(event) => setUsername(event.target.value)} />
+            <label>نام کاربری
+              <input name="username" placeholder="نام کاربری شما" dir="ltr" autoComplete="username" required maxLength={80} value={username} onChange={(event) => setUsername(event.target.value)} />
             </label>
-            <label className="text-sm font-semibold">رمز عبور
-              <Input className="mt-2" dir="ltr" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required maxLength={256} value={password} onChange={(event) => setPassword(event.target.value)} />
+            <label>رمز عبور
+              <div className="password-field"><input name="password" placeholder="رمز عبور شما" dir="ltr" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required maxLength={256} value={password} onChange={(event) => setPassword(event.target.value)} /><button type="button" className="icon-button" aria-label={showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}><Icon name="eye" className="icon" /></button></div>
             </label>
-            <button type="button" className="mb-4 text-xs text-green" onClick={() => setShowPassword((value) => !value)}>
-              {showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
-            </button>
           </>
         )}
         {totpToken && (
           <label className="text-sm font-semibold">کد ورود
-            <Input className="mt-2" dir="ltr" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value)} />
+            <input dir="ltr" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value)} />
           </label>
         )}
-        {error && <p className="mb-4 text-sm text-danger" role="alert">{error}</p>}
-        <Button type="submit" disabled={busy}>{busy ? 'در حال بررسی…' : 'ورود به پنل'}</Button>
+        <p className="form-error" role="alert">{error}</p>
+        <button className="login-submit" type="submit" disabled={busy}>{busy ? 'در حال بررسی…' : 'ورود به پنل'}<Icon name="arrow" className="icon" /></button>
       </form>
+      <p className="login-footnote"><Icon name="shield" className="icon" /> دسترسی ویژهٔ مدیران رژیم من</p>
+      </div></div>
     </section>
   )
 }
