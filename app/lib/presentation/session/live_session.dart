@@ -160,6 +160,7 @@ Future<void> refreshLive(DemoStore store, {ProfileSummary? profile}) async {
     plan: plan,
     walletToman: wallet,
     targetKcal: profile?.targetKcal,
+    profile: profile,
   );
   await pullLiveShopping(store, plan?.weekStart);
 }

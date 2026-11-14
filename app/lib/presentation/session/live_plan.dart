@@ -1,5 +1,6 @@
 import '../../data/day.dart';
 import '../../data/demo_store.dart';
+import '../../domain/onboarding/onboarding.dart';
 import '../../domain/plan/plan.dart';
 
 const _goals = {
@@ -20,11 +21,23 @@ void showServerPlan(
   PublishedPlan? plan,
   int? walletToman,
   int? targetKcal,
+  ProfileSummary? profile,
 }) {
   final goal = _goals[track] ?? (track ?? 'تغذیه');
   store.questionnaire.name = name.trim().isEmpty ? 'دوست' : name.trim();
   if (track != null && track.isNotEmpty) {
     store.questionnaire.goal = goal;
+  }
+  if (profile != null) {
+    store.questionnaire.age = fa(profile.age);
+    store.questionnaire.height = fa(profile.heightCm.round());
+    store.questionnaire.weight = fa(profile.weightKg.round());
+    final target = profile.targetWeightKg;
+    if (target != null) {
+      store.questionnaire.targetWeight = fa(
+        target == target.roundToDouble() ? target.round() : target,
+      );
+    }
   }
   store.questionnaireComplete = true;
   store.entryStage = EntryStage.home;
