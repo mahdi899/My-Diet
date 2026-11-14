@@ -1,3 +1,6 @@
+import '../domain/payload_values.dart';
+export '../domain/payload_values.dart';
+
 import 'dart:convert';
 
 import '../domain/coach_events.dart';
@@ -73,7 +76,11 @@ void adaptCoachPayload(String type, Map<String, dynamic> payload) {
     case 'calorie_ring':
       final calories = payload['calories'];
       if (calories is Map) {
-        _fill(payload, 'eaten', calories['consumed'] ?? payload['consumedKcal']);
+        _fill(
+          payload,
+          'eaten',
+          calories['consumed'] ?? payload['consumedKcal'],
+        );
         _fill(payload, 'goal', calories['target'] ?? payload['targetKcal']);
       } else {
         _fill(payload, 'eaten', payload['consumedKcal']);
@@ -150,7 +157,11 @@ Map<String, dynamic> _adaptFoodItem(Map<String, dynamic> item) {
   _fill(item, 'fat_g', item['fatG']);
   final label = item['servingLabel'];
   if (item['servings'] != null) {
-    _fill(item, 'unit', label is String && label.trim().isNotEmpty ? label : 'serving');
+    _fill(
+      item,
+      'unit',
+      label is String && label.trim().isNotEmpty ? label : 'serving',
+    );
   }
   return item;
 }
@@ -195,7 +206,8 @@ void _adaptQuickReplies(Map<String, dynamic> payload) {
           ),
           if (item['id'] != null) 'id': item['id'],
           if (item['action'] != null) 'action': item['action'],
-          if (item['args'] is Map) 'args': Map<String, dynamic>.from(item['args'] as Map),
+          if (item['args'] is Map)
+            'args': Map<String, dynamic>.from(item['args'] as Map),
         },
   ];
 }
@@ -270,13 +282,18 @@ List<String> parseSuggestions(Object? raw) {
   return out;
 }
 
-({String? code, String? message, bool? retryable}) parseProblemBody(String body) {
+({String? code, String? message, bool? retryable}) parseProblemBody(
+  String body,
+) {
   try {
     final decoded = jsonDecode(body);
     if (decoded is Map) {
-      final direct = decoded['messageFa'] ?? decoded['message'] ?? decoded['detail'];
+      final direct =
+          decoded['messageFa'] ?? decoded['message'] ?? decoded['detail'];
       final error = decoded['error'];
-      final nested = error is Map ? error['messageFa'] ?? error['message'] : null;
+      final nested = error is Map
+          ? error['messageFa'] ?? error['message']
+          : null;
       final text = direct is String && direct.trim().isNotEmpty
           ? direct.trim()
           : nested is String && nested.trim().isNotEmpty
@@ -286,7 +303,9 @@ List<String> parseSuggestions(Object? raw) {
       return (
         code: code is String ? code : null,
         message: text,
-        retryable: decoded['retryable'] is bool ? decoded['retryable'] as bool : null,
+        retryable: decoded['retryable'] is bool
+            ? decoded['retryable'] as bool
+            : null,
       );
     }
   } on FormatException {
@@ -464,16 +483,21 @@ CoachEvent? coachEventFrom(String name, Map<String, dynamic> json) {
             ? json['user_message_id'] as String
             : null,
         messageIds: [
-          for (final id in json['messageIds'] is List
-              ? json['messageIds'] as List
-              : const [])
+          for (final id
+              in json['messageIds'] is List
+                  ? json['messageIds'] as List
+                  : const [])
             '$id',
         ],
       );
     case 'error':
       final server = json['messageFa'] ?? json['message'];
-      final text = server is String && server.isNotEmpty ? server : 'مشکلی پیش آمد.';
-      final code = json['code'] is String ? json['code'] as String : 'server_error';
+      final text = server is String && server.isNotEmpty
+          ? server
+          : 'مشکلی پیش آمد.';
+      final code = json['code'] is String
+          ? json['code'] as String
+          : 'server_error';
       final problem = classifyCoachProblem(code: code);
       return CoachErrorEvent(
         code: code,
@@ -499,30 +523,4 @@ List<CoachMessage> _messagesFrom(Object? raw) {
     if (item is Map) out.add(parseCoachMessage(item));
   }
   return out;
-}
-
-Map<String, dynamic> asMap(Object? value) =>
-    value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
-
-List<Map<String, dynamic>> asMapList(Object? value) {
-  if (value is! List) return const [];
-  return [
-    for (final item in value)
-      if (item is Map) Map<String, dynamic>.from(item),
-  ];
-}
-
-String asString(Object? value, [String fallback = '']) =>
-    value is String && value.trim().isNotEmpty ? value.trim() : fallback;
-
-double asDouble(Object? value, [double fallback = 0]) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? fallback;
-  return fallback;
-}
-
-int asInt(Object? value, [int fallback = 0]) {
-  if (value is num) return value.round();
-  if (value is String) return int.tryParse(value) ?? fallback;
-  return fallback;
 }

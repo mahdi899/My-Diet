@@ -1,3 +1,4 @@
+import 'package:sabzine_flutter/application/commerce/settle_topup.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:http/http.dart' as http;
@@ -182,11 +183,10 @@ void main() {
   test('hosted gateway opens the page and waits for credit', () async {
     final commerce = FakeCommerce()..hosted = true;
     final opened = <Uri>[];
-    openExternalUrl = (uri) async => opened.add(uri);
-    addTearDown(() => openExternalUrl = null);
     final wallet = await settleTopup(
       commerce,
       'p1',
+      openUrl: (uri) async => opened.add(uri),
       pollEvery: Duration.zero,
     );
     expect(opened.single.toString(), 'https://pay.example/StartPay/A1');
@@ -194,50 +194,56 @@ void main() {
     expect(wallet.total, 500000);
   });
 
-  test('a plan purchase uses one idempotency key and then shows the request', () async {
-    final commerce = FakeCommerce(balance: 600000);
-    final plans = FakePlans();
-    final store = liveStore(commerce, plans);
-    await syncLiveCatalog(store);
-    expect(store.newPlanPrice, 490000);
-    expect(store.walletBalance, 600000);
+  test(
+    'a plan purchase uses one idempotency key and then shows the request',
+    () async {
+      final commerce = FakeCommerce(balance: 600000);
+      final plans = FakePlans();
+      final store = liveStore(commerce, plans);
+      await syncLiveCatalog(store);
+      expect(store.newPlanPrice, 490000);
+      expect(store.walletBalance, 600000);
 
-    commerce.failOffline = true;
-    expect(await buyLiveService(store, 'new-plan'), isFalse);
-    final key = store.liveOrderKey;
-    expect(key, isNotNull);
-    expect(commerce.orders, isEmpty);
+      commerce.failOffline = true;
+      expect(await buyLiveService(store, 'new-plan'), isFalse);
+      final key = store.liveOrderKey;
+      expect(key, isNotNull);
+      expect(commerce.orders, isEmpty);
 
-    plans.request = requestWith('queued');
-    expect(await buyLiveService(store, 'new-plan'), isTrue);
-    expect(commerce.orders, [key]);
-    expect(store.liveReady, isTrue);
-    expect(store.userRequest.status, PlanStatus.queued);
-    expect(store.hasUserRequest, isTrue);
-  });
+      plans.request = requestWith('queued');
+      expect(await buyLiveService(store, 'new-plan'), isTrue);
+      expect(commerce.orders, [key]);
+      expect(store.liveReady, isTrue);
+      expect(store.userRequest.status, PlanStatus.queued);
+      expect(store.hasUserRequest, isTrue);
+    },
+  );
 
-  test('an open doctor question can be answered from the original home data', () async {
-    final plans = FakePlans()
-      ..request = requestWith(
-        'awaiting_user',
-        questions: [
-          {
-            'id': 'q1',
-            'prompt': 'آلرژی به گردو داری؟',
-            'required': true,
-            'status': 'open',
-          },
-        ],
-      );
-    final store = liveStore(FakeCommerce(balance: 1), plans);
-    await refreshLive(store);
-    expect(store.liveOpenQuestions.single.prompt, 'آلرژی به گردو داری؟');
-    expect(store.userRequest.status, PlanStatus.needsInfo);
+  test(
+    'an open doctor question can be answered from the original home data',
+    () async {
+      final plans = FakePlans()
+        ..request = requestWith(
+          'awaiting_user',
+          questions: [
+            {
+              'id': 'q1',
+              'prompt': 'آلرژی به گردو داری؟',
+              'required': true,
+              'status': 'open',
+            },
+          ],
+        );
+      final store = liveStore(FakeCommerce(balance: 1), plans);
+      await refreshLive(store);
+      expect(store.liveOpenQuestions.single.prompt, 'آلرژی به گردو داری؟');
+      expect(store.userRequest.status, PlanStatus.needsInfo);
 
-    plans.request = requestWith('in_review');
-    expect(await answerLiveQuestion(store, 'q1', 'نه'), isTrue);
-    expect(plans.answers['q1'], 'نه');
-    expect(store.liveOpenQuestions, isEmpty);
-    expect(store.userRequest.status, PlanStatus.reviewing);
-  });
+      plans.request = requestWith('in_review');
+      expect(await answerLiveQuestion(store, 'q1', 'نه'), isTrue);
+      expect(plans.answers['q1'], 'نه');
+      expect(store.liveOpenQuestions, isEmpty);
+      expect(store.userRequest.status, PlanStatus.reviewing);
+    },
+  );
 }

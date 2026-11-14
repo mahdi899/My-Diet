@@ -1,3 +1,8 @@
+export '../domain/common/digits.dart';
+import '../domain/onboarding/questionnaire.dart';
+export '../domain/onboarding/questionnaire.dart';
+import '../presentation/session/customer_scope.dart';
+import 'preferences_water_log.dart';
 import 'weekly_feedback.dart';
 export 'weekly_feedback.dart';
 import 'shopping_list.dart';
@@ -46,252 +51,6 @@ extension StatusLabel on PlanStatus {
     PlanStatus.reviewing => 'در حال بررسی متخصص',
     PlanStatus.needsInfo => 'منتظر پاسخ کاربر',
     PlanStatus.ready => 'برنامه آماده است',
-  };
-}
-
-String fa(Object value) => value.toString().replaceAllMapped(
-  RegExp(r'\d'),
-  (m) => '۰۱۲۳۴۵۶۷۸۹'[int.parse(m[0]!)],
-);
-String latinDigits(String value) => value
-    .replaceAllMapped(RegExp('[۰-۹٠-٩]'), (m) {
-      final digit = '۰۱۲۳۴۵۶۷۸۹'.indexOf(m[0]!);
-      return '${digit >= 0 ? digit : '٠١٢٣٤٥٦٧٨٩'.indexOf(m[0]!)}';
-    })
-    .replaceAll('٫', '.');
-
-class QuestionnaireData {
-  static const goals = {
-    'کاهش وزن',
-    'افزایش وزن',
-    'تثبیت وزن',
-    'تغذیهٔ سالم',
-    'تغذیهٔ ورزشی',
-    'رژیم برای شرایط پزشکی',
-  };
-  QuestionnaireData();
-  QuestionnaireData.empty() {
-    name = age = height = weight = goal = activity = preference = sex =
-        lifeStage = '';
-    health.clear();
-    babies = exercise = sleep = mealPattern = water = previousDiet = '';
-  }
-  String name = 'سارا احمدی', age = '۲۸', height = '۱۶۵', weight = '۷۲';
-  String goal = 'تغذیهٔ سالم',
-      targetWeight = '',
-      sex = 'زن',
-      lifeStage = 'هیچ‌کدام';
-  String pregnancyWeek = '',
-      prePregnancyWeight = '',
-      babies = 'تک‌قلو',
-      nursingAge = '';
-  String healthDetails = '',
-      medicines = '',
-      allergies = '',
-      previousDiet = 'نداشته‌ام';
-  String activity = 'فعالیت سبک',
-      exercise = '۱ تا ۲ جلسه',
-      sleep = '۷ تا ۹ ساعت';
-  String mealPattern = 'سه وعدهٔ منظم',
-      water = '۴ تا ۶ لیوان',
-      preference = 'غذای ایرانی';
-  String budget = 'متوسط', cooking = 'کمتر از ۳۰ دقیقه', dislikes = '';
-  final Set<String> health = {'موردی ندارم'};
-  bool consent = false;
-  final Map<String, dynamic> extraAnswers = {};
-  bool get pregnant => lifeStage == 'باردار هستم';
-  bool get weightGoal => goal == 'کاهش وزن' || goal == 'افزایش وزن';
-  QuestionnaireData copy() => QuestionnaireData.fromJson(toJson());
-  void copyFrom(QuestionnaireData other) {
-    final copy = other.toJson();
-    name = other.name;
-    age = other.age;
-    height = other.height;
-    weight = other.weight;
-    goal = other.goal;
-    activity = other.activity;
-    preference = other.preference;
-    targetWeight = other.targetWeight;
-    sex = other.sex;
-    lifeStage = other.lifeStage;
-    pregnancyWeek = other.pregnancyWeek;
-    prePregnancyWeight = other.prePregnancyWeight;
-    babies = other.babies;
-    nursingAge = other.nursingAge;
-    healthDetails = other.healthDetails;
-    medicines = other.medicines;
-    allergies = other.allergies;
-    previousDiet = other.previousDiet;
-    exercise = other.exercise;
-    sleep = other.sleep;
-    mealPattern = other.mealPattern;
-    water = other.water;
-    budget = other.budget;
-    cooking = other.cooking;
-    dislikes = other.dislikes;
-    consent = other.consent;
-    extraAnswers
-      ..clear()
-      ..addAll(
-        jsonDecode(jsonEncode(other.extraAnswers)) as Map<String, dynamic>,
-      );
-    health
-      ..clear()
-      ..addAll((copy['health'] as List).cast<String>());
-  }
-
-  static double? number(String v) => double.tryParse(latinDigits(v.trim()));
-  bool get hasBasicAnswers =>
-      name.trim().isNotEmpty &&
-      [age, height, weight].every(
-        (v) => number(v) != null && number(v)! > 0 && number(v)! <= 500,
-      ) &&
-      goal.isNotEmpty &&
-      health.isNotEmpty &&
-      activity.isNotEmpty &&
-      preference.isNotEmpty &&
-      consent;
-  bool get isComplete =>
-      hasBasicAnswers &&
-      goals.contains(goal) &&
-      (targetWeight.trim().isEmpty ||
-          (number(targetWeight) != null &&
-              number(targetWeight)! > 0 &&
-              number(targetWeight)! <= 500)) &&
-      (!pregnant || babies.isNotEmpty) &&
-      (lifeStage != 'شیرده هستم' || nursingAge.isNotEmpty) &&
-      [
-        exercise,
-        sleep,
-        mealPattern,
-        water,
-        previousDiet,
-      ].every((v) => v.isNotEmpty) &&
-      sex.isNotEmpty &&
-      lifeStage.isNotEmpty &&
-      (health.contains('موردی ندارم') || healthDetails.trim().isNotEmpty) &&
-      (!health.contains('حساسیت غذایی دارم') || allergies.trim().isNotEmpty) &&
-      (!health.contains('دارو مصرف می‌کنم') || medicines.trim().isNotEmpty) &&
-      (!pregnant ||
-          (number(pregnancyWeek) != null &&
-              number(pregnancyWeek)! >= 1 &&
-              number(pregnancyWeek)! <= 42 &&
-              number(pregnancyWeek)! ==
-                  number(pregnancyWeek)!.roundToDouble() &&
-              number(prePregnancyWeight) != null &&
-              number(prePregnancyWeight)! > 0 &&
-              number(prePregnancyWeight)! <= 500)) &&
-      (!(weightGoal && !pregnant) ||
-          (number(targetWeight) != null &&
-              number(targetWeight)! > 0 &&
-              number(targetWeight)! <= 500 &&
-              (goal == 'کاهش وزن'
-                  ? number(targetWeight)! < number(weight)!
-                  : number(targetWeight)! > number(weight)!)));
-  Map<String, Object?> toJson() => {
-    'name': name.trim(),
-    'age': age.trim(),
-    'height': height.trim(),
-    'weight': weight.trim(),
-    'goal': goal,
-    'targetWeight': targetWeight.trim(),
-    'sex': sex,
-    'lifeStage': lifeStage,
-    'pregnancyWeek': pregnancyWeek,
-    'prePregnancyWeight': prePregnancyWeight,
-    'babies': babies,
-    'nursingAge': nursingAge,
-    'health': health.toList(),
-    'healthDetails': healthDetails.trim(),
-    'medicines': medicines.trim(),
-    'allergies': allergies.trim(),
-    'previousDiet': previousDiet,
-    'activity': activity,
-    'exercise': exercise,
-    'sleep': sleep,
-    'mealPattern': mealPattern,
-    'water': water,
-    'preference': preference,
-    'budget': budget,
-    'cooking': cooking,
-    'dislikes': dislikes.trim(),
-    'consent': consent,
-    'extraAnswers': extraAnswers,
-  };
-  factory QuestionnaireData.fromJson(Map<String, dynamic> json) {
-    final q = QuestionnaireData.empty();
-    String text(String k, [String d = '']) =>
-        json[k] is String ? json[k] as String : d;
-    q.name = text('name');
-    q.age = text('age');
-    q.height = text('height');
-    q.weight = text('weight');
-    q.goal = switch (text('goal')) {
-      'تغذیهٔ متعادل' => 'تغذیهٔ سالم',
-      'بهبود عادت غذایی' => 'تغذیهٔ سالم',
-      final v => v,
-    };
-    q.targetWeight = text('targetWeight');
-    q.sex = text('sex');
-    q.lifeStage = text('lifeStage');
-    q.pregnancyWeek = text('pregnancyWeek');
-    q.prePregnancyWeight = text('prePregnancyWeight');
-    q.babies = text('babies', 'تک‌قلو');
-    q.nursingAge = text('nursingAge');
-    q.healthDetails = text('healthDetails');
-    q.medicines = text('medicines');
-    q.allergies = text('allergies');
-    if (json['health'] is List) {
-      q.health.addAll((json['health'] as List).whereType<String>());
-    }
-    q.previousDiet = text('previousDiet');
-    q.activity = text('activity');
-    q.exercise = text('exercise');
-    q.sleep = text('sleep');
-    q.mealPattern = text('mealPattern');
-    q.water = text('water');
-    q.preference = text('preference');
-    q.budget = text('budget', 'متوسط');
-    q.cooking = text('cooking', 'کمتر از ۳۰ دقیقه');
-    q.dislikes = text('dislikes');
-    q.consent = json['consent'] == true;
-    if (json['extraAnswers'] is Map) {
-      q.extraAnswers.addAll(
-        jsonDecode(jsonEncode(json['extraAnswers'])) as Map<String, dynamic>,
-      );
-    }
-    return q;
-  }
-  Map<String, String> get summary => {
-    'نام': name,
-    'سن': '$age سال',
-    'جنسیت': sex,
-    'قد': '$height سانتی‌متر',
-    'وزن فعلی': '$weight کیلوگرم',
-    'هدف': goal,
-    if (targetWeight.isNotEmpty)
-      'وزن هدف پیشنهادی شما': '$targetWeight کیلوگرم',
-    'شرایط': lifeStage,
-    if (pregnant) ...{
-      'هفتهٔ بارداری': pregnancyWeek,
-      'وزن پیش از بارداری': '$prePregnancyWeight کیلوگرم',
-      'تعداد جنین': babies,
-    },
-    if (lifeStage == 'شیرده هستم') 'سن کودک': nursingAge,
-    'سلامت': health.join('، '),
-    if (healthDetails.isNotEmpty) 'توضیحات سلامت': healthDetails,
-    if (medicines.isNotEmpty) 'دارو و مکمل': medicines,
-    if (allergies.isNotEmpty) 'حساسیت و واکنش': allergies,
-    'فعالیت': activity,
-    'ورزش در هفته': exercise,
-    'خواب': sleep,
-    'الگوی وعده‌ها': mealPattern,
-    'آب در روز': water,
-    'سابقهٔ رژیم': previousDiet,
-    'سلیقهٔ غذایی': preference,
-    'بودجه': budget,
-    'زمان آشپزی': cooking,
-    if (dislikes.isNotEmpty) 'غذاهای نامطلوب': dislikes,
   };
 }
 
@@ -646,7 +405,15 @@ class ChatThread {
 }
 
 /// Demo UI data. Only the questionnaire has optional local persistence; no backend.
-class DemoStore extends ChangeNotifier {
+class DemoStore extends ChangeNotifier implements CustomerWorkspace {
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   final messaging = DemoMessaging();
   final journey = JourneyAnalytics();
   DemoStore({
@@ -656,6 +423,7 @@ class DemoStore extends ChangeNotifier {
     WalletStateStorage? walletStorage,
     SessionStorage? sessionStorage,
     this.customerAuth,
+    this.openPaymentUrl,
     WorkspaceSettingsStorage? settingsStorage,
     DateTime Function()? clock,
   }) : _sessionStorage = sessionStorage,
@@ -858,6 +626,7 @@ class DemoStore extends ChangeNotifier {
     if (userRequestId == null) return experts.firstOrNull;
     return experts.where((e) => e.name == userRequest.specialist).firstOrNull;
   }
+
   final chatThreads = <ChatThread>[
     ChatThread('user-main', 'سارا احمدی'),
     ChatThread('patient-amir', 'امیر حسینی'),
@@ -939,9 +708,11 @@ class DemoStore extends ChangeNotifier {
   final QuestionnaireStorage? _storage;
   final NutritionLogStorage? _nutritionStorage;
   final DateTime Function() _clock;
+  @override
   DateTime get today => _clock();
   final Map<String, int> _mealCalories = {};
   final Map<String, Map<String, dynamic>> _consumptionDetails = {};
+  @override
   Map<String, dynamic>? consumedMealOn(DateTime date, int index) {
     final prefix = '${dateKey(date)}|${userRequestId ?? 'none'}|$index|';
     final found = _consumptionDetails.entries.where(
@@ -950,6 +721,7 @@ class DemoStore extends ChangeNotifier {
     return found.isEmpty ? null : Map.unmodifiable(found.first.value);
   }
 
+  @override
   bool savingMeal = false;
   String mealLogKey(DateTime date, int index) =>
       '${dateKey(date)}|${userRequestId ?? 'none'}|$index|${mealsOn(date)[index].title}|${mealsOn(date)[index].calories}';
@@ -957,6 +729,7 @@ class DemoStore extends ChangeNotifier {
   final List<MealSelection> _substitutionHistory = [];
   List<MealSelection> get substitutionHistory =>
       List.unmodifiable(_substitutionHistory);
+  @override
   bool savingSubstitution = false;
   final Map<String, String> substitutionReasons = {
     'expensive': 'گران است',
@@ -998,6 +771,7 @@ class DemoStore extends ChangeNotifier {
   bool canSubstituteOn(DateTime date) =>
       originalMealsOn(date).isNotEmpty &&
       dateKey(date).compareTo(dateKey(today)) >= 0;
+  @override
   List<Meal> mealsOn(DateTime date) =>
       originalMealsOn(date).asMap().entries.map((entry) {
         final option = selectedOptionOn(date, entry.key);
@@ -1136,7 +910,9 @@ class DemoStore extends ChangeNotifier {
   });
   final Map<String, ShoppingMark> _shoppingMarks = {};
   final Map<String, Map<String, dynamic>> _shoppingChanges = {};
+  @override
   bool savingShopping = false;
+  @override
   bool get hasActiveShoppingPlan =>
       hasUserRequest &&
       userRequest.isPublished &&
@@ -1286,6 +1062,7 @@ class DemoStore extends ChangeNotifier {
     mealsOn(date).length,
     (i) => i,
   ).where((i) => mealRecordOn(date, i) != null || mealEaten(date, i)).length;
+  @override
   bool hasUnknownCalories(DateTime date) =>
       List.generate(mealsOn(date).length, (i) => i).any((i) {
         final record = mealRecordOn(date, i);
@@ -1390,14 +1167,20 @@ class DemoStore extends ChangeNotifier {
   int? liveTargetKcal;
 
   /// Latest `GET /v1/me/coach/today`, used so the ring matches the coach log.
+  @override
   String? coachDay;
   int? coachConsumedKcal;
   int? coachTargetKcal;
+  @override
   int? coachProtein;
+  @override
   int? coachCarbs;
+  @override
   int? coachFat;
+  @override
   int? coachWaterGlasses;
 
+  @override
   int calorieTarget(DateTime date) {
     if (coachDay == dateKey(date) &&
         coachTargetKcal != null &&
@@ -1414,6 +1197,7 @@ class DemoStore extends ChangeNotifier {
     return mealsOn(date).fold(0, (n, m) => n + m.calories);
   }
 
+  @override
   int consumedCalories(DateTime date) {
     if (coachDay == dateKey(date) && coachConsumedKcal != null) {
       return coachConsumedKcal!;
@@ -1512,6 +1296,8 @@ class DemoStore extends ChangeNotifier {
       };
     }
   }
+
+  @override
   bool mealEaten(DateTime date, int index) {
     final record = consumedMealOn(date, index);
     if (record != null) return record['mode'] != 'skipped';
@@ -1666,6 +1452,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   bool questionnaireNeedsReview = false;
+  @override
   final questionnaire = QuestionnaireData();
 
   /// Restore only this app's questionnaire key. Demo plans stay in memory.
@@ -2019,6 +1806,37 @@ class DemoStore extends ChangeNotifier {
   AppRole? selectedRole = AppRole.user;
   EntryStage entryStage = EntryStage.home;
   final CustomerAuth? customerAuth;
+  final Future<void> Function(Uri url)? openPaymentUrl;
+  @override
+  late final WaterRepository waterLog = PreferencesWaterLog();
+
+  @override
+  bool get canLoadProfilePhoto => userSignedIn && customerAuth != null;
+
+  @override
+  PlanOverview get planOverview => PlanOverview(
+    programWeek: userRequest.programWeek,
+    isPublished: userRequest.isPublished,
+    publishedNote: userRequest.publishedNote,
+  );
+
+  @override
+  Future<void> loadHomePhoto() async {
+    final auth = customerAuth;
+    if (!userSignedIn || auth == null) return;
+    final previous = profilePhoto;
+    final response = await auth.api('me/personal-details');
+    if (_disposed || !userSignedIn || previous != profilePhoto) return;
+    final photo = response is Map && response['details'] is Map
+        ? response['details']['photo']
+        : null;
+    if (photo is String) {
+      profilePhoto = photo;
+      update();
+    }
+  }
+
+  @override
   bool get serverAuthEnabled => customerAuth != null;
   String? sessionError;
 
@@ -2079,6 +1897,7 @@ class DemoStore extends ChangeNotifier {
   DateTime? sessionIssuedAt, sessionExpiresAt;
   String sessionPhone = '';
   bool _userAuthenticated = false;
+  @override
   bool get userSignedIn =>
       _userAuthenticated &&
       sessionExpiresAt != null &&
@@ -2190,10 +2009,12 @@ class DemoStore extends ChangeNotifier {
   bool questionnaireComplete = false;
 
   /// Real sessions stay on the sign-in gate until the server plan is loaded.
+  @override
   bool liveReady = false;
 
   /// Keeps the login screen under an in-app signup questionnaire until that route closes.
   bool suppressLiveEntry = false;
+  @override
   String? profilePhoto;
 
   /// Meal uid per civil date and index, so "خوردم" updates the server plan.
@@ -2206,10 +2027,12 @@ class DemoStore extends ChangeNotifier {
   List<TopupPackage> liveTopups = [];
   ShoppingList? liveShopping;
   String? liveOrderKey;
+  @override
   String? liveNotice;
 
   /// Pushes a shopping tick to the server. Null in fixture mode.
   Future<void> Function(String ingredientName, String? status)? reportShopping;
+  @override
   double latestWeight = 72;
   final List<DateTime> weightDates = [];
   List<DateTime> get weightEntryDates =>
@@ -2223,6 +2046,7 @@ class DemoStore extends ChangeNotifier {
             today.day - (weightEntries.length - 1 - i) * 7,
           ),
         );
+  @override
   final weightEntries = <double>[73.1, 72.8, 72.6, 72.2, 72];
   final completedMeals = <String>{}, completedHabits = <String>{};
   String feedback = '';
@@ -2373,6 +2197,7 @@ class DemoStore extends ChangeNotifier {
     'سلیقهٔ غذایی',
     'بازبینی و تأیید',
   ];
+  @override
   bool get hasUserRequest => userRequestId != null;
 
   DietRequest get userRequest => request(userRequestId!);
@@ -2628,6 +2453,7 @@ class DemoStore extends ChangeNotifier {
     return eligible.first;
   }
 
+  @override
   bool get canReviewCurrentProgram => userSignedIn && feedbackProgram != null;
   WeeklyFeedback? feedbackFor(DietRequest request) {
     final matching = weeklyFeedback.where(
@@ -3013,8 +2839,11 @@ class DemoStore extends ChangeNotifier {
 }
 
 class DemoScope extends InheritedNotifier<DemoStore> {
-  const DemoScope({super.key, required DemoStore store, required super.child})
-    : super(notifier: store);
+  DemoScope({super.key, required DemoStore store, required Widget child})
+    : super(
+        notifier: store,
+        child: CustomerScope(session: store, notifier: store, child: child),
+      );
   static DemoStore of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<DemoScope>()!.notifier!;
 }

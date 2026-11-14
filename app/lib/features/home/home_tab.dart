@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/motion/motion_kit.dart';
 import '../../core/photos/photos.dart';
 import '../../core/theme/tokens.dart';
-import '../../data/demo_store.dart';
+import '../../presentation/session/customer_scope.dart';
 import '../../presentation/widgets/kit/kit.dart';
 import '../coach/coach_launcher.dart';
 import '../plan/goal_math.dart';
@@ -30,25 +30,15 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final store = DemoScope.of(context);
-    final auth = store.customerAuth;
-    if (_loadedPhoto || !store.userSignedIn || auth == null) return;
+    final store = CustomerScope.of(context);
+    if (_loadedPhoto || !store.canLoadProfilePhoto) return;
     _loadedPhoto = true;
-    final previous = store.profilePhoto;
-    auth.api('me/personal-details').then<void>((response) {
-      if (!mounted || !store.userSignedIn || previous != store.profilePhoto) {
-        return;
-      }
-      final photo = response is Map && response['details'] is Map
-          ? response['details']['photo']
-          : null;
-      if (photo is String) setState(() => store.profilePhoto = photo);
-    }, onError: (Object _) {});
+    store.loadHomePhoto().catchError((Object _) {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
+    final store = CustomerScope.of(context);
     final name = _firstName(store);
     final day = nutritionOn(store, store.today);
     final next = findNextMeal(store);
@@ -335,14 +325,14 @@ class WaterCard extends StatefulWidget {
   const WaterCard({super.key, required this.goal, this.log});
 
   final int goal;
-  final WaterLog? log;
+  final WaterRepository? log;
 
   @override
   State<WaterCard> createState() => _WaterCardState();
 }
 
 class _WaterCardState extends State<WaterCard> {
-  late final WaterLog _log = widget.log ?? WaterLog();
+  WaterRepository get _log => widget.log ?? CustomerScope.of(context).waterLog;
   int _glasses = 0;
 
   @override
@@ -354,14 +344,14 @@ class _WaterCardState extends State<WaterCard> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final glasses = DemoScope.of(context).coachWaterGlasses;
+    final glasses = CustomerScope.of(context).coachWaterGlasses;
     if (glasses != null && glasses != _glasses) _glasses = glasses;
   }
 
   Future<void> _load() async {
     if (!mounted) return;
     try {
-      final store = DemoScope.of(context);
+      final store = CustomerScope.of(context);
       final remote = store.coachWaterGlasses;
       if (remote != null) {
         if (mounted) setState(() => _glasses = remote);
@@ -375,7 +365,7 @@ class _WaterCardState extends State<WaterCard> {
   }
 
   Future<void> _set(int value) async {
-    final store = DemoScope.of(context);
+    final store = CustomerScope.of(context);
     final next = value.clamp(0, widget.goal);
     setState(() => _glasses = next);
     Haptics.tick();
@@ -478,7 +468,7 @@ String _hello(DateTime now) {
   return 'عصر بخیر';
 }
 
-String _firstName(DemoStore store) {
+String _firstName(CustomerWorkspace store) {
   final raw = store.userSignedIn ? store.questionnaire.name.trim() : '';
   if (raw.isEmpty) return 'دوست';
   return raw.split(RegExp(r'\s+')).first;
@@ -489,7 +479,7 @@ String _nudge(NextMeal? next) {
   return 'دربارهٔ ${next.meal.name} بپرس';
 }
 
-String _prefill(DemoStore store, NextMeal? next) {
+String _prefill(CustomerWorkspace store, NextMeal? next) {
   if (next == null) return 'امروز را با هم مرور کنیم.';
   return 'می‌خوام دربارهٔ ${next.meal.name} «${next.meal.title}» حرف بزنیم.';
 }

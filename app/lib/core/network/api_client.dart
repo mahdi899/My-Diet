@@ -1,17 +1,8 @@
-/// A failed call, already phrased for the user. `code` is the server's stable error code.
-class ApiException implements Exception {
-  const ApiException(
-    this.message, {
-    this.code,
-    this.offline = false,
-    this.expired = false,
-  });
-  final String message;
-  final String? code;
-  final bool offline;
-  final bool expired;
-  @override
-  String toString() => message;
+import '../../domain/common/failure.dart';
+
+/// A transport failure, phrased for the user.
+class ApiException extends AppFailure {
+  const ApiException(super.message, {super.code, super.offline, super.expired});
 }
 
 /// The only door from features to the network. Features depend on this, never on `http`.

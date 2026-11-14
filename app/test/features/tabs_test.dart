@@ -5,6 +5,7 @@ import 'package:sabzine_flutter/core/theme/theme.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/features/home/home_tab.dart';
 import 'package:sabzine_flutter/features/plan/plan_tab.dart';
+import 'package:sabzine_flutter/features/plan/consume_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget host(DemoStore store, Widget page) {
@@ -155,6 +156,16 @@ void main() {
     await tester.ensureVisible(done.first);
     await tester.pump();
     await tester.tap(done.first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Opening the consumption sheet does not record a meal until confirmed.
+    expect(store.mealEaten(store.today, 0), isFalse);
+    final confirm = find.descendant(
+      of: find.byType(ConsumeSheet),
+      matching: find.text('انجام شد'),
+    );
+    await tester.tap(confirm);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

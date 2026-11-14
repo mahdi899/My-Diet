@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/demo_store.dart';
-import 'application/coach_controller.dart';
+import 'composition.dart';
 import 'presentation/coach_page.dart';
 import 'presentation/coach_route.dart';
 import 'presentation/profile_sheet.dart';

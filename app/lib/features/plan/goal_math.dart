@@ -1,7 +1,10 @@
 import 'dart:math' as math;
 
-import '../../data/day.dart';
-import '../../data/demo_store.dart';
+import '../../domain/common/day.dart';
+import '../../domain/common/digits.dart';
+import '../../domain/plan/meal.dart';
+import '../../domain/plan/nutrition_source.dart';
+import '../../domain/onboarding/questionnaire.dart';
 
 /// Space the shell's floating bar needs. Tabs must not draw their own bar.
 const double shellBottomInset = 134;
@@ -120,7 +123,7 @@ MacroGrams macrosFor(int kcal, String mealName) {
   );
 }
 
-DayNutrition nutritionOn(DemoStore store, DateTime date) {
+DayNutrition nutritionOn(NutritionSource store, DateTime date) {
   final meals = store.mealsOn(date);
   var protein = 0, carbs = 0, fat = 0;
   var eatenProtein = 0, eatenCarbs = 0, eatenFat = 0;
@@ -169,7 +172,7 @@ DayNutrition nutritionOn(DemoStore store, DateTime date) {
   );
 }
 
-GoalView goalOf(DemoStore store) {
+GoalView goalOf(NutritionSource store) {
   final answers = store.questionnaire;
   final current = store.latestWeight;
   final target = QuestionnaireData.number(answers.targetWeight);
@@ -200,7 +203,7 @@ GoalView goalOf(DemoStore store) {
   );
 }
 
-NextMeal? findNextMeal(DemoStore store) {
+NextMeal? findNextMeal(NutritionSource store) {
   final date = store.today;
   final meals = store.mealsOn(date);
   for (var i = 0; i < meals.length; i++) {
@@ -215,7 +218,7 @@ String mealHeroTag(DateTime date, int index) =>
 String swapPrefill(Meal meal) =>
     'می‌خوام ${meal.name} «${meal.title}» را عوض کنم. یک جایگزین هم‌کالری پیشنهاد بده.';
 
-bool canLogMeal(DemoStore store, DateTime date) =>
+bool canLogMeal(NutritionSource store, DateTime date) =>
     dateKey(date) == dateKey(store.today) &&
     !store.savingMeal &&
     !store.savingSubstitution &&

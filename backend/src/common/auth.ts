@@ -1,3 +1,5 @@
+import type { Role } from './roles.js';
+export type { Role } from './roles.js';
 import { CanActivate, ExecutionContext, Inject, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
@@ -11,7 +13,6 @@ export const IS_PUBLIC = 'isPublic';
 export const Public = () => SetMetadata(IS_PUBLIC, true);
 
 export const ROLES_KEY = 'roles';
-export type Role = 'user' | 'specialist' | 'admin';
 export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
 
 export interface AuthUser {

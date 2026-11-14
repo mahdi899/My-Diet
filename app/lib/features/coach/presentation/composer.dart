@@ -6,7 +6,7 @@ import '../../../data/demo_store.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../../home/weight_sheet.dart';
 import '../../plan/goal_math.dart';
-import '../application/coach_controller.dart';
+import '../presentation/coach_controller.dart';
 
 class CoachComposer extends StatefulWidget {
   const CoachComposer({super.key, required this.controller, this.prefill});

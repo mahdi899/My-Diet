@@ -1,5 +1,4 @@
 ﻿import 'dart:math';
-import '../../core/network/api_client.dart';
 
 class ServiceOffer {
   const ServiceOffer({
@@ -71,40 +70,6 @@ abstract interface class CommerceRepository {
     required String idempotencyKey,
     String? parentRequestId,
   });
-}
-
-/// Opens a hosted gateway page. Set once at startup; null in tests until a test assigns it.
-Future<void> Function(Uri url)? openExternalUrl;
-
-/// Starts a top-up and waits until the wallet is credited.
-/// Sandbox payments complete in-app. Hosted gateways open [openExternalUrl] and poll.
-Future<Wallet> settleTopup(
-  CommerceRepository commerce,
-  String packageCode, {
-  Duration pollEvery = const Duration(seconds: 2),
-  int attempts = 90,
-}) async {
-  final gateways = await commerce.gateways();
-  final hosted = gateways.where((g) => g != 'sandbox').toList();
-  final gateway = hosted.isNotEmpty ? hosted.first : 'sandbox';
-  final start = await commerce.startTopup(packageCode, gateway: gateway);
-  if (start.gateway == 'sandbox') {
-    return commerce.completeSandbox(start.paymentId);
-  }
-  final url = start.redirectUrl;
-  if (url == null || openExternalUrl == null) {
-    throw const ApiException('درگاه پرداخت در این دستگاه در دسترس نیست.');
-  }
-  await openExternalUrl!(Uri.parse(url));
-  for (var i = 0; i < attempts; i++) {
-    await Future<void>.delayed(pollEvery);
-    if (await commerce.topupStatus(start.paymentId) == 'credited') {
-      return commerce.wallet();
-    }
-  }
-  throw const ApiException(
-    'پرداخت هنوز تأیید نشده؛ اگر پرداخت کردی چند لحظه بعد موجودی را ببین.',
-  );
 }
 
 String newIdempotencyKey() {

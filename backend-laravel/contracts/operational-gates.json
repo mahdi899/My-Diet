@@ -1,0 +1,8 @@
+[
+  {"gate": "All HTTP contracts and provider failure cases verified", "verified": false},
+  {"gate": "Outbox, pg-boss backlog, retries and consumer idempotency migrated", "verified": false},
+  {"gate": "Payment callbacks and money/plan transactions verified under concurrency", "verified": false},
+  {"gate": "AI streaming, SSE reconnect and concurrency load verified", "verified": false},
+  {"gate": "Admin/doctor static assets, metrics, maintenance and scheduled jobs verified", "verified": false},
+  {"gate": "Production rehearsal, database backup and rollback procedure verified", "verified": false}
+]

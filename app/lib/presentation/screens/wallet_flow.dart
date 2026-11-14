@@ -1,10 +1,11 @@
+import '../../application/commerce/settle_topup.dart';
+import '../../domain/common/failure.dart';
 import 'weekly_feedback.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../data/demo_store.dart';
 import '../../data/wallet_catalog.dart';
 import '../session/live_session.dart';
-import '../../domain/commerce/commerce.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/theme.dart';
 import '../widgets/ui.dart';
@@ -329,7 +330,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
       if (!store.serverAuthEnabled) return;
       try {
         await syncLiveCatalog(store);
-      } on ApiException catch (e) {
+      } on AppFailure catch (e) {
         store.liveNotice = e.message;
         store.update();
       }
@@ -622,7 +623,7 @@ class _WalletChargeScreenState extends State<WalletChargeScreen> {
       setState(() => loadingPackages = true);
       try {
         await syncLiveCatalog(store);
-      } on ApiException catch (e) {
+      } on AppFailure catch (e) {
         if (mounted) {
           setState(() => failed = true);
           showToast(context, e.message);
@@ -649,12 +650,13 @@ class _WalletChargeScreenState extends State<WalletChargeScreen> {
           final wallet = await settleTopup(
             ensureLiveServices(store).commerce,
             offer.id,
+            openUrl: store.openPaymentUrl,
           );
           store.walletBalance = wallet.total;
           store.selectedChargeId = null;
           store.update();
           if (mounted) Navigator.pop(context);
-        } on ApiException catch (e) {
+        } on AppFailure catch (e) {
           if (mounted) {
             setState(() => failed = true);
             showToast(context, e.message);

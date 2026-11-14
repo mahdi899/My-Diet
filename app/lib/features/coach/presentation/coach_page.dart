@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
 import '../../../presentation/session/live_session.dart';
-import '../../home/water_log.dart';
-import '../application/coach_controller.dart';
+import '../presentation/coach_controller.dart';
 import '../domain/coach_repository.dart';
 import 'coach_header.dart';
 import 'composer.dart';
@@ -46,7 +45,9 @@ class _CoachPageState extends State<CoachPage> {
       final store = DemoScope.of(context);
       if (!store.applyCoachToday(today)) return;
       final glasses = store.coachWaterGlasses;
-      if (glasses != null) unawaited(WaterLog().write(store.today, glasses));
+      if (glasses != null) {
+        unawaited(store.waterLog.write(store.today, glasses));
+      }
       if (reloadPlan && store.serverAuthEnabled) unawaited(refreshLive(store));
     };
     _controller.addListener(_rebuild);

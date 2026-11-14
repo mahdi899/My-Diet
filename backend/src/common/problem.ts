@@ -1,3 +1,4 @@
+import { ApplicationError } from './application-error.js';
 import { HttpException } from '@nestjs/common';
 
 export interface ProblemBody {
@@ -22,6 +23,9 @@ export function classifyProblem(exception: unknown): ProblemBody {
   }
   if (exception instanceof Error && exception.message === 'provider_outcome_unknown') {
     return problem(503, 'provider_outcome_unknown', 'نتیجهٔ سرویس مدل نامشخص است', false);
+  }
+  if (exception instanceof ApplicationError) {
+    return problem(exception.status, exception.code, exception.messageFa, RETRYABLE.has(exception.code));
   }
   if (exception instanceof HttpException) {
     const status = exception.getStatus();

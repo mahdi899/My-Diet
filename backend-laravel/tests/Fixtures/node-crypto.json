@@ -1,0 +1,29 @@
+{
+  "key": "synthetic-migration-key-keep-out-of-production",
+  "plain": "{\"name\":\"آزمایش مهاجرت\",\"note\":\"test/🙂\",\"weight\":71.5}",
+  "encrypted": "enc1:QLSwX7wOoiXsTLo9:tV037CNwCP6VvxcD7yTYsw:yYITt6gOdHPczLmzOwV9azxlYWRfx6F_u-pbiBbSNUkrjGBzmMD6t-0jmnPqgN_vigNIXL63gnXbnUl49eDap4oWAqlG",
+  "claims": {
+    "sub": "01934300-0000-7000-8000-000000000001",
+    "sid": "01934300-0000-7000-8000-000000000002",
+    "role": "admin",
+    "iat": 1735689600,
+    "exp": 4102444800
+  },
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTkzNDMwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJzaWQiOiIwMTkzNDMwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3MzU2ODk2MDAsImV4cCI6NDEwMjQ0NDgwMH0.NiRNSc7Zh9cLDCaNeIgDlMMZ9_rIw1Wfzb_B5Ix-drw",
+  "passwords": [
+    {
+      "password": "migration-test",
+      "encoded": "0123456789abcdef0123456789abcdef:ec529a780c52fb4fbbe10cfbdd21f1dba258cb2ce7ca03b7fda1282eaf66d3276fdcecd72ec92f3b2d1724fd94674d55fa4595d10c439cad361fd1ec698485df"
+    },
+    {
+      "password": "رمز آزمایشی 🙂",
+      "encoded": "0123456789abcdef0123456789abcdef:84a1c0bd74d4ce6bf752f785327236b6e88aa6ffa633fb1eddcb0846d1c61d2a67d6d6684da9740de4954357884c5c54ea3815abcfeb0a7a6189050585b98575"
+    }
+  ],
+  "totp": {
+    "secret": "MTIzNDU2Nzg5MDEyMzQ1Njc4OTA=",
+    "base32": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+    "at": 59000,
+    "code": "287082"
+  }
+}

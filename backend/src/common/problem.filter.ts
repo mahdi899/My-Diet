@@ -1,3 +1,4 @@
+import { ApplicationError } from './application-error.js';
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { classifyProblem } from './problem.js';
@@ -10,7 +11,7 @@ export class ProblemFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     const request = host.switchToHttp().getRequest<Request>();
     const problem = classifyProblem(exception);
-    if (!(exception instanceof HttpException)) {
+    if (!(exception instanceof HttpException) && !(exception instanceof ApplicationError)) {
       this.logger.error(`${request.method} ${request.path} failed: ${problem.code}`);
     }
     response.status(problem.status).json(problem);

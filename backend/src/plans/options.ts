@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApiError } from '../common/errors.js';
+import { ApplicationError as ApiError } from '../common/application-error.js';
 
 const amount = z.number().finite().positive().max(1_000_000);
 const unit = z.enum(['g', 'kg', 'ml', 'l', 'piece', 'serving', 'cup', 'tbsp', 'tsp']);

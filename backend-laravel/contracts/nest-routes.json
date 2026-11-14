@@ -1,0 +1,3183 @@
+{
+  "schemaVersion": 1,
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/go/:slug",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/campaign-links.controller.ts",
+      "handler": "CampaignRedirectController.open"
+    },
+    {
+      "method": "HEAD",
+      "path": "/go/:slug",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/campaign-links.controller.ts",
+      "handler": "CampaignRedirectController.head"
+    },
+    {
+      "method": "GET",
+      "path": "/health/live",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "health",
+      "source": "backend/src/health/health.controller.ts",
+      "handler": "HealthController.live"
+    },
+    {
+      "method": "GET",
+      "path": "/health/ready",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "health",
+      "source": "backend/src/health/health.controller.ts",
+      "handler": "HealthController.ready"
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "metrics",
+      "source": "backend/src/metrics/metrics.controller.ts",
+      "handler": "MetricsController.metrics"
+    },
+    {
+      "method": "GET",
+      "path": "/questionnaire-editor",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/editor.controller.ts",
+      "handler": "QuestionnaireEditorPageController.page"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai-connections",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai-connections",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.add"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/ai-connections/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.remove"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/ai-connections/:id/active",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.activate"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai-controls",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.aiControls"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/ai-controls",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.setAiControls"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai-cost",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.aiCost"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai-executions",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.aiExecutions"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai-executions/:id/reconcile",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.reconcileAi"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai-generations",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.generations"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/budget",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.budget"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/ai/budget",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.setBudget"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/generations",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.generations"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/ledger",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.ledger"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai/members/:id/reset-health",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.resetHealth"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/pools",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.pools"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/ai/pools/:code",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.updatePool"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/ai/pools/:code/members",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.setMembers"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai/pools/:code/test",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.testPool"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/prompts",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.prompts"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai/prompts/:key",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.createPrompt"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai/prompts/:key/:version/activate",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.activatePrompt"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/providers",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.providers"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai/providers",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.createProvider"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/ai/providers/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.deleteProvider"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/ai/providers/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.updateProvider"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/providers/:id/models",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.models"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/ai/providers/:id/test",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.testProvider"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ai/usage",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "ai",
+      "source": "backend/src/ai/ai-admin.controller.ts",
+      "handler": "AiAdminController.usage"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/articles",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.adminArticles"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/articles",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.create"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/articles/:slug",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.update"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/articles/:slug/publish",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.publish"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/articles/:slug/unpublish",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.unpublish"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/audit-logs",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.auditLogs"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/campaign-links",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/campaign-links.controller.ts",
+      "handler": "CampaignLinksController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/campaign-links",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/campaign-links.controller.ts",
+      "handler": "CampaignLinksController.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/campaign-links/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/campaign-links.controller.ts",
+      "handler": "CampaignLinksController.toggle"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/consents",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.consent"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/daily-messages",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.dailyMessage"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/dashboard",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.dashboard"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/feedback-metrics",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "FeedbackMetricsController.metrics"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/foods",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/foods",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.create"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/foods/:slug",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.get"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/foods/:slug",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.update"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/foods/:slug/active",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.setActive"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/foods/backups/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.backup"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/foods/export",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.exportJson"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/foods/export.csv",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.exportCsv"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/foods/export.json",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.exportFullJson"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/foods/import",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.importCsv"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/foods/replace",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.replace"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/foods/revision",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.revision"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/ledger",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.ledger"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/maintenance",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.maintenanceRun"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/onboarding-questionnaire/:goal",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-web.controller.ts",
+      "handler": "OnboardingQuestionnaireController.save"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/onboarding-transfers",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-transfers.controller.ts",
+      "handler": "OnboardingTransfersController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/onboarding-transfers/:id/confirm",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-transfers.controller.ts",
+      "handler": "OnboardingTransfersController.confirm"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/onboarding/funnel",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingAdminController.funnel"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/onboarding/funnel/refresh",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingAdminController.refresh"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/onboarding/onboarding-leads",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingAdminController.onboardingLeads"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/onboarding/profiles",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingAdminController.profiles"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/onboarding/profiles/:userId",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingAdminController.profile"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/orders",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.orders"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/orders/:id/compensate",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.compensate"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/outbox/:id/retry",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.retryDeadLetter"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/outbox/dead",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.deadLetters"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/payments",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.payments"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/plan-change-reasons",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.allReasons"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/plan-change-reasons/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.updateReason"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/plan-versions/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.adminVersion"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/prices",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.price"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/public-config",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.config"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/push/campaigns",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.campaigns"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/push/campaigns",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.create"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/push/campaigns/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.delete"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/push/campaigns/:id/send",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.send"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/push/devices",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.devices"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/push/firebase",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.firebase"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/push/status",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/integrations.controller.ts",
+      "handler": "IntegrationsController.status"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/questionnaire/compatibility",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/editor.controller.ts",
+      "handler": "QuestionnaireAdminController.check"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/questionnaire/schemas",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/editor.controller.ts",
+      "handler": "QuestionnaireAdminController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/questionnaire/schemas",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/editor.controller.ts",
+      "handler": "QuestionnaireAdminController.save"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/questionnaire/schemas/:version/publish",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/editor.controller.ts",
+      "handler": "QuestionnaireAdminController.publish"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/reports/feedback",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.feedback"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/reports/foods",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.foods"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/reports/journeys",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.journeyReport"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/reports/retention",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.retention"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/reports/sla",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.admin"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/reports/specialists",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.specialists"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/requests",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.requests"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/requests/:id/assignment",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.assign"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/reviews",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.reviews"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/reviews/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.review"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/reward",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.reward"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/specialists",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.specialists"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/specialists",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/specialists/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.update"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/specialists/:id/members",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.members"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/specialists/:id/members",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.addMember"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/specialists/:id/members/:userId",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.removeMember"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/specialists/:id/verification",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.verification"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/streak-campaigns",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "rewards",
+      "source": "backend/src/rewards/streak.controller.ts",
+      "handler": "StreakController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/streak-campaigns",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "rewards",
+      "source": "backend/src/rewards/streak.controller.ts",
+      "handler": "StreakController.publish"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/support-conversations",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.support"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/users",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.users"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/users/:id",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.user"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/users/:id/delete",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.deleteUser"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/users/:id/package",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.packageDays"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/users/:id/status",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.status"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/wallet-adjustments",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "AdminController.adjust"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/web-analytics",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/web-analytics.controller.ts",
+      "handler": "WebAnalyticsController.report"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/web-analytics/departures",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/web-analytics.controller.ts",
+      "handler": "WebAnalyticsController.departures"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/web-analytics/live",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/web-analytics.controller.ts",
+      "handler": "WebAnalyticsController.live"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/web-analytics/reset",
+      "public": false,
+      "roles": [
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/web-analytics.controller.ts",
+      "handler": "WebAnalyticsController.reset"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/admin/login",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.adminLogin"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/logout",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.logout"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/auth/otp/latest",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.latest"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/otp/request",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.request"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/otp/verify",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.verify"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/refresh",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.refresh"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/auth/sessions",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.sessions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/auth/sessions/:id",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.revoke"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/specialist/login",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.specialistLogin"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/totp",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "IdentityController.totp"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/catalog",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.catalog"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/catalog/compose",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.compose"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/catalog/foods",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.search"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/conversations",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.list"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/conversations/:id/media",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.beginMedia"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/conversations/:id/messages",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.messages"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/conversations/:id/messages",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.post"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/conversations/:id/read",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.read"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/conversations/:id/receipts",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.receipt"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/conversations/:id/timeline",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.timeline"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/events",
+      "public": false,
+      "roles": [
+        "user",
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "realtime",
+      "source": "backend/src/realtime/realtime.controller.ts",
+      "handler": "RealtimeController.events"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/journey/events",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.journey"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me",
+      "public": false,
+      "roles": [
+        "user",
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "MeProfileController.me"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/me",
+      "public": false,
+      "roles": [
+        "user",
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "MeProfileController.rename"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/account/delete",
+      "public": false,
+      "roles": [
+        "user",
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "privacy",
+      "source": "backend/src/privacy/privacy.controller.ts",
+      "handler": "PrivacyController.deleteAccount"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/acquisition-state",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/questionnaire.controller.ts",
+      "handler": "AcquisitionController.state"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/care-conversation",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.care"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/coach/actions",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.action"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/coach/day-brief",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.dayBrief"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/coach/food-photos",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.photo"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/me/coach/meals/:id",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.patchMeal"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/coach/media/:id",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.media"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/coach/messages",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.messages"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/coach/thread",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.thread"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/coach/today",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "coach",
+      "source": "backend/src/coach/coach.controller.ts",
+      "handler": "CoachController.today"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/consents",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.mine"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/consents",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.record"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/dashboard",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.dashboard"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/devices",
+      "public": false,
+      "roles": [
+        "user",
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "realtime",
+      "source": "backend/src/realtime/realtime.controller.ts",
+      "handler": "RealtimeController.register"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/me/devices/:id",
+      "public": false,
+      "roles": [
+        "user",
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "realtime",
+      "source": "backend/src/realtime/realtime.controller.ts",
+      "handler": "RealtimeController.remove"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/export",
+      "public": false,
+      "roles": [
+        "user",
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "privacy",
+      "source": "backend/src/privacy/privacy.controller.ts",
+      "handler": "PrivacyController.exportAccount"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/info-questions",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.questions"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/info-questions/:id/answers",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.answer"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/meal-activity/:date",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.activityDay"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/meal-activity/:date/history",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.activityHistory"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/meal-consumption",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.record"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/meal-logs",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.meal"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/meal-selections",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.select"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/notifications",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.notifications"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/notifications/:id/read",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.readNotification"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/onboarding",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingController.state"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/onboarding-transfers",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-transfers.controller.ts",
+      "handler": "OnboardingTransfersController.create"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/onboarding-transfers/:id",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-transfers.controller.ts",
+      "handler": "OnboardingTransfersController.status"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/onboarding-transfers/:id/zibal",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-transfers.controller.ts",
+      "handler": "OnboardingTransfersController.startGateway"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/onboarding-transfers/zibal/return",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-transfers.controller.ts",
+      "handler": "OnboardingTransfersController.gatewayReturn"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/onboarding/consent",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingController.consent"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/me/onboarding/draft",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingController.saveDraft"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/onboarding/submit",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingController.submit"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/orders",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.order"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/orders/:id",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.orderOne"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/orders/:id/cancel",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.cancel"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/patient-reports",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "WeeklyFeedbackController.latest"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/patient-reports",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "WeeklyFeedbackController.report"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/personal-details",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "MeProfileController.personalDetails"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/me/personal-details",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "MeProfileController.savePersonalDetails"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/plan",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.plan"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/plan-change-reasons",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.reasons"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/plan-changes",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.mine"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/plan-changes",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.submit"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/plan-changes/:id",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.one"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/plan-changes/:id/replies",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.reply"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/plan/day/:date",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.day"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/plan/week",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.week"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/preferences",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "WeeklyFeedbackController.preferences"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/me/preferences",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "WeeklyFeedbackController.confirm"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/questionnaire",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/questionnaire.controller.ts",
+      "handler": "QuestionnaireController.draft"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/me/questionnaire",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/questionnaire.controller.ts",
+      "handler": "QuestionnaireController.save"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/questionnaire/current",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/questionnaire.controller.ts",
+      "handler": "QuestionnaireController.current"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/questionnaire/submissions",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/questionnaire.controller.ts",
+      "handler": "QuestionnaireController.submit"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/request",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.mine"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/requests",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.requests"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/requests/:id",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.requestOne"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/requests/:id/cancel",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.cancelRequest"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/reviews",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.review"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/rewards/:id/acknowledge",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.acknowledge"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/rewards/pending",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.pendingRewards"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/shopping-list",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "shopping",
+      "source": "backend/src/shopping/shopping.controller.ts",
+      "handler": "ShoppingController.get"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/me/shopping-list/items/:key",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "shopping",
+      "source": "backend/src/shopping/shopping.controller.ts",
+      "handler": "ShoppingController.flag"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/shopping-list/share",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "shopping",
+      "source": "backend/src/shopping/shopping.controller.ts",
+      "handler": "ShoppingController.share"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/specialist",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.specialist"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/streak",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "rewards",
+      "source": "backend/src/rewards/streak.controller.ts",
+      "handler": "StreakController.snapshot"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/streak/claim",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "rewards",
+      "source": "backend/src/rewards/streak.controller.ts",
+      "handler": "StreakController.claim"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/substitution-reasons",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.reasons"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/support-conversation",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.support"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/sync",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MessagingController.sync"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/topups",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.topup"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/topups/:id",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.topupOne"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/totp",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "MeProfileController.totp"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/totp/confirm",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "MeProfileController.confirm"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/totp/setup",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "identity",
+      "source": "backend/src/identity/identity.controller.ts",
+      "handler": "MeProfileController.setup"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/wallet",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.wallet"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/wallet/ledger",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.ledger"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/weekly-feedback",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "WeeklyFeedbackController.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/me/weekly-feedback",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "WeeklyFeedbackController.save"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/weekly-feedback/publish",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "WeeklyFeedbackController.publish"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/me/weights",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.weights"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/me/weights",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "TrackingController.weight"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/media/:id",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MediaController.finish"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/media/:id/access",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MediaController.grant"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/media/:id/content",
+      "public": false,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "messaging",
+      "source": "backend/src/messaging/messaging.controller.ts",
+      "handler": "MediaController.content"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/onboarding/submissions",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-web.controller.ts",
+      "handler": "OnboardingSubmissionsController.save"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/onboarding/submissions/:id/verify",
+      "public": false,
+      "roles": [
+        "user"
+      ],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-web.controller.ts",
+      "handler": "OnboardingSubmissionsController.verify"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/callback/:gateway",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.callback"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/gateways",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.gateways"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/sandbox/complete",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "money",
+      "source": "backend/src/money/money.controller.ts",
+      "handler": "MoneyController.complete"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/app-download",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.download"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/articles",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.articles"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/articles/:slug",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.article"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/config",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "PublicConfigController.config"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/consents",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "publishing",
+      "source": "backend/src/publishing/publishing.controller.ts",
+      "handler": "PublishingController.consents"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/daily-message",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "PublicConfigController.dailyMessage"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/food-images/:file",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "food",
+      "source": "backend/src/food/food.controller.ts",
+      "handler": "FoodController.image"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/onboarding-questionnaire",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-web.controller.ts",
+      "handler": "OnboardingQuestionnaireController.list"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/onboarding-spec",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "onboarding",
+      "source": "backend/src/onboarding/onboarding.controller.ts",
+      "handler": "OnboardingController.spec"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/public/onboarding/community-join",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 201,
+      "module": "admin",
+      "source": "backend/src/admin/onboarding-web.controller.ts",
+      "handler": "OnboardingQuestionnaireController.communityJoin"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/reviews",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "tracking",
+      "source": "backend/src/tracking/tracking.controller.ts",
+      "handler": "PublicReviewsController.reviews"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/questionnaire/schema",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "questionnaire",
+      "source": "backend/src/questionnaire/questionnaire.controller.ts",
+      "handler": "QuestionnaireSchemaController.schema"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/info-questions/:id/acknowledge",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.acknowledge"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/info-questions/:id/withdraw",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.withdraw"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/patients/:userId/patient-reports",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 200,
+      "module": "feedback",
+      "source": "backend/src/feedback/weekly-feedback.controller.ts",
+      "handler": "SpecialistReportController.read"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/patients/:userId/plan-versions",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.patientVersions"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/plan-changes",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.queue"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/plan-changes/:id",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.staffOne"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/plan-changes/:id/approve",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.approve"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/plan-changes/:id/clarifications",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.clarify"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/plan-changes/:id/reject",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.reject"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/plan-changes/:id/review",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plan-changes.controller.ts",
+      "handler": "PlanChangesController.review"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/profile",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "SpecialistProfileController.profile"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/specialist/profile",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "SpecialistProfileController.save"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/queue",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.queue"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/requests",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.queue"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/requests/:id",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.one"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/requests/:id/corrections",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.correct"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/specialist/requests/:id/draft",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 200,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.replace"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/requests/:id/publish",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.publish"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/requests/:id/questions",
+      "public": false,
+      "roles": [
+        "specialist",
+        "admin"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.ask"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/specialist/requests/:id/regenerate",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 201,
+      "module": "plans",
+      "source": "backend/src/plans/plans.controller.ts",
+      "handler": "PlansController.regenerate"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialist/sla",
+      "public": false,
+      "roles": [
+        "specialist"
+      ],
+      "defaultStatus": 200,
+      "module": "reports",
+      "source": "backend/src/reports/reports.controller.ts",
+      "handler": "ReportsController.mine"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/specialists",
+      "public": true,
+      "roles": [],
+      "defaultStatus": 200,
+      "module": "admin",
+      "source": "backend/src/admin/admin.controller.ts",
+      "handler": "SpecialistsController.list"
+    }
+  ]
+}

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sabzine_flutter/data/customer_auth.dart';
-import 'package:sabzine_flutter/features/coach/application/coach_controller.dart';
+import 'package:sabzine_flutter/features/coach/presentation/coach_controller.dart';
 import 'package:sabzine_flutter/features/coach/data/coach_parse.dart';
 import 'package:sabzine_flutter/features/coach/data/coach_wire.dart';
 import 'package:sabzine_flutter/features/coach/data/http_coach_repository.dart';

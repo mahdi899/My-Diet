@@ -8,7 +8,7 @@ import 'presentation/screens/first_login.dart';
 import 'presentation/screens/splash.dart';
 import 'presentation/screens/onboarding.dart';
 import 'core/theme/theme.dart';
-import 'features/coach/application/coach_controller.dart';
+import 'features/coach/composition.dart';
 import 'features/coach/presentation/coach_page.dart';
 import 'features/home/home_tab.dart';
 import 'features/plan/plan_tab.dart';

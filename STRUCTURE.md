@@ -44,6 +44,8 @@
 
 قانون ماژول: جدول ماژول دیگر را مستقیم ننویس. استثنا همان تراکنش‌های مشترکی است که در `backend/docs/adr/0001-modular-monolith-nestjs.md` آمده.
 
+برش برنامه در `backend/src/plans/` لایه‌های `domain`، `application` و `infrastructure` دارد. `plans.service.ts` آداپتر Nest است و وابستگی‌های عینی در `plans.module.ts` ساخته می‌شوند. سناریوی پرداخت آنبوردینگ هم در `backend/src/onboarding/application/` و آداپترهایش در `infrastructure/` قرار دارد؛ کنترلر HTTP داخل `admin/` مانده است. مرز تراکنش‌های مشترک حفظ شده؛ جزئیات در `backend/docs/adr/0004-clean-boundaries.md` است.
+
 ## اپ
 
 دستورها را داخل `app/` بزن. پروژهٔ اندروید همین‌جا است: `app/android/`. پوشهٔ `android/` در ریشهٔ مخزن اضافه بود و برداشته شد.
@@ -53,6 +55,7 @@ app/lib/
   main.dart
   app.dart                 پوسته و ناوبری
   core/                    ظاهر، حرکت، شبکه، عکس غذا
+  application/             سناریوی شارژ و قرارداد دادهٔ خانه و برنامه
   features/coach/          برش تمیز: domain، data، application، presentation
   features/home|plan|shell نمایش تب‌ها
   domain/                  قرارداد تجارت، برنامه، آنبوردینگ
@@ -61,6 +64,8 @@ app/lib/
 ```
 
 کد تازهٔ اپ را مثل `features/coach/` برش بده: دامنه، داده، کاربرد، نمایش. `presentation/screens/` و `data/` کد قبلی‌اند؛ اپ منتشرشده فقط نقش کاربر را نشان می‌دهد. صفحه‌های قدیمی کارکنان داخل اپ برای تست مانده‌اند. پنل زنده `admin/` و `doctor/` است.
+
+در مربی، `CoachSession` منطق مستقل از Flutter است؛ `CoachController` داخل `presentation/` اعلان‌های Flutter را اضافه می‌کند و ساخت ریپازیتوری در `composition.dart` انجام می‌شود. تب‌های اصلی خانه و برنامه قرارداد `CustomerWorkspace` را می‌خوانند و محاسبات هدف فقط `NutritionSource` را می‌شناسند. `DemoStore` فعلاً آداپتر قدیمی این قراردادهاست. مدل وعده و پرسش‌نامه داخل `domain/` قرار دارند و مسیرهای قبلی داده آن‌ها را دوباره export می‌کنند.
 
 ## سایت و آنبوردینگ و پنل
 

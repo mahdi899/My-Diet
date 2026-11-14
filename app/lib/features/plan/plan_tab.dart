@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import '../../core/motion/motion_kit.dart';
 import '../../core/photos/photos.dart';
 import '../../core/theme/tokens.dart';
-import '../../data/day.dart';
-import '../../data/demo_store.dart';
+import '../../domain/common/day.dart';
+import '../../presentation/session/customer_scope.dart';
 import '../../presentation/screens/messaging.dart';
 import '../../presentation/screens/user.dart';
 import '../../presentation/widgets/kit/kit.dart';
@@ -76,7 +76,7 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
+    final store = CustomerScope.of(context);
     if (store.serverAuthEnabled && !store.liveReady) {
       return const PlanSkeleton();
     }
@@ -84,7 +84,7 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
       return PlanProblem(message: store.liveNotice!);
     }
     if (!store.hasUserRequest) return const PlanEmpty();
-    final request = store.userRequest;
+    final request = store.planOverview;
     final week = request.programWeek;
     if (request.isPublished &&
         week != null &&

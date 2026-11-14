@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'app.dart';
 import 'core/photos/food_photo_resolver.dart';
-import 'domain/commerce/commerce.dart';
+import 'domain/common/failure.dart';
 import 'data/customer_auth.dart';
 import 'data/secure_auth_storage.dart';
 import 'data/demo_store.dart';
@@ -33,12 +33,15 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Warm the bundled photo index so FoodImage resolves instantly.
   FoodPhotoResolver.load().ignore();
-  openExternalUrl = (uri) =>
-      launchUrl(uri, mode: LaunchMode.externalApplication);
   final apiBase = resolveApiBase();
   if (kDebugMode) debugPrint('API $apiBase');
   final fixtures = _forceDemo || (!kReleaseMode && apiBase.isEmpty);
   final store = DemoStore(
+    openPaymentUrl: (uri) async {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw const CommerceException('درگاه پرداخت باز نشد.');
+      }
+    },
     customerAuth: fixtures || apiBase.isEmpty
         ? null
         : CustomerAuth(baseUrl: apiBase, storage: const SecureAuthStorage()),

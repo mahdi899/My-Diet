@@ -4,7 +4,7 @@ import '../../../core/motion/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
 import '../../../presentation/widgets/kit/kit.dart';
-import '../application/coach_controller.dart';
+import '../presentation/coach_controller.dart';
 import '../data/coach_parse.dart';
 import '../domain/coach_message.dart';
 import 'bubbles.dart';
