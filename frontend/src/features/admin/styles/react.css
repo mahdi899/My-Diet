@@ -1,0 +1,8 @@
+.admin-reference { min-height: 100dvh; line-height: 1.8; }
+.admin-reference .account-menu { position: relative; }
+.admin-reference .account-dropdown { position: absolute; inset-inline-end: 0; top: 42px; z-index: 50; padding: 8px; background: white; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.admin-reference .reference-table { overflow-x: auto; }
+.admin-reference .preview-notice { margin-bottom: 20px; justify-content: space-between; flex-wrap: wrap; }
+.admin-reference .preview-content { border: 0; padding: 0; margin: 0; min-width: 0; }
+.admin-reference .hero-action { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; color: #e9f4dd; background: #ffffff0e; border: 1px solid #8fb29255; border-radius: 10px; padding: 6px 13px; font-size: 11px; }
+@media(max-width:760px) { .admin-reference .menu-open #sidebar { transform: none; } }

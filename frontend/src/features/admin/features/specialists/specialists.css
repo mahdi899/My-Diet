@@ -1,0 +1,40 @@
+.admin-reference .specialists-card{background:white;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.admin-reference .specialists-card-heading{padding:26px 28px;border-bottom:1px solid var(--line)}
+.admin-reference .specialists-card-heading h2{font-size:18px;font-weight:600}
+.admin-reference .specialists-card-heading p{margin-top:6px;font-size:12px}
+.admin-reference .specialists-toolbar{padding:22px 28px;border-bottom:1px solid var(--line)}
+.admin-reference .specialists-search{display:flex;align-items:center;gap:12px;width:min(438px,100%);height:50px;padding:0 14px;margin:0;border:1px solid var(--line);border-radius:10px;background:#f7f8f2;color:#75816d}
+.admin-reference .specialists-search input{width:100%;min-width:0;height:48px;padding:8px 0;margin:0;border:0;background:transparent;border-radius:0;outline:none;box-shadow:none;font-size:13px}
+.admin-reference .specialists-search:focus-within{outline:2px solid #72967e;outline-offset:2px}
+.admin-reference .specialists-table-scroll{overflow-x:auto}
+.admin-reference .specialists-card table{width:100%;min-width:840px;table-layout:fixed;border-collapse:collapse}
+.admin-reference .specialists-card th,.admin-reference .specialists-card td{text-align:right;vertical-align:middle;padding:20px 28px}
+.admin-reference .specialists-card th{background:#f7f9f6;color:#53634f;font-size:13px;font-weight:600;white-space:nowrap}
+.admin-reference .specialists-card th:first-child{width:24%}
+.admin-reference .specialists-card th:nth-child(2){width:18%}
+.admin-reference .specialists-card td{height:90px;font-size:14px;border-bottom:1px solid #edf0e8}
+.admin-reference .specialist-person{display:flex;align-items:center;gap:12px;overflow-wrap:anywhere}
+.admin-reference .specialist-avatar{display:grid;place-items:center;width:44px;height:44px;flex:none;border-radius:50%;object-fit:cover;background:#edf3e8;color:#537847}
+.admin-reference button.specialist-members-button{width:54px;min-height:44px;padding:10px;background:white;color:#526951;border:1px solid #d5dfc6;border-radius:10px;box-shadow:none}
+.admin-reference button.specialist-edit-button{min-height:44px;padding:8px 0;border:0;background:transparent;color:var(--ink);font-size:12px;font-weight:400;box-shadow:none}
+.admin-reference .specialist-edit-button .icon,.admin-reference .specialist-members-button .icon{width:17px;height:17px}
+.admin-reference button.specialist-edit-button:hover:not(:disabled),.admin-reference button.specialist-members-button:hover:not(:disabled){background:var(--soft);color:var(--green);box-shadow:none}
+.admin-reference .specialists-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 28px;color:var(--muted);font-size:12px}
+.admin-reference .specialists-pagination>div{display:flex;align-items:center;gap:8px}
+.admin-reference .specialists-pagination button{min-height:40px;padding:6px 10px;font-size:12px}
+.admin-reference .specialists-pagination .icon{width:14px;height:14px}
+.admin-reference .specialists-pagination [aria-current]{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;background:#eef4e5;color:#466d39}
+.admin-reference td.specialists-empty{text-align:center;height:150px;color:var(--muted)}
+.admin-reference .specialist-dialog{padding:0;border:1px solid var(--line);border-radius:18px;width:min(640px,calc(100% - 32px));max-height:85dvh;background:white;color:var(--ink)}
+.admin-reference .specialist-dialog::backdrop{background:#112e2980}
+.admin-reference .specialist-dialog-content{padding:24px}
+.admin-reference .specialist-dialog-content>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.admin-reference .specialist-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin-top:16px}
+.admin-reference .specialist-form-wide{grid-column:1/-1}
+.admin-reference .specialist-checkbox{display:flex;gap:8px;align-items:center}
+.admin-reference .specialist-checkbox input{width:18px;min-height:18px;margin:0}
+.admin-reference .specialist-members-list{list-style:none;padding:0;margin:0}
+.admin-reference .specialist-members-section{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.admin-reference #specialist-members{margin-top:16px}
+.admin-reference .specialist-members-list li{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);font-size:13px}
+@media(max-width:640px){.admin-reference .specialists-card-heading,.admin-reference .specialists-toolbar{padding:20px}.admin-reference .specialists-pagination{padding:12px 16px;flex-wrap:wrap}.admin-reference .specialist-form-grid{grid-template-columns:1fr}}

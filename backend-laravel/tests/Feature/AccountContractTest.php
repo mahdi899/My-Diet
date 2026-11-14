@@ -11,6 +11,7 @@ final class AccountContractTest extends MySqlTestCase
     {
         $user = $this->actor();
         $plan = $this->planFixture($user['id']);
+        $this->db->table('orders')->where('id', $plan['order'])->update(['created_at' => '2026-11-14 08:00:00']);
         $this->db->table('plan_requests')->where('id', $plan['request'])->update(['week_start' => '2026-11-14']);
         $this->db->table('wallet_ledger')->insert(['id' => Crypto::uuid(), 'user_id' => $user['id'], 'bucket' => 'cash', 'amount_toman' => 1000, 'kind' => 'topup', 'reference_id' => Crypto::uuid()]);
         $this->db->table('wallets')->where('user_id', $user['id'])->update(['cash_toman' => 1000]);
