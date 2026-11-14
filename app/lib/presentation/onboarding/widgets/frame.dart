@@ -1,9 +1,12 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
 import '../../widgets/kit/pill_button.dart';
+import 'blur_ink.dart';
+import 'camera_progress.dart';
 
 /// Circular progress that eases to its value, with the percent in the middle.
 class ProgressRing extends StatelessWidget {
@@ -92,92 +95,55 @@ class OnboardingFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inset = MediaQuery.viewInsetsOf(context).bottom;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final sign = (rtl ? -1.0 : 1.0) * (forward ? 1.0 : -1.0);
+    final media = MediaQuery.of(context);
+    final hasCamera = topCameraBounds(media) != null;
     return DecoratedBox(
       decoration: const BoxDecoration(gradient: AppGradients.warmBackground),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: true,
-        body: SafeArea(
+        body: Stack(
+          children: [
+            CameraProgressRing(progress: progress),
+            SafeArea(
           child: Column(
             children: [
+              if (!hasCamera)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(
+                      value: progress.clamp(0, 1),
+                      minHeight: 5,
+                      backgroundColor: AppColors.mint,
+                      color: AppColors.emerald,
+                    ),
+                  ),
+                ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
+                padding: const EdgeInsets.fromLTRB(12, 4, 20, 0),
                 child: Row(
                   children: [
-                    IconButton(
-                      tooltip: 'قبلی',
-                      onPressed: onBack,
-                      icon: Icon(
-                        Icons.arrow_forward_rounded,
-                        color: onBack == null
-                            ? Colors.transparent
-                            : AppColors.ink,
-                      ),
-                    ),
+                    _CircleBack(onPressed: onBack),
                     Expanded(
-                      child: AnimatedSwitcher(
-                        duration: Motion.of(context, Motion.base),
-                        child: Text(
-                          groupTitle ?? '',
-                          key: ValueKey(groupTitle),
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
+                      child: BlurSwap(
+                        text: groupTitle ?? '',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
                         ),
                       ),
                     ),
-                    ProgressRing(value: progress),
+                    const SizedBox(width: 44),
                   ],
                 ),
               ),
+              Expanded(child: child),
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0, 1),
-                    minHeight: 7,
-                    backgroundColor: AppColors.mint,
-                    color: AppColors.emerald,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: Motion.of(context, Motion.page),
-                  switchInCurve: Motion.emphasized,
-                  switchOutCurve: Curves.easeIn,
-                  layoutBuilder: (current, previous) => Stack(
-                    alignment: Alignment.topCenter,
-                    children: [...previous, ?current],
-                  ),
-                  transitionBuilder: (child, animation) {
-                    final entering = child.key == ValueKey(stepKey);
-                    final from = Offset(
-                      entering ? 0.12 * sign : -0.12 * sign,
-                      0,
-                    );
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween(
-                          begin: from,
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: KeyedSubtree(key: ValueKey(stepKey), child: child),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(20, 4, 20, 16 + inset),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -206,6 +172,35 @@ class OnboardingFrame extends StatelessWidget {
             ],
           ),
         ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleBack extends StatelessWidget {
+  const _CircleBack({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: onPressed == null ? 0 : 1,
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 0,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: const SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(Icons.arrow_forward_rounded, color: AppColors.ink),
+          ),
+        ),
       ),
     );
   }
@@ -219,22 +214,19 @@ class QuestionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+    padding: const EdgeInsets.fromLTRB(28, 8, 28, 18),
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Reveal(
-          child: Text(title, style: Theme.of(context).textTheme.headlineMedium),
+        BlurSwap(
+          text: title,
+          style: Theme.of(context).textTheme.headlineMedium!,
         ),
         if (subtitle != null && subtitle!.isNotEmpty)
-          Reveal(
-            index: 1,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                subtitle!,
-                style: const TextStyle(color: muted, fontSize: 13),
-              ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: BlurSwap(
+              text: subtitle!,
+              style: const TextStyle(color: muted, fontSize: 13, height: 1.7),
             ),
           ),
       ],

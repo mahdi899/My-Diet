@@ -111,6 +111,11 @@
           "label": "مرد"
         }
       ],
+      "tracks": [
+        "weight_loss",
+        "weight_gain",
+        "detox"
+      ],
       "required": true,
       "demo": "all",
       "demoTitles": [
@@ -1181,6 +1186,12 @@
       "demo": [
         "pregnancy"
       ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
       "demoTitles": [
         "قبل از بارداری چند کیلوگرم وزن داشتی؟",
         "وزنت قبل از بارداری چقدر بوده؟"

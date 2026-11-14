@@ -72,6 +72,29 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     final step = c.current;
+    if (step is TrackStep && !c.submitting) {
+      return PopScope<void>(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _back();
+        },
+        child: HeroGoalScreen(
+          tracks: c.spec.tracks,
+          value: c.track,
+          progress: c.progress,
+          onBack: c.isFirst && widget.onExit == null ? null : _back,
+          onChanged: (id) {
+            c.setTrack(id);
+            Future<void>.delayed(const Duration(milliseconds: 280), () {
+              if (mounted && c.current is TrackStep && c.track == id) {
+                forward = true;
+                c.next();
+              }
+            });
+          },
+        ),
+      );
+    }
     final flow = PopScope<void>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -112,19 +135,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   bool _answered(QuestionStep s) => c.spec.isAnswered(s.question, c.answers);
 
   Widget _content(FlowStep step) => switch (step) {
-    TrackStep() => TrackPicker(
-      tracks: c.spec.tracks,
-      value: c.track,
-      onChanged: (id) {
-        c.setTrack(id);
-        Future<void>.delayed(const Duration(milliseconds: 260), () {
-          if (mounted && c.current is TrackStep && c.track == id) {
-            forward = true;
-            c.next();
-          }
-        });
-      },
-    ),
+    TrackStep() => const SizedBox.shrink(),
     QuestionStep() => _QuestionView(
       controller: c,
       question: step.question,
@@ -147,15 +158,11 @@ class _QuestionView extends StatelessWidget {
   final SpecQuestion question;
   final ValueChanged<String> onSingleChoice;
 
-  /// Same wording as the website. Age stays a wheel; these two titles depend on the path.
+  /// Same wording as the website. The gain path uses its own target-weight question.
   String get _title {
     if (question.key == 'target_weight_kg' &&
         controller.track == 'weight_gain') {
       return 'دوست داری وزنت به چند کیلوگرم برسه؟';
-    }
-    if (question.key == 'pre_pregnancy_weight_kg' &&
-        controller.answer('life_stage') == 'breastfeeding') {
-      return 'وزنت قبل از بارداری چقدر بوده؟';
     }
     return question.title;
   }
@@ -227,6 +234,15 @@ class _QuestionView extends StatelessWidget {
                   unit: q.unit ?? '',
                   onChanged: (n) => controller.setAnswer(q.key, n),
                 )
+              : q.key.endsWith('_kg')
+              ? WeightDial(
+                  value: (v as num).toDouble(),
+                  min: q.min ?? 0,
+                  max: q.max ?? 100,
+                  step: q.step ?? 1,
+                  unit: q.unit ?? '',
+                  onChanged: (n) => controller.setAnswer(q.key, n),
+                )
               : BigNumberPicker(
                   value: (v as num).toDouble(),
                   min: q.min ?? 0,
@@ -256,20 +272,23 @@ class _QuestionView extends StatelessWidget {
         q.kind == QuestionKind.multi ||
         q.kind == QuestionKind.dishPicker;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         QuestionHeader(title: _title, subtitle: q.subtitle),
         Expanded(
-          child: scrolls
-              ? body
-              : Center(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
+          child: KeyedSubtree(
+            key: ValueKey(q.key),
+            child: scrolls
+                ? body
+                : Center(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
+                      ),
+                      child: body,
                     ),
-                    child: body,
                   ),
-                ),
+          ),
         ),
       ],
     );

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
+import 'blur_ink.dart';
 
 /// A big number with round +/- buttons (press and hold to run) and a slider underneath.
 class BigNumberPicker extends StatefulWidget {
@@ -184,17 +185,21 @@ class _RulerPickerState extends State<RulerPicker> {
   Widget build(BuildContext context) => Column(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      Text(
-        faNumber(widget.value),
+      BlurDigits(
+        value: widget.value.round(),
+        places: widget.max.round().toString().length,
         style: const TextStyle(
-          fontSize: 64,
-          fontWeight: FontWeight.bold,
-          color: pine,
-          height: 1.2,
+          fontFamily: 'Vazirmatn',
+          fontSize: 84,
+          fontWeight: FontWeight.w800,
+          color: AppColors.ink,
+          height: 1,
+          shadows: [Shadow(color: Color(0x3312A072), blurRadius: 24)],
         ),
       ),
-      Text(widget.unit, style: const TextStyle(color: muted)),
-      const SizedBox(height: 22),
+      const SizedBox(height: 4),
+      Text(widget.unit, style: const TextStyle(color: muted, fontSize: 16)),
+      const SizedBox(height: 28),
       Directionality(
         textDirection: TextDirection.ltr,
         child: SizedBox(
@@ -257,7 +262,20 @@ class _RulerPickerState extends State<RulerPicker> {
                     ),
                   ),
                   IgnorePointer(
-                    child: Container(width: 3, height: 74, color: amber),
+                    child: Container(
+                      width: 3,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald,
+                        borderRadius: BorderRadius.circular(99),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x8012A072),
+                            blurRadius: 14,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -267,6 +285,160 @@ class _RulerPickerState extends State<RulerPicker> {
       ),
     ],
   );
+}
+
+/// Vertical hold-to-repeat dial for a body weight, in the question's own range.
+class WeightDial extends StatelessWidget {
+  const WeightDial({
+    super.key,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.step,
+    required this.unit,
+    required this.onChanged,
+  });
+
+  final double value, min, max, step;
+  final String unit;
+  final ValueChanged<double> onChanged;
+
+  void _stepBy(int direction) {
+    final next = (value + direction * step).clamp(min, max);
+    if (next == value) return;
+    Haptics.tap();
+    onChanged(double.parse(next.toStringAsFixed(1)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _HoldArrow(
+          icon: Icons.arrow_upward_rounded,
+          enabled: value < max,
+          onStep: () => _stepBy(1),
+        ),
+        const SizedBox(height: 22),
+        BlurSwap(
+          text: faNumber(value),
+          style: const TextStyle(
+            fontFamily: 'Vazirmatn',
+            fontSize: 88,
+            height: 1,
+            fontWeight: FontWeight.w800,
+            color: AppColors.ink,
+            shadows: [Shadow(color: Color(0x4012A072), blurRadius: 28)],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(unit, style: const TextStyle(color: muted, fontSize: 18)),
+        const SizedBox(height: 22),
+        _HoldArrow(
+          icon: Icons.arrow_downward_rounded,
+          enabled: value > min,
+          onStep: () => _stepBy(-1),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoldArrow extends StatefulWidget {
+  const _HoldArrow({
+    required this.icon,
+    required this.enabled,
+    required this.onStep,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onStep;
+
+  @override
+  State<_HoldArrow> createState() => _HoldArrowState();
+}
+
+class _HoldArrowState extends State<_HoldArrow> {
+  Timer? _timer;
+  int _ticks = 0;
+  bool _pressed = false;
+
+  void _fire() {
+    if (!widget.enabled) {
+      _stop();
+      return;
+    }
+    widget.onStep();
+  }
+
+  void _down(PointerDownEvent _) {
+    if (!widget.enabled) return;
+    setState(() => _pressed = true);
+    _ticks = 0;
+    _timer?.cancel();
+    _fire();
+    _timer = Timer(const Duration(milliseconds: 420), _chain);
+  }
+
+  void _chain() {
+    if (!mounted || !widget.enabled) return;
+    _fire();
+    _ticks++;
+    final ms = (190 - _ticks * 14).clamp(28, 190);
+    _timer = Timer(Duration(milliseconds: ms), _chain);
+  }
+
+  void _stop([PointerEvent? _]) {
+    _timer?.cancel();
+    _timer = null;
+    _ticks = 0;
+    if (_pressed && mounted) setState(() => _pressed = false);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final on = _pressed && widget.enabled;
+    return Opacity(
+      opacity: widget.enabled ? 1 : 0.28,
+      child: Listener(
+        onPointerDown: widget.enabled ? _down : null,
+        onPointerUp: _stop,
+        onPointerCancel: _stop,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 84,
+          height: 84,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: on ? AppColors.emerald : Colors.white,
+            border: Border.all(
+              color: on ? AppColors.emerald : const Color(0xFFD7E6CF),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.emerald.withValues(alpha: on ? 0.35 : 0.08),
+                blurRadius: on ? 18 : 10,
+              ),
+            ],
+          ),
+          child: Icon(
+            widget.icon,
+            size: 36,
+            color: on ? Colors.white : AppColors.ink,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SnapPhysics extends ScrollPhysics {

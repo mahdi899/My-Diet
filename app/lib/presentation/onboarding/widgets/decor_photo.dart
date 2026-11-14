@@ -225,7 +225,15 @@ class PhotoOptionCard extends StatelessWidget {
               color: selected ? AppColors.emerald : AppColors.line,
               width: selected ? 1.8 : 1,
             ),
-            boxShadow: selected ? AppShadows.soft : const <BoxShadow>[],
+            boxShadow: selected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x3312A072),
+                      blurRadius: 22,
+                      offset: Offset(0, 8),
+                    ),
+                  ]
+                : const <BoxShadow>[],
           ),
           child: Row(
             children: [

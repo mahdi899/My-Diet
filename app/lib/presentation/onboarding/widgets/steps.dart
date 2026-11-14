@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../../core/photos/food_image.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
 import '../../../domain/onboarding/spec.dart';
+import 'blur_ink.dart';
+import 'blur_name_field.dart';
+import 'camera_progress.dart';
 import 'decor_photo.dart';
-import 'frame.dart';
 
 IconData insightIcon(String name) => switch (name) {
   'scale' => Icons.monitor_weight_outlined,
@@ -70,6 +73,120 @@ class InsightInterstitial extends StatelessWidget {
   );
 }
 
+/// Opening screen: a full-bleed photograph, then the same goal choices.
+class HeroGoalScreen extends StatelessWidget {
+  const HeroGoalScreen({
+    super.key,
+    required this.tracks,
+    required this.value,
+    required this.progress,
+    required this.onChanged,
+    this.onBack,
+  });
+
+  final List<SpecTrack> tracks;
+  final String? value;
+  final double progress;
+  final ValueChanged<String> onChanged;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: AppColors.emeraldDark),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            const FoodImage(
+              photoId: 'emerald_sprout_rising_through_ring',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.18, 0.48, 0.72, 1],
+                  colors: [
+                    Color(0x14000000),
+                    Color(0x660A5C42),
+                    Color(0xF20A5C42),
+                    AppColors.bg,
+                  ],
+                ),
+              ),
+            ),
+            CameraProgressRing(progress: progress),
+            SafeArea(
+              child: Column(
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: onBack == null
+                          ? const SizedBox(height: 44)
+                          : Material(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: onBack,
+                                child: const SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const Spacer(),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 28),
+                    child: BlurSwap(
+                      text: 'برای چه هدفی اینجایی؟',
+                      style: TextStyle(
+                        fontFamily: 'Vazirmatn',
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(32, 8, 32, 16),
+                    child: Text(
+                      'برنامهٔ غذایی‌ات حول همین هدف ساخته می‌شود',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFFE7F6EE), height: 1.7),
+                    ),
+                  ),
+                  Flexible(
+                    flex: 5,
+                    child: TrackPicker(
+                      tracks: tracks,
+                      value: value,
+                      onChanged: onChanged,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// First step: what is the person here for?
 class TrackPicker extends StatelessWidget {
   const TrackPicker({
@@ -86,10 +203,6 @@ class TrackPicker extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const QuestionHeader(
-        title: 'برای چه هدفی اینجایی؟',
-        subtitle: 'برنامهٔ غذایی‌ات حول همین هدف ساخته می‌شود',
-      ),
       Expanded(
         child: ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -235,19 +348,53 @@ class _TextStepFieldState extends State<TextStepField> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    child: TextField(
-      controller: _c,
-      autofocus: widget.question.required,
-      maxLength: 120,
-      maxLines: widget.question.key == 'dislikes' ? 3 : 1,
-      textInputAction: TextInputAction.done,
-      scrollPadding: const EdgeInsets.only(bottom: 140),
-      onChanged: widget.onChanged,
-      decoration: InputDecoration(hintText: widget.question.placeholder),
-    ),
-  );
+  Widget build(BuildContext context) {
+    if (widget.question.key == 'name') {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: BlurNameField(
+          value: widget.value,
+          hint: widget.question.placeholder ?? 'اسمت',
+          autofocus: widget.question.required,
+          onChanged: widget.onChanged,
+        ),
+      );
+    }
+    const bare = InputBorder.none;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: TextField(
+        controller: _c,
+        autofocus: widget.question.required,
+        maxLength: 120,
+        maxLines: widget.question.key == 'dislikes' ? 3 : 1,
+        textAlign: TextAlign.center,
+        textInputAction: TextInputAction.done,
+        scrollPadding: const EdgeInsets.only(bottom: 120),
+        style: const TextStyle(
+          fontFamily: 'Vazirmatn',
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: AppColors.ink,
+        ),
+        onChanged: widget.onChanged,
+        decoration: InputDecoration(
+          filled: false,
+          hintText: widget.question.placeholder,
+          hintStyle: const TextStyle(
+            fontFamily: 'Vazirmatn',
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: AppColors.muted,
+          ),
+          border: bare,
+          enabledBorder: bare,
+          focusedBorder: bare,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
 }
 
 /// "Pick up to N favourite Iranian dishes" as a wrap of chips with a counter.
