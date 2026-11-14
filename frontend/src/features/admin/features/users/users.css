@@ -1,0 +1,106 @@
+.admin-reference .users-table-card {
+  --users-ink: #293e34;
+  --users-muted: #657368;
+  --users-line: #e8ede7;
+  --users-soft: #f7f9f6;
+  --users-accent: #31634b;
+  --users-focus: #769880;
+  --users-danger: #ad4038;
+  background: #fff;
+  color: var(--users-ink);
+  border: 1px solid var(--users-line);
+  border-radius: 12px;
+  overflow: visible;
+}
+.admin-reference .users-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 24px; }
+.admin-reference .users-list-heading { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.admin-reference .users-list-heading h2 { font-size: 14px; font-weight: 600; }
+.admin-reference .users-total { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding-inline: 6px; border: 1px solid var(--users-line); border-radius: 6px; font-size: 12px; color: var(--users-muted); font-variant-numeric: tabular-nums; }
+.admin-reference .users-controls { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px; }
+.admin-reference button.users-filter-toggle { position: relative; width: 44px; height: 44px; padding: 12px; border: 0; border-radius: 8px; background: transparent; color: var(--users-muted); box-shadow: none; }
+.admin-reference button.users-filter-toggle:hover, .admin-reference button.users-filter-toggle[aria-expanded="true"] { background: var(--users-soft); color: var(--users-accent); box-shadow: none; }
+.admin-reference .users-filter-toggle .icon { width: 18px; height: 18px; }
+.admin-reference .users-filter-anchor { position: relative; flex: none; }
+.admin-reference .users-filter-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; flex: none; }
+.admin-reference button.users-clear-filters { min-height: 44px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--users-accent); font-size: 12px; font-weight: 400; box-shadow: none; }
+.admin-reference button.users-clear-filters:hover:not(:disabled), .admin-reference button.users-clear-filters:active:not(:disabled) { background: #edf3e9; color: #244e38; box-shadow: none; }
+.admin-reference button.users-clear-filters:focus-visible { outline: 2px solid var(--users-focus); outline-offset: 2px; }
+.admin-reference .users-clear-filters .icon { width: 14px; height: 14px; }
+.admin-reference .users-status-menu { position: absolute; top: calc(100% + 6px); inset-inline-end: 0; z-index: 30; width: 184px; padding: 6px; background: #fff; border: 1px solid var(--users-line); border-radius: 10px; box-shadow: 0 8px 28px #20382f14; }
+.admin-reference .users-status-menu button { display: flex; justify-content: space-between; width: 100%; min-height: 44px; padding: 8px 12px; background: transparent; border: 0; border-radius: 6px; box-shadow: none; color: var(--users-ink); font-size: 12px; font-weight: 400; }
+.admin-reference .users-status-menu button:hover, .admin-reference .users-status-menu button[aria-checked="true"] { background: var(--users-soft); color: var(--users-accent); box-shadow: none; }
+.admin-reference .users-status-menu button:focus-visible { outline: 2px solid var(--users-focus); outline-offset: -2px; }
+.admin-reference .users-status-menu .icon { width: 15px; height: 15px; }
+.admin-reference .users-filter-dot { position: absolute; top: 7px; inset-inline-end: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--users-accent); }
+.admin-reference .users-filter-panel { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 24px 16px; padding: 16px; background: var(--users-soft); border-radius: 8px; }
+.admin-reference .users-status-field { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 0; color: var(--users-muted); font-size: 12px; }
+.admin-reference .users-status-field select { width: 180px; height: 44px; margin: 0; padding: 8px 12px; background: white; border: 1px solid var(--users-line); border-radius: 8px; font-size: 12px; }
+.admin-reference button.users-close-filters { width: 44px; height: 44px; padding: 12px; background: transparent; color: var(--users-muted); border: 0; box-shadow: none; }
+.admin-reference .users-search, .admin-reference .users-filter { display: flex; align-items: center; gap: 8px; height: 44px; padding-inline: 12px; margin: 0; border: 1px solid var(--users-line); border-radius: 8px; background: #fff; color: var(--users-muted); transition: border-color 180ms ease, background-color 180ms ease; }
+.admin-reference .users-search { width: clamp(200px, 22vw, 288px); background: var(--users-soft); border-color: transparent; }
+.admin-reference .users-search input { margin: 0; padding: 10px 0; height: 42px; border: 0; border-radius: 0; min-width: 0; width: 100%; background: transparent; box-shadow: none; outline: none; font-size: 13px; color: var(--users-ink); }
+.admin-reference .users-search input::placeholder { color: var(--users-muted); opacity: 1; }
+.admin-reference .users-filter select { margin: 0; padding: 8px 0; border: 0; border-radius: 0; height: 42px; width: 132px; background: transparent; box-shadow: none; outline: none; color: var(--users-ink); font-size: 12px; cursor: pointer; }
+.admin-reference .users-search > .icon, .admin-reference .users-filter > .icon { width: 16px; height: 16px; }
+.admin-reference .users-search:focus-within, .admin-reference .users-filter:focus-within { outline: 2px solid var(--users-focus); outline-offset: 2px; }
+.admin-reference .users-filter:hover { border-color: var(--users-focus); }
+.admin-reference .users-filter-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 24px 12px; font-size: 12px; color: var(--users-muted); }
+.admin-reference .users-filter-summary button { padding: 6px 8px; min-height: 44px; border: 0; background: transparent; box-shadow: none; font-size: 12px; color: var(--users-accent); }
+.admin-reference .users-filter-summary .icon { width: 14px; height: 14px; }
+.admin-reference .users-table-scroll { overflow-x: auto; }
+.admin-reference .users-table-card table { width: 100%; min-width: 580px; border-collapse: collapse; table-layout: fixed; text-align: start; }
+.admin-reference .users-table-card th, .admin-reference .users-table-card td { text-align: right; vertical-align: middle; }
+.admin-reference .users-table-card th { padding: 12px 24px; border-block: 1px solid var(--users-line); background: #fcfdfb; color: var(--users-muted); font-size: 12px; font-weight: 400; }
+.admin-reference .users-table-card th:first-child { width: 40%; }
+.admin-reference .users-table-card th:last-child { width: 144px; }
+.admin-reference .users-table-card td { padding: 16px 24px; height: 76px; border: 0; border-bottom: 1px solid #f0f3ee; font-size: 13px; }
+.admin-reference .users-table-card tbody tr { transition: background-color 180ms ease; }
+.admin-reference .users-table-card tbody tr:hover, .admin-reference .users-table-card tbody tr:focus-within { background: #fafcf9; }
+.admin-reference .users-table-card tbody tr:last-child td { border-bottom: 0; }
+.admin-reference .users-person { display: flex; align-items: center; gap: 12px; }
+.admin-reference .users-avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 50%; background: #f0f4ed; color: #557047; font-size: 14px; font-weight: 500; }
+.admin-reference .users-person strong { display: block; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.admin-reference .users-person small { display: block; margin-top: 3px; color: var(--users-muted); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.admin-reference .users-status { display: inline-flex; align-items: center; gap: 6px; padding: 0; background: transparent; color: #8a651d; font-size: 12px; white-space: nowrap; }
+.admin-reference .users-status i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.admin-reference .users-status-active { color: var(--users-accent); }
+.admin-reference .users-status-suspended, .admin-reference .users-status-deleted { color: var(--users-danger); }
+.admin-reference .users-id { color: var(--users-muted); font: 12px Consolas, monospace; unicode-bidi: isolate; }
+.admin-reference .users-actions { display: flex; gap: 8px; }
+.admin-reference button.users-action { display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 12px; border: 0; border-radius: 8px; box-shadow: none; background: transparent; color: var(--users-muted); }
+.admin-reference .users-action .icon { width: 16px; height: 16px; }
+.admin-reference button.users-action:hover:not(:disabled) { background: #edf3e9; color: var(--users-accent); box-shadow: none; }
+.admin-reference button.users-delete:hover:not(:disabled) { background: #fff1ef; color: var(--users-danger); }
+.admin-reference .users-action:focus-visible, .admin-reference .users-page-button:focus-visible, .admin-reference .users-filter-summary button:focus-visible { outline: 2px solid var(--users-focus); outline-offset: 2px; }
+.admin-reference .users-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px; border-top: 1px solid var(--users-line); color: var(--users-muted); font-size: 12px; }
+.admin-reference .users-pagination > div { display: flex; align-items: center; gap: 8px; }
+.admin-reference button.users-page-button { min-height: 44px; padding: 8px; border: 0; border-radius: 6px; box-shadow: none; background: transparent; color: var(--users-muted); font-size: 12px; }
+.admin-reference button.users-page-button:hover:not(:disabled) { background: var(--users-soft); color: var(--users-ink); box-shadow: none; }
+.admin-reference .users-page-button .icon { width: 14px; height: 14px; }
+.admin-reference .users-current { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; background: #f0f4ec; color: var(--users-accent); }
+.admin-reference td.users-empty { text-align: center; height: 160px; color: var(--users-muted); }
+.admin-reference .users-dialog-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: #112e2980; }
+.admin-reference .users-dialog { display: grid; gap: 16px; width: min(460px, 100%); padding: 26px; border-radius: 16px; background: white; box-shadow: 0 12px 60px #0003; }
+@media(max-width: 1000px) { .admin-reference .users-toolbar { flex-wrap: wrap; gap: 16px; } .admin-reference .users-controls { flex: 1; justify-content: flex-end; } }
+@media(max-width: 640px) {
+  .admin-reference .users-toolbar { padding: 16px; }
+  .admin-reference .users-controls { width: 100%; flex-wrap: wrap; gap: 8px; }
+  .admin-reference .users-search { flex: 1; width: auto; }
+  .admin-reference .users-filter-toggle { flex: none; }
+  .admin-reference .users-filter-panel { margin-inline: 16px; }
+  .admin-reference .users-filter { flex: 1 1 150px; }
+  .admin-reference .users-filter select { width: 100%; }
+  .admin-reference .users-table-card table { min-width: 0; }
+  .admin-reference .users-table-card thead { display: none; }
+  .admin-reference .users-table-card tbody { display: block; }
+  .admin-reference .users-table-card tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 16px; border-top: 1px solid var(--users-line); }
+  .admin-reference .users-table-card td { padding: 0; height: auto; border: 0; align-self: center; }
+  .admin-reference .users-table-card td:first-child { min-width: 0; }
+  .admin-reference .users-table-card td:nth-child(2) { justify-self: end; }
+  .admin-reference .users-table-card td:nth-child(3) { padding-inline-start: 48px; }
+  .admin-reference .users-table-card td:nth-child(4) { justify-self: end; }
+  .admin-reference .users-table-card td.users-empty { grid-column: 1 / -1; padding: 40px 0; }
+  .admin-reference .users-pagination { padding: 8px 16px; flex-wrap: wrap; gap: 4px; }
+  .admin-reference .users-filter-summary { padding-inline: 16px; }
+}
+@media(prefers-reduced-motion: reduce) { .admin-reference .users-table-card *, .admin-reference .users-table-card *::before { transition: none !important; animation: none !important; } }
