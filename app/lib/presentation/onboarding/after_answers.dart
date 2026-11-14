@@ -703,12 +703,17 @@ class _PhoneScreenState extends State<_PhoneScreen> {
     });
     try {
       await widget.requestCode(phone);
-    } on AuthFailure {
-      // Local preview still opens the cells. 123456 confirms them.
-    } finally {
+      if (!mounted) return;
+      setState(() {
+        _otp = true;
+        _code.clear();
+        _error = null;
+        _busy = false;
+      });
+    } on AuthFailure catch (failure) {
       if (mounted) {
         setState(() {
-          _otp = true;
+          _error = failure.message;
           _busy = false;
         });
       }
@@ -876,6 +881,14 @@ class _PhoneScreenState extends State<_PhoneScreen> {
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
             ),
           ),
+          if (_otp && !_pay)
+            TextButton(
+              onPressed: _busy ? null : _send,
+              child: const Text(
+                'ارسال دوبارهٔ کد',
+                style: TextStyle(color: Color(0xFF17472F)),
+              ),
+            ),
           const Spacer(),
         ],
       ),

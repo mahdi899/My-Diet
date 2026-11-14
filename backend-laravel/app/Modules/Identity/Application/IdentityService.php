@@ -43,11 +43,17 @@ final class IdentityService
             ? $this->settings->fixedOtp : str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $this->store->transaction(function () use ($phone, $ip, $existingOnly, $code): void {
             $budget = $this->store->lockOtpBudgets($phone, $ip);
+            $localFixed = $this->settings->environment === 'development'
+                && is_string($this->settings->fixedOtp)
+                && $this->settings->fixedOtp !== '';
+            $hourlyCap = $localFixed ? 100 : 5;
+            $dailyCap = $localFixed ? 100 : 10;
+            $networkCap = $localFixed ? 200 : 20;
             $message = match (true) {
                 $budget['locks'] >= 3 && $budget['recently_locked'] => 'به‌خاطر تلاش‌های ناموفق، ورود تا چند دقیقه ممکن نیست',
-                $budget['hourly'] >= 5 => 'تعداد درخواست کد در این ساعت به سقف رسیده است',
-                $budget['daily'] >= 10 => 'تعداد درخواست کد در امروز به سقف رسیده است',
-                $budget['network'] >= 20 => 'تعداد درخواست از این شبکه به سقف رسیده است',
+                $budget['hourly'] >= $hourlyCap => 'تعداد درخواست کد در این ساعت به سقف رسیده است',
+                $budget['daily'] >= $dailyCap => 'تعداد درخواست کد در امروز به سقف رسیده است',
+                $budget['network'] >= $networkCap => 'تعداد درخواست از این شبکه به سقف رسیده است',
                 (bool) $budget['cooling'] => 'درخواست کد جدید کمی بعد ممکن است',
                 default => null,
             };
