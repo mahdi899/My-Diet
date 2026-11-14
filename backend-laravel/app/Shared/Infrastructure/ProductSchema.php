@@ -16,14 +16,7 @@ final class ProductSchema
         $schema = json_decode(file_get_contents(base_path('contracts/mysql-schema.json')), true, 512, JSON_THROW_ON_ERROR);
         foreach ($schema['tables'] as $table) {
             if (! $this->db->getSchemaBuilder()->hasTable($table['name'])) {
-                // XAMPP's bundled MySQL/MariaDB may not provide MySQL 8.0's
-                // utf8mb4_0900 collations; use compatible equivalents locally.
-                $sql = str_replace(
-                    ['utf8mb4_0900_bin', 'utf8mb4_0900_ai_ci'],
-                    ['utf8mb4_unicode_ci', 'utf8mb4_unicode_ci'],
-                    $table['sql'],
-                );
-                $this->db->unprepared($sql);
+                $this->db->unprepared($table['sql']);
             }
         }
         foreach ($schema['constraints'] as $constraint) {
