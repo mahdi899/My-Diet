@@ -17,6 +17,19 @@ use App\Modules\Money\Application\MoneyStore;
 use App\Modules\Money\Application\PaymentGateways;
 use App\Modules\Money\Infrastructure\ConfiguredGateways;
 use App\Modules\Money\Infrastructure\MySqlMoney;
+use App\Modules\Onboarding\Application\OnboardingAdminQueries;
+use App\Modules\Onboarding\Application\OnboardingStore;
+use App\Modules\Onboarding\Application\PurchaseConfirmation;
+use App\Modules\Onboarding\Application\TransferGateway;
+use App\Modules\Onboarding\Application\TransferStore;
+use App\Modules\Onboarding\Application\WebIntakeStore;
+use App\Modules\Onboarding\Domain\OnboardingRules;
+use App\Modules\Onboarding\Infrastructure\ConfiguredTransferGateway;
+use App\Modules\Onboarding\Infrastructure\MySqlOnboarding;
+use App\Modules\Onboarding\Infrastructure\MySqlOnboardingAdmin;
+use App\Modules\Onboarding\Infrastructure\MySqlTransfers;
+use App\Modules\Onboarding\Infrastructure\MySqlWebIntakes;
+use App\Modules\Onboarding\Infrastructure\PurchaseConfirmationSms;
 use App\Modules\Plans\Application\PlanQueryStore;
 use App\Modules\Plans\Application\PlanQuestionStore;
 use App\Modules\Plans\Infrastructure\MySqlPlanQueries;
@@ -39,9 +52,14 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(ConnectionInterface::class, fn ($app) => $app['db']->connection());
         $this->app->bind(IdentityStore::class, MySqlIdentityStore::class);
-        $this->app->bind(\App\Modules\Onboarding\Application\OnboardingStore::class, \App\Modules\Onboarding\Infrastructure\MySqlOnboarding::class);
-        $this->app->singleton(\App\Modules\Onboarding\Domain\OnboardingRules::class,fn () => new \App\Modules\Onboarding\Domain\OnboardingRules(
-            json_decode(file_get_contents(app_path('Modules/Onboarding/Infrastructure/resources/spec.json')),true,512,JSON_THROW_ON_ERROR)));
+        $this->app->bind(TransferStore::class, MySqlTransfers::class);
+        $this->app->bind(TransferGateway::class, ConfiguredTransferGateway::class);
+        $this->app->bind(PurchaseConfirmation::class, PurchaseConfirmationSms::class);
+        $this->app->bind(WebIntakeStore::class, MySqlWebIntakes::class);
+        $this->app->bind(OnboardingAdminQueries::class, MySqlOnboardingAdmin::class);
+        $this->app->bind(OnboardingStore::class, MySqlOnboarding::class);
+        $this->app->singleton(OnboardingRules::class, fn () => new OnboardingRules(
+            json_decode(file_get_contents(app_path('Modules/Onboarding/Infrastructure/resources/spec.json')), true, 512, JSON_THROW_ON_ERROR)));
         $this->app->bind(PlanQuestionStore::class, MySqlPlanQuestions::class);
         $this->app->bind(PlanQueryStore::class, MySqlPlanQueries::class);
         $this->app->bind(MoneyStore::class, MySqlMoney::class);

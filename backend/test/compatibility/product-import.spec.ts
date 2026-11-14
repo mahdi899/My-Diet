@@ -29,6 +29,11 @@ describe('Full product PostgreSQL to MySQL data rehearsal', {concurrency:1,timeo
     const fixture = JSON.parse(await readFile(path.join(root,'backend-laravel/tests/Fixtures/node-questionnaire.json'),'utf8'));
     const submitted = await request(app.api.getHttpServer()).post('/v1/me/questionnaire/submissions').set(auth).send(fixture[0].input);
     assert.equal(submitted.status,201);
+    const intake = JSON.parse(await readFile(path.join(root,'backend-laravel/tests/Fixtures/node-onboarding.json'),'utf8')).canonical[0];
+    const draft = await request(app.api.getHttpServer()).put('/v1/me/onboarding/draft').set(auth).send({track:intake.track,patch:intake.answers});
+    assert.equal(draft.status,200);
+    const completed = await request(app.api.getHttpServer()).post('/v1/me/onboarding/submit').set(auth).send({consent:true});
+    assert.equal(completed.status,201);
     const order=randomUUID(), plan=randomUUID(), version=randomUUID(), day=randomUUID(), meal=randomUUID(), uid=randomUUID(), option=randomUUID();
     requestId = plan;
     await app.pool.query("insert into orders(id,user_id,service_code,price_toman,cash_toman,promo_toman,status,idempotency_key) values($1,$2,'new_plan',100,100,0,'paid','test-migration-key')",[order,userId]);
@@ -63,6 +68,8 @@ describe('Full product PostgreSQL to MySQL data rehearsal', {concurrency:1,timeo
     const preview = JSON.parse((await run(php,['artisan','migration:import-product'],options())).stdout);
     assert.equal(preview.executed,false); assert.equal(Object.keys(preview.tables).length,117);
     assert.equal(preview.tables.plan_versions.rows,1); assert.equal(preview.tables.meal_log_history.rows,2);
+    assert.equal(preview.tables.nutrition_profiles.rows,1); assert.equal(preview.tables.nutrition_profile_history.rows,1);
+    assert.ok(preview.tables.onboarding_answer_facts.rows>0);
     const sourceBefore = (await app.pool.query('select count(*)::int as n from users')).rows[0].n;
     const imported = JSON.parse((await run(php,['artisan','migration:import-product','--execute'],options())).stdout);
     assert.equal(imported.executed,true); assert.equal(imported.sourceReadOnly,true); assert.deepEqual(imported.tables,preview.tables);
@@ -77,7 +84,7 @@ describe('Full product PostgreSQL to MySQL data rehearsal', {concurrency:1,timeo
     let ready=false;
     for(let i=0;i<100;i++) {try {if((await fetch(base+'/health/ready')).ok){ready=true;break;}} catch {} await new Promise(resolve=>setTimeout(resolve,100));}
     assert.ok(ready,logs);
-    for(const route of ['/v1/me/plan','/v1/me/plan/week?weekStart=2026-11-14','/v1/me/plan/day/2026-11-14','/v1/me/requests','/v1/me/request','/v1/me/requests/'+requestId]) {
+    for(const route of ['/v1/me/onboarding','/v1/me/plan','/v1/me/plan/week?weekStart=2026-11-14','/v1/me/plan/day/2026-11-14','/v1/me/requests','/v1/me/request','/v1/me/requests/'+requestId]) {
       const node=await request(app.api.getHttpServer()).get(route).set(auth);
       const laravel=await fetch(base+route,{headers:auth});
       assert.equal(laravel.status,node.status,route); assert.deepEqual(await laravel.json(),node.body,route);

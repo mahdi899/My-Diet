@@ -66,8 +66,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       process.stdout.write(fullMigration.stdout);
       const testFileIndex = process.argv.indexOf('--test-file');
       const testFiles = testFileIndex === -1 ? ['test/compatibility/laravel.spec.ts', 'test/compatibility/product-import.spec.ts'] : [process.argv[testFileIndex + 1]];
-      const result = await run(process.execPath, ['--import', 'tsx', '--test', '--test-concurrency=1', ...testFiles], { ...options, env: { ...env, MYSQL_FULL_TEST_URL: fullUrl }, cwd: path.join(root, 'backend'), timeout: 240000 });
-      process.stdout.write(result.stdout);
+      const testing = run(process.execPath, ['--import', 'tsx', '--test', '--test-concurrency=1', ...testFiles], { ...options, env: { ...env, MYSQL_FULL_TEST_URL: fullUrl }, cwd: path.join(root, 'backend'), timeout: 240000 });
+      testing.child.stdout.on('data', chunk => process.stdout.write(chunk));
+      testing.child.stderr.on('data', chunk => process.stderr.write(chunk));
+      try { await testing; } catch (error) { error.stdout = ''; error.stderr = ''; throw error; }
     }
     await run(binary('mysqladmin'), [...args, 'shutdown'], { windowsHide: true, timeout: 20000 });
     await new Promise(resolve => server.exitCode !== null ? resolve() : server.once('exit', resolve));

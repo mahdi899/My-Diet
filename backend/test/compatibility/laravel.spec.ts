@@ -113,10 +113,13 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
   });
 
   after(async () => {
-    await Promise.all(servers.map(async server => {
-      if (server.exitCode === null) { server.kill(); await new Promise(resolve => server.once('exit', resolve)); }
-    }));
-    await source?.stop();
+    try {
+      await Promise.all(servers.map(async server => {
+        if (server.exitCode !== null || server.signalCode !== null) return;
+        const stopped = new Promise(resolve => server.once('exit', resolve));
+        server.kill(); await stopped;
+      }));
+    } finally { await source?.stop(); }
   });
 
   it('accepts existing Node sessions and returns the same profiles and encrypted personal details', async () => {
@@ -325,6 +328,122 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
     assert.deepEqual(phpCancelled.find(reply => reply.status === 201)!.body,nodeCancelled.body);
   });
 
+  it('matches Node onboarding drafts, clinical validation, consent and profiles across all four tracks', async () => {
+    const fixture = JSON.parse(await readFile(path.join(root,'backend-laravel/tests/Fixtures/node-onboarding.json'),'utf8'));
+    assert.deepEqual((await api(phpBase,'/v1/public/onboarding-spec')).body,(await api(nodeBase,'/v1/public/onboarding-spec')).body);
+    const selected = fixture.canonical.filter((row: {track:string}, index:number, all:{track:string}[]) => all.findIndex(item => item.track === row.track) === index);
+    for (const [index, row] of selected.entries()) {
+      const phone = '0912000030'+index;
+      const aToken = (await source.login(phone)).Authorization.slice(7);
+      assert.equal((await api(phpBase,'/v1/auth/otp/request','POST',{phone})).status,201);
+      const bToken = (await api(phpBase,'/v1/auth/otp/verify','POST',{phone,code:'123456'})).body.accessToken as string;
+      const pair = async (route:string,method='GET',body?:unknown) => {
+        const a = await api(nodeBase,route,method,body,aToken), b = await api(phpBase,route,method,body,bToken);
+        assert.equal(b.status,a.status,route+': '+JSON.stringify(b.body));
+        return [a.body,b.body] as const;
+      };
+      assert.deepEqual(...await pair('/v1/me/onboarding'));
+      for (const invalid of [{patch:{unknown:true}},{patch:{age:'34'}},{patch:{sleep_wake:{sleep:24,wake:7}}},{track:'invalid',patch:{}},{patch:{name:'a'.repeat(501)}}]) {
+        assert.deepEqual(...await pair('/v1/me/onboarding/draft','PUT',invalid));
+      }
+      await pair('/v1/me/onboarding/draft','PUT',{patch:{name:'\uFEFF\u00A0نام آزمایشی\u00A0'},stepKey:'🙂'.repeat(64),progress:1e100});
+      const normalized = await pair('/v1/me/onboarding');
+      for(const state of normalized) delete (state.draft as Record<string,unknown>).updatedAt;
+      assert.deepEqual(...normalized);
+      assert.equal((normalized[1]!.draft as Record<string,unknown>).progress,100);
+      const drafts = await pair('/v1/me/onboarding/draft','PUT',{track:row.track,patch:row.answers,progress:99.6,stepKey:'review'});
+      assert.equal(drafts[0]!.version,drafts[1]!.version);
+      assert.deepEqual(...await pair('/v1/me/onboarding/draft','PUT',{baseVersion:0,patch:{name:'نباید تغییر کند'}}));
+      const states = await pair('/v1/me/onboarding');
+      for(const state of states) delete (state.draft as Record<string,unknown>).updatedAt;
+      assert.deepEqual(...states);
+      assert.deepEqual(...await pair('/v1/me/onboarding/submit','POST',{consent:false}));
+      const submitted = await pair('/v1/me/onboarding/submit','POST',{consent:true});
+      assert.deepEqual(submitted[0]!.profile,submitted[1]!.profile);
+      assert.deepEqual(...await pair('/v1/me/onboarding'));
+      assert.deepEqual(...await pair('/v1/me/onboarding/consent','POST',{}));
+    }
+  });
+
+  it('matches public web lead verification, questionnaire settings and audited admin nutrition details', async () => {
+    const phone = '09120000399', id = randomUUID(), journeyId = randomUUID();
+    const aToken = (await source.login(phone)).Authorization.slice(7);
+    assert.equal((await api(phpBase,'/v1/auth/otp/request','POST',{phone})).status,201);
+    const bToken = (await api(phpBase,'/v1/auth/otp/verify','POST',{phone,code:'123456'})).body.accessToken as string;
+    const aAdmin = (await api(nodeBase,'/v1/auth/admin/login','POST',{username:'migration-admin',password})).body.accessToken as string;
+    const bAdmin = (await api(phpBase,'/v1/auth/admin/login','POST',{username:'migration-admin',password})).body.accessToken as string;
+    const pair = async (route:string,method='GET',body?:unknown,admin=false) => {
+      const a = await api(nodeBase,route,method,body,admin?aAdmin:aToken), b = await api(phpBase,route,method,body,admin?bAdmin:bToken);
+      assert.equal(b.status,a.status,route+': '+JSON.stringify(b.body));
+      return [a.body,b.body] as const;
+    };
+    const lead = {id,phone,goal:'weight_loss',answers:[{key:'name',question:'نام شما',answer:'نام خصوصی فرم وب'}]};
+    assert.deepEqual(...await pair('/v1/onboarding/submissions','POST',lead));
+    assert.deepEqual(...await pair('/v1/onboarding/submissions','POST',lead));
+    assert.deepEqual(...await pair('/v1/onboarding/submissions','POST',{...lead,phone:'09121111111'}));
+    assert.deepEqual(...await pair('/v1/onboarding/submissions/'+id+'/verify','POST',{journeyId}));
+    const states = await pair('/v1/me/onboarding');
+    for(const state of states) delete (state.draft as Record<string,unknown>).updatedAt;
+    assert.deepEqual(...states);
+    const document = {title:'عنوان وب',questions:[{id:1,q:'نام'},{id:101,q:'گزینه',type:'choice',options:['یک','دو']}]};
+    assert.deepEqual(...await pair('/v1/admin/onboarding-questionnaire/weight_loss','PUT',document,true));
+    assert.deepEqual(...await pair('/v1/public/onboarding-questionnaire'));
+    assert.deepEqual(...await pair('/v1/public/onboarding/community-join','POST',{}));
+    const row = JSON.parse(await readFile(path.join(root,'backend-laravel/tests/Fixtures/node-onboarding.json'),'utf8')).canonical[0];
+    await pair('/v1/me/onboarding/draft','PUT',{patch:row.answers});
+    await pair('/v1/me/onboarding/submit','POST',{consent:true});
+    const transferBody = {plan:'weekly',submissionId:id};
+    const concurrent = await Promise.all([phpBase,secondBase].map(base => api(base,'/v1/me/onboarding-transfers','POST',transferBody,bToken)));
+    assert.deepEqual(concurrent.map(item => item.status),[201,201]);
+    assert.deepEqual(concurrent[0]!.body,concurrent[1]!.body,'Concurrent checkout visits must reuse one transfer');
+    const aTransfer = await api(nodeBase,'/v1/me/onboarding-transfers','POST',transferBody,aToken);
+    const bTransfer = concurrent[0]!;
+    assert.equal(aTransfer.status,201);
+    for (const transfer of [aTransfer,bTransfer]) {
+      assert.equal(transfer.body.plan,'weekly'); assert.equal(transfer.body.confirmed_at,null); assert.equal(transfer.body.gateway_started,false);
+      assert.ok((transfer.body.amount_toman as number)>1290000 && (transfer.body.amount_toman as number)<=1300000);
+    }
+    const aStart = await api(nodeBase,'/v1/me/onboarding-transfers/'+aTransfer.body.id+'/zibal','POST',{},aToken);
+    const bStart = await api(phpBase,'/v1/me/onboarding-transfers/'+bTransfer.body.id+'/zibal','POST',{},bToken);
+    assert.equal(bStart.status,aStart.status); assert.equal(bStart.status,503); assert.deepEqual(bStart.body,aStart.body);
+    const reference = 'COMPAT-BANK-1234';
+    const confirmations = await Promise.all([phpBase,secondBase].map(base => api(base,'/v1/admin/onboarding-transfers/'+bTransfer.body.id+'/confirm','POST',{reference,amountToman:bTransfer.body.amount_toman},bAdmin)));
+    assert.deepEqual(confirmations.map(item=>item.status).sort(),[201,409]);
+    const aConfirmed = await api(nodeBase,'/v1/admin/onboarding-transfers/'+aTransfer.body.id+'/confirm','POST',{reference,amountToman:aTransfer.body.amount_toman},aAdmin);
+    assert.equal(aConfirmed.status,201); assert.deepEqual(confirmations.find(item=>item.status === 201)!.body,aConfirmed.body);
+    for (const [index,base] of [nodeBase,phpBase].entries()) {
+      const transfer = index === 0 ? aTransfer : bTransfer;
+      const ownToken = index === 0 ? aToken : bToken;
+      const status = await api(base,'/v1/me/onboarding-transfers/'+transfer.body.id,'GET',undefined,ownToken);
+      assert.equal(status.status,200); assert.ok(status.body.confirmed_at);
+      assert.equal((await api(base,'/v1/me/onboarding-transfers/'+transfer.body.id,'GET',undefined,customerAccess)).status,404);
+      const callback = await fetch(base+'/v1/me/onboarding-transfers/zibal/return?trackId=invalid',{redirect:'manual'});
+      assert.equal(callback.status,303); assert.equal(callback.headers.get('location'),'/onboarding/payment');
+    }
+    const ids = [aToken,bToken].map(token => verifyAccessToken(token,secrets.JWT_SECRET).sub);
+    const details = [];
+    for (const [index,base] of [nodeBase,phpBase].entries()) {
+      const detail = (await api(base,'/v1/admin/onboarding/profiles/'+ids[index],'GET',undefined,index === 0 ? aAdmin : bAdmin)).body;
+      delete detail.userId;
+      const profile = detail.profile as Record<string,unknown>; delete profile.consentedAt;
+      const submission = detail.submission as Record<string,unknown>; delete submission.id; delete submission.submittedAt;
+      detail.history = (detail.history as Record<string,unknown>[]).map(({weight_kg,target_kcal}) => ({weight_kg,target_kcal}));
+      details.push(detail);
+    }
+    assert.deepEqual(details[1],details[0]);
+    const leads = await pair('/v1/admin/onboarding/onboarding-leads','GET',undefined,true);
+    for(const result of leads) {
+      for(const item of result.items as Record<string,unknown>[]) {delete item.claimedAt;delete item.createdAt;delete item.claimedUserId;}
+    }
+    assert.deepEqual(...leads);
+    assert.deepEqual(...await pair('/v1/admin/onboarding/funnel/refresh','POST',{},true));
+    const funnel = await pair('/v1/admin/onboarding/funnel','GET',undefined,true);
+    for(const result of funnel) {
+      (result.daily as {day:string;track:string;source:string}[]).sort((a,b) => (a.day+a.track+a.source).localeCompare(b.day+b.track+b.source));
+    }
+    assert.deepEqual(...funnel);
+  });
+
   it('connects real React site, admin and doctor screens to Laravel/MySQL with login and refresh', {skip:!process.env.PLAYWRIGHT_MODULE}, async () => {
     const {chromium} = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE!);
     const port = await freePort();
@@ -368,6 +487,13 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
       await page.getByText(foods[0]!.nameFa,{exact:true}).first().waitFor();
       await page.goto(base+'/admin/articles');
       await page.getByText(article.title,{exact:true}).first().waitFor();
+      const profiles = page.waitForResponse((response:{url():string;status():number}) => response.url().endsWith('/v1/admin/onboarding/profiles') && response.status() === 200);
+      await page.goto(base+'/admin/onboarding'); await profiles;
+      await page.getByText('نام خصوصی فرم وب',{exact:true}).first().waitFor();
+      const transfers = (await api(phpBase,'/v1/admin/onboarding-transfers','GET',undefined,token)).body as unknown as {id:string;bank_reference:string}[];
+      assert.equal(transfers[0]!.bank_reference,'COMPAT-BANK-1234');
+      await page.goto(base+'/admin/payments');
+      await page.getByText(transfers[0]!.id,{exact:true}).first().waitFor();
       const loggedOut = page.waitForResponse((response: {url():string;status():number}) => response.url().endsWith('/v1/auth/logout') && response.status() === 201);
       await page.getByRole('button',{name:'خروج از حساب',exact:true}).click(); await loggedOut;
       await page.getByRole('heading',{name:'خوش برگشتید',exact:true}).waitFor();
@@ -382,7 +508,26 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
       await page.getByRole('heading',{name:'پرونده کاربران',exact:true}).waitFor();
       await page.goto(base+'/doctor/profile');
       await page.getByText('متخصص آزمایش',{exact:true}).waitFor();
+      const customer = await browser.newPage({viewport:{width:430,height:900}});
+      customer.on('pageerror',(error:Error)=>errors.push(error.message));
+      const submissionId = randomUUID();
+      await customer.addInitScript((saved:unknown) => sessionStorage.setItem('mydiet.quiz.progress',JSON.stringify(saved)),{
+        goal:'weight_loss',answersByNumber:{1:'کاربر مرورگر'},focused:0,unlocked:0,planId:'weekly',submissionId,step:{stage:'phone',index:0},
+      });
+      await customer.goto(base+'/onboarding');
+      await customer.getByLabel('شماره همراهت',{exact:true}).fill('09120000299');
+      const leadSaved = customer.waitForResponse((response:{url():string;status():number})=>response.url().endsWith('/v1/onboarding/submissions') && response.status() === 201);
+      await customer.getByRole('button',{name:'دریافت کد تأیید',exact:true}).click(); await leadSaved;
+      await customer.getByLabel('کد تأیید',{exact:true}).fill('123456');
+      const transferCreated = customer.waitForResponse((response:{url():string;status():number})=>response.url().endsWith('/v1/me/onboarding-transfers') && response.status() === 201);
+      await customer.getByRole('button',{name:'تأیید و ادامه',exact:true}).click(); await transferCreated;
+      await customer.getByRole('button',{name:'کارت‌به‌کارت',exact:true}).click();
+      await customer.getByText('منتظر واریز و بررسی پشتیبانی',{exact:true}).waitFor();
+      await customer.close();
       assert.deepEqual(errors,[]);
+    } catch (error) {
+      console.error('React browser verification failed:',error);
+      throw error;
     } finally { await browser.close(); }
   });
 });

@@ -5,18 +5,43 @@ use App\Modules\Food\Presentation\FoodController;
 use App\Modules\Health\Presentation\HealthController;
 use App\Modules\Identity\Presentation\IdentityController;
 use App\Modules\Money\Presentation\MoneyController;
+use App\Modules\Onboarding\Presentation\OnboardingAdminController;
+use App\Modules\Onboarding\Presentation\OnboardingController;
+use App\Modules\Onboarding\Presentation\OnboardingWebController;
+use App\Modules\Onboarding\Presentation\TransferController;
+
+Route::get('v1/me/onboarding-transfers/zibal/return', [TransferController::class, 'callback']);
+Route::prefix('v1/me/onboarding-transfers')->middleware('session:user')->controller(TransferController::class)->group(function (): void {
+    Route::post('', 'create');
+    Route::get('{id}', 'status');
+    Route::post('{id}/zibal', 'start');
+});
+Route::get('v1/admin/onboarding-transfers', [TransferController::class, 'all'])->middleware('session:admin');
+Route::post('v1/admin/onboarding-transfers/{id}/confirm', [TransferController::class, 'confirm'])->middleware('session:admin');
 use App\Modules\Plans\Presentation\PlanQueryController;
 use App\Modules\Plans\Presentation\PlanQuestionController;
 use App\Modules\Publishing\Presentation\PublishingController;
 use App\Modules\Questionnaire\Presentation\QuestionnaireController;
-use App\Modules\Onboarding\Presentation\OnboardingController;
 
-Route::get('v1/public/onboarding-spec',[OnboardingController::class,'spec']);
+Route::get('v1/public/onboarding-questionnaire', [OnboardingWebController::class, 'questionnaires']);
+Route::post('v1/public/onboarding/community-join', [OnboardingWebController::class, 'join']);
+Route::put('v1/admin/onboarding-questionnaire/{goal}', [OnboardingWebController::class, 'configure'])->middleware('session:admin');
+Route::post('v1/onboarding/submissions', [OnboardingWebController::class, 'save']);
+Route::post('v1/onboarding/submissions/{id}/verify', [OnboardingWebController::class, 'verify'])->middleware('session:user');
+Route::prefix('v1/admin/onboarding')->middleware('session:admin')->controller(OnboardingAdminController::class)->group(function (): void {
+    Route::get('profiles', 'profiles');
+    Route::get('profiles/{userId}', 'profile');
+    Route::get('funnel', 'funnel');
+    Route::post('funnel/refresh', 'refresh');
+    Route::get('onboarding-leads', 'leads');
+});
+
+Route::get('v1/public/onboarding-spec', [OnboardingController::class, 'spec']);
 Route::prefix('v1/me/onboarding')->middleware('session:user')->controller(OnboardingController::class)->group(function (): void {
-    Route::get('','state');
-    Route::put('draft','draft');
-    Route::post('submit','submit');
-    Route::post('consent','consent');
+    Route::get('', 'state');
+    Route::put('draft', 'draft');
+    Route::post('submit', 'submit');
+    Route::post('consent', 'consent');
 });
 
 Route::post('v1/me/info-questions/{id}/answers', [PlanQuestionController::class, 'answer'])->middleware('session:user');
