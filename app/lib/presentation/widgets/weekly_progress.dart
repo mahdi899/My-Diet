@@ -332,7 +332,7 @@ class _WeeklyRewardGateState extends State<WeeklyRewardGate> {
               ),
               title: const Text('تبریک! هفته‌ات را کامل کردی 🎉'),
               content: Text(
-                '${fa(store.streakProgress.requiredDays)} روز پیاپی تأیید شد و ${formatToman(store.rewardForWeek(week))} به کیف پولت نشست.',
+                '${fa(store.streakProgress.requiredDays)} روز پیاپی تأیید شد و پاداش ${formatToman(store.rewardForWeek(week))} ثبت شد.',
               ),
               actions: [
                 TextButton(

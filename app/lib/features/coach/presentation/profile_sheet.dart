@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
-import '../../../data/wallet_catalog.dart';
 import '../../../presentation/screens/doctor.dart';
 import '../../../presentation/screens/messaging.dart';
 import '../../../presentation/screens/shared.dart';
@@ -148,20 +147,15 @@ class _SignedIn extends StatelessWidget {
                 onTap: () => _open(context, ChangeGoal(store: store)),
               ),
               MenuRow(
-                'کیف پول و تعرفه‌ها',
-                Icons.account_balance_wallet_outlined,
-                subtitle: '${formatMoneyNumber(store.walletBalance)} تومان',
-                onTap: () => openPlanServices(context),
+                'پلن‌ها و اشتراک من',
+                Icons.workspace_premium_outlined,
+                subtitle: store.subscriptionSummary,
+                onTap: () => openPlanServices(context, browseOnly: true),
               ),
               MenuRow(
                 'مشخصات دکتر',
                 Icons.medical_information_outlined,
                 onTap: () => _open(context, const DoctorDetailsScreen()),
-              ),
-              MenuRow(
-                'سفارش‌ها و پرداخت‌ها',
-                Icons.credit_card_outlined,
-                onTap: () => _open(context, const OrdersScreen()),
               ),
             ],
           ),

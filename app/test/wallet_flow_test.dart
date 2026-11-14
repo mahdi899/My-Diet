@@ -2,170 +2,179 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
+import 'package:sabzine_flutter/domain/commerce/commerce.dart';
 import 'package:sabzine_flutter/presentation/screens/wallet_flow.dart';
 import 'package:sabzine_flutter/presentation/widgets/ui.dart';
 import 'widget_test.dart' show mobile;
 
-Future<void> tapWallet(WidgetTester t, Finder f) async {
-  await t.ensureVisible(f);
-  await t.pumpAndSettle();
-  await t.tap(f);
-  await t.pumpAndSettle();
+Future<void> tapPlan(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
 }
 
-Future<void> startWallet(WidgetTester t, DemoStore s) async {
-  mobile(t);
-  s.questionnaireComplete = true;
-  s.login(AppRole.user);
-  await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
-  await t.pumpAndSettle();
-  await t.tap(find.byKey(const ValueKey('tab-coach')));
-  await t.pumpAndSettle();
-  await t.tap(find.byKey(const ValueKey('coach-avatar')));
-  await t.pumpAndSettle();
-  await tapWallet(t, find.text('کیف پول و تعرفه‌ها'));
+Future<void> openProfilePlans(WidgetTester tester) async {
+  if (find.byKey(const ValueKey('tab-coach')).evaluate().isNotEmpty) {
+    await tester.tap(find.byKey(const ValueKey('tab-coach')));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.byKey(const ValueKey('coach-avatar')));
+  await tester.pumpAndSettle();
+  expect(find.text('کیف پول و تعرفه‌ها'), findsNothing);
+  expect(find.text('برنامه‌های قبلی'), findsNothing);
+  await tapPlan(tester, find.text('پلن‌ها و اشتراک من'));
 }
 
-PrimaryButton primary(WidgetTester t, String label) =>
-    t.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, label));
-Future<void> cleanupWallet(WidgetTester t, DemoStore s) async {
-  await t.pumpWidget(const SizedBox());
-  await t.pump();
-  s.dispose();
+Future<void> startPlans(
+  WidgetTester tester,
+  DemoStore store, {
+  bool questionnaireComplete = true,
+}) async {
+  mobile(tester);
+  store.questionnaireComplete = questionnaireComplete;
+  store.login(AppRole.user);
+  await tester.pumpWidget(
+    SabzineApp(store: store, splashDuration: Duration.zero),
+  );
+  await tester.pumpAndSettle();
+  await openProfilePlans(tester);
+}
+
+PrimaryButton primary(WidgetTester tester, String label) =>
+    tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, label));
+
+Future<void> cleanup(WidgetTester tester, DemoStore store) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump();
+  store.dispose();
 }
 
 void main() {
-  test(
-    'Money debit and charge are idempotent, face value with no intermediary conversion',
-    () {
-      final s = DemoStore()..login(AppRole.user), count = s.requests.length;
-      expect(s.walletBalance, 0);
-      expect(s.tryPurchasePlanService('new-plan'), false);
-      expect(s.completeMockPayment('p200', 'payment-1'), true);
-      expect(s.completeMockPayment('p200', 'payment-1'), false);
-      expect(s.walletBalance, 500000);
-      expect(
-        s.tryPurchasePlanService('new-plan', operationId: 'order-1'),
-        true,
-      );
-      expect(
-        s.tryPurchasePlanService('new-plan', operationId: 'order-1'),
-        false,
-      );
-      expect(s.walletBalance, 0);
-      expect(s.requests.length, count + 1);
-      s.dispose();
-    },
-  );
-  testWidgets('Insufficient money shows amount then charge then balance', (
-    t,
+  testWidgets('Profile shows rates and subscription without wallet controls', (
+    tester,
   ) async {
-    final s = DemoStore();
-    await startWallet(t, s);
-    expect(primary(t, 'برداشت از کیف پول').onPressed, isNull);
-    await tapWallet(t, find.byKey(const ValueKey('service-new-plan')));
-    expect(find.text('مبلغ قابل پرداخت: ۵۰۰,۰۰۰ تومان'), findsOneWidget);
-    expect(find.text('موجودی ناکافی'), findsOneWidget);
-    expect(
-      t.getCenter(find.byKey(const ValueKey('payable-amount'))).dy,
-      lessThan(
-        t.getCenter(find.widgetWithText(PrimaryButton, 'شارژ کیف پول')).dy,
-      ),
-    );
-    expect(
-      t.getCenter(find.widgetWithText(PrimaryButton, 'شارژ کیف پول')).dy,
-      lessThan(
-        t.getCenter(find.byKey(const ValueKey('wallet-balance-line'))).dy,
-      ),
-    );
-    expect(t.takeException(), isNull);
-    await cleanupWallet(t, s);
+    final store = DemoStore();
+    await startPlans(tester, store);
+    expect(primary(tester, 'پرداخت و فعال‌سازی پلن').onPressed, isNull);
+    expect(find.byKey(const ValueKey('subscription-summary')), findsOneWidget);
+    expect(find.textContaining('هنوز اشتراک فعالی نداری'), findsOneWidget);
+    await tapPlan(tester, find.byKey(const ValueKey('plan-monthly')));
+    expect(find.text('مبلغ قابل پرداخت: ۱,۹۹۰,۰۰۰ تومان'), findsOneWidget);
+    expect(find.textContaining('کیف پول'), findsNothing);
+    expect(find.textContaining('موجودی'), findsNothing);
+    expect(primary(tester, 'پرداخت و فعال‌سازی پلن').onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+    await cleanup(tester, store);
   });
+
   testWidgets(
-    'Charge at face value returns to selected service; double taps debit once',
-    (t) async {
-      final s = DemoStore();
-      await startWallet(t, s);
-      await tapWallet(t, find.byKey(const ValueKey('service-new-plan')));
-      await tapWallet(t, find.widgetWithText(PrimaryButton, 'شارژ کیف پول'));
-      expect(primary(t, 'شارژ کیف پول').onPressed, isNull);
-      await tapWallet(t, find.byKey(const ValueKey('package-p200')));
-      await tapWallet(t, find.widgetWithText(PrimaryButton, 'شارژ کیف پول'));
-      final pay = primary(t, 'پرداخت موفق').onPressed!;
-      pay();
-      pay();
-      await t.pumpAndSettle();
-      expect(s.walletBalance, 500000);
-      await tapWallet(t, find.widgetWithText(FilledButton, 'باشه'));
-      expect(s.selectedPlanServiceId, 'new-plan');
-      expect(find.text('موجودی کافی'), findsOneWidget);
-      final debit = primary(t, 'برداشت از کیف پول').onPressed!;
-      debit();
-      debit();
-      await t.pumpAndSettle();
-      expect(s.walletBalance, 0);
-      expect(s.walletTransactions.length, 2);
-      await tapWallet(t, find.widgetWithText(TextButton, 'باشه'));
+    'Direct payment activates once and subscription appears in profile',
+    (tester) async {
+      final store = DemoStore();
+      await startPlans(tester, store);
+      await tapPlan(tester, find.byKey(const ValueKey('plan-monthly')));
+      final purchase = primary(tester, 'پرداخت و فعال‌سازی پلن').onPressed!;
+      purchase();
+      purchase();
+      await tester.pumpAndSettle();
+      expect(find.byType(PlanPaymentScreen), findsOneWidget);
+      expect(store.planSubscription, isNull);
+      expect(store.hasUserRequest, isFalse);
+      final complete = primary(tester, 'پرداخت موفق').onPressed!;
+      complete();
+      complete();
+      await tester.pumpAndSettle();
+      expect(store.walletBalance, 0);
+      expect(store.walletTransactions, isEmpty);
+      expect(store.planPurchases, hasLength(1));
+      expect(store.planSubscription!.activeAt(store.today), isTrue);
+      expect(store.planSubscription!.title, 'پلن همراه');
+      expect(
+        store.planSubscription!.endsAt!.difference(store.today).inDays,
+        29,
+      );
+      expect(store.hasUserRequest, isTrue);
+      await tapPlan(tester, find.text('ورود به برنامه'));
       expect(find.byType(PlanServicesScreen), findsNothing);
-      expect(s.hasUserRequest, true);
-      expect(t.takeException(), isNull);
-      await cleanupWallet(t, s);
+      expect(store.userSignedIn, isTrue);
+      expect(store.entryStage, EntryStage.home);
+      expect(find.byType(PanelShell), findsOneWidget);
+      await openProfilePlans(tester);
+      expect(find.text('فعال'), findsOneWidget);
+      expect(find.textContaining('کیف پول'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await cleanup(tester, store);
     },
   );
-  testWidgets(
-    'Custom money amount credits exactly and failed payment preserves balance',
-    (t) async {
-      final s = DemoStore();
-      await startWallet(t, s);
-      await tapWallet(t, find.byKey(const ValueKey('service-new-plan')));
-      await tapWallet(t, find.widgetWithText(PrimaryButton, 'شارژ کیف پول'));
-      await t.enterText(find.byKey(const ValueKey('custom-charge')), '۶۵۰۰۰۰');
-      await t.pumpAndSettle();
-      await tapWallet(t, find.widgetWithText(PrimaryButton, 'شارژ کیف پول'));
-      await tapWallet(t, find.text('پرداخت ناموفق / انصراف'));
-      expect(s.walletBalance, 0);
-      expect(find.byKey(const ValueKey('mock-payment-error')), findsOneWidget);
-      await tapWallet(t, find.widgetWithText(PrimaryButton, 'شارژ کیف پول'));
-      await tapWallet(t, find.widgetWithText(PrimaryButton, 'پرداخت موفق'));
-      expect(s.walletBalance, 650000);
-      expect(s.walletTransactions.single.amountToman, 650000);
-      await tapWallet(t, find.widgetWithText(FilledButton, 'باشه'));
-      expect(t.takeException(), isNull);
-      await cleanupWallet(t, s);
-    },
-  );
-  testWidgets(
-    'Exact monetary balance can buy without opening payment gateway',
-    (t) async {
-      final s = DemoStore()..setDebugWalletBalance(500000);
-      await startWallet(t, s);
-      await tapWallet(t, find.byKey(const ValueKey('service-new-plan')));
-      expect(find.text('موجودی کافی'), findsOneWidget);
-      await tapWallet(
-        t,
-        find.widgetWithText(PrimaryButton, 'برداشت از کیف پول'),
-      );
-      expect(s.walletBalance, 0);
-      expect(find.byType(MockPaymentScreen), findsNothing);
-      await tapWallet(t, find.widgetWithText(TextButton, 'باشه'));
-      await cleanupWallet(t, s);
-    },
-  );
-  testWidgets('Repeated insufficient-wallet taps open one charge screen', (
-    t,
+
+  testWidgets('Failed payment preserves selection and never grants access', (
+    tester,
   ) async {
-    final s = DemoStore();
-    await startWallet(t, s);
-    await tapWallet(t, find.byKey(const ValueKey('service-new-plan')));
-    final charge = primary(t, 'شارژ کیف پول').onPressed!;
-    charge();
-    charge();
-    await t.pumpAndSettle();
-    expect(find.byType(WalletChargeScreen), findsOneWidget);
-    Navigator.of(t.element(find.byType(WalletChargeScreen))).pop();
-    await t.pumpAndSettle();
-    expect(find.byType(PlanServicesScreen), findsOneWidget);
-    expect(t.takeException(), isNull);
-    await cleanupWallet(t, s);
+    final store = DemoStore();
+    await startPlans(tester, store);
+    await tapPlan(tester, find.byKey(const ValueKey('plan-monthly')));
+    await tapPlan(
+      tester,
+      find.widgetWithText(PrimaryButton, 'پرداخت و فعال‌سازی پلن'),
+    );
+    await tapPlan(tester, find.text('پرداخت ناموفق / انصراف'));
+    expect(store.hasUserRequest, isFalse);
+    expect(store.planSubscription, isNull);
+    expect(store.planPurchases, isEmpty);
+    expect(store.selectedPlanServiceId, 'new-plan');
+    expect(find.text('پرداخت لغو شد؛ پلنی فعال نشد.'), findsOneWidget);
+    await tapPlan(
+      tester,
+      find.widgetWithText(PrimaryButton, 'پرداخت و فعال‌سازی پلن'),
+    );
+    expect(find.byType(PlanPaymentScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await cleanup(tester, store);
   });
+
+  testWidgets('Legacy balance never bypasses direct payment', (tester) async {
+    final store = DemoStore()..setDebugWalletBalance(500000);
+    await startPlans(tester, store);
+    await tapPlan(tester, find.byKey(const ValueKey('plan-monthly')));
+    await tapPlan(
+      tester,
+      find.widgetWithText(PrimaryButton, 'پرداخت و فعال‌سازی پلن'),
+    );
+    expect(find.byType(PlanPaymentScreen), findsOneWidget);
+    await tapPlan(tester, find.widgetWithText(PrimaryButton, 'پرداخت موفق'));
+    expect(store.walletBalance, 500000);
+    expect(store.planPurchases.single.priceToman, 1990000);
+    await tapPlan(tester, find.text('ورود به برنامه'));
+    await cleanup(tester, store);
+  });
+
+  testWidgets(
+    'Profile rates remain available before questionnaire completion',
+    (tester) async {
+      final store = DemoStore();
+      await startPlans(tester, store, questionnaireComplete: false);
+      expect(find.byType(PlanServicesScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('plan-monthly')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await cleanup(tester, store);
+    },
+  );
+
+  testWidgets(
+    'Expired subscription is displayed without claiming active access',
+    (tester) async {
+      final store = DemoStore()
+        ..planSubscription = PlanSubscription(
+          title: 'پلن تغذیه',
+          status: 'active',
+          endsAt: DateTime(2020),
+        );
+      await startPlans(tester, store);
+      expect(find.text('پایان یافته'), findsOneWidget);
+      expect(find.text('فعال'), findsNothing);
+      expect(find.textContaining('اعتبار تا'), findsOneWidget);
+      await cleanup(tester, store);
+    },
+  );
 }

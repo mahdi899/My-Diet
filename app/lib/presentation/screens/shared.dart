@@ -6,6 +6,8 @@ import 'expert.dart';
 import 'clinic_workspace.dart';
 import '../widgets/ui.dart';
 import 'messaging.dart';
+import '../session/live_session.dart';
+import '../../domain/common/failure.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key, required this.threadId});
@@ -490,53 +492,81 @@ class ArchivedPlanScreen extends StatelessWidget {
   );
 }
 
-class OrdersScreen extends StatelessWidget {
+class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
   @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  bool loading = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => load());
+  }
+
+  Future<void> load() async {
+    final store = DemoScope.of(context);
+    if (!store.serverAuthEnabled) return;
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      await syncLiveSubscription(store);
+    } on AppFailure catch (failure) {
+      if (mounted) setState(() => error = failure.message);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final s = DemoScope.of(context);
+    final store = DemoScope.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('گردش کیف پول')),
+      appBar: AppBar(title: const Text('سفارش‌ها و پرداخت‌ها')),
       body: PageBody(
         children: [
-          Surface(
-            color: sage,
-            child: Heading(
-              'موجودی کیف پول',
-              subtitle: formatToman(s.walletBalance),
+          if (loading) const LinearProgressIndicator(),
+          if (error != null) ...[
+            Notice(error!),
+            TextButton(onPressed: load, child: const Text('تلاش دوباره')),
+          ],
+          if (!store.serverAuthEnabled)
+            const Notice(
+              'مبلغ‌ها و پرداخت‌ها نمایشی‌اند؛ پول واقعی جابه‌جا نمی‌شود.',
             ),
-          ),
-          const Notice(
-            'مبلغ‌ها و پرداخت‌ها نمایشی‌اند؛ پول واقعی جابه‌جا نمی‌شود.',
-          ),
-          if (s.walletTransactions.isEmpty)
+          if (!loading && error == null && store.planPurchases.isEmpty)
             const EmptyPanel(
-              'تراکنشی نداری',
-              'شارژ، خرید و جایزهٔ هفتگی اینجا ثبت می‌شوند.',
+              'هنوز خریدی نداری',
+              'پلن‌هایی که پرداخت کرده‌ای، اینجا نمایش داده می‌شوند.',
               icon: Icons.receipt_long_outlined,
             ),
-          for (final t in s.walletTransactions)
+          for (final purchase in store.planPurchases)
             Surface(
               child: Row(
                 children: [
-                  Icon(
-                    t.credit ? Icons.south_west : Icons.north_east,
-                    color: pine,
-                  ),
+                  const Icon(Icons.receipt_long_outlined, color: pine),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.title),
+                        Text(purchase.title),
                         Text(
-                          'مانده: ${formatToman(t.balanceAfter)}',
+                          purchase.status == 'paid'
+                              ? 'پرداخت موفق'
+                              : 'بازگشت وجه',
                           style: const TextStyle(color: muted, fontSize: 11),
                         ),
                       ],
                     ),
                   ),
-                  Text('${t.credit ? '+' : '−'} ${formatToman(t.amountToman)}'),
+                  Text(formatToman(purchase.priceToman)),
                 ],
               ),
             ),

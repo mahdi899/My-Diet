@@ -169,6 +169,11 @@ DemoStore liveStore(FakeCommerce commerce, FakePlans plans) {
     plans: plans,
   );
   store.questionnaire.name = 'مهدی';
+  store.customerAuth!.session = CustomerSession.fromJson({
+    'accessToken': 'test-token',
+    'sessionExpiresAt': '2099-01-01T00:00:00Z',
+    'role': 'user',
+  });
   return store;
 }
 
@@ -202,7 +207,7 @@ void main() {
       final store = liveStore(commerce, plans);
       await syncLiveCatalog(store);
       expect(store.newPlanPrice, 490000);
-      expect(store.walletBalance, 600000);
+      expect(store.walletBalance, 0);
 
       commerce.failOffline = true;
       expect(await buyLiveService(store, 'new-plan'), isFalse);

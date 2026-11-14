@@ -2,6 +2,7 @@
 
 namespace App\Modules\Money\Application;
 
+use App\Modules\Money\Domain\SubscriptionPlans;
 use App\Shared\Domain\Amount;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
@@ -12,12 +13,185 @@ final class MoneyService
 
     public function catalog(): array
     {
-        return $this->store->catalog();
+        return [...$this->store->catalog(), 'plans' => array_values(SubscriptionPlans::ALL)];
     }
 
     public function gateways(): array
     {
         return $this->gateways->listing();
+    }
+
+    public function subscription(string $user): array
+    {
+        $subscription = $this->store->subscription($user);
+        if ($subscription !== null) {
+            $subscription['includedChanges'] = $this->store->admission($user, null)['includedChanges'];
+        }
+
+        return ['subscription' => $subscription];
+    }
+
+    public function orders(string $user): array
+    {
+        return array_map(fn ($row) => ['id' => $row['id'], 'serviceCode' => $row['service_code'], 'title' => $row['title_fa'], 'priceToman' => Amount::safe($row['price_toman']), 'status' => $row['status'], 'createdAt' => Crypto::iso($row['created_at'])], $this->store->orders($user));
+    }
+
+    private function checkoutResult(array $row): array
+    {
+        return ['paymentId' => $row['id'], 'status' => $row['status'], 'gateway' => $row['gateway'], 'redirectUrl' => $row['redirect_url'], 'amountToman' => Amount::safe($row['amount_toman']), 'orderId' => $row['order_id'], 'requestId' => $row['request_id']];
+    }
+
+    public function checkoutStatus(string $user, string $id): array
+    {
+        $row = $this->store->checkout($id);
+        if (! $row || $row['user_id'] !== $user) {
+            throw new Problem(404, 'not_found', 'پرداخت پیدا نشد');
+        }
+
+        return $this->checkoutResult($row);
+    }
+
+    public function startCheckout(string $user, string $key, string $service, int $expected, ?string $parent, ?string $gatewayName, ?string $planId = null): array
+    {
+        if (! in_array($service, ['new_plan', 'ai_revision', 'specialist_revision'], true) || ($service === 'new_plan') !== ($parent === null)) {
+            throw new Problem(400, 'validation', 'پلن انتخابی معتبر نیست');
+        }
+        $plan = $planId === null ? null : (SubscriptionPlans::ALL[$planId] ?? throw new Problem(400, 'validation', 'پلن انتخابی معتبر نیست'));
+        if ($plan !== null && $service !== 'new_plan') {
+            throw new Problem(400, 'validation', 'پلن انتخابی معتبر نیست');
+        }
+        $hash = hash('sha256', json_encode([$service, $expected, $parent, $planId], JSON_THROW_ON_ERROR));
+
+        return $this->store->transaction(function () use ($user, $key, $service, $expected, $parent, $gatewayName, $hash, $plan): array {
+            $this->store->wallet($user, true);
+            $prior = $this->store->priorCheckout($user, $key) ?? $this->store->pendingCheckout($user);
+            if ($prior !== null) {
+                if ($prior['request_hash'] !== $hash) {
+                    throw new Problem(409, 'payment_in_progress', 'ابتدا پرداخت قبلی را تکمیل کن');
+                }
+
+                return $this->checkoutResult($prior);
+            }
+            if ($this->store->priorOrder($user, $key) !== null) {
+                return ['status' => 'paid', ...$this->place($user, $key, $service, $expected, $parent)];
+            }
+            $context = $this->store->admission($user, $parent);
+            if ($context['open']) {
+                throw new Problem(409, 'request_in_progress', 'یک درخواست باز دارید');
+            }
+            if (! $context['submission']) {
+                throw new Problem(409, 'questionnaire_required', 'اول پرسشنامه را کامل کن');
+            }
+            if (! $context['consented']) {
+                throw new Problem(409, 'consent_required', 'برای ادامه باید با پردازش اطلاعات سلامت موافقت کنی');
+            }
+            if ($parent !== null && ! $context['parentPublished']) {
+                throw new Problem(404, 'not_found', 'برنامهٔ فعلی پیدا نشد');
+            }
+            if ($service !== 'new_plan' && $context['includedChanges']) {
+                return ['status' => 'paid', ...$this->place($user, $key, $service, $expected, $parent)];
+            }
+            $amount = $plan['priceToman'] ?? $this->store->price($service);
+            if ($amount <= 0 || $amount !== $expected) {
+                throw new Problem(409, 'price_changed', 'تعرفه تغییر کرده است؛ پلن‌ها را دوباره دریافت کن');
+            }
+            $name = $gatewayName ?? $this->settings->defaultGateway;
+            $gateway = $this->gateways->info($name) ?? throw new Problem(400, 'unknown_gateway', 'درگاه پرداخت شناخته نشد');
+            $origin = rtrim($this->settings->publicApiUrl ?? '', '/');
+            if (($gateway['network'] && ! $gateway['hosted']) || ($gateway['hosted'] && $origin === '')) {
+                throw new Problem(503, 'payment_unavailable', 'درگاه پرداخت در دسترس نیست');
+            }
+            $row = ['id' => Crypto::uuid(), 'user_id' => $user, 'service_code' => $service, 'submission_id' => $context['submission'], 'parent_request_id' => $parent, 'amount_toman' => $amount, 'amount_rial' => Amount::safe((string) ($amount * 10)), 'idempotency_key' => $key, 'request_hash' => $hash, 'gateway' => $name, 'status' => 'pending', 'redirect_url' => null, 'order_id' => null, 'request_id' => null];
+            $row['plan_code'] = $plan['id'] ?? null;
+            $row['duration_days'] = $plan['days'] ?? null;
+            if ($gateway['hosted']) {
+                try {
+                    $started = $this->gateways->start($name, $row['amount_rial'], $origin.'/v1/payments/checkout/callback/'.$name.'?paymentId='.$row['id']);
+                    $row['authority'] = $started['authority'];
+                    $row['redirect_url'] = $started['redirectUrl'];
+                } catch (\Throwable) {
+                    throw new Problem(502, 'payment_unavailable', 'اتصال به درگاه پرداخت برقرار نشد؛ کمی بعد دوباره تلاش کن');
+                }
+            }
+            $this->store->createCheckout($row);
+
+            return $this->checkoutResult($row);
+        });
+    }
+
+    public function completeCheckout(string $id, string $gateway, ?string $reference = null): array
+    {
+        $initial = $this->store->checkout($id) ?? throw new Problem(404, 'not_found', 'پرداخت پیدا نشد');
+        if (! $this->gateways->info($gateway)) {
+            throw new Problem(404, 'not_found', 'درگاه پیدا نشد');
+        }
+
+        return $this->store->transaction(function () use ($id, $gateway, $reference, $initial): array {
+            $this->store->wallet($initial['user_id'], true);
+            $row = $this->store->checkout($id, true);
+            if ($row['gateway'] !== $gateway) {
+                throw new Problem(404, 'not_found', 'پرداخت پیدا نشد');
+            }
+            if ($row['status'] === 'paid') {
+                return $this->checkoutResult($row);
+            }
+            if ($row['status'] !== 'pending') {
+                throw new Problem(409, 'payment_closed', 'این پرداخت بسته شده است');
+            }
+            $order = Crypto::uuid();
+            $request = Crypto::uuid();
+            $this->store->createOrder(['id' => $order, 'user_id' => $row['user_id'], 'service_code' => $row['service_code'], 'price_toman' => $row['amount_toman'], 'cash_toman' => $row['amount_toman'], 'promo_toman' => 0, 'status' => 'paid', 'idempotency_key' => 'checkout-'.$row['id']],
+                ['id' => $request, 'user_id' => $row['user_id'], 'order_id' => $order, 'kind' => $row['service_code'], 'status' => $row['service_code'] === 'specialist_revision' ? 'in_review' : 'queued', 'submission_id' => $row['submission_id'], 'assigned_specialist_id' => $this->store->assignSpecialist(), 'parent_request_id' => $row['parent_request_id'], 'price_toman' => $row['amount_toman']]);
+            if ($row['service_code'] === 'specialist_revision') {
+                $this->store->copyPublishedDraft($row['parent_request_id'], $request);
+            }
+            if ($row['duration_days'] !== null) {
+                $this->store->activateSubscription($row['user_id'], $row['service_code'], (int) $row['duration_days']);
+            }
+            $changes = ['status' => 'paid', 'order_id' => $order, 'request_id' => $request, 'ref_id' => $reference, 'paid_at' => gmdate('Y-m-d H:i:s')];
+            $this->store->updateCheckout($id, $changes);
+
+            return $this->checkoutResult([...$row, ...$changes]);
+        });
+    }
+
+    public function checkoutCallback(string $gateway, string $id, ?string $authority, ?string $status): string
+    {
+        $row = $this->store->checkout($id);
+        if (! ($this->gateways->info($gateway)['hosted'] ?? false) || ! $row || $row['gateway'] !== $gateway || ! $row['authority'] || $row['authority'] !== $authority) {
+            throw new Problem(404, 'not_found', 'پرداخت پیدا نشد');
+        }
+        if ($row['status'] !== 'pending') {
+            return $row['status'];
+        }
+        if ($status !== 'OK') {
+            return $this->failCheckout($id);
+        }
+        try {
+            $verified = $this->gateways->verify($gateway, Amount::safe($row['amount_rial']), $authority);
+        } catch (\Throwable) {
+            return 'pending';
+        }
+        if (! $verified['ok']) {
+            return $this->failCheckout($id);
+        }
+        $this->completeCheckout($id, $gateway, $verified['refId']);
+
+        return 'paid';
+    }
+
+    public function failCheckout(string $id): string
+    {
+        return $this->store->transaction(function () use ($id): string {
+            $row = $this->store->checkout($id, true) ?? throw new Problem(404, 'not_found', 'پرداخت پیدا نشد');
+            if ($row['status'] === 'pending') {
+                $this->store->updateCheckout($id, ['status' => 'failed']);
+
+                return 'failed';
+            }
+
+            return $row['status'];
+        });
     }
 
     public function wallet(string $user): array
@@ -174,6 +348,9 @@ final class MoneyService
                 return $prior['response'] ?? throw new Problem(409, 'idempotency_pending', 'درخواست قبلی هنوز تمام نشده است');
             }
             $this->store->beginOrder($user, $key, $hash);
+            if ($this->store->pendingCheckout($user) !== null) {
+                throw new Problem(409, 'payment_in_progress', 'ابتدا پرداخت قبلی را تکمیل کن');
+            }
             $context = $this->store->admission($user, $parent);
             if ($context['open']) {
                 throw new Problem(409, 'request_in_progress', 'یک درخواست باز دارید');
@@ -229,6 +406,9 @@ final class MoneyService
         $initial = $this->store->order($id);
         if (! $initial || (! $compensate && $initial['user_id'] !== $actor)) {
             throw new Problem(404, 'not_found', 'سفارش پیدا نشد');
+        }
+        if ($initial['direct_payment'] ?? false) {
+            throw new Problem(409, 'direct_refund_required', 'برای لغو و بازگشت مبلغ پرداخت مستقیم با پشتیبانی تماس بگیر');
         }
 
         return $this->store->transaction(function () use ($actor, $id, $compensate, $initial): array {

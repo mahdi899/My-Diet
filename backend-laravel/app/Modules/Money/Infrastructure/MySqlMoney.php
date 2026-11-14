@@ -3,6 +3,7 @@
 namespace App\Modules\Money\Infrastructure;
 
 use App\Modules\Money\Application\MoneyStore;
+use App\Modules\Money\Domain\SubscriptionPlans;
 use App\Shared\Domain\Amount;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
@@ -65,23 +66,37 @@ final class MySqlMoney implements MoneyStore
         $this->db->table('plan_checkouts')->where('id', $id)->update($changes);
     }
 
+    public function activateSubscription(string $user, string $service, int $days): void
+    {
+        $this->db->statement('insert into user_service_access (user_id, service_code, ends_at) values (?, ?, date_add(current_timestamp(6), interval ? day)) as incoming on duplicate key update service_code=incoming.service_code, ends_at=incoming.ends_at, updated_at=current_timestamp(6)', [$user, $service, $days]);
+    }
+
     public function orders(string $user): array
     {
-        return array_map(fn ($row) => (array) $row, $this->db->table('orders as o')->join('services as s', 's.code', '=', 'o.service_code')->where('o.user_id', $user)->select('o.*', 's.title_fa')->orderByDesc('o.created_at')->limit(100)->get()->all());
+        return array_map(function ($row): array {
+            $row->title_fa = SubscriptionPlans::ALL[$row->plan_code ?? '']['title'] ?? $row->title_fa;
+
+            return (array) $row;
+        }, $this->db->table('orders as o')->join('services as s', 's.code', '=', 'o.service_code')->leftJoin('plan_checkouts as c', 'c.order_id', '=', 'o.id')->where('o.user_id', $user)->select('o.*', 's.title_fa', 'c.plan_code')->orderByDesc('o.created_at')->limit(100)->get()->all());
     }
 
     public function subscription(string $user): ?array
     {
-        $access = $this->db->table('user_service_access as a')->join('services as s', 's.code', '=', 'a.service_code')->where('a.user_id', $user)->select('a.service_code', 's.title_fa', 'a.ends_at')->first();
-        if ($access !== null && new \DateTimeImmutable($access->ends_at) > new \DateTimeImmutable('now', new \DateTimeZone('UTC'))) {
-            return ['serviceCode' => $access->service_code, 'title' => $access->title_fa, 'status' => 'active', 'endsAt' => Crypto::iso($access->ends_at)];
-        }
+        $access = $this->db->table('user_service_access as a')->join('services as s', 's.code', '=', 'a.service_code')->where('a.user_id', $user)->select('a.service_code', 's.title_fa', 'a.ends_at', 'a.updated_at')->first();
         $order = $this->db->table('orders as o')->join('services as s', 's.code', '=', 'o.service_code')->join('plan_requests as r', 'r.order_id', '=', 'o.id')->where('o.user_id', $user)->where('o.service_code', 'new_plan')->where('o.status', 'paid')->where('r.status', '<>', 'cancelled')->orderByDesc('o.created_at')->select('o.*', 's.title_fa', 'r.status as request_status')->first();
+        if ($access !== null) {
+            $checkout = $this->db->table('plan_checkouts')->where('user_id', $user)->where('status', 'paid')->whereNotNull('plan_code')->orderByDesc('paid_at')->first();
+            $access->title_fa = SubscriptionPlans::ALL[$checkout->plan_code ?? '']['title'] ?? $access->title_fa;
+            $active = new \DateTimeImmutable($access->ends_at, new \DateTimeZone('UTC')) > new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+            if ($active || $order === null || $order->created_at <= $access->updated_at) {
+                return ['serviceCode' => $access->service_code, 'title' => $access->title_fa, 'status' => $active ? 'active' : 'expired', 'endsAt' => Crypto::iso($access->ends_at)];
+            }
+        }
         if ($order !== null) {
             return ['serviceCode' => $order->service_code, 'title' => $order->title_fa, 'status' => 'active', 'requestStatus' => $order->request_status, 'startedAt' => Crypto::iso($order->created_at), 'endsAt' => null];
         }
 
-        return $access === null ? null : ['serviceCode' => $access->service_code, 'title' => $access->title_fa, 'status' => 'expired', 'endsAt' => Crypto::iso($access->ends_at)];
+        return null;
     }
 
     public function ledger(string $user): array
@@ -92,8 +107,9 @@ final class MySqlMoney implements MoneyStore
     public function order(string $id, bool $lock = false): ?array
     {
         $q = $this->db->table('orders')->where('id', $id);
+        $row = $this->row(($lock ? $q->lockForUpdate() : $q)->first());
 
-        return $this->row(($lock ? $q->lockForUpdate() : $q)->first());
+        return $row === null ? null : [...$row, 'direct_payment' => $this->db->table('plan_checkouts')->where('order_id', $id)->exists()];
     }
 
     public function payment(string $id, bool $lock = false): ?array
@@ -163,7 +179,21 @@ final class MySqlMoney implements MoneyStore
         return ['open' => $this->db->table('plan_requests')->where('user_id', $user)->whereIn('status', ['queued', 'generating', 'in_review', 'awaiting_user', 'response_received'])->exists(),
             'submission' => $this->db->table('questionnaire_submissions')->where('user_id', $user)->orderByDesc('submitted_at')->value('id'),
             'consented' => $profile === null || $profile->consented_at !== null, 'parentPublished' => $parentPublished,
-            'includedChanges' => $this->db->table('payments')->where('user_id', $user)->where('status', 'credited')->exists() || $this->db->table('orders')->where('user_id', $user)->where('service_code', 'new_plan')->where('status', 'paid')->exists() || $this->db->table('user_service_access')->where('user_id', $user)->where('ends_at', '>', $this->db->raw('current_timestamp(6)'))->exists()];
+            'includedChanges' => $this->includedChanges($user)];
+    }
+
+    private function includedChanges(string $user): bool
+    {
+        $checkout = $this->db->table('plan_checkouts')->where('user_id', $user)->where('status', 'paid')->whereNotNull('plan_code')->orderByDesc('paid_at')->first();
+        $access = $this->db->table('user_service_access')->where('user_id', $user)->where('ends_at', '>', $this->db->raw('current_timestamp(6)'))->exists();
+        if ($checkout !== null) {
+            $limit = ['weekly' => 0, 'monthly' => 2, 'quarterly' => 6][$checkout->plan_code] ?? 0;
+            $used = $this->db->table('orders')->where('user_id', $user)->where('service_code', '<>', 'new_plan')->where('status', 'paid')->where('created_at', '>=', $checkout->paid_at)->count();
+
+            return $access && $used < $limit;
+        }
+
+        return $access || $this->db->table('payments')->where('user_id', $user)->where('status', 'credited')->exists() || $this->db->table('orders')->where('user_id', $user)->where('service_code', 'new_plan')->where('status', 'paid')->exists();
     }
 
     public function price(string $service): int

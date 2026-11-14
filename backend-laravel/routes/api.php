@@ -195,9 +195,15 @@ Route::middleware('session:specialist,admin')->controller(PlanQueryController::c
 Route::get('v1/catalog', [MoneyController::class, 'catalog']);
 Route::get('v1/payments/gateways', [MoneyController::class, 'gateways']);
 Route::get('v1/payments/callback/{gateway}', [MoneyController::class, 'callback']);
+Route::get('v1/payments/checkout/callback/{gateway}', [MoneyController::class, 'checkoutCallback']);
 Route::post('v1/payments/sandbox/complete', [MoneyController::class, 'sandbox']);
 Route::post('v1/admin/orders/{id}/compensate', [MoneyController::class, 'compensate'])->middleware('session:admin');
 Route::prefix('v1/me')->middleware('session:user')->controller(MoneyController::class)->group(function (): void {
+    Route::get('subscription', 'subscription');
+    Route::get('orders', 'orders');
+    Route::post('checkouts', 'startCheckout');
+    Route::get('checkouts/{id}', 'checkout');
+    Route::post('checkouts/{id}/sandbox', 'checkoutSandbox');
     Route::get('wallet', 'wallet');
     Route::get('wallet/ledger', 'ledger');
     Route::get('orders/{id}', 'order');

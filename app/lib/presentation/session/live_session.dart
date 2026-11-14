@@ -7,6 +7,8 @@ import '../../domain/onboarding/onboarding.dart';
 import '../../domain/plan/plan.dart';
 import '../../data/session/services.dart';
 import 'live_plan.dart';
+import '../../application/commerce/settle_checkout.dart';
+import '../../domain/common/failure.dart';
 
 Services ensureLiveServices(DemoStore store) {
   final auth = store.customerAuth;
@@ -59,11 +61,12 @@ String _serviceCode(String id) => switch (id) {
   _ => id,
 };
 
-/// Prices and wallet balance from the server catalog.
+/// Prices from the server catalog.
 Future<void> syncLiveCatalog(DemoStore store) async {
   final services = ensureLiveServices(store);
   final catalog = await services.commerce.catalog();
-  final wallet = await services.commerce.wallet();
+  store.liveServiceOffers = catalog.services;
+  store.subscriptionOffers = catalog.plans;
   for (final service in catalog.services) {
     switch (service.code) {
       case 'new_plan':
@@ -75,8 +78,67 @@ Future<void> syncLiveCatalog(DemoStore store) async {
     }
   }
   store.liveTopups = catalog.topups;
-  store.walletBalance = wallet.total;
+  await syncLiveSubscription(store);
   store.update();
+}
+
+Future<void> syncLiveSubscription(DemoStore store) async {
+  final commerce = ensureLiveServices(store).commerce;
+  if (commerce is! PlanCheckoutRepository) return;
+  final subscription = await (commerce as PlanCheckoutRepository)
+      .subscription();
+  final purchases = await (commerce as PlanCheckoutRepository).purchases();
+  store.planSubscription = subscription;
+  store.planPurchases = purchases;
+  store.update();
+}
+
+Future<bool> checkoutLiveService(
+  DemoStore store,
+  String serviceId, {
+  required Future<bool> Function() confirmSandbox,
+  String? planId,
+}) async {
+  final offer = planId == null
+      ? store.serviceById(serviceId)
+      : store.subscriptionServiceById(planId);
+  if (offer == null) return false;
+  final commerce = ensureLiveServices(store).commerce;
+  if (commerce is! PlanCheckoutRepository) {
+    store.liveNotice = 'پرداخت مستقیم در دسترس نیست.';
+    return false;
+  }
+  store.liveNotice = null;
+  store.liveOrderKey ??= newIdempotencyKey();
+  try {
+    await settleCheckout(
+      commerce as PlanCheckoutRepository,
+      serviceCode: _serviceCode(serviceId),
+      expectedPriceToman: offer.priceToman,
+      idempotencyKey: store.liveOrderKey!,
+      parentRequestId: serviceId == 'new-plan' ? null : store.userRequestId,
+      planId: planId,
+      openUrl: store.openPaymentUrl,
+      confirmSandbox: confirmSandbox,
+    );
+    store.liveOrderKey = null;
+  } on AppFailure catch (error) {
+    if (error.code == 'payment_failed' || error.code == 'price_changed') {
+      store.liveOrderKey = null;
+    }
+    store.liveNotice = error.message;
+    if (error.expired) await store.signOutCustomer();
+    return false;
+  }
+  // Payment has succeeded even when refreshing the dashboard is temporarily unavailable.
+  try {
+    await refreshLive(store);
+    await syncLiveSubscription(store);
+  } on AppFailure {
+    store.liveNotice =
+        'پرداخت تأیید شد؛ اطلاعات پلن با اتصال دوباره به‌روز می‌شود.';
+  }
+  return true;
 }
 
 /// Pays for a plan from the server wallet. One idempotency key per attempt.
@@ -120,6 +182,11 @@ Future<void> refreshLive(DemoStore store, {ProfileSummary? profile}) async {
   PublishedPlan? plan;
   var wallet = store.walletBalance;
   var name = store.questionnaire.name;
+  try {
+    await syncLiveSubscription(store);
+  } on AppFailure {
+    // Keep the previously confirmed subscription until the next refresh.
+  }
   try {
     request = await services.plans.latestRequest();
   } on ApiException catch (e) {

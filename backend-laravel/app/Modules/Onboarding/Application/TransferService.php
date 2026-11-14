@@ -3,6 +3,7 @@
 namespace App\Modules\Onboarding\Application;
 
 use App\Modules\Identity\Application\IdentitySettings;
+use App\Modules\Money\Domain\SubscriptionPlans;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 
@@ -12,7 +13,7 @@ final class TransferService
 
     public function create(string $user, string $plan, string $submission): array
     {
-        $price = ['weekly' => 1290000, 'monthly' => 1990000, 'quarterly' => 8990000][$plan] ?? null;
+        $price = SubscriptionPlans::ALL[$plan]['priceToman'] ?? null;
         if (! $price) {
             throw new Problem(400, 'validation', 'پلن معتبر نیست');
         }

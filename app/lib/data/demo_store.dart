@@ -13,6 +13,7 @@ import 'meal_fixtures.dart';
 export 'meal_plan.dart';
 import 'package:flutter/foundation.dart';
 import 'wallet_catalog.dart';
+import 'subscription_catalog.dart';
 import 'package:flutter/material.dart';
 import 'questionnaire_storage.dart';
 import 'nutrition_log_storage.dart';
@@ -464,22 +465,56 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   );
   final Set<String> _qualifiedDays = {};
   StreakProgress get streakProgress => streakServer.progress;
-  List<PlanServiceOffer> get serviceOffers => planServiceOffers
-      .map(
-        (offer) => PlanServiceOffer(
+  List<ServiceOffer>? liveServiceOffers;
+  List<SubscriptionPlanOffer> subscriptionOffers = subscriptionPlanOffers;
+  String? selectedSubscriptionPlanId;
+  SubscriptionPlanOffer? subscriptionById(String? id) =>
+      subscriptionOffers.where((offer) => offer.id == id).firstOrNull;
+  PlanServiceOffer? subscriptionServiceById(String? id) {
+    final plan = subscriptionById(id);
+    if (plan == null) return null;
+    return PlanServiceOffer(
+      id: 'new-plan',
+      title: 'پلن ${plan.title}',
+      subtitle: '${fa(plan.days)} روزه · ${plan.description}',
+      priceToman: plan.priceToman,
+      icon: Icons.workspace_premium_outlined,
+      successLine:
+          'اشتراک ${plan.title} فعال شد و درخواست برنامه غذایی ارسال شد.',
+    );
+  }
+
+  List<PlanServiceOffer> get serviceOffers {
+    final catalog = liveServiceOffers;
+    final offers = <PlanServiceOffer>[];
+    for (final offer in planServiceOffers) {
+      final code = switch (offer.id) {
+        'new-plan' => 'new_plan',
+        'ai-change' => 'ai_revision',
+        _ => 'specialist_revision',
+      };
+      final remote = catalog?.where((item) => item.code == code).firstOrNull;
+      if (catalog != null && remote == null) continue;
+      offers.add(
+        PlanServiceOffer(
           id: offer.id,
-          title: offer.title,
+          title: remote?.title ?? offer.title,
           subtitle: offer.subtitle,
           icon: offer.icon,
           successLine: offer.successLine,
-          priceToman: switch (offer.id) {
-            'new-plan' => newPlanPrice,
-            'ai-change' => aiRevisionPrice,
-            _ => expertRevisionPrice,
-          },
+          priceToman:
+              remote?.priceToman ??
+              switch (offer.id) {
+                'new-plan' => newPlanPrice,
+                'ai-change' => aiRevisionPrice,
+                _ => expertRevisionPrice,
+              },
         ),
-      )
-      .toList();
+      );
+    }
+    return offers;
+  }
+
   PlanServiceOffer? serviceById(String? id) {
     for (final offer in serviceOffers) {
       if (offer.id == id) return offer;
@@ -1708,6 +1743,51 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   }
 
   int walletBalance = kInitialWalletBalance;
+  PlanSubscription? planSubscription;
+  List<PlanPurchase> planPurchases = [];
+  String get subscriptionSummary {
+    final subscription = planSubscription;
+    if (subscription == null) return 'مشاهدهٔ پلن‌ها و تعرفه‌ها';
+    return subscription.activeAt(today)
+        ? '${subscription.title} · فعال'
+        : 'اشتراک پایان یافته · مشاهدهٔ پلن‌ها';
+  }
+
+  bool activateMockPlan(String serviceId, String paymentId, {String? planId}) {
+    final offer = planId == null
+        ? serviceById(serviceId)
+        : subscriptionServiceById(planId);
+    if (offer == null || planPurchases.any((item) => item.id == paymentId)) {
+      return false;
+    }
+    if (serviceId != 'new-plan' && !hasUserRequest) return false;
+    planPurchases.insert(
+      0,
+      PlanPurchase(
+        id: paymentId,
+        title: offer.title,
+        priceToman: offer.priceToman,
+        status: 'paid',
+      ),
+    );
+    if (serviceId == 'new-plan') {
+      final plan = subscriptionById(planId);
+      planSubscription = PlanSubscription(
+        title: offer.title,
+        status: 'active',
+        endsAt: plan == null ? null : today.add(Duration(days: plan.days)),
+      );
+      submitQuestionnaire();
+    } else {
+      userRequest.revisionRequested = true;
+      userRequest.revisionAwaitingUser = false;
+      userRequest.revisionReason = offer.title;
+      userRequest.revisionDetails = 'درخواست پس از پرداخت مستقیم ثبت شد.';
+    }
+    update();
+    return true;
+  }
+
   String? selectedPlanServiceId, selectedChargeId;
   bool walletPurchaseBusy = false, walletPricingOpen = false;
   int _walletSequence = 0;
@@ -2314,8 +2394,13 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     liveServices = null;
     liveOpenQuestions = [];
     liveTopups = [];
+    liveServiceOffers = null;
+    subscriptionOffers = subscriptionPlanOffers;
+    selectedSubscriptionPlanId = null;
     liveShopping = null;
     liveOrderKey = null;
+    planSubscription = null;
+    planPurchases = [];
     liveNotice = null;
     reportShopping = null;
     role = selectedRole = AppRole.user;

@@ -55,7 +55,7 @@ final class ConfiguredGateways implements PaymentGateways
         if ($name !== 'zarinpal' || ! ($this->info($name)['hosted'] ?? false)) {
             throw new \LogicException('Hosted gateway is unavailable');
         }
-        $reply = $this->post('/pg/v4/payment/request.json', ['merchant_id' => $this->config['zarinpal_merchant'], 'amount' => $amountRial, 'callback_url' => $callbackUrl, 'description' => 'شارژ کیف پول سبزینه']);
+        $reply = $this->post('/pg/v4/payment/request.json', ['merchant_id' => $this->config['zarinpal_merchant'], 'amount' => $amountRial, 'callback_url' => $callbackUrl, 'description' => str_contains($callbackUrl, '/checkout/') ? 'خرید پلن رژیم من' : 'شارژ کیف پول سبزینه']);
         $authority = ($reply['data']['code'] ?? null) === 100 ? ($reply['data']['authority'] ?? null) : null;
         if (! is_string($authority) || ! preg_match('/^[A-Za-z0-9]{10,64}$/D', $authority)) {
             throw new \RuntimeException('Gateway request failed');

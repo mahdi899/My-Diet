@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 
 class ServiceOffer {
   const ServiceOffer({
@@ -17,9 +17,14 @@ class TopupPackage {
 }
 
 class Catalog {
-  const Catalog({required this.services, required this.topups});
+  const Catalog({
+    required this.services,
+    required this.topups,
+    this.plans = const [],
+  });
   final List<ServiceOffer> services;
   final List<TopupPackage> topups;
+  final List<SubscriptionPlanOffer> plans;
 
   ServiceOffer? service(String code) {
     for (final s in services) {
@@ -27,6 +32,20 @@ class Catalog {
     }
     return null;
   }
+}
+
+class SubscriptionPlanOffer {
+  const SubscriptionPlanOffer({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.days,
+    required this.priceToman,
+    required this.features,
+  });
+  final String id, title, description;
+  final int days, priceToman;
+  final List<String> features;
 }
 
 class Wallet {
@@ -50,6 +69,59 @@ class TopupStart {
 class OrderResult {
   const OrderResult({required this.orderId, required this.requestId});
   final String orderId, requestId;
+}
+
+class PlanSubscription {
+  const PlanSubscription({
+    required this.title,
+    required this.status,
+    this.endsAt,
+    this.includedChanges = false,
+  });
+  final String title, status;
+  final DateTime? endsAt;
+  final bool includedChanges;
+  bool activeAt(DateTime now) =>
+      status == 'active' && (endsAt == null || endsAt!.isAfter(now));
+}
+
+class PlanPurchase {
+  const PlanPurchase({
+    required this.id,
+    required this.title,
+    required this.priceToman,
+    required this.status,
+  });
+  final String id, title, status;
+  final int priceToman;
+}
+
+class PlanCheckout {
+  const PlanCheckout({
+    required this.status,
+    this.paymentId,
+    this.gateway,
+    this.redirectUrl,
+  });
+  final String status;
+  final String? paymentId, gateway, redirectUrl;
+}
+
+abstract interface class PlanCheckoutRepository {
+  Future<PlanSubscription?> subscription();
+  Future<List<PlanPurchase>> purchases();
+  Future<PlanCheckout> startCheckout({
+    required String serviceCode,
+    required int expectedPriceToman,
+    required String idempotencyKey,
+    String? parentRequestId,
+    String? planId,
+  });
+  Future<PlanCheckout> checkoutStatus(String paymentId);
+  Future<PlanCheckout> completeCheckoutSandbox(
+    String paymentId, {
+    required bool success,
+  });
 }
 
 abstract interface class CommerceRepository {

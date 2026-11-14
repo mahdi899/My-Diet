@@ -17,7 +17,6 @@ import 'shared.dart';
 import 'doctor.dart';
 import 'wallet_flow.dart';
 import 'entry.dart';
-import '../../data/wallet_catalog.dart';
 import '../session/live_session.dart';
 
 class UserHome extends StatefulWidget {
@@ -70,7 +69,7 @@ class _UserHomeState extends State<UserHome> with WidgetsBindingObserver {
           actions: [
             const Padding(
               padding: EdgeInsetsDirectional.only(end: 8),
-              child: Center(child: WalletBalanceChip()),
+              child: Center(child: PlanSubscriptionChip()),
             ),
             IconButton(
               tooltip: 'پیام‌ها',
@@ -263,7 +262,9 @@ class _DoctorQuestionsState extends State<_DoctorQuestions> {
                         showToast(context, store.liveNotice!);
                       }
                     },
-              child: Text(busyId == question.id ? 'در حال ارسال…' : 'ارسال جواب'),
+              child: Text(
+                busyId == question.id ? 'در حال ارسال…' : 'ارسال جواب',
+              ),
             ),
             const SizedBox(height: 12),
           ],
@@ -1151,22 +1152,16 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 if (!expert)
                   MenuRow(
-                    'کیف پول و تعرفه‌ها',
-                    Icons.account_balance_wallet_outlined,
-                    subtitle: '${formatMoneyNumber(store.walletBalance)} تومان',
-                    onTap: () => openPlanServices(context),
+                    'پلن‌ها و اشتراک من',
+                    Icons.workspace_premium_outlined,
+                    subtitle: store.subscriptionSummary,
+                    onTap: () => openPlanServices(context, browseOnly: true),
                   ),
                 if (!expert)
                   MenuRow(
                     'مشخصات دکتر',
                     Icons.medical_information_outlined,
                     onTap: () => pushPage(context, const DoctorDetailsScreen()),
-                  ),
-                if (!expert)
-                  MenuRow(
-                    'سفارش‌ها و پرداخت‌ها',
-                    Icons.credit_card_outlined,
-                    onTap: () => pushPage(context, const OrdersScreen()),
                   ),
               ],
             ),
