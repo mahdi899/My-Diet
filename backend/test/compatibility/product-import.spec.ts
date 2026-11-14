@@ -78,7 +78,7 @@ describe('Full product PostgreSQL to MySQL data rehearsal', {concurrency:1,timeo
   });
   it('serves imported published plans, meal activity and request timelines exactly like Node', async () => {
     const port = await new Promise<number>((resolve,reject) => {const listener=net.createServer();listener.on('error',reject);listener.listen(0,'127.0.0.1',()=>{const port=(listener.address() as net.AddressInfo).port;listener.close(()=>resolve(port));});});
-    server = spawn(php,['-S',`127.0.0.1:${port}`,'-t','public','public/index.php'],{...options(),stdio:['ignore','pipe','pipe']});
+    server = spawn(php,['-S',`127.0.0.1:${port}`,'-t','public','public/index.php'],{...options(),timeout:0,stdio:['ignore','pipe','pipe']});
     let logs=''; server.stderr?.on('data',chunk=>{logs+=String(chunk);}); server.stdout?.on('data',()=>undefined);
     const base = `http://127.0.0.1:${port}`;
     let ready=false;

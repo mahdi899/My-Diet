@@ -86,6 +86,12 @@ final class PlanQueries
         if (! $request) {
             return null;
         }
+
+        return $this->summary($request);
+    }
+
+    public function summary(array $request): array
+    {
         $answers = $this->store->answers($request['id']);
         $questions = array_map(function ($q) use ($answers): array {
             return [...$this->question($q), 'answers' => array_map(fn ($answer) => ['body' => Crypto::decrypt($answer['body'], $this->settings->fieldKey), 'createdAt' => Crypto::iso($answer['created_at'])],
@@ -137,6 +143,6 @@ final class PlanQueries
             throw new Problem(400, 'validation', 'دستهٔ صف شناخته نشد');
         }
 
-        return array_map(fn ($row) => ['id' => $row['id'], 'status' => $row['status'], 'kind' => $row['kind'], 'createdAt' => Crypto::iso($row['created_at']), 'displayName' => $row['display_name']], $this->store->queue($actor,$bucket));
+        return array_map(fn ($row) => ['id' => $row['id'], 'status' => $row['status'], 'kind' => $row['kind'], 'createdAt' => Crypto::iso($row['created_at']), 'displayName' => $row['display_name']], $this->store->queue($actor, $bucket));
     }
 }

@@ -38,4 +38,12 @@ final class HttpFoundationTest extends TestCase
     {
         $this->artisan('migration:status', ['--require-ready' => true])->assertFailed();
     }
+
+    public function test_json_parser_enforces_the_original_object_array_and_three_megabyte_envelope(): void
+    {
+        foreach (['null', 'true', '123', '"text"', '{"broken":'] as $raw) {
+            $this->call('POST', '/v1/auth/otp/request', [], [], [], ['CONTENT_TYPE' => 'application/json'], $raw)->assertStatus(400)->assertJsonPath('code', 'validation');
+        }
+        $this->call('POST', '/v1/auth/otp/request', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['large' => str_repeat('a', 3 * 1024 * 1024)]))->assertStatus(413)->assertJsonPath('code', 'internal');
+    }
 }

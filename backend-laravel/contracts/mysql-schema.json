@@ -2232,40 +2232,7 @@
       "sql": "create index `wallet_ledger_user` on `wallet_ledger`(`user_id`,`created_at` DESC)"
     }
   ],
-  "performanceIndexesPending": [
-    {
-      "name": "food_catalog_allergens",
-      "definition": "CREATE INDEX food_catalog_allergens ON public.food_catalog USING gin (allergens)"
-    },
-    {
-      "name": "food_catalog_meals",
-      "definition": "CREATE INDEX food_catalog_meals ON public.food_catalog USING gin (meal_types)"
-    },
-    {
-      "name": "food_catalog_search",
-      "definition": "CREATE INDEX food_catalog_search ON public.food_catalog USING gin (to_tsvector('simple'::regconfig, name_fa))"
-    },
-    {
-      "name": "food_catalog_tags",
-      "definition": "CREATE INDEX food_catalog_tags ON public.food_catalog USING gin (tags)"
-    },
-    {
-      "name": "meal_history_owner_date",
-      "definition": "CREATE INDEX meal_history_owner_date ON public.meal_log_history USING btree (user_id, ((current ->> 'scheduled_date'::text)), id DESC)"
-    },
-    {
-      "name": "nutrition_profiles_allergens",
-      "definition": "CREATE INDEX nutrition_profiles_allergens ON public.nutrition_profiles USING gin (allergens)"
-    },
-    {
-      "name": "nutrition_profiles_conditions",
-      "definition": "CREATE INDEX nutrition_profiles_conditions ON public.nutrition_profiles USING gin (conditions)"
-    },
-    {
-      "name": "nutrition_profiles_flags",
-      "definition": "CREATE INDEX nutrition_profiles_flags ON public.nutrition_profiles USING gin (risk_flags)"
-    }
-  ],
+  "performanceIndexesPending": [],
   "seeds": {
     "ai_controls": [
       {

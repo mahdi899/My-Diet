@@ -2,6 +2,8 @@
 
 use App\Modules\Identity\Presentation\SessionMiddleware;
 use App\Shared\Domain\Problem;
+use App\Shared\Presentation\Cors;
+use App\Shared\Presentation\JsonEnvelope;
 use App\Shared\Presentation\ProblemRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(JsonEnvelope::class);
+        $middleware->append(Cors::class);
         $middleware->remove([
             TrimStrings::class,
             ConvertEmptyStringsToNull::class,

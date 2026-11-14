@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Modules\Admin\Presentation;
+
+use App\Modules\Admin\Infrastructure\MySqlAnalytics;
+use App\Shared\Domain\Problem;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+final class AnalyticsController
+{
+    public function __construct(private MySqlAnalytics $analytics) {}
+
+    public function report(Request $request): array
+    {
+        $days = (int) ($request->query('days') ?? '7');
+        if (! in_array($days, [1, 7, 30, 90], true)) {
+            throw new Problem(400, 'validation', 'بازهٔ گزارش معتبر نیست');
+        }
+
+        return $this->analytics->report($days, $this->campaign($request));
+    }
+
+    public function live(Request $request): array
+    {
+        return $this->analytics->live($this->campaign($request));
+    }
+
+    public function departures(Request $request): array
+    {
+        $from = $request->query('from');
+        $to = $request->query('to');
+        $within = $request->query('within');
+        $hasFrom = is_string($from) && $from !== '';
+        $hasTo = is_string($to) && $to !== '';
+        $hasWithin = is_string($within) && $within !== '';
+        $since = null;
+        $until = null;
+        if ($hasFrom || $hasTo || $hasWithin) {
+            if ($hasWithin && ($hasFrom || $hasTo)) {
+                throw new Problem(400, 'validation', 'بازهٔ زمانی معتبر نیست');
+            }
+            if ($hasWithin) {
+                $hours = ['24h' => 24, '7d' => 168, '30d' => 720][$within] ?? null;
+                if ($hours === null) {
+                    throw new Problem(400, 'validation', 'بازهٔ زمانی معتبر نیست');
+                }
+                $since = gmdate('Y-m-d H:i:s', time() - $hours * 3600);
+            } else {
+                $start = strtotime(is_string($from) ? $from : '');
+                $end = strtotime(is_string($to) ? $to : '');
+                if ($start === false || $end === false) {
+                    throw new Problem(400, 'validation', 'بازهٔ زمانی معتبر نیست');
+                }
+                if ($start >= $end) {
+                    throw new Problem(400, 'validation', 'شروع بازه باید قبل از پایان آن باشد');
+                }
+                if ($end - $start > 90 * 86400 + 60) {
+                    throw new Problem(400, 'validation', 'بازهٔ زمانی حداکثر ۹۰ روز است');
+                }
+                if ($end > time() + 300) {
+                    throw new Problem(400, 'validation', 'پایان بازه نمی‌تواند در آینده باشد');
+                }
+                $since = gmdate('Y-m-d H:i:s', $start);
+                $until = gmdate('Y-m-d H:i:s', $end);
+            }
+        }
+
+        return $this->analytics->departures($this->campaign($request), $since, $until);
+    }
+
+    public function reset(Request $request): JsonResponse
+    {
+        return response()->json($this->analytics->reset($request->attributes->get('actor')['id']), 201);
+    }
+
+    private function campaign(Request $request): ?string
+    {
+        $campaign = $request->query('campaign');
+        if (! is_string($campaign) || $campaign === '') {
+            return null;
+        }
+        if (! preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $campaign) || strlen($campaign) > 64) {
+            throw new Problem(400, 'validation', 'لینک ورودی معتبر نیست');
+        }
+
+        return $campaign;
+    }
+}

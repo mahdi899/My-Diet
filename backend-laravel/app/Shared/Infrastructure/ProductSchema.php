@@ -26,11 +26,9 @@ final class ProductSchema
             }
         }
         foreach ($schema['indexes'] as $index) {
-            $exists = $this->db->selectOne('select count(*) as n from information_schema.statistics where table_schema=database() and table_name=? and index_name=?', [$index['table'], $index['name']]);
-            if ((int) $exists->n === 0) {
-                $this->db->unprepared($index['sql']);
-            }
+            $this->index($index['table'], $index['name'], $index['sql']);
         }
+        $this->performance();
         if (! config('runtime.skip_product_seeds')) {
             $this->seed($schema['seeds']);
         }
@@ -82,5 +80,32 @@ final class ProductSchema
     public function down(): void
     {
         throw new RuntimeException('Product schema rollback requires a reviewed data restore; destructive table drops are not automatic.');
+    }
+
+    private function index(string $table, string $name, string $sql): void
+    {
+        $exists = $this->db->selectOne('select count(*) as n from information_schema.statistics where table_schema=database() and table_name=? and index_name=?', [$table, $name]);
+        if ((int) $exists->n === 0) {
+            $this->db->unprepared($sql);
+        }
+    }
+
+    /** MySQL replacements for the eight PostgreSQL indexes that were still pending. */
+    private function performance(): void
+    {
+        if ($this->db->selectOne("select count(*) as n from information_schema.columns where table_schema=database() and table_name='meal_log_history' and column_name='scheduled_date_key'")->n === 0) {
+            $this->db->unprepared('alter table meal_log_history add column scheduled_date_key char(10) generated always as (json_unquote(json_extract(`current`, \'$.scheduled_date\'))) stored');
+        }
+        if ($this->db->selectOne("select count(*) as n from information_schema.columns where table_schema=database() and table_name='food_catalog' and column_name='name_fa_search'")->n === 0) {
+            $this->db->unprepared('alter table food_catalog add column name_fa_search varchar(255) character set utf8mb4 collate utf8mb4_0900_ai_ci generated always as (left(name_fa, 255)) stored');
+        }
+        $this->index('food_catalog', 'food_catalog_allergens', "create index food_catalog_allergens on food_catalog ((cast(allergens->'$' as char(64) array)))");
+        $this->index('food_catalog', 'food_catalog_meals', "create index food_catalog_meals on food_catalog ((cast(meal_types->'$' as char(32) array)))");
+        $this->index('food_catalog', 'food_catalog_tags', "create index food_catalog_tags on food_catalog ((cast(tags->'$' as char(64) array)))");
+        $this->index('food_catalog', 'food_catalog_search', 'create fulltext index food_catalog_search on food_catalog (name_fa_search)');
+        $this->index('meal_log_history', 'meal_history_owner_date', 'create index meal_history_owner_date on meal_log_history (user_id, scheduled_date_key, id)');
+        $this->index('nutrition_profiles', 'nutrition_profiles_allergens', "create index nutrition_profiles_allergens on nutrition_profiles ((cast(allergens->'$' as char(64) array)))");
+        $this->index('nutrition_profiles', 'nutrition_profiles_conditions', "create index nutrition_profiles_conditions on nutrition_profiles ((cast(conditions->'$' as char(64) array)))");
+        $this->index('nutrition_profiles', 'nutrition_profiles_flags', "create index nutrition_profiles_flags on nutrition_profiles ((cast(risk_flags->'$' as char(64) array)))");
     }
 }

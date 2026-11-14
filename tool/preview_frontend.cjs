@@ -5,7 +5,7 @@ const { readFile, writeFile, mkdir } = require('node:fs/promises');
 const { existsSync } = require('node:fs');
 const { resolve, sep, extname } = require('node:path');
 const root = resolve(__dirname,'..');
-const apiTarget = new URL(process.env.SABZINE_API_TARGET || 'http://127.0.0.1:3000');
+const apiTarget = new URL(process.env.SABZINE_API_TARGET || 'http://127.0.0.1:8000');
 const onboardingDir = existsSync(resolve(root, 'onboarding')) ? resolve(root, 'onboarding') : resolve(root, '..', 'onboarding');
 const mounts = {admin:resolve(root,'admin'),doctor:resolve(root,'doctor'),app:resolve(root,'app/build/web'),site:resolve(root,'site'),onboarding:onboardingDir};
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.ttf':'font/ttf','.woff2':'font/woff2','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.wasm':'application/wasm'};

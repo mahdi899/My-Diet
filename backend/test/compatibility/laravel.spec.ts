@@ -4,6 +4,7 @@ import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import net from 'node:net';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -11,7 +12,8 @@ import { createRequire } from 'node:module';
 import { bootApp, type Booted } from '../helpers/boot.js';
 import { hashPassword } from '../../src/common/password.js';
 import { decryptText, encryptText } from '../../src/common/field-crypto.js';
-import { verifyAccessToken } from '../../src/common/jwt.js';
+import { verifyAccessToken, signAccessToken } from '../../src/common/jwt.js';
+import { PostgresPlanRepository } from '../../src/plans/infrastructure/postgres-plan-repository.js';
 
 const run = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -39,14 +41,16 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
   let customerId: string;
   const servers: ChildProcess[] = [];
   let env: NodeJS.ProcessEnv;
+  let sourceStopped = false;
   const options = () => ({ cwd: path.join(root, 'backend-laravel'), env, windowsHide: true, timeout: 60_000, maxBuffer: 4 * 1024 * 1024 });
   async function api(base: string, route: string, method = 'GET', body?: unknown, token?: string, headers: Record<string, string> = {}) {
     const response = await fetch(base + route, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
     return { status: response.status, body: await response.json() as Record<string, unknown>, headers: response.headers };
   }
-  async function startPhp(): Promise<string> {
+  async function startPhp(isolated = false): Promise<string> {
     const port = await freePort();
-    const server = spawn(php, ['-S', `127.0.0.1:${port}`, '-t', 'public', 'public/index.php'], { ...options(), stdio: ['ignore', 'pipe', 'pipe'] });
+    const allowedPaths = [path.join(root,'backend-laravel'),os.tmpdir()].join(path.delimiter);
+    const server = spawn(php, [...(isolated ? ['-d','open_basedir='+allowedPaths] : []),'-S', `127.0.0.1:${port}`, '-t', 'public', 'public/index.php'], { ...options(), timeout:0, stdio: ['ignore', 'pipe', 'pipe'] });
     servers.push(server);
     let logs = '';
     server.stderr?.on('data', chunk => { logs += String(chunk); });
@@ -119,7 +123,7 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
         const stopped = new Promise(resolve => server.once('exit', resolve));
         server.kill(); await stopped;
       }));
-    } finally { await source?.stop(); }
+    } finally { if(!sourceStopped) await source?.stop(); }
   });
 
   it('accepts existing Node sessions and returns the same profiles and encrypted personal details', async () => {
@@ -444,6 +448,61 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
     assert.deepEqual(...funnel);
   });
 
+  it('matches doctor draft edits, publication, corrections and audited clinical views with concurrent version checks',async () => {
+    const specialist = (await source.pool.query("select id from users where phone_e164='+989120005555'")).rows[0].id as string;
+    const sid = randomUUID(); const now = Math.floor(Date.now()/1000);
+    const doctor = signAccessToken({sub:specialist,sid,role:'specialist',iat:now,exp:now+600},secrets.JWT_SECRET);
+    await source.pool.query("insert into sessions(id,user_id,created_at,absolute_expires_at) values($1,$2,now(),now()+interval '30 day')",[sid,specialist]);
+    await source.pool.query("update specialist_profiles set verification_status='verified' where user_id=$1",[specialist]);
+    await source.pool.query('update wallets set cash_toman=10000000 where user_id=$1',[customerId]);
+    const setup = 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); $db=$app->make(Illuminate\\Database\\ConnectionInterface::class); $db->statement("insert into sessions(id,user_id,created_at,absolute_expires_at) values(?,?,current_timestamp(6),date_add(current_timestamp(6),interval 30 day))",[$argv[1],$argv[2]]); $db->table("specialist_profiles")->where("user_id",$argv[2])->update(["verification_status"=>"verified"]); $db->table("wallets")->where("user_id",$argv[3])->update(["cash_toman"=>10000000]);';
+    await run(php,['-r',setup,sid,specialist,customerId],options());
+    const fixture = JSON.parse(await readFile(path.join(root,'backend-laravel/tests/Fixtures/node-onboarding.json'),'utf8')).canonical[0];
+    const draft = JSON.parse(await readFile(path.join(root,'backend-laravel/tests/Fixtures/node-plans.json'),'utf8'))[4].input;
+    const requestIds:string[]=[];
+    for (const base of [nodeBase,phpBase]) {
+      assert.equal((await api(base,'/v1/me','PATCH',{displayName:'کاربر آزمایش ویرایش'},customerAccess)).status,200);
+      assert.equal((await api(base,'/v1/me/onboarding/draft','PUT',{track:fixture.track,patch:fixture.answers},customerAccess)).status,200);
+      assert.equal((await api(base,'/v1/me/onboarding/submit','POST',{consent:true},customerAccess)).status,201);
+      const catalog = await api(base,'/v1/catalog');
+      const price = (catalog.body.services as {code:string;priceToman:number}[]).find(s=>s.code === 'new_plan')!.priceToman;
+      const order = await api(base,'/v1/me/orders','POST',{serviceCode:'new_plan',expectedPriceToman:price},customerAccess,{'Idempotency-Key':'editor-integration'});
+      assert.equal(order.status,201,JSON.stringify(order.body)); requestIds.push(order.body.requestId as string);
+    }
+    /** Seed an editable fixture: generation by the background worker has its own readiness gate. */
+    await new PostgresPlanRepository(source.pool).transaction(session=>session.insertDays(requestIds[0]!,1,null,Array.from({length:7},()=>[])));
+    await source.pool.query("update plan_requests set status='in_review',assigned_specialist_id=$2 where id=$1",[requestIds[0],specialist]);
+    const makeDraft = 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); $db=$app->make(Illuminate\\Database\\ConnectionInterface::class); $db->transaction(function()use($app,$db,$argv){ $db->table("plan_requests")->where("id",$argv[1])->update(["status"=>"in_review","assigned_specialist_id"=>$argv[2]]); $app->make(App\\Modules\\Plans\\Application\\PlanEditorStore::class)->createVersion($argv[1],1,null,array_fill(0,7,[])); });';
+    await run(php,['-r',makeDraft,requestIds[1]!,specialist],options());
+    const pair=async (suffix:string,method='GET',body?:unknown,lock?:number)=>{
+      const replies=[];
+      for(const [index,base] of [nodeBase,phpBase].entries()) replies.push(await api(base,'/v1/specialist/requests/'+requestIds[index]+suffix,method,body,doctor,lock === undefined ? {} : {'If-Match':String(lock)}));
+      assert.equal(replies[1]!.status,replies[0]!.status,JSON.stringify(replies[1]!.body));
+      return replies;
+    };
+    const normalized=(value:unknown):unknown=>Array.isArray(value)?value.map(normalized):value && typeof value === 'object'?Object.fromEntries(Object.entries(value).filter(([key])=>!['id','versionId','conversationId','createdAt','publishedAt'].includes(key)).map(([key,item])=>[key,normalized(item)])):value;
+    let views=await pair(''); assert.deepEqual(normalized(views[1]!.body),normalized(views[0]!.body));
+    for(const vector of JSON.parse(await readFile(path.join(root,'backend-laravel/tests/Fixtures/node-plans.json'),'utf8')).filter((v:{error?:unknown})=>v.error)) {
+      const replies=await pair('/draft','PUT',vector.input,1); assert.deepEqual(replies[1]!.body,replies[0]!.body);
+    }
+    const edits=await Promise.all([phpBase,secondBase].map(base=>api(base,'/v1/specialist/requests/'+requestIds[1]+'/draft','PUT',draft,doctor,{'If-Match':'1'})));
+    assert.deepEqual(edits.map(r=>r.status).sort(),[200,409]);
+    assert.equal((await api(nodeBase,'/v1/specialist/requests/'+requestIds[0]+'/draft','PUT',draft,doctor,{'If-Match':'1'})).status,200);
+    views=await pair(''); assert.deepEqual(normalized(views[1]!.body),normalized(views[0]!.body));
+    const published=await Promise.all([phpBase,secondBase].map(base=>api(base,'/v1/specialist/requests/'+requestIds[1]+'/publish','POST',{},doctor,{'If-Match':'2'})));
+    assert.deepEqual(published.map(r=>r.status).sort(),[201,409]);
+    const original=await api(nodeBase,'/v1/specialist/requests/'+requestIds[0]+'/publish','POST',{},doctor,{'If-Match':'2'}); assert.equal(original.status,201);
+    for(const base of [nodeBase,phpBase]) {const result=await api(base,'/v1/me/plan','GET',undefined,customerAccess);assert.equal(result.status,200);assert.equal((result.body.days as unknown[]).length,7);}
+    const corrected=await pair('/corrections','POST',{});assert.deepEqual(corrected[1]!.body,corrected[0]!.body);
+    const blocked=await pair('/publish','POST',{},1);assert.equal(blocked[0]!.status,409);assert.deepEqual(blocked[1]!.body,blocked[0]!.body);
+    await pair('/draft','PUT',draft,1);const republished=await pair('/publish','POST',{},2);assert.equal(republished[0]!.status,201);
+    views=await pair(''); assert.deepEqual(normalized(views[1]!.body),normalized(views[0]!.body));
+    const versions=[];
+    for(const base of [nodeBase,phpBase]) versions.push((await api(base,'/v1/specialist/patients/'+customerId+'/plan-versions','GET',undefined,doctor)).body);
+    const normalizeVersions=(value:unknown)=> (value as Record<string,unknown>[]).map(({requestId,...rest})=>normalized(rest));
+    assert.deepEqual(normalizeVersions(versions[1]),normalizeVersions(versions[0]));
+  });
+
   it('connects real React site, admin and doctor screens to Laravel/MySQL with login and refresh', {skip:!process.env.PLAYWRIGHT_MODULE}, async () => {
     const {chromium} = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE!);
     const port = await freePort();
@@ -529,5 +588,22 @@ describe('Node/PostgreSQL to Laravel/MySQL compatibility', { concurrency: 1, tim
       console.error('React browser verification failed:',error);
       throw error;
     } finally { await browser.close(); }
+  });
+
+  it('serves migrated API reads and writes after the Node backend and its PostgreSQL source are stopped',async () => {
+    const isolatedBase = await startPhp(true);
+    const isolatedReader = await startPhp(true);
+    await source.stop(); sourceStopped = true;
+    await assert.rejects(fetch(nodeBase+'/health/live'));
+    for(const route of ['/health/ready','/v1/catalog','/v1/public/onboarding-spec','/v1/public/articles','/v1/me/onboarding','/v1/me/plan']) {
+      const response = await api(isolatedBase,route,'GET',undefined,customerAccess);
+      assert.equal(response.status,200,route+': '+JSON.stringify(response.body));
+    }
+    const login = await api(isolatedBase,'/v1/auth/admin/login','POST',{username:'migration-admin',password});
+    assert.equal(login.status,201);
+    assert.equal((await api(isolatedBase,'/v1/admin/onboarding/profiles','GET',undefined,login.body.accessToken as string)).status,200);
+    const changed = await api(isolatedBase,'/v1/me','PATCH',{displayName:'کاربر مستقل لاراول'},customerAccess);
+    assert.equal(changed.status,200,JSON.stringify(changed.body));
+    assert.equal((await api(isolatedReader,'/v1/me','GET',undefined,customerAccess)).body.displayName,'کاربر مستقل لاراول');
   });
 });

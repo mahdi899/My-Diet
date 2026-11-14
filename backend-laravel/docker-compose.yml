@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: sabzine
+      MYSQL_DATABASE: sabzine
+      MYSQL_USER: sabzine
+      MYSQL_PASSWORD: sabzine
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-psabzine"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - sabzine_mysql:/var/lib/mysql
+
+  api:
+    build:
+      context: .
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_ROLE: api
+      NODE_ENV: development
+      DB_CONNECTION: mysql
+      DATABASE_URL: mysql://sabzine:sabzine@mysql:3306/sabzine
+      JWT_SECRET: dev-only-jwt-secret-not-for-production
+      OTP_PEPPER: dev-only-otp-pepper-not-for-production
+      FIELD_KEY: dev-only-field-key-not-for-production
+      SMS_PROVIDER: console
+      PAYMENT_GATEWAY: sandbox
+      AI_HTTP: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ["sh", "-c", "php artisan migrate --force --no-interaction && php artisan serve --host=0.0.0.0 --port=8000 --no-reload"]
+
+  worker:
+    build:
+      context: .
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_ROLE: worker
+      NODE_ENV: development
+      DB_CONNECTION: mysql
+      DATABASE_URL: mysql://sabzine:sabzine@mysql:3306/sabzine
+      JWT_SECRET: dev-only-jwt-secret-not-for-production
+      OTP_PEPPER: dev-only-otp-pepper-not-for-production
+      FIELD_KEY: dev-only-field-key-not-for-production
+      SMS_PROVIDER: console
+      PAYMENT_GATEWAY: sandbox
+      AI_HTTP: "false"
+    depends_on:
+      api:
+        condition: service_started
+    command: ["php", "artisan", "sabzine:work"]
+
+volumes:
+  sabzine_mysql:

@@ -32,6 +32,18 @@ final class LegacyCrypto
         return substr($hex, 0, 8).'-'.substr($hex, 8, 4).'-'.substr($hex, 12, 4).'-'.substr($hex, 16, 4).'-'.substr($hex, 20);
     }
 
+    public static function hashPassword(string $password, int $minimum = 12): string
+    {
+        $length = strlen(mb_convert_encoding($password, 'UTF-16LE', 'UTF-8')) / 2;
+        if ($length < $minimum || $length > 256) {
+            throw new RuntimeException('Password must contain 12–256 characters');
+        }
+        $salt = bin2hex(random_bytes(16));
+        $hash = sodium_crypto_pwhash_scryptsalsa208sha256(64, $password, $salt, 524288, 16777216);
+
+        return $salt.':'.bin2hex($hash);
+    }
+
     public static function verifyPassword(string $password, string $encoded): bool
     {
         $parts = explode(':', $encoded);

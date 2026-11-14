@@ -21,8 +21,17 @@ final class CivilDates
         return self::add($date, -(($weekday + 1) % 7));
     }
 
+    public static function now(): \DateTimeImmutable
+    {
+        $override = getenv('SABZINE_NOW');
+
+        return new \DateTimeImmutable(is_string($override) && $override !== '' ? $override : 'now', new \DateTimeZone('UTC'));
+    }
+
     public static function today(?string $instant = null): string
     {
-        return (new \DateTimeImmutable($instant ?? 'now', new \DateTimeZone('UTC')))->setTimezone(new \DateTimeZone('Asia/Tehran'))->format('Y-m-d');
+        $base = $instant !== null ? new \DateTimeImmutable($instant, new \DateTimeZone('UTC')) : self::now();
+
+        return $base->setTimezone(new \DateTimeZone('Asia/Tehran'))->format('Y-m-d');
     }
 }

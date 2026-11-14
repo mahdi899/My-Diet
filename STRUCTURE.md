@@ -2,7 +2,7 @@
 
 پنج سطح محصول داریم و یک بک‌اند فعال در `backend/`. بک‌اند را به چهار سرویس جدا تقسیم نکن: پرداخت، پروفایل، سفارش برنامه و پاداش باید در یک تراکنش بنشینند. دیتابیس نسخهٔ فعال PostgreSQL است. فرایندها دو تا هستند، هر دو از همین کد: `api` و `worker`.
 
-نسخهٔ جایگزین در `backend-laravel/` با Laravel و MySQL در حال انتقال است؛ MySQL 8.4 LTS مبنای تست است و نسخهٔ سرور مقصد هنوز تعیین نشده. schema شامل ۱۱۷ جدول و ابزار انتقال آزمایشی دادهٔ محصول پیاده شده است. Identity، Health، Questionnaire، Food، Publishing، Money و Onboarding اپ/وب و پرداخت آن منتقل شده‌اند؛ برنامه و پنل مدیر بخشی از مسیرها را پوشش می‌دهند. اکنون ۱۱۲ مسیر از ۲۷۱ قرارداد ثبت شده است. سایر عملیات، worker و تعویض محیط اصلی هنوز کامل نشده‌اند. وضعیت دقیق و دستورهای تست در `backend-laravel/README.md` و `php artisan migration:status` است. مسیر انتشار فعال هنوز تغییر نکرده است.
+نسخهٔ جایگزین در `backend-laravel/` با Laravel و MySQL در حال انتقال است؛ MySQL 8.4 LTS مبنای تست است و نسخهٔ سرور مقصد هنوز تعیین نشده. schema شامل ۱۱۷ جدول و ابزار انتقال آزمایشی دادهٔ محصول پیاده شده است. Identity، Health، Questionnaire، Food، Publishing، Money و Onboarding اپ/وب و پرداخت آن منتقل شده‌اند؛ برنامه و پنل مدیر بخشی از مسیرها را پوشش می‌دهند. ویرایش، انتشار و اصلاح برنامه با کنترل نسخه نیز پیاده شده است. اکنون ۱۱۸ مسیر از ۲۷۱ قرارداد ثبت شده است. سایر عملیات، worker و تعویض محیط اصلی هنوز کامل نشده‌اند و بک‌اند Node هنوز قابل حذف نیست. وضعیت دقیق و دستورهای تست در `backend-laravel/README.md` و `php artisan migration:status` است. مسیر انتشار فعال هنوز تغییر نکرده است.
 
 آدرس‌های عمومی و اسکریپت دیپلوی به نام پوشه‌های ریشه وابسته‌اند. این نام‌ها را عوض نکن.
 
@@ -88,7 +88,7 @@ app/lib/
 ```powershell
 cd app
 flutter pub get
-flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:3000
+flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:8000
 ```
 
 ```powershell
@@ -96,5 +96,7 @@ cd backend
 npm run start:dev
 ```
 
-پنل: http://127.0.0.1:3000/admin/
-پزشک: http://127.0.0.1:3000/doctor/
+پنل Nest: http://127.0.0.1:3000/admin/
+پزشک Nest: http://127.0.0.1:3000/doctor/
+پنل Laravel: http://127.0.0.1:8000/admin/
+پزشک Laravel: http://127.0.0.1:8000/doctor/

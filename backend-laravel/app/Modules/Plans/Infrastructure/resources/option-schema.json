@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "optionId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "primary",
+        "ai_alternative",
+        "specialist_alternative"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "portion": {
+      "type": "object",
+      "properties": {
+        "quantity": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "g",
+            "kg",
+            "ml",
+            "l",
+            "piece",
+            "serving",
+            "cup",
+            "tbsp",
+            "tsp"
+          ]
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "raw",
+            "cooked",
+            "as_served",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "quantity",
+        "unit",
+        "basis"
+      ],
+      "additionalProperties": false
+    },
+    "calories": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "preparationMinutes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1440
+    },
+    "instructions": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "ingredients": {
+      "minItems": 1,
+      "maxItems": 30,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "quantity": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "g",
+              "kg",
+              "ml",
+              "l",
+              "piece",
+              "serving",
+              "cup",
+              "tbsp",
+              "tsp"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "raw",
+              "cooked",
+              "as_served",
+              "unknown"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "produce",
+              "dairy",
+              "protein",
+              "grains",
+              "pantry",
+              "other"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "quantity",
+          "unit",
+          "basis"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "approved": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "optionId",
+    "kind",
+    "title",
+    "portion",
+    "calories",
+    "preparationMinutes",
+    "instructions",
+    "ingredients",
+    "approved"
+  ],
+  "additionalProperties": false
+}

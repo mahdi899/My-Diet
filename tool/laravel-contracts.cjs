@@ -1,9 +1,40 @@
-/* Snapshot the actual Nest decorators; no endpoints are inferred from documentation. */
+/* Snapshot the actual Nest decorators; no endpoints are inferred from documentation.
+ * --check validates the frozen files only and does not read backend/.
+ * --against-source (and a bare run) still need the Nest tree. */
 const fs = require('node:fs');
 const path = require('node:path');
-const ts = require('../backend/node_modules/typescript');
 const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
+const target = path.join(root, 'backend-laravel/contracts/nest-routes.json');
+const snapshotDirectory = path.join(root, 'backend-laravel/contracts/postgres-source');
+const manifest = JSON.parse(fs.readFileSync(path.join(snapshotDirectory, 'manifest.json'), 'utf8'));
+
+function snapshotHashes() {
+  const names = Object.keys(manifest).sort();
+  for (const name of names) {
+    const file = path.join(snapshotDirectory, name);
+    if (!fs.existsSync(file)) throw new Error('PostgreSQL source snapshot is missing: ' + name);
+    const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    if (hash !== manifest[name]) throw new Error('PostgreSQL source snapshot mismatch: ' + name);
+  }
+  return names.length;
+}
+
+if (process.argv.includes('--check') && !process.argv.includes('--against-source')) {
+  const saved = JSON.parse(fs.readFileSync(target, 'utf8'));
+  if (!Array.isArray(saved.routes) || saved.routes.length < 271) throw new Error('frozen Nest contract snapshot is incomplete');
+  for (const route of saved.routes) {
+    for (const field of ['method', 'path', 'public', 'roles', 'defaultStatus', 'module', 'source', 'handler']) {
+      if (route[field] === undefined) throw new Error('frozen route is missing ' + field);
+    }
+  }
+  const snapshots = snapshotHashes();
+  console.log(`${saved.routes.length} frozen Nest HTTP contracts verified without reading backend/.`);
+  console.log(`${snapshots} PostgreSQL source snapshots verified from the frozen copies.`);
+  process.exit(0);
+}
+
+const ts = require('../backend/node_modules/typescript');
 const methods = new Set(['Get', 'Post', 'Put', 'Patch', 'Delete', 'Head', 'Options', 'All']);
 function decorators(node) {
   return (ts.getDecorators(node) || []).map(d => {
@@ -54,17 +85,14 @@ function visit(directory) {
 visit(path.join(root, 'backend/src'));
 routes.sort((a, b) => a.path.localeCompare(b.path, 'en') || a.method.localeCompare(b.method, 'en'));
 const output = JSON.stringify({ schemaVersion: 1, routes }, null, 2) + '\n';
-const target = path.join(root, 'backend-laravel/contracts/nest-routes.json');
-if (process.argv.includes('--check')) {
+if (process.argv.includes('--against-source')) {
   if (fs.readFileSync(target, 'utf8') !== output) throw new Error('Nest contract inventory is stale. Run node tool/laravel-contracts.cjs');
 } else {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, output);
 }
-console.log(`${routes.length} Nest HTTP contracts ${process.argv.includes('--check') ? 'verified' : 'recorded'}.`);
+console.log(`${routes.length} Nest HTTP contracts ${process.argv.includes('--against-source') ? 'verified against source' : 'recorded'}.`);
 const sourceDirectory = path.join(root, 'backend/migrations');
-const snapshotDirectory = path.join(root, 'backend-laravel/contracts/postgres-source');
-const manifest = JSON.parse(fs.readFileSync(path.join(snapshotDirectory, 'manifest.json'), 'utf8'));
 const sqlFiles = fs.readdirSync(sourceDirectory).filter(f => f.endsWith('.sql')).sort();
 if (JSON.stringify(sqlFiles) !== JSON.stringify(Object.keys(manifest).sort())) throw new Error('PostgreSQL migration inventory is stale.');
 for (const name of sqlFiles) {

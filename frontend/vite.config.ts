@@ -17,7 +17,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/v1': {
-        target: process.env.SABZINE_API_TARGET || 'http://127.0.0.1:3000',
+        target: process.env.SABZINE_API_TARGET || 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },
