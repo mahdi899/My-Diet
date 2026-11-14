@@ -84,7 +84,7 @@ export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
           )
         })}
       </div>
-      <button id="aiReadyGoBtn" type="button" className="quiz-green-btn" disabled={!specialistId} onClick={onContinue}>
+      <button id="aiReadyGoBtn" type="button" className="quiz-green-btn w-full" disabled={!specialistId} onClick={onContinue}>
         <span>انتخاب پلن و ادامه</span>
         <span aria-hidden="true">←</span>
       </button>

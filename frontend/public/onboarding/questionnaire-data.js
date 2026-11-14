@@ -70,6 +70,7 @@
       category: CAT.general,
       q: 'به چه غذاهایی حساسیت داری؟',
       multi: true,
+      exclusiveLabels: ['بدون حساسیت'],
       options: [O('بدون حساسیت'), O('لبنیات'), O('آجیل'), O('تخم‌مرغ'), O('گلوتن'), O('سایر')],
       followUpText: true,
       followUpWhenLabel: ['لبنیات', 'آجیل', 'تخم‌مرغ', 'گلوتن', 'سایر'],

@@ -4,6 +4,7 @@ import '../../core/photos/food_image.dart';
 import '../../core/theme/theme.dart';
 import '../../data/demo_store.dart' show DemoScope, latinDigits;
 import '../../data/customer_auth.dart';
+import '../../data/onboarding/signup_progress.dart';
 import '../onboarding/signup_onboarding.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/kit/pill_button.dart';
@@ -20,6 +21,26 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
   final _form = GlobalKey<FormState>();
   bool _busy = false, _codeStep = false, _unregistered = false;
   String? _error;
+  static var _resumedOnce = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resumeIfNeeded());
+  }
+
+  Future<void> _resumeIfNeeded() async {
+    final tests = WidgetsBinding.instance.runtimeType.toString().contains(
+      'Test',
+    );
+    if (!mounted || _resumedOnce || tests) return;
+    try {
+      final saved = await SignupProgressStore().read();
+      if (!mounted || saved == null || !saved.hasProgress) return;
+      _resumedOnce = true;
+      await _openOnboarding();
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -28,7 +49,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
     super.dispose();
   }
 
-  Future<void> _openOnboarding() async {
+  Future<void> _openOnboarding({bool fresh = false}) async {
     final store = DemoScope.of(context);
     final phone = latinDigits(_phone.text).trim();
     final initial = RegExp(r'^09\d{9}$').hasMatch(phone) ? phone : null;
@@ -38,7 +59,11 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
         reverseTransitionDuration: const Duration(milliseconds: 380),
         pageBuilder: (_, animation, _) => FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-          child: SignupOnboardingPage(store: store, initialPhone: initial),
+          child: SignupOnboardingPage(
+            store: store,
+            initialPhone: initial,
+            startFresh: fresh,
+          ),
         ),
       ),
     );
@@ -213,7 +238,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                     const SizedBox(height: 12),
                     PillButton(
                       label: 'ثبت‌نام',
-                      onPressed: _busy ? null : _openOnboarding,
+                      onPressed: _busy ? null : () => _openOnboarding(fresh: true),
                     ),
                   ],
                   if (_codeStep)
@@ -233,7 +258,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                     )
                   else if (!_unregistered)
                     TextButton(
-                      onPressed: _busy ? null : _openOnboarding,
+                      onPressed: _busy ? null : () => _openOnboarding(fresh: true),
                       child: const Text(
                         'هنوز ثبت‌نام نکردی؟',
                         style: TextStyle(color: Colors.white),

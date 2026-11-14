@@ -297,10 +297,12 @@ class WeightDial extends StatelessWidget {
     required this.step,
     required this.unit,
     required this.onChanged,
+    this.hint,
   });
 
   final double value, min, max, step;
   final String unit;
+  final String? hint;
   final ValueChanged<double> onChanged;
 
   void _stepBy(int direction) {
@@ -334,6 +336,14 @@ class WeightDial extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(unit, style: const TextStyle(color: muted, fontSize: 18)),
+        if (hint != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            hint!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: muted, fontSize: 13),
+          ),
+        ],
         const SizedBox(height: 22),
         _HoldArrow(
           icon: Icons.arrow_downward_rounded,

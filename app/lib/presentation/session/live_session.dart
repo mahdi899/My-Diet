@@ -113,6 +113,7 @@ Future<bool> buyLiveService(DemoStore store, String serviceId) async {
 
 /// Reloads the request, the published plan and the wallet into the original shell.
 Future<void> refreshLive(DemoStore store, {ProfileSummary? profile}) async {
+  if (store.customerAuth?.session == null) return;
   if (store.customerAuth == null && store.liveServices == null) return;
   final services = ensureLiveServices(store);
   PlanRequestInfo? request;

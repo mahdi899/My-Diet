@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/format/digits.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/theme.dart';
 import '../../data/customer_auth.dart';
-import '../../data/demo_store.dart';
+import '../../data/demo_store.dart' hide fa;
 import '../../data/network/customer_api_client.dart';
 import '../../data/onboarding/http_onboarding_repository.dart';
+import '../../data/onboarding/signup_progress.dart';
 import '../../domain/onboarding/onboarding.dart';
 import '../../domain/onboarding/spec.dart';
 import '../../core/photos/food_image.dart';
 import '../widgets/kit/pill_button.dart';
+import 'after_answers.dart';
 import 'controller.dart';
 import 'onboarding_flow.dart';
 
@@ -20,10 +23,14 @@ class SignupOnboardingPage extends StatefulWidget {
     super.key,
     required this.store,
     this.initialPhone,
+    this.startFresh = false,
   });
 
   final DemoStore store;
   final String? initialPhone;
+
+  /// The signup button starts the questionnaire over so answers can be entered again.
+  final bool startFresh;
 
   @override
   State<SignupOnboardingPage> createState() => _SignupOnboardingPageState();
@@ -31,8 +38,11 @@ class SignupOnboardingPage extends StatefulWidget {
 
 class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
   OnboardingController? controller;
+  _LocalOnboardingRepository? _local;
+  SignupCheckpoint? _saved;
   String? error;
   bool loading = true;
+  bool _afterAnswers = false;
 
   @override
   void initState() {
@@ -67,9 +77,15 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
       final spec = OnboardingSpec.fromJson(
         await auth.publicGet('public/onboarding-spec'),
       );
+      if (widget.startFresh) await SignupProgressStore().clear();
+      final saved = widget.startFresh
+          ? null
+          : await SignupProgressStore().read();
       if (!mounted) return;
       controller?.dispose();
-      final local = _LocalOnboardingRepository(spec);
+      final local = _LocalOnboardingRepository(spec, saved);
+      _local = local;
+      _saved = saved;
       controller = OnboardingController(
         repository: _SubmittingRepository(
           local: local,
@@ -77,14 +93,30 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
           auth: auth,
         ),
         spec: spec,
-        state: const OnboardingState(
-          nextStep: NextStep.start,
-          claimedFromDemo: false,
-          track: null,
-          missing: [],
-        ),
+        state: saved == null || !saved.hasProgress
+            ? const OnboardingState(
+                nextStep: NextStep.start,
+                claimedFromDemo: false,
+                track: null,
+                missing: [],
+              )
+            : OnboardingState(
+                nextStep: NextStep.resume,
+                claimedFromDemo: false,
+                track: saved.track,
+                missing: const [],
+                draft: DraftSnapshot(
+                  answers: saved.answers,
+                  stepKey: saved.stepKey,
+                  progress: saved.progress,
+                  version: 1,
+                ),
+              ),
       );
-      setState(() => loading = false);
+      setState(() {
+        loading = false;
+        _afterAnswers = saved != null && saved.stage != 'quiz';
+      });
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {
@@ -122,6 +154,47 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
 
   void _close() {
     if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+  }
+
+  /// Local 123456 has no server session. Mark the shell ready so AppRoot
+  /// opens the app instead of LiveEntry, which would sign the user out.
+  void _enterLocally(String phone) {
+    final store = widget.store;
+    _applyOnboardingAnswers();
+    store.login(AppRole.user, phone: phone);
+    store.pendingPlanAcquisition = false;
+    store.entryStage = EntryStage.home;
+    store.liveReady = true;
+    store.questionnaireComplete = true;
+    store.attachDemoUserRequest();
+    store.update();
+  }
+
+  void _applyOnboardingAnswers() {
+    final answers = controller?.answers;
+    if (answers == null) return;
+    final profile = widget.store.questionnaire;
+    final name = answers['name'];
+    if (name is String && name.trim().isNotEmpty) profile.name = name.trim();
+    final age = _figure(answers['age']);
+    if (age != null) profile.age = age;
+    final height = _figure(answers['height_cm']);
+    if (height != null) profile.height = height;
+    final weight = _figure(answers['weight_kg'], round: true);
+    if (weight != null) profile.weight = weight;
+    final target = _figure(answers['target_weight_kg'], round: true);
+    if (target != null) profile.targetWeight = target;
+    final sex = answers['sex'];
+    if (sex == 'female') profile.sex = 'زن';
+    if (sex == 'male') profile.sex = 'مرد';
+    final goal = controller?.spec.track(controller?.track)?.title;
+    if (goal != null && goal.isNotEmpty) profile.goal = goal;
+    profile.consent = true;
+  }
+
+  String? _figure(Object? value, {bool round = false}) {
+    if (value is! num) return null;
+    return fa(round ? value.round() : value);
   }
 
   @override
@@ -175,20 +248,108 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
         ),
       );
     }
+    if (_afterAnswers) {
+      return AfterAnswersFlow(
+        onExit: _close,
+        initialPhone: widget.initialPhone,
+        age: _figure(controller!.answers['age']),
+        height: _figure(controller!.answers['height_cm']),
+        weight: _figure(controller!.answers['weight_kg'], round: true),
+        goal: controller!.spec.track(controller!.track)?.title,
+        requestCode: (phone) => widget.store.customerAuth!.requestCode(phone),
+        verifyCode: (phone, code) => widget.store.verifyLoginCode(phone, code),
+        initialStage: _saved?.stage ?? 'analysis',
+        initialSpecialistId: _saved?.specialistId,
+        initialPlanId: _saved?.planId,
+        initialOfferedIds: _saved?.offeredIds ?? const [],
+        onProgress:
+            ({
+              required String stage,
+              required List<String> offeredIds,
+              String? specialistId,
+              String? planId,
+            }) {
+              final local = _local;
+              if (local == null) return;
+              local.stage = stage;
+              local.offeredIds = offeredIds;
+              local.specialistId = specialistId;
+              local.planId = planId;
+              local.remember();
+            },
+        onVerified: () async {
+          final localOnly =
+              widget.store.userSignedIn &&
+              widget.store.customerAuth?.session == null;
+          if (localOnly) {
+            _enterLocally(widget.store.sessionPhone);
+            await SignupProgressStore().clear();
+            widget.store.suppressLiveEntry = false;
+            widget.store.update();
+            if (mounted) _close();
+            return true;
+          }
+          final profile = await controller!.submit();
+          if (profile != null) await SignupProgressStore().clear();
+          if (profile != null && mounted) _close();
+          return profile != null;
+        },
+      );
+    }
     return OnboardingFlow(
       controller: controller!,
       onExit: _close,
+      releaseWithoutSubmit: true,
+      onQuestionnaireDone: () {
+        final local = _local;
+        if (local != null) {
+          local.stage = 'analysis';
+          local.remember();
+        }
+        if (mounted) setState(() => _afterAnswers = true);
+      },
       onDone: (_) => _close(),
     );
   }
 }
 
 class _LocalOnboardingRepository implements OnboardingRepository {
-  _LocalOnboardingRepository(this._spec);
+  _LocalOnboardingRepository(this._spec, SignupCheckpoint? saved)
+    : track = saved?.track,
+      answers = Map<String, Object?>.from(saved?.answers ?? const {}),
+      stepKey = saved?.stepKey,
+      progressValue = saved?.progress ?? 0,
+      stage = saved?.stage ?? 'quiz',
+      offeredIds = List<String>.of(saved?.offeredIds ?? const []),
+      specialistId = saved?.specialistId,
+      planId = saved?.planId;
+
   final OnboardingSpec _spec;
-  final Answers answers = {};
+  final SignupProgressStore _progress = SignupProgressStore();
+  final Answers answers;
   String? track;
+  String? stepKey;
+  int progressValue;
+  String stage;
+  List<String> offeredIds;
+  String? specialistId;
+  String? planId;
   int version = 0;
+
+  Future<void> remember() {
+    return _progress.write(
+      SignupCheckpoint(
+        track: track,
+        answers: answers,
+        stepKey: stepKey,
+        progress: progressValue,
+        stage: stage,
+        offeredIds: offeredIds,
+        specialistId: specialistId,
+        planId: planId,
+      ),
+    );
+  }
 
   @override
   Future<OnboardingSpec> spec() async => _spec;
@@ -217,7 +378,10 @@ class _LocalOnboardingRepository implements OnboardingRepository {
         answers[key] = value;
       }
     });
+    if (stepKey != null) this.stepKey = stepKey;
+    progressValue = progress ?? progressValue;
     version += 1;
+    await remember();
     return version;
   }
 
@@ -239,6 +403,22 @@ class _SubmittingRepository implements OnboardingRepository {
   final _LocalOnboardingRepository local;
   final Future<void> Function() ensureAccount;
   final CustomerAuth auth;
+
+  void _keepTargetLegal() {
+    final weight = local.answers['weight_kg'];
+    final target = local.answers['target_weight_kg'];
+    if (weight is! num || target is! num) return;
+    const step = 0.5;
+    if (local.track == 'weight_loss' && target >= weight) {
+      local.answers['target_weight_kg'] = double.parse(
+        (weight - step).toStringAsFixed(1),
+      );
+    } else if (local.track == 'weight_gain' && target <= weight) {
+      local.answers['target_weight_kg'] = double.parse(
+        (weight + step).toStringAsFixed(1),
+      );
+    }
+  }
 
   @override
   Future<OnboardingSpec> spec() => local.spec();
@@ -273,6 +453,7 @@ class _SubmittingRepository implements OnboardingRepository {
         local.answers[key] = value;
       }
     });
+    _keepTargetLegal();
     await ensureAccount();
     final http = HttpOnboardingRepository(CustomerApiClient(auth));
     await http.saveDraft(

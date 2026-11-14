@@ -32,6 +32,15 @@ function selectedIndex(question: QuizQuestion, answer: AnswerValue | undefined, 
   return Boolean(answer && typeof answer === 'object' && 'choice' in answer && answer.choice === index)
 }
 
+function optionLockedByExclusive(question: QuizQuestion, answer: AnswerValue | undefined, optionIndex: number) {
+  const exclusive = question.exclusiveLabels ?? []
+  if (!exclusive.length) return false
+  const label = question.options?.[optionIndex]?.label ?? ''
+  const choices = answer && typeof answer === 'object' && 'choices' in answer ? answer.choices : []
+  const exclusiveActive = choices.some((item) => exclusive.includes(question.options?.[item]?.label ?? ''))
+  return exclusiveActive && !exclusive.includes(label)
+}
+
 export function QuizStage({ onSubmit }: { onSubmit: () => void }) {
   const navigate = useNavigate()
   const wizard = useWizard()
@@ -135,8 +144,8 @@ export function QuizStage({ onSubmit }: { onSubmit: () => void }) {
       <div className="relative">
         <div id="quizScrollViewport" className="quiz-single-view">
           <div id="questionsVerticalList" className="quiz-question-stack">
-            <div className="quiz-question-hero" aria-hidden="true">
-              <img src={assetUrl(question.heroImage || 'assets/quiz-hero-diet.jpg')} alt="" />
+            <div className="quiz-question-hero quiz-question-hero--fixed" aria-hidden="true">
+              <img src={assetUrl('assets/quiz-hero-diet.jpg')} alt="" />
             </div>
             <article className={`question-card question-step-enter state-active ${showImageTitle ? 'age-question-shell' : ''}`}>
               <div>
@@ -170,7 +179,7 @@ export function QuizStage({ onSubmit }: { onSubmit: () => void }) {
             </article>
           </div>
           {allAnswered && (
-            <div className="max-w-2xl mx-auto px-1 pb-6 text-center">
+            <div id="submitAnswersSection" className="quiz-submit-bar w-full max-w-[560px] mx-auto px-4 pb-6 pt-2 text-center box-border">
               <button type="button" className="quiz-green-btn cta-pulse w-full py-4 rounded-2xl font-black text-lg" onClick={onSubmit}>
                 ثبت پاسخ‌ها
               </button>
@@ -330,8 +339,20 @@ function QuestionBody({
       <div className={compact ? 'quiz-choice-grid quiz-choice-grid--compact' : 'grid grid-cols-1 sm:grid-cols-2 gap-2.5'}>
         {question.options?.map((option, index) => {
           const selected = selectedIndex(question, answer, index)
+          const locked = optionLockedByExclusive(question, answer, index)
           return (
-            <button key={option.label} type="button" data-q-index={index} className={'quiz-option-btn w-full text-right p-3.5 rounded-2xl border-2 flex items-center justify-between gap-3' + (selected ? ' is-selected' : '')} onClick={() => onOption(index)}>
+            <button
+              key={option.label}
+              type="button"
+              data-q-index={index}
+              disabled={locked}
+              className={
+                'quiz-option-btn w-full text-right p-3.5 rounded-2xl border-2 flex items-center justify-between gap-3'
+                + (selected ? ' is-selected' : '')
+                + (locked ? ' is-choice-locked' : '')
+              }
+              onClick={() => onOption(index)}
+            >
               <span className="text-sm font-bold leading-snug flex-1">
                 {option.label}
                 {question.ui === 'loss-pace' && option.pace && <small className="loss-pace-description">{lossPaceText(option.pace, questions, answers)}</small>}

@@ -82,10 +82,14 @@ final class IdentityService
             if (! $row || $row['consumed_at'] || $row['superseded_at'] || $row['locked_at']) {
                 throw new Problem(401, 'unauthorized', 'کد واردشده درست نیست');
             }
-            if ($row['expired']) {
+            $fixed = $this->settings->environment === 'development'
+                && is_string($this->settings->fixedOtp)
+                && $this->settings->fixedOtp !== ''
+                && hash_equals($this->settings->fixedOtp, $code);
+            if ($row['expired'] && ! $fixed) {
                 throw new Problem(401, 'unauthorized', 'کد منقضی شده است');
             }
-            $valid = hash_equals($row['code_hmac'], $this->otpHmac($row['id'], $code));
+            $valid = $fixed || hash_equals($row['code_hmac'], $this->otpHmac($row['id'], $code));
             $this->store->consumeOtp($row['id'], $valid);
             if (! $valid) {
                 return new Problem(401, 'unauthorized', $row['attempts'] + 1 >= 5 ? 'کد دیگر معتبر نیست. کد جدید بگیرید' : 'کد واردشده درست نیست');
