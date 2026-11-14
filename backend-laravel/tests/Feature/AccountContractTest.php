@@ -50,7 +50,7 @@ final class AccountContractTest extends MySqlTestCase
         self::assertSame('first_visit', $this->db->table('journey_sessions')->where('id', $session)->value('session_type'));
         $this->actor('admin');
         $this->getJson('/v1/admin/reports/retention?from=2026-11-14&to=2026-11-14&event=nope')->assertStatus(400);
-        $this->getJson('/v1/admin/reports/retention?from=2026-11-14&to=2026-11-14')->assertOk()->assertJsonPath('rows.0.cells.week4.status', 'not_yet_measurable');
+        $this->getJson('/v1/admin/reports/retention?from=2026-11-14&to=2026-11-14')->assertOk()->assertJsonPath('rows.0.cells.week4.state', 'not_yet_measurable');
         $this->withToken($user['token']);
         $conversation = $this->postJson('/v1/me/support-conversation')->assertOk()->json('id');
         $this->postJson('/v1/conversations/'.$conversation.'/messages', ['body' => 'پیام خصوصی'])->assertOk();

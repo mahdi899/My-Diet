@@ -12,7 +12,7 @@ HOST = "87.107.190.112"
 USER = "root"
 REPO = pathlib.Path(__file__).resolve().parent.parent
 ADMIN = REPO / "admin"
-REMOTE_DIR = "/opt/sabzine/backend/admin-web"
+REMOTE_DIR = "/opt/sabzine/admin"
 
 
 def connect():

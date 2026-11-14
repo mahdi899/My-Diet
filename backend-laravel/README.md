@@ -1,127 +1,89 @@
 # بک‌اند Laravel سبزینه
 
-مقصد مهاجرت: Laravel 13، PHP 8.4 و MySQL. نسخهٔ سرور مقصد هنوز تعیین نشده؛ فعلاً MySQL 8.4 LTS مبنای توسعه و تست است.
+کد API و worker در همین پوشه است: PHP 8.4، Laravel 13 و MySQL. مبنای فعلی تست MySQL 8.4 LTS است؛ نسخهٔ سرور مقصد هنوز تعیین نشده است.
 
-این پوشه فعلاً جایگزین کامل سرویس Node نیست. Identity، Health، Questionnaire، Food، Publishing، Money و Onboarding منتقل شده‌اند؛ بخشی از برنامه و پنل مدیر هم پیاده شده است. اکنون ۱۱۸ مسیر از ۲۷۱ قرارداد ثبت شده است؛ ۱۵۳ مسیر باقی مانده‌اند. تعداد دقیق را `migration:status` نشان می‌دهد. بک‌اند فعال و تنظیمات انتشار همچنان از `backend/` استفاده می‌کنند.
+اجرای برنامه به بک‌اند Node یا PostgreSQL نیاز ندارد. Node برای ساخت React و ابزار مرورگر استفاده می‌شود. PostgreSQL فقط به عنوان مبدأ خواندنیِ ابزار انتقال قابل تنظیم است؛ کد آن ابزار را تا پایان انتقال داده نگه دارید.
 
-## ساختار
+پوشهٔ backend هنوز روی دیسک موجود است؛ حذف بازگشتی آن توسط بررسی خودکار مجوز رد شد. تنظیمات اجرای جدید به آن وابسته نیست. مرجع تاریخی در Git و نسخهٔ بازیابی کد در .tools/legacy-backend-2f6dd66.zip موجود است. این نسخه پشتیبان دیتابیس production نیست.
 
-- `app/Modules/*/Application`: سناریوها و پورت‌ها، مستقل از Laravel و SQL.
-- `app/Modules/*/Infrastructure`: مخزن MySQL و آداپترهای بیرونی.
-- `app/Modules/*/Presentation`: HTTP، کوکی، اعتبارسنجی و کنترل دسترسی.
-- `app/Shared/Domain`: خطا و سازگاری JWT، scrypt، AES-GCM و TOTP.
-- `app/Providers/AppServiceProvider.php`: اتصال وابستگی‌ها.
-- `contracts/nest-routes.json`: مسیر، نقش، عمومی بودن، وضعیت پیش‌فرض و محل هر handler در Node.
-- `contracts/postgres-source/`: کپی مرجع ۴۴ migration مبدأ همراه SHA-256؛ این SQLها روی MySQL اجرا نمی‌شوند.
+## معماری
 
-## وضعیت و مراحل بعدی
+- app/Modules/*/Domain: قواعد دامنه.
+- Application: use case و پورت مستقل از Laravel و SQL.
+- Infrastructure: MySQL و آداپتر سرویس بیرونی.
+- Presentation: HTTP و اعتبارسنجی.
+- contracts/nest-routes.json: قرارداد منجمد ۲۷۱ مسیر قبلی.
+- contracts/postgres-source: ۴۴ migration مبدأ برای بررسی انتقال، نه اجرا روی MySQL.
 
-| مرحله | وضعیت |
-|---|---|
-| اسکلت ماژولار، قرارداد HTTP و رمزنگاری سازگار با Node | پیاده شده |
-| Identity، نشست، پروفایل، OTP و TOTP روی MySQL | پیاده شده؛ تست‌های PHP و مقایسه با Node در مخزن موجود است |
-| schema محصول | ۱۱۷ جدول PostgreSQL روی MySQL ساخته می‌شود؛ CHECK، FK، unique شرطی و معادل triggerها نصب می‌شوند |
-| انتقال آزمایشی تمام جدول‌های محصول با count/checksum | پیاده شده؛ دادهٔ مصنوعی، مبلغ بزرگ، JSON، آرایه، تصویر و تاریخ میکروثانیه‌ای بررسی شده‌اند |
-| پرسش‌نامه، کاتالوگ غذا، مقاله و رضایت‌نامه | پیاده شده؛ اعتبارسنجی، نسخه‌بندی، CSV، پشتیبان کاتالوگ و دسترسی نقش‌ها تست می‌شوند |
-| Money و Orders | شارژ، callback، برداشت، تکرار امن و refund پیاده شده؛ sandbox و خطاهای Zarinpal با آداپتر تست بررسی می‌شوند |
-| Plans و Rewards | خواندن برنامه، درخواست، صف و جزئیات پزشک، تبادل سؤال، ویرایش با قفل نسخه، انتشار، اصلاح و تاریخچه نسخه‌ها پیاده شده؛ تولید خودکار، regenerate، درخواست تغییر و پاداش باقی مانده‌اند |
-| پنل مدیر/پزشک | خواندن داشبورد، پرداخت‌ها، متخصصان، تاریخچه و غذا/مقاله پیاده شده؛ بقیهٔ عملیات باقی مانده |
-| Onboarding اپ و وب | چهار هدف، پیش‌نویس رمز‌شده، کنترل نسخه، رضایت، تبدیل پاسخ‌های قدیمی، پروفایل و محاسبات تغذیه پیاده شده؛ مدیریت پروفایل، facts، تاریخچه و funnel نیز موجود است |
-| پرداخت آنبوردینگ وب | درخواست کارت‌به‌کارت، زیبال، تطبیق مبلغ، تأیید مدیر، تکرار امن و وضعیت پیامک پیاده شده؛ تست درگاه از HTTP fake استفاده می‌کند و تراکنش واقعی انجام نمی‌شود |
-| پیام‌ها، گزارش‌های دیگر، حریم خصوصی، مربی، پیگیری و خرید | باقی مانده |
-| AI، SSE، outbox، worker، retry و jobs زمان‌بندی‌شده | باقی مانده |
-| انتقال کامل داده، تمرین cutover و rollback و آزمون بار | باقی مانده |
+۲۷۱ مسیر ثبت شده است. این تعداد اثبات پوشش کامل تمام سناریوهای عملیاتی نیست. دستور migration:status --require-ready تا تأیید واقعی تمام gateهای عملیاتی ناموفق می‌ماند؛ فایل gateها برای عبور ظاهری تست تغییر نکرده است. مستقل شدن اجرا، به معنی تکمیل انتقال production یا حذف دادهٔ قدیمی نیست.
 
-FK مکالمه به درخواست برنامه نصب شده است. واردکنندهٔ جزئی Identity همچنان مکالمهٔ مرتبط با برنامه را رد می‌کند؛ برای دادهٔ کامل، واردکنندهٔ محصول لازم است. هشت index عملکردی PostgreSQL هنوز معادل بهینه‌شدهٔ MySQL ندارند؛ در `contracts/mysql-schema.json` با `performanceIndexesPending` مشخص شده‌اند. آزمون بار کامل انجام نشده است.
+## اجرا
 
-## راه‌اندازی توسعه
+از ریشهٔ پروژه در PowerShell:
 
-PHP 8.4 با `pdo_mysql`، `sodium`، `openssl` و `mbstring` لازم است. Composer از `composer.lock` نصب می‌کند. MySQL باید InnoDB، UTC و `utf8mb4_0900_bin` داشته باشد. حساب اجرای migration باید مجوز ساخت trigger داشته باشد؛ با binary logging فعال، الزامات مدیریت trigger در MySQL هم باید برقرار باشد.
+    & .\.tools\php84\php.exe backend-laravel\artisan serve --host=127.0.0.1 --port=8000
 
-در همین پوشه:
+پیش از اولین اجرا، composer install، ساخت .env از .env.example، تنظیم APP_KEY و DATABASE_URL مخصوص MySQL و اجرای artisan migrate لازم است.
 
-```sh
-composer install
-cp .env.example .env
-php artisan key:generate
-# DATABASE_URL را روی یک دیتابیس MySQL مخصوص توسعه تنظیم کن.
-php artisan migrate
-php artisan serve --host=127.0.0.1 --port=8000
-```
+برای worker، APP_ROLE=worker را در فرایند مستقل تنظیم کنید و اجرا کنید:
 
-در PowerShell به‌جای `cp` می‌توان `Copy-Item .env.example .env` زد. در این دستگاه PHP سازگار در `../.tools/php84/php.exe` آماده شده؛ PHP مربوط به XAMPP نسخهٔ قدیمی‌تری دارد.
+    php artisan sabzine:work
 
-`JWT_SECRET`، `OTP_PEPPER` و `FIELD_KEY` باید هنگام مهاجرت همان مقادیر قبلی بمانند. `APP_KEY` کلید Laravel است و جای این سه مقدار را نمی‌گیرد. HTTP فعلی همان `/v1` است؛ prefix جدید `/api` اضافه نشده. کوکی وب همان `sabzine_refresh` با Path، HttpOnly و SameSite قبلی است.
+API باید APP_ROLE=api باشد. worker شامل relay، lease دارای شناسهٔ مالکیت، پردازش job، maintenance و refresh زمان‌بندی‌شدهٔ funnel است.
 
-OTP کنسولی فقط برای توسعه/تست است. در production از Melipayamak با تنظیمات موجود استفاده می‌شود. تست‌ها هیچ پیامک واقعی نمی‌فرستند. کد OTP در log نوشته نمی‌شود؛ مسیر latest فقط در development قابل استفاده است و cache آن ۱۲۰ ثانیه عمر دارد. `OTP_FIXED_CODE` فقط در development اثر دارد.
+JWT_SECRET، OTP_PEPPER و FIELD_KEY هنگام انتقال داده باید با مقادیر قبلی سازگار بمانند. APP_KEY جای این کلیدها نیست. مسیرها همان /v1 هستند و cookie وب sabzine_refresh حفظ شده است.
 
-## کنترل آمادگی
+## AI و اعلان
 
-از ریشهٔ مخزن:
+تنظیمات اصلی به ProviderClient/ModelPools، ConfiguredDraftProvider، ConfiguredCoachModel و FcmPush متصل‌اند. آداپترهای ثابت فقط در تست‌های قدیمی به‌صراحت تزریق می‌شوند.
 
-```sh
-node tool/laravel-contracts.cjs --check
-```
+برای AI واقعی، provider و کلید رمز‌شده، مدل‌ها و poolهای plan_draft و nutrition_coach را در پنل تنظیم و AI_HTTP=true کنید. قیمت ورودی/خروجی مدل باید برای اعمال سقف هزینه تعیین شود. مصرف و رزروهای باز در کنترل بودجه لحاظ می‌شوند؛ رزرو باقی‌مانده پس از قطع فرایند نیازمند بررسی است و خودکار آزاد نمی‌شود.
 
-در این پوشه:
+در نبود تنظیمات، خطای قابل تشخیص برمی‌گردد؛ پاسخ ساختگی موفقیت تولید نمی‌شود. پیش‌نویس AI از غذاهای کاتالوگ ساخته می‌شود، کنترل حساسیت و مقدار دارد و تا تأیید متخصص منتشر نمی‌شود.
 
-```sh
-php artisan migration:status
-php artisan migration:status --json
-php artisan migration:status --require-ready
-```
+Firebase از تنظیمات حساب سرویس رمز‌شده استفاده می‌کند. ارسال فقط پس از پاسخ موفق FCM تأیید می‌شود. هیچ credential واقعی در تست‌ها استفاده نمی‌شود.
 
-دستور آخر تا تکمیل مسیرها و gateهای عملیاتی با exit code ناموفق تمام می‌شود. ثبت route به‌تنهایی اثبات برابری رفتار نیست. اکنون این نسخه آمادهٔ تعویض سرویس فعال نیست و worker هم هنوز پیاده نشده است.
+SSE رویدادهای جدید را در اتصال باز دنبال می‌کند، heartbeat می‌دهد و since یا Last-Event-ID را با دقت میکروثانیه می‌پذیرد. زمان اتصال محدود است تا کلاینت reconnect کند.
 
-**پوشهٔ `backend/` هنوز قابل حذف نیست.** علاوه بر مسیرهای باقی‌مانده و worker، Docker/Compose و تنظیمات انتشار فعال Node/PostgreSQL هستند. تست مقایسه و ابزار بررسی قرارداد هم هنوز کد مرجع Node را لازم دارند. CI جدید `standalone-php` فقط پوشهٔ Laravel را checkout می‌کند و تست‌های PHP/MySQL را بدون نصب بک‌اند Node اجرا می‌کند؛ این CI تا زمان اجرای روی GitHub تأیید عملی نشده است. این job به‌تنهایی پوشش قابلیت‌های منتقل‌نشده یا آمادگی حذف بک‌اند قبلی را اثبات نمی‌کند.
+## Docker
 
-## انتقال دادهٔ آزمایشی
+از ریشهٔ پروژه:
 
-برای ابزار انتقال، `pdo_pgsql` هم لازم است. `POSTGRES_SOURCE_URL` را با حساب مبدأ دارای دسترسی SELECT تنظیم کن و `DATABASE_URL` را به یک MySQL خالی مخصوص تمرین بده. عملیات مبدأ در snapshot تراکنشی read-only انجام می‌شود.
+    docker compose -f backend-laravel/docker-compose.yml up --build -d
 
-```sh
-php artisan migration:preflight
-php artisan migration:import-identity
-php artisan migration:import-identity --execute
-```
+وب روی پورت ۸۰۰۰ است. سرویس‌ها MySQL، migration، PHP-FPM، Nginx و worker هستند. React در مرحلهٔ build ساخته می‌شود؛ سرویس Node در runtime وجود ندارد. پنل‌های قدیمی نیز در image PHP قرار می‌گیرند.
 
-preflight جدول‌ها، UUID، timestamptz، JSONB، آرایه‌ها، triggerها، functionها و indexهای شرطی را گزارش می‌کند. import-identity فقط برش احراز هویت را با FK فعال منتقل می‌کند.
+مقادیر پیش‌فرض Compose مخصوص توسعه‌اند. برای production، NODE_ENV، APP_ENV، کلیدها، پیامک، درگاه، URL عمومی و CORS را صریح تنظیم کنید. build و rollout واقعی Docker روی این دستگاه بدون Docker قابل تأیید نیست.
 
-برای تمرین همهٔ جدول‌های محصول، ابتدا یک دیتابیس تازه بساز. **پیش از اولین `migrate`** مقدار `MIGRATION_SKIP_PRODUCT_SEEDS=true` را تنظیم کن تا دادهٔ پیش‌فرض در مقصد نوشته نشود؛ سپس:
+## تست مستقل
 
-```sh
-php artisan migrate --force
-php artisan migration:import-product
-php artisan migration:import-product --execute
-```
+از ریشهٔ پروژه:
 
-واردکنندهٔ محصول schema مبدأ را با نسخهٔ بررسی‌شده تطبیق می‌دهد، مقصد غیرخالی را رد می‌کند و همهٔ ۱۱۷ جدول را در یک تراکنش مقصد کپی می‌کند. برای وابستگی دوری و محتوای منتشرشده، فقط در نشست importer، triggerها و بررسی فوری FK کنار گذاشته می‌شوند؛ **پیش از commit** همهٔ FKها، پایان اعتبار نشست، تعداد ردیف‌ها و checksum هر جدول کنترل می‌شوند. خطا باعث rollback کل مقصد می‌شود و تنظیمات همان نشست به حالت عادی برمی‌گردد. عدد اعشاری خارج از ظرفیت، متن طولانی و تاریخ غیرقابل نمایش رد می‌شوند؛ برش یا گردکردن پنهان انجام نمی‌شود.
+    node tool/laravel-contracts.cjs --check
+    node tool/test-laravel.cjs --browser
 
-صف عملیاتی pg-boss، دیتابیس آنالیتیکس مستقل و فایل‌های رسانه‌ای بیرون از DB در این importer نیستند. ابزار هنوز مخصوص تمرین آفلاین است و اجرای production تا تکمیل gateها مسدود می‌ماند.
+runner یک MySQL موقت می‌سازد و به DATABASE_URL فایل .env وصل نمی‌شود. تست‌های PHP با --fail-on-skipped اجرا می‌شوند. تست مرورگر سایت، ورود و refresh مدیر، ورود پزشک، آنبوردینگ مشتری و اجرای worker را به PHP/MySQL واقعی وصل می‌کند. نبود Playwright خطاست و به عنوان تست موفق شمرده نمی‌شود.
 
-`onboarding_daily_cache` دادهٔ مشتق‌شدهٔ MySQL و معادل Materialized View مبدأ است؛ جزو ۱۱۷ جدول مبدأ نیست. پس از import باید با `POST /v1/admin/onboarding/funnel/refresh` و نشست مدیر بازسازی شود. refresh اتمی است و مرز روز با timezone واقعی تهران محاسبه می‌شود. refresh زمان‌بندی‌شده همراه worker هنوز باقی مانده است.
+PHP_BINARY و MYSQL_HOME برای محیط دیگر قابل تنظیم‌اند. برای اجرای مستقیم PHPUnit، MYSQL_TEST_URL و MYSQL_BACKUP_TEST_URL باید به دیتابیس disposable تست اشاره کنند؛ URL دوم برای ساخت دیتابیس restore مجوز کافی لازم دارد.
 
-این واردکننده برای تمرین است؛ در production اجازهٔ اجرای انتقال جزئی ندارد. انتقال کامل باید با توقف نوشتن یا یک طرح مشخص CDC انجام شود. بعد از شروع نوشتن در MySQL، برگرداندن صرفِ ترافیک به PostgreSQL rollback معتبر محسوب نمی‌شود؛ داده‌های جدید هم باید تعیین تکلیف شوند.
+تست آداپترهای واقعی از HTTP fake کنترل‌شده استفاده می‌کند؛ provider، امضا، خطا، هزینه و اعتبارسنجی بررسی می‌شوند. این تست، اتصال زنده به حساب AI/Firebase یا پرداخت واقعی را تأیید نمی‌کند.
 
-## تست
+تست‌های مقایسه و انتقال با مرجع Node در محیط موقت اجرا شدند. fixtureهای رمزنگاری، پرسش‌نامه، محاسبات تغذیه و برنامه در همین پوشه مستقل‌اند. CI اصلی بدون checkout پوشهٔ backend اجرا می‌شود؛ workflow قدیمی فقط به صورت دستی برای مرجع قابل اجراست.
 
-تست‌های بدون دیتابیس:
+## انتقال داده و بکاپ
 
-```sh
-php vendor/bin/phpunit tests/Unit tests/Feature/HttpFoundationTest.php
-```
+schema معادل ۱۱۷ جدول محصول، FK، CHECK، index و trigger در MySQL موجود است. برای تمرین انتقال، مبدأ را فقط‌خواندنی و مقصد را خالی و مستقل تنظیم کنید. پیش از اولین migrate مقصد تمرین، MIGRATION_SKIP_PRODUCT_SEEDS=true لازم است.
 
-تست کامل محلی از ریشهٔ مخزن، با یک MySQL موقت و PostgreSQL موقت:
+    php artisan migration:preflight
+    php artisan migration:import-product
+    php artisan migration:import-product --execute
 
-```sh
-npm --prefix backend run build
-node tool/test-laravel.cjs --cross-runtime
-```
+واردکننده ظرفیت نوع‌ها، FK، تعداد و checksum را پیش از commit بررسی می‌کند. اجرای production هنوز تا تکمیل gateها مسدود است. انتقال pg-boss، analytics و رسانه‌ها نیز باید در cutover واقعی تطبیق داده شود.
 
-روی Windows، runner از ابزارهای محلی `.tools/` استفاده می‌کند. روی محیط دیگر، `PHP_BINARY` و `MYSQL_HOME` را به PHP 8.4 و توزیع MySQL 8.4 بده. runner دیتابیس تست مستقل می‌سازد و به DATABASE_URL فایل .env وصل نمی‌شود. تست‌های دیتابیس PHP بدون `MYSQL_TEST_URL` صریح، skipped می‌شوند.
+دستور زیر واقعاً dump می‌گیرد، در دیتابیس تازه restore می‌کند، checksum/تعداد تمام جدول‌ها و triggerها را بررسی می‌کند و مقصد موقت را پاک می‌کند:
 
-مقایسه با Node شامل نشست و رمز قبلی، AES-GCM در هر دو جهت، مبلغ بزرگ‌تر از محدودهٔ امن Number در JavaScript، قرارداد خطا، پرسش‌نامه، غذا، آنبوردینگ چهار هدف، محاسبات تغذیه، فرم وب، رضایت، گزارش روزانه و رقابت دو پردازش PHP در ساخت/تأیید پرداخت است. تست مرورگر، React واقعی را بدون پاسخ ساختگی API به Laravel/MySQL وصل می‌کند: مقاله، ورود مدیر، refresh بعد از reload، غذا و مقالهٔ مدیر، پروفایل تغذیه و پرداخت آنبوردینگ، خروج و ورود پزشک. همچنین ادامهٔ فرم ذخیره‌شده، ارسال پاسخ‌ها، OTP و ساخت درخواست پرداخت را در رابط کاربر انجام می‌دهد. پاسخ درگاه و پیامک بیرونی در تست‌های PHP ساختگی است؛ پرداخت واقعی و ارسال پیامک واقعی انجام نمی‌شود. برای اجرای محلی مرورگر `PLAYWRIGHT_MODULE` را به بستهٔ Playwright نصب‌شده بده؛ در این دستگاه `.tools/browser-tests/node_modules/playwright` خودکار پیدا می‌شود. تست مرورگر در نبود این وابستگی skipped می‌شود و نباید به عنوان تأیید اتصال شمرده شود.
+    php artisan sabzine:rehearse-backup --url=<URL دیتابیس تست>
 
-فرانت React به‌طور پیش‌فرض به `http://127.0.0.1:8000` وصل می‌شود. برای برگشت صریح به Nest مقدار `SABZINE_API_TARGET=http://127.0.0.1:3000` را بگذار. در PowerShell: `$env:SABZINE_API_TARGET='http://127.0.0.1:3000'`. دریافت مقالهٔ React از API انجام می‌شود؛ نسخهٔ استاتیک قدیمی `site/` همچنان فایل مجلهٔ خودش را دارد. تست‌های فعلی پوشش همهٔ بخش‌های Flutter، عملیات پزشک، آنالیتیکس و دریافت برنامه از worker را تأیید نمی‌کنند.
+فقط نام دارای _test یا _rehearsal پذیرفته می‌شود. ابزارهای mysql و mysqldump باید در MYSQL_HOME/bin باشند. نبود ابزار یا شکست restore خطاست. این دستور دادهٔ مبدأ را حذف نمی‌کند.
 
-تست ادیتور پزشک، اعتبارسنجی ۴۲ نمونه از Node، رقابت دو پردازش در ویرایش/انتشار، اصلاح نسخهٔ منتشرشده و دسترسی بالینی را بررسی می‌کند. تست جداگانهٔ worker سفارش پرداخت‌شده را تا پیش‌نویس، بررسی پزشک و انتشار می‌رساند؛ fixture ادیتور جایگزین آن جریان نیست. آخر تست اتصال، سرویس Node و PostgreSQL مبدأ خاموش می‌شوند و خواندن برنامه، پروفایل، کاتالوگ و نوشتن پروفایل در دو پردازش مستقل PHP دوباره انجام می‌شود. این دو سرور با `open_basedir` به Laravel و پوشهٔ موقت سیستم محدود هستند و اجازهٔ خواندن کد بک‌اند Node را ندارند.
+بازگشت صرف ترافیک به PostgreSQL بعد از شروع نوشتن در MySQL، rollback معتبر نیست. اطلاعات جدید، فایل‌ها و صف‌ها نیز باید تعیین تکلیف شوند. هیچ دیتابیس production با حذف پوشهٔ بک‌اند پاک نمی‌شود.

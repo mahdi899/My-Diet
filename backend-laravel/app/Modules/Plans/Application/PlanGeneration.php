@@ -45,7 +45,7 @@ final class PlanGeneration
             }
             foreach ($meals as $meal) {
                 $items = $meal['items'] ?? [];
-                $named = is_array($items) && array_filter($items, fn ($item) => is_string($item['name'] ?? null) && trim($item['name']) !== '');
+                $named = is_array($items) ? array_filter($items, fn ($item) => is_string($item['name'] ?? null) && trim($item['name']) !== '') : [];
                 if (! is_string($meal['title'] ?? null) || trim($meal['title']) === '' || (int) ($meal['calories'] ?? 0) <= 0 || $named === []) {
                     return false;
                 }

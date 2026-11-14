@@ -1,0 +1,86 @@
+{
+  "اسمت چیه": {
+    "key": "name",
+    "options": {}
+  },
+  "کدوم غذاهای ایرانی رو بیشتر دوست داری": {
+    "key": "fav_dishes",
+    "options": {
+      "قورمهسبزی": "ghormeh_sabzi",
+      "قیمه": "gheymeh",
+      "فسنجان": "fesenjan",
+      "آش رشته": "ash_reshteh",
+      "عدسپلو": "adas_polo",
+      "کباب کوبیده": "kabab_koobideh",
+      "جوجهکباب": "joojeh_kabab",
+      "زرشکپلو با مرغ": "zereshk_polo_morgh",
+      "میرزاقاسمی": "mirza_ghasemi",
+      "کشک بادمجان": "kashk_bademjan",
+      "دیزی": "dizi",
+      "کوکو سبزی": "kuku_sabzi",
+      "باقالیپلو": "baghali_polo",
+      "سبزیپلو با ماهی": "sabzi_polo_mahi",
+      "حلیم": "halim",
+      "املت گوجه": "omelet_gojeh",
+      "آش جو": "ash_jo",
+      "سالاد شیرازی": "salad_shirazi"
+    }
+  },
+  "نان همیشگی سفرهات کدومه": {
+    "key": "bread_type",
+    "options": {
+      "سنگک": "sangak",
+      "بربری": "barbari",
+      "تافتون": "taftoon",
+      "لواش": "lavash",
+      "نان سبوسدار / جو": "whole_grain",
+      "نان نمیخورم": "none"
+    }
+  },
+  "برنج چقدر تو برنامهات هست": {
+    "key": "rice_frequency",
+    "options": {
+      "تقریباً هر روز": "daily",
+      "چند بار در هفته": "few_week",
+      "بهندرت": "rare",
+      "اصلاً": "none"
+    }
+  },
+  "چای و شیرینی عادتهات چطوره": {
+    "key": "tea_sugar",
+    "options": {
+      "چای نمیخورم": "no_tea",
+      "چای بدون قند": "plain",
+      "چای با یک حبه قند": "one_sugar",
+      "چای با دو حبه قند یا بیشتر": "two_plus"
+    }
+  },
+  "سفرهٔ خونهتون بیشتر به کدوم ناحیه میخوره": {
+    "key": "region",
+    "options": {
+      "مرکزی و تهران": "central",
+      "شمال (گیلان و مازندران)": "north",
+      "جنوب (خوزستان هرمزگان بوشهر)": "south",
+      "آذربایجان": "azari",
+      "کردستان و غرب": "kurdish",
+      "خراسان": "khorasan",
+      "اصفهان و فارس": "isfahan_fars"
+    }
+  },
+  "ماه رمضان روزه میگیری": {
+    "key": "ramadan",
+    "options": {
+      "بله": "yes",
+      "گاهی": "sometimes",
+      "خیر": "no"
+    }
+  },
+  "مهمونی و سفرهٔ دورهمی چقدر تو زندگیت هست": {
+    "key": "guest_meals",
+    "options": {
+      "هفتگی": "often",
+      "ماهی چند بار": "sometimes",
+      "بهندرت": "rare"
+    }
+  }
+}

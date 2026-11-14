@@ -2,6 +2,14 @@
 
 namespace Tests;
 
+use App\Modules\Ai\Application\AiCatalog;
+use App\Modules\Ai\Infrastructure\FixedAiCatalog;
+use App\Modules\Coach\Application\CoachModel;
+use App\Modules\Coach\Infrastructure\FixedCoachModel;
+use App\Modules\Plans\Application\DraftProvider;
+use App\Modules\Plans\Infrastructure\LocalDraftProvider;
+use App\Modules\Realtime\Application\PushSender;
+use App\Modules\Realtime\Infrastructure\RecordingPush;
 use App\Shared\Domain\LegacyCrypto;
 use Illuminate\Database\ConnectionInterface;
 
@@ -12,6 +20,10 @@ abstract class MySqlTestCase extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->app->bind(DraftProvider::class, LocalDraftProvider::class);
+        $this->app->bind(CoachModel::class, FixedCoachModel::class);
+        $this->app->singleton(AiCatalog::class, FixedAiCatalog::class);
+        $this->app->singleton(PushSender::class, RecordingPush::class);
         if (! getenv('MYSQL_TEST_URL')) {
             $this->markTestSkipped('Requires the disposable MySQL test environment.');
         }

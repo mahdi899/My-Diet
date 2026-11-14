@@ -1,64 +1,92 @@
+x-api: &api
+  build:
+    context: ..
+    dockerfile: backend-laravel/Dockerfile
+    target: api
+  environment: &environment
+    APP_ENV: ${APP_ENV:-local}
+    APP_DEBUG: "false"
+    APP_KEY: ${APP_KEY:-base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
+    APP_ROLE: api
+    NODE_ENV: ${NODE_ENV:-development}
+    DB_CONNECTION: mysql
+    DATABASE_URL: mysql://sabzine:${MYSQL_PASSWORD:-sabzine_dev}@mysql:3306/sabzine
+    JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-not-for-production}
+    OTP_PEPPER: ${OTP_PEPPER:-dev-only-otp-pepper-not-for-production}
+    FIELD_KEY: ${FIELD_KEY:-dev-only-field-key-not-for-production}
+    SMS_PROVIDER: ${SMS_PROVIDER:-console}
+    MELIPAYAMAK_USERNAME: ${MELIPAYAMAK_USERNAME:-}
+    MELIPAYAMAK_API_KEY: ${MELIPAYAMAK_API_KEY:-}
+    MELIPAYAMAK_FROM: ${MELIPAYAMAK_FROM:-}
+    MELIPAYAMAK_PATTERN_ID: ${MELIPAYAMAK_PATTERN_ID:-}
+    PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-sandbox}
+    PAYMENT_GATEWAYS: ${PAYMENT_GATEWAYS:-sandbox}
+    ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID:-}
+    ZARINPAL_SANDBOX: ${ZARINPAL_SANDBOX:-false}
+    ZIBAL_MERCHANT: ${ZIBAL_MERCHANT:-}
+    PUBLIC_API_URL: ${PUBLIC_API_URL:-http://127.0.0.1:8000}
+    CORS_ORIGINS: ${CORS_ORIGINS:-}
+    AI_HTTP: ${AI_HTTP:-false}
+    CACHE_STORE: file
+    LOG_CHANNEL: stderr
+  volumes:
+    - application_storage:/var/www/backend-laravel/storage
+
 services:
   mysql:
     image: mysql:8.4
+    command: ["--log-bin-trust-function-creators=1"]
     environment:
-      MYSQL_ROOT_PASSWORD: sabzine
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev}
       MYSQL_DATABASE: sabzine
       MYSQL_USER: sabzine
-      MYSQL_PASSWORD: sabzine
-    ports:
-      - "3306:3306"
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-sabzine_dev}
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-psabzine"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 30
     volumes:
       - sabzine_mysql:/var/lib/mysql
-
-  api:
-    build:
-      context: .
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "false"
-      APP_ROLE: api
-      NODE_ENV: development
-      DB_CONNECTION: mysql
-      DATABASE_URL: mysql://sabzine:sabzine@mysql:3306/sabzine
-      JWT_SECRET: dev-only-jwt-secret-not-for-production
-      OTP_PEPPER: dev-only-otp-pepper-not-for-production
-      FIELD_KEY: dev-only-field-key-not-for-production
-      SMS_PROVIDER: console
-      PAYMENT_GATEWAY: sandbox
-      AI_HTTP: "false"
-    ports:
-      - "8000:8000"
+  migrate:
+    <<: *api
+    command: ["php", "artisan", "migrate", "--force", "--no-interaction"]
     depends_on:
       mysql:
         condition: service_healthy
-    command: ["sh", "-c", "php artisan migrate --force --no-interaction && php artisan serve --host=0.0.0.0 --port=8000 --no-reload"]
-
-  worker:
+  api:
+    <<: *api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  web:
     build:
-      context: .
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "false"
-      APP_ROLE: worker
-      NODE_ENV: development
-      DB_CONNECTION: mysql
-      DATABASE_URL: mysql://sabzine:sabzine@mysql:3306/sabzine
-      JWT_SECRET: dev-only-jwt-secret-not-for-production
-      OTP_PEPPER: dev-only-otp-pepper-not-for-production
-      FIELD_KEY: dev-only-field-key-not-for-production
-      SMS_PROVIDER: console
-      PAYMENT_GATEWAY: sandbox
-      AI_HTTP: "false"
+      context: ..
+      dockerfile: backend-laravel/Dockerfile
+      target: web
+    ports:
+      - "8000:8080"
     depends_on:
       api:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  worker:
+    <<: *api
+    environment:
+      <<: *environment
+      APP_ROLE: worker
     command: ["php", "artisan", "sabzine:work"]
-
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    stop_grace_period: 360s
 volumes:
   sabzine_mysql:
+  application_storage:

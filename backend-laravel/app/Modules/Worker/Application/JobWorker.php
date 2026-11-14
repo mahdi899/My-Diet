@@ -19,11 +19,11 @@ final class JobWorker
             foreach ($jobs as $job) {
                 try {
                     $this->handle($job);
-                    $this->store->succeed($job->id);
+                    $this->store->succeed($job->id, $job->lease_token);
                     $done++;
                 } catch (Throwable $error) {
                     $limit = $job->topic === 'plan.generate' ? 3 : 5;
-                    $this->store->fail($job->id, $error->getMessage(), (int) $job->attempts, $limit);
+                    $this->store->fail($job->id, $error->getMessage(), (int) $job->attempts, $limit, $job->lease_token);
                 }
             }
         } while ($jobs !== []);

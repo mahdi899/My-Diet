@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseCsv } from '../../backend/dist/food/csv.js';
+import { parseCsv } from './csv.mjs';
 import { recipes } from './recipes.mjs';
 import { ingredients } from './ingredients.mjs';
 import { legacySlugs } from './legacy-slugs.mjs';

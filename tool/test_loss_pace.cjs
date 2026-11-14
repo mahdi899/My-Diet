@@ -44,9 +44,8 @@ test('missing, invalid and underweight targets do not produce a weight-loss time
 });
 
 test('option codes and initial weekly rates agree with the nutrition engine', () => {
-  const engine = fs.readFileSync(path.join(root, 'backend/src/nutrition/engine.ts'), 'utf8');
-  const ratesSource = engine.match(/const PACE_KG_PER_WEEK[^=]*=\s*(\{[^}]+\})/)[1];
-  const rates = vm.runInNewContext(`(${ratesSource})`);
+  const engine = fs.readFileSync(path.join(root, 'backend-laravel/app/Modules/Onboarding/Domain/EnergyEngine.php'), 'utf8');
+  const rates = Object.fromEntries([...engine.matchAll(/'(slow|balanced|fast|auto)'\s*=>\s*(\.[0-9]+)/g)].map(match => [match[1], Number(match[2])]));
   for (const option of pace.options) {
     assert.equal(estimate(option.pace, 100, 95, 170).weeklyRate, rates[option.pace], option.pace);
   }

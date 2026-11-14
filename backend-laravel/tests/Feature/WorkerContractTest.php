@@ -35,6 +35,23 @@ final class CountingDraft implements DraftProvider
 
 final class WorkerContractTest extends MySqlTestCase
 {
+    public function test_stale_worker_cannot_complete_or_fail_a_reclaimed_lease(): void
+    {
+        $id = Crypto::uuid();
+        $this->db->table('worker_jobs')->insert(['id' => $id, 'topic' => 'shopping.invalidate', 'aggregate_id' => Crypto::uuid(), 'payload' => '{}']);
+        $store = $this->app->make(WorkerStore::class);
+        $first = $store->claim()[0];
+        $this->db->table('worker_jobs')->where('id', $id)->update(['lease_until' => '2000-01-01 00:00:00']);
+        $second = $store->claim()[0];
+        self::assertNotSame($first->lease_token, $second->lease_token);
+        $store->succeed($id, $first->lease_token);
+        self::assertSame('leased', $this->db->table('worker_jobs')->where('id', $id)->value('status'));
+        $store->fail($id, 'stale', 1, 3, $first->lease_token);
+        self::assertSame('leased', $this->db->table('worker_jobs')->where('id', $id)->value('status'));
+        $store->succeed($id, $second->lease_token);
+        self::assertSame('succeeded', $this->db->table('worker_jobs')->where('id', $id)->value('status'));
+    }
+
     public function test_paid_order_reaches_a_published_plan_through_the_worker(): void
     {
         $provider = new CountingDraft;

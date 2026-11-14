@@ -29,6 +29,6 @@ final class Cors
 
     private function headers(string $origin): array
     {
-        return ['Access-Control-Allow-Origin' => $origin, 'Access-Control-Allow-Credentials' => 'true', 'Access-Control-Allow-Headers' => 'Authorization, Content-Type, X-Sabzine-Client', 'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS', 'Vary' => 'Origin'];
+        return ['Access-Control-Allow-Origin' => $origin, 'Access-Control-Allow-Credentials' => 'true', 'Access-Control-Allow-Headers' => 'Authorization, Content-Type, X-Sabzine-Client, If-Match, Last-Event-ID', 'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS', 'Vary' => 'Origin'];
     }
 }

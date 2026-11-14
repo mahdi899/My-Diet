@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Shared\Infrastructure\MySqlBackup;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -19,16 +20,15 @@ class RehearseBackup extends Command
 
             return 1;
         }
-        $mysqldump = dirname(env('MYSQL_HOME', '')).'/bin/mysqldump';
-        if (! is_file($mysqldump) && ! is_file($mysqldump.'.exe')) {
-            $this->line('Returning application traffic to PostgreSQL after MySQL has accepted writes is not a rollback.');
-            $this->line(json_encode(['database' => $name, 'dump' => 'not-run', 'reason' => 'mysqldump was not found; the name check passed']));
+        try {
+            $result = app(MySqlBackup::class)->rehearse($url);
+            $this->line(json_encode($result, JSON_THROW_ON_ERROR));
 
             return 0;
+        } catch (\Throwable $error) {
+            $this->error($error->getMessage());
+
+            return 1;
         }
-
-        $this->line(json_encode(['database' => $name, 'dump' => 'ready']));
-
-        return 0;
     }
 }

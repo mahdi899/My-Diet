@@ -1,14 +1,7 @@
-name: backend
+name: legacy-backend-reference
 
 on:
-  push:
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend.yml"
-  pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend.yml"
+  workflow_dispatch:
 
 jobs:
   test:

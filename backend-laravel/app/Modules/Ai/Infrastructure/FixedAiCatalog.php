@@ -16,12 +16,12 @@ final class FixedAiCatalog implements AiCatalog
         return false;
     }
 
-    public function models(): array
+    public function models(?array $provider = null): array
     {
         return array_map(fn (string $id) => ['id' => $id, 'name' => $id, 'contextLength' => null, 'priceInMicrosPerM' => 0, 'priceOutMicrosPerM' => 0, 'free' => true], self::SUGGESTED);
     }
 
-    public function complete(string $model): array
+    public function complete(string $model, ?array $provider = null): array
     {
         $this->calls++;
 

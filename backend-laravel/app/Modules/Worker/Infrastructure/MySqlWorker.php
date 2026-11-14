@@ -29,12 +29,13 @@ final class MySqlWorker implements WorkerStore
         });
     }
 
-    public function claim(int $limit = 5): array
+    public function claim(int $limit = 1): array
     {
         return $this->db->transaction(function () use ($limit) {
             $rows = $this->db->select("select id,topic,aggregate_id,payload,attempts from worker_jobs where (status='pending' and available_at<=current_timestamp(6)) or (status='leased' and lease_until<current_timestamp(6)) order by created_at limit ? for update skip locked", [$limit]);
             foreach ($rows as $row) {
-                $this->db->update("update worker_jobs set status='leased', attempts=attempts+1, lease_until=date_add(current_timestamp(6), interval 60 second), updated_at=current_timestamp(6) where id=?", [$row->id]);
+                $row->lease_token = Crypto::uuid();
+                $this->db->update("update worker_jobs set status='leased', attempts=attempts+1, lease_token=?, lease_until=date_add(current_timestamp(6), interval 900 second), updated_at=current_timestamp(6) where id=?", [$row->lease_token, $row->id]);
                 $row->attempts = (int) $row->attempts + 1;
             }
 
@@ -42,18 +43,19 @@ final class MySqlWorker implements WorkerStore
         });
     }
 
-    public function succeed(string $id): void
+    public function succeed(string $id, string $lease): void
     {
-        $this->db->table('worker_jobs')->where('id', $id)->update(['status' => 'succeeded', 'lease_until' => null, 'last_error' => null, 'updated_at' => $this->db->raw('current_timestamp(6)')]);
+        $this->db->table('worker_jobs')->where('id', $id)->where('status', 'leased')->where('lease_token', $lease)->update(['status' => 'succeeded', 'lease_until' => null, 'lease_token' => null, 'last_error' => null, 'updated_at' => $this->db->raw('current_timestamp(6)')]);
     }
 
-    public function fail(string $id, string $error, int $attempts, int $limit = 3): void
+    public function fail(string $id, string $error, int $attempts, int $limit = 3, ?string $lease = null): void
     {
         $dead = $attempts >= $limit;
-        $this->db->table('worker_jobs')->where('id', $id)->update([
+        $this->db->table('worker_jobs')->where('id', $id)->where('status', 'leased')->where('lease_token', $lease)->update([
             'status' => $dead ? 'dead' : 'pending',
             'available_at' => $this->db->raw('date_add(current_timestamp(6), interval 30 second)'),
             'lease_until' => null,
+            'lease_token' => null,
             'last_error' => mb_substr($error, 0, 500),
             'updated_at' => $this->db->raw('current_timestamp(6)'),
         ]);

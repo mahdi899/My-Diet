@@ -3,6 +3,7 @@
 namespace App\Modules\Reports\Infrastructure;
 
 use App\Modules\Plans\Domain\CivilDates;
+use App\Shared\Domain\Amount;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
@@ -16,22 +17,37 @@ final class MySqlReports
         if (! CivilDates::valid($from) || ! CivilDates::valid($to) || $from > $to) {
             return ['status' => 'invalid', 'rows' => []];
         }
-        if (! in_array($event, ['activity', 'meal', 'weight'], true)) {
+        if (! in_array($event, ['activity', 'tracking', 'purchase'], true)) {
             throw new Problem(400, 'validation', 'رویداد بازگشت نامعتبر است');
         }
         $rows = [];
-        foreach ($this->db->select("select date(created_at) as started_on, count(*) as size from orders where status='paid' and service_code='new_plan' and date(created_at) between ? and ? group by date(created_at) order by started_on", [$from, $to]) as $row) {
+        $within = function (int $days) use ($event): string {
+            $end = "date_add(f.started_on,interval $days day)";
+
+            return match ($event) {
+                'activity' => "exists(select 1 from sessions s where s.user_id=f.user_id and ((date(date_add(s.created_at,interval 210 minute))>f.started_on and date(date_add(s.created_at,interval 210 minute))<=$end) or (date(date_add(s.last_seen_at,interval 210 minute))>f.started_on and date(date_add(s.last_seen_at,interval 210 minute))<=$end)))",
+                'tracking' => "exists(select 1 from meal_logs m where m.user_id=f.user_id and m.scheduled_date>f.started_on and m.scheduled_date<=$end and (m.eaten=1 or json_unquote(json_extract(m.details,'$.state')) collate utf8mb4_0900_bin in ('as_planned','less','more','different')))",
+                'purchase' => "exists(select 1 from orders o where o.user_id=f.user_id and o.status='paid' and o.id<>f.order_id and date(date_add(o.created_at,interval 210 minute))>f.started_on and date(date_add(o.created_at,interval 210 minute))<=$end)"
+            };
+        };
+        $sql = "with ranked as (select user_id,id as order_id,date(date_add(created_at,interval 210 minute)) as started_on,row_number() over(partition by user_id order by created_at,id) as n from orders where status='paid' and service_code='new_plan'),
+            first_orders as (select user_id,order_id,started_on from ranked where n=1)
+            select started_on,count(*) as size,sum(".$within(7).') as week1,sum('.$within(14).') as week2,sum('.$within(28).') as week4 from first_orders f where started_on between ? and ? group by started_on order by started_on';
+        foreach ($this->db->select($sql, [$from, $to]) as $row) {
             $started = substr((string) $row->started_on, 0, 10);
             $age = (int) (new \DateTimeImmutable($to))->diff(new \DateTimeImmutable($started))->days;
             $size = (int) $row->size;
             $cells = [];
             foreach (['week1' => 7, 'week2' => 14, 'week4' => 28] as $key => $days) {
-                $cells[$key] = $age < $days ? ['status' => 'not_yet_measurable', 'count' => null] : ['status' => 'measured', 'count' => 0, 'rate' => $size === 0 ? null : 0];
+                $cells[$key] = $age < $days ? ['state' => 'not_yet_measurable'] : ($size === 0 ? ['state' => 'no_denominator'] :
+                    ['state' => 'measured', 'count' => (int) $row->$key, 'denominator' => $size, 'percent' => (int) floor(100 * $row->$key / $size + 0.5)]);
             }
             $rows[] = ['id' => $started, 'label' => $started, 'size' => $size, 'ageDays' => $age, 'cells' => $cells];
         }
 
-        return ['status' => $rows === [] ? 'empty' : 'ready', 'from' => $from, 'to' => $to, 'asOf' => $to, 'event' => $event, 'anchor' => 'first_paid_new_plan', 'rows' => $rows];
+        $definitions = ['activity' => 'بازگشت به برنامه بعد از روز شروع، بدون الزام ثبت وعده یا خرید', 'tracking' => 'ثبت حداقل یک وعدهٔ خورده‌شده در همان پنجره', 'purchase' => 'سفارش پرداخت‌شدهٔ بعدی در همان پنجره'];
+
+        return ['status' => $rows === [] ? 'empty' : 'ready', 'from' => $from, 'to' => $to, 'asOf' => $to, 'event' => $event, 'definition' => $definitions[$event], 'anchor' => 'first_paid_new_plan', 'rows' => $rows];
     }
 
     public function foods(string $from, string $to, string $kind): array
@@ -42,17 +58,38 @@ final class MySqlReports
         if (! in_array($kind, ['selected', 'alternative', 'disliked', 'reason'], true)) {
             throw new Problem(400, 'validation', 'نوع رتبه‌بندی شناخته نشد');
         }
-        $counts = [];
+        $events = [];
         if ($kind === 'reason') {
-            foreach ($this->db->select('select reason_label from meal_selections where civil_date between ? and ? and reason_label is not null', [$from, $to]) as $row) {
-                $counts[$row->reason_label] = ($counts[$row->reason_label] ?? 0) + 1;
+            foreach ($this->db->select('select reason_id,reason_label from meal_selections where civil_date between ? and ? and reason_id is not null', [$from, $to]) as $row) {
+                $events[] = ['id' => $row->reason_id, 'label' => $row->reason_label];
+            }
+        } elseif ($kind === 'disliked') {
+            foreach ($this->db->table('weekly_feedback')->whereBetween('week_start', [$from, $to])->get(['dislikes']) as $row) {
+                foreach (json_decode($row->dislikes, true) as $item) {
+                    $option = $this->db->table('plan_meal_options')->where('option_uid', $item)->value('document');
+                    $label = $option ? (json_decode($option, true)['title'] ?? $item) : $item;
+                    $events[] = ['id' => $label, 'label' => $label];
+                }
+            }
+        } else {
+            foreach ($this->db->select("select o.document from meal_selections s join plan_meal_options o on o.meal_id=s.meal_id and o.option_uid=s.option_uid where s.civil_date between ? and ? and (?='selected' or o.kind<>'primary')", [$from, $to, $kind]) as $row) {
+                $label = json_decode($row->document, true)['title'] ?? '';
+                if ($label !== '') {
+                    $events[] = ['id' => $label, 'label' => $label];
+                }
             }
         }
-        arsort($counts);
-        $rows = [];
-        foreach ($counts as $label => $count) {
-            $rows[] = ['id' => $label, 'label' => $label, 'count' => $count];
+        $grouped = [];
+        foreach ($events as $event) {
+            $key = mb_strtolower(trim(preg_replace('/\s+/u', ' ', \Normalizer::normalize($event['label'], \Normalizer::FORM_KC))));
+            if ($key === '') {
+                continue;
+            }
+            $grouped[$key] ??= ['id' => $event['id'], 'label' => trim($event['label']), 'count' => 0, 'uncertain' => mb_strlen($key) < 4];
+            $grouped[$key]['count']++;
         }
+        $rows = array_values($grouped);
+        usort($rows, fn ($a, $b) => $b['count'] <=> $a['count'] ?: strcmp($a['label'], $b['label']));
 
         return ['status' => $rows === [] ? 'empty' : 'ready', 'kind' => $kind, 'matching' => 'exact_normalized_label', 'rows' => $rows];
     }
@@ -62,41 +99,82 @@ final class MySqlReports
         if (! CivilDates::valid($from) || ! CivilDates::valid($to) || $from > $to) {
             return ['status' => 'invalid', 'rows' => []];
         }
-        $count = (int) $this->db->table('weekly_feedback')->whereBetween('week_start', [$from, $to])->count();
+        $row = $this->db->selectOne("with eligible as (select distinct user_id from plan_requests where status='published' and week_start between ? and ?),
+            first_orders as (select user_id,min(created_at) as first_at from orders where status='paid' group by user_id)
+            select (select count(*) from eligible) as eligible,
+            (select count(distinct f.user_id) from weekly_feedback f join eligible e on e.user_id=f.user_id where f.week_start between ? and ?) as submitted,
+            (select count(distinct e.user_id) from eligible e join first_orders f on f.user_id=e.user_id join orders o on o.user_id=e.user_id and o.status='paid' and o.created_at>f.first_at where date(date_add(o.created_at,interval 210 minute)) between ? and ?) as continued", [$from, $to, $from, $to, $from, $to]);
+        if (! $row->eligible) {
+            return ['status' => 'empty'];
+        }
+        $cell = fn ($count) => ['count' => (int) $count, 'denominator' => (int) $row->eligible, 'percent' => (int) floor(100 * $count / $row->eligible + 0.5)];
 
-        return ['status' => $count === 0 ? 'empty' : 'ready', 'from' => $from, 'to' => $to, 'privateCount' => $count];
+        return ['status' => 'ready', 'participation' => $cell($row->submitted), 'continuation' => $cell($row->continued), 'continuationSeparateFromFeedback' => true];
     }
 
     public function specialists(string $sort): array
     {
-        if (! in_array($sort, ['rating', 'load'], true)) {
+        if (! in_array($sort, ['rating', 'response', 'workload'], true)) {
             throw new Problem(400, 'validation', 'مرتب‌سازی متخصص شناخته نشد');
         }
-        $rows = $this->db->select('select sp.user_id, sp.display_name, sp.rating, (select count(*) from plan_requests r where r.assigned_specialist_id=sp.user_id and r.status in (\'queued\',\'generating\',\'in_review\',\'awaiting_user\',\'response_received\')) as open_count from specialist_profiles sp order by '.($sort === 'rating' ? 'sp.rating desc' : 'open_count desc'));
+        $average = fn ($values) => $values === [] ? null : array_sum($values) / count($values);
+        $rows = [];
+        foreach ($this->db->table('specialist_profiles')->orderBy('display_name')->get() as $person) {
+            $stars = $this->db->table('program_reviews as p')->join('plan_requests as r', 'r.id', '=', 'p.request_id')->where('r.assigned_specialist_id', $person->user_id)->pluck('p.rating')->all();
+            $replies = $this->db->select("with asked as (select c.id,min(m.created_at) as asked_at from conversations c join plan_requests r on r.id=c.request_id join messages m on m.conversation_id=c.id and m.author_id=r.user_id and m.kind<>'system' where c.kind='care' and r.assigned_specialist_id=? group by c.id)
+                select a.asked_at,min(m.created_at) as replied_at from asked a left join messages m on m.conversation_id=a.id and m.author_id=? and m.kind<>'system' and m.created_at>a.asked_at group by a.id,a.asked_at", [$person->user_id, $person->user_id]);
+            $answered = array_values(array_filter($replies, fn ($r) => $r->replied_at !== null));
+            $times = array_map(fn ($r) => (strtotime($r->replied_at) - strtotime($r->asked_at)) / 60, $answered);
+            $changes = $this->db->table('plan_change_requests as c')->join('plan_requests as r', 'r.id', '=', 'c.plan_request_id')->where('r.assigned_specialist_id', $person->user_id)->select('c.*')->get()->all();
+            $responses = array_values(array_filter($changes, fn ($c) => $c->first_responded_at !== null));
+            $resolved = array_values(array_filter($changes, fn ($c) => in_array($c->status, ['approved', 'rejected'], true)));
+            $pendingChanges = count(array_filter($changes, fn ($c) => in_array($c->status, ['awaiting_review', 'under_review'], true)));
+            $pendingMessages = count($replies) - count($answered);
+            $rows[] = ['id' => $person->user_id, 'name' => $person->display_name, 'ratingCount' => count($stars), 'ratingAverage' => $average($stars),
+                'smallSample' => count($stars) > 0 && count($stars) < 5, 'distribution' => array_map(fn ($star) => ['star' => $star, 'count' => count(array_filter($stars, fn ($s) => $s === $star))], range(1, 5)),
+                'messageResponse' => $average($times), 'messageSamples' => count($times),
+                'changeResponse' => $average(array_map(fn ($c) => (strtotime($c->first_responded_at) - strtotime($c->created_at)) / 60, $responses)), 'changeResponseSamples' => count($responses),
+                'reviewTime' => $average(array_map(fn ($c) => (strtotime($c->updated_at) - strtotime($c->created_at)) / 60, $resolved)), 'reviewSamples' => count($resolved),
+                'pendingMessages' => $pendingMessages, 'pendingChanges' => $pendingChanges, 'pending' => $pendingChanges + $pendingMessages];
+        }
+        $field = ['rating' => 'ratingAverage', 'response' => 'messageResponse', 'workload' => 'pending'][$sort];
+        usort($rows, fn ($a, $b) => ($a[$field] === null ? 1 : ($b[$field] === null ? -1 : (($a[$field] <=> $b[$field]) * ($sort === 'response' ? 1 : -1)))) ?: strcmp($a['name'], $b['name']));
 
-        return ['sort' => $sort, 'rows' => array_map(fn ($row) => ['id' => $row->user_id, 'name' => $row->display_name, 'rating' => $row->rating === null ? null : (float) $row->rating, 'openCount' => (int) $row->open_count], $rows)];
+        return ['sort' => $sort, 'timing' => 'elapsed_minutes', 'businessHours' => false, 'unanswered' => 'excluded_from_average', 'automaticMessages' => 'excluded', 'moderation' => 'ratings_kept', 'rows' => $rows];
     }
 
     public function sla(string $specialist): array
     {
-        $rows = $this->db->select("select id,status,created_at from plan_requests where assigned_specialist_id=? and status not in ('published','cancelled')", [$specialist]);
-        $overdue = 0;
-        foreach ($rows as $row) {
-            $age = time() - strtotime((string) $row->created_at);
-            $responded = $this->db->table('request_events')->where('request_id', $row->id)->where('actor_id', $specialist)->exists();
-            if (! $responded && $age > 86400) {
-                $overdue++;
-            }
-        }
-
-        return ['open' => count($rows), 'overdue' => $overdue, 'thresholdHours' => 24];
+        return $this->slaBoard($specialist)[0] ?? ['specialistId' => $specialist, 'displayName' => '', 'requests' => 0, 'published' => 0, 'overdue' => 0, 'medianResponseMinutes' => null];
     }
 
     public function adminSla(): array
     {
-        $open = (int) $this->db->table('plan_requests')->whereNotIn('status', ['published', 'cancelled'])->count();
+        return ['slaHours' => 24, 'specialists' => $this->slaBoard(null),
+            'requestsByStatus' => array_map(fn ($r) => ['status' => $r->status, 'requests' => (int) $r->requests], $this->db->select('select status,count(*) as requests from plan_requests group by status order by status')),
+            'creditedPaymentsByGateway' => array_map(fn ($r) => ['gateway' => $r->gateway, 'payments' => (int) $r->payments, 'amountToman' => Amount::safe($r->amount_toman)], $this->db->select("select gateway,count(*) as payments,sum(amount_toman) as amount_toman from payments where status='credited' group by gateway order by gateway"))];
+    }
 
-        return ['open' => $open, 'thresholdHours' => 24];
+    private function slaBoard(?string $specialist): array
+    {
+        $people = $this->db->table('specialist_profiles')->orderBy('display_name');
+        if ($specialist !== null) {
+            $people->where('user_id', $specialist);
+        }
+        $board = [];
+        foreach ($people->get() as $person) {
+            $requests = $this->db->select("select r.id,r.status,r.created_at,min(e.created_at) as first_at from plan_requests r left join request_events e on e.request_id=r.id and e.kind in ('draft_edited','info_question','published') where r.assigned_specialist_id=? group by r.id,r.status,r.created_at", [$person->user_id]);
+            $times = array_values(array_map(fn ($r) => (strtotime($r->first_at) - strtotime($r->created_at)) / 60, array_filter($requests, fn ($r) => $r->first_at !== null)));
+            sort($times, SORT_NUMERIC);
+            $n = count($times);
+            $median = $n === 0 ? null : ($n % 2 ? $times[intdiv($n, 2)] : ($times[$n / 2 - 1] + $times[$n / 2]) / 2);
+            $board[] = ['specialistId' => $person->user_id, 'displayName' => $person->display_name, 'requests' => count($requests),
+                'published' => count(array_filter($requests, fn ($r) => $r->status === 'published')),
+                'overdue' => count(array_filter($requests, fn ($r) => ! in_array($r->status, ['published', 'cancelled'], true) && $r->first_at === null && time() - strtotime($r->created_at) > 86400)),
+                'medianResponseMinutes' => $median === null ? null : (int) floor($median + 0.5)];
+        }
+
+        return $board;
     }
 
     public function journey(array $body, ?string $user): array

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Modules\Admin\Infrastructure\MySqlIntegrations;
+use App\Modules\Onboarding\Application\OnboardingAdminQueries;
 use App\Modules\Worker\Application\JobWorker;
 use App\Modules\Worker\Application\WorkerStore;
 use Illuminate\Console\Attributes\Description;
@@ -30,10 +31,30 @@ class Work extends Command
         if ($this->option('once')) {
             return 0;
         }
-        while (true) {
+        $running = true;
+        if (function_exists('pcntl_async_signals')) {
+            pcntl_async_signals(true);
+            $stop = function () use (&$running): void {
+                $running = false;
+            };
+            pcntl_signal(SIGTERM, $stop);
+            pcntl_signal(SIGINT, $stop);
+        }
+        $lastMaintenance = 0;
+        $lastRefresh = 0;
+        while ($running) {
             $once();
-            $store->maintenance();
+            if (time() - $lastMaintenance >= 60) {
+                $store->maintenance();
+                $lastMaintenance = time();
+            }
+            if (time() - $lastRefresh >= 3600) {
+                app(OnboardingAdminQueries::class)->refresh();
+                $lastRefresh = time();
+            }
             sleep(1);
         }
+
+        return 0;
     }
 }

@@ -33,7 +33,7 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             }
             $flags = json_decode((string) $request->risk_flags, true);
             $skip = is_array($flags) && array_intersect(self::SKIP_FLAGS, $flags) !== [] ? 'high_risk' : $this->budgetBlock($request->user_id);
-            $this->db->statement("insert into ai_execution_claims (request_id,status) values (?, 'started') as incoming on duplicate key update status='started', finished_at=null, error_code=null", [$requestId]);
+            $this->db->statement("insert into ai_execution_claims (request_id,status) values (?, 'started') as incoming on duplicate key update status='started', started_at=current_timestamp(6), finished_at=null, error_code=null", [$requestId]);
             $this->db->table('plan_requests')->where('id', $requestId)->update(['status' => 'generating', 'updated_at' => $this->db->raw('current_timestamp(6)')]);
 
             return ['skip' => $skip, 'userId' => $request->user_id, 'specialistId' => $request->assigned_specialist_id];
@@ -75,6 +75,9 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             }
             $attempt = (int) $this->db->table('ai_generations')->where('request_id', $requestId)->count() + 1;
             $generation = Crypto::uuid();
+            $started = $this->db->table('ai_execution_claims')->where('request_id', $requestId)->value('started_at');
+            $usage = $this->db->table('ai_usage_ledger')->where('request_id', $requestId)->where('created_at', '>=', $started)->get();
+            $latest = $usage->last();
             $this->db->table('ai_generations')->insert([
                 'id' => $generation,
                 'request_id' => $requestId,
@@ -82,6 +85,10 @@ final class MySqlPlanGeneration implements PlanGenerationStore
                 'status' => $status === 'drafted' ? 'drafted' : ($status === 'failed' ? 'failed' : 'skipped'),
                 'skipped_reason' => $status === 'drafted' ? null : $reason,
                 'attempt_no' => $attempt,
+                'model' => $latest->model ?? '',
+                'pool_code' => $latest->pool_code ?? null,
+                'cost_micros' => $usage->sum('cost_micros'),
+                'tokens' => $usage->sum(fn ($u) => $u->tokens_in + $u->tokens_out),
                 'warnings' => '[]',
             ]);
             if ($versionId !== null) {
@@ -187,7 +194,10 @@ final class MySqlPlanGeneration implements PlanGenerationStore
                     'notes' => (string) ($meal['notes'] ?? ''),
                 ]);
                 $option = Crypto::uuid();
-                $this->db->table('plan_meal_options')->insert(['meal_id' => $mealId, 'option_uid' => $option, 'kind' => 'primary', 'document' => json_encode(['optionId' => $option, 'kind' => 'primary', 'title' => $meal['title'], 'calories' => (int) $meal['calories'], 'approved' => false], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+                foreach ($meal['options'] ?? [['optionId' => $option, 'kind' => 'primary', 'title' => $meal['title'], 'calories' => (int) $meal['calories'], 'approved' => false]] as $document) {
+                    $document['approved'] = false;
+                    $this->db->table('plan_meal_options')->insert(['meal_id' => $mealId, 'option_uid' => $document['optionId'], 'kind' => $document['kind'], 'document' => json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+                }
                 foreach (array_values($meal['items'] ?? []) as $itemPosition => $item) {
                     $this->db->table('plan_meal_items')->insert(['id' => Crypto::uuid(), 'meal_id' => $mealId, 'position' => $itemPosition, 'name' => $item['name'], 'quantity' => $item['quantity'] ?? null, 'unit' => $item['unit'] ?? null]);
                 }

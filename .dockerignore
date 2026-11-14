@@ -1,4 +1,9 @@
 .git
+.tools
+backend
+**/vendor
+backend-laravel/storage/logs/*
+backend-laravel/storage/framework/cache/*
 app
 onboarding
 site

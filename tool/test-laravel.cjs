@@ -43,14 +43,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const url = `mysql://sabzine_test:${password}@127.0.0.1:${port}/sabzine_test`;
     const env = { ...process.env, APP_ENV: 'testing', NODE_ENV: 'development', DATABASE_URL: url, MYSQL_TEST_URL: url,
       DB_CONNECTION: 'mysql', CACHE_STORE: 'array', SESSION_DRIVER: 'array', SMS_PROVIDER: 'console', OTP_FIXED_CODE: '123456',
-      JWT_SECRET: 'test-only-cross-runtime-jwt-secret', OTP_PEPPER: 'test-only-cross-runtime-otp-pepper', FIELD_KEY: 'test-only-cross-runtime-field-key', PHP_BINARY: php };
+      JWT_SECRET: 'test-only-cross-runtime-jwt-secret', OTP_PEPPER: 'test-only-cross-runtime-otp-pepper', FIELD_KEY: 'test-only-cross-runtime-field-key', PHP_BINARY: php,
+      MYSQL_BACKUP_TEST_URL: `mysql://root@127.0.0.1:${port}/sabzine_test`, MYSQL_HOME: mysqlHome };
     const options = { cwd: path.join(root, 'backend-laravel'), env, windowsHide: true, timeout: 120000, maxBuffer: 8 * 1024 * 1024 };
     const migrated = await run(php, ['artisan', 'migrate', '--force', '--no-interaction'], {
       ...options, env: { ...env, DATABASE_URL: `mysql://root@127.0.0.1:${port}/sabzine_test` },
     });
     process.stdout.write(migrated.stdout);
     if (!process.argv.includes('--schema-only')) {
-      const tests = await run(php, ['vendor/bin/phpunit'], options);
+      const tests = await run(php, ['vendor/bin/phpunit', '--fail-on-skipped'], options);
       process.stdout.write(tests.stdout);
     }
     if (process.argv.includes('--cross-runtime')) {
@@ -70,6 +71,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       testing.child.stdout.on('data', chunk => process.stdout.write(chunk));
       testing.child.stderr.on('data', chunk => process.stderr.write(chunk));
       try { await testing; } catch (error) { error.stdout = ''; error.stderr = ''; throw error; }
+    }
+    if (process.argv.includes('--browser')) {
+      env.PLAYWRIGHT_MODULE ||= path.join(root, '.tools/browser-tests/node_modules/playwright');
+      const browserTest = await run(process.execPath, ['--test', 'tool/laravel-browser.spec.cjs'], { ...options, cwd: root, timeout: 150000 });
+      process.stdout.write(browserTest.stdout);
     }
     await run(binary('mysqladmin'), [...args, 'shutdown'], { windowsHide: true, timeout: 20000 });
     await new Promise(resolve => server.exitCode !== null ? resolve() : server.once('exit', resolve));

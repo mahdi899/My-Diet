@@ -30,7 +30,7 @@ final class MySqlCoach implements CoachGateway
 
     public function accept(string $user, string $client, string $text): array
     {
-        return $this->db->transaction(function () use ($user, $client, $text) {
+        return $this->serial($user, function () use ($user, $client, $text) {
             $thread = $this->ensure($user);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
@@ -52,9 +52,11 @@ final class MySqlCoach implements CoachGateway
             }
             $reply = $this->model->reply($text);
             $assistant = Crypto::uuid();
-            $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $reply['text'], 'reply_to' => $id, 'model' => 'test-adapter', 'tokens_in' => $reply['tokensIn'], 'tokens_out' => $reply['tokensOut'], 'payload' => '{}']);
-            $this->usage($user, $reply['costMicros'], 1, 0);
-            $this->db->table('coach_threads')->where('id', $thread->id)->update(['last_message_at' => $this->db->raw('current_timestamp(6)')]);
+            $this->db->transaction(function () use ($assistant, $thread, $user, $reply, $id): void {
+                $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $reply['text'], 'reply_to' => $id, 'model' => $reply['model'] ?? 'unreported', 'tokens_in' => $reply['tokensIn'] ?? 0, 'tokens_out' => $reply['tokensOut'] ?? 0, 'payload' => '{}']);
+                $this->usage($user, $reply['costMicros'], 1, 0);
+                $this->db->table('coach_threads')->where('id', $thread->id)->update(['last_message_at' => $this->db->raw('current_timestamp(6)')]);
+            });
 
             return ['replay' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
         });
@@ -107,13 +109,34 @@ final class MySqlCoach implements CoachGateway
 
     public function action(string $user, string $client, string $action): array
     {
-        if ($action === 'log_water') {
-            $day = CivilDates::today();
-            $this->db->statement('insert into coach_water (user_id,civil_date,ml) values (?,?,250) as incoming on duplicate key update ml=coach_water.ml+250, updated_at=current_timestamp(6)', [$user, $day]);
-        }
-        $accepted = $this->accept($user, $client, $action);
+        return $this->serial($user, function () use ($user, $client, $action): array {
+            $thread = $this->ensure($user);
+            $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
+            if ($prior !== null) {
+                return ['userMessage' => $this->message($prior), 'messages' => $this->replies($prior->id), 'today' => $this->today($user)];
+            }
+            if ($action === 'log_water') {
+                $day = CivilDates::today();
+                $this->db->statement('insert into coach_water (user_id,civil_date,ml) values (?,?,250) as incoming on duplicate key update ml=coach_water.ml+250, updated_at=current_timestamp(6)', [$user, $day]);
+            }
+            $accepted = $this->accept($user, $client, $action);
 
-        return ['userMessage' => $accepted['userMessage'], 'messages' => $accepted['replies'], 'today' => $this->today($user)];
+            return ['userMessage' => $accepted['userMessage'], 'messages' => $accepted['replies'], 'today' => $this->today($user)];
+        });
+    }
+
+    /** A connection-scoped lock serializes a thread without rolling back paid model usage on provider failure. */
+    private function serial(string $user, \Closure $work): mixed
+    {
+        $lock = hash('sha256', 'coach:'.$user);
+        if ((int) $this->db->selectOne('select get_lock(?,0) as acquired', [$lock])->acquired !== 1) {
+            throw new Problem(409, 'coach_busy', 'پاسخ قبلی هنوز در حال آماده شدن است');
+        }
+        try {
+            return $work();
+        } finally {
+            $this->db->selectOne('select release_lock(?) as released', [$lock]);
+        }
     }
 
     public function patch(string $user, string $entry, string $title): array

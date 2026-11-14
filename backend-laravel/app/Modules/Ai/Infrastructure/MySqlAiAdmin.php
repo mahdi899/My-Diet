@@ -117,7 +117,7 @@ final class MySqlAiAdmin
             throw new Problem(404, 'not_found', 'سرویس پیدا نشد');
         }
         $chosen = is_string($model) && $model !== '' ? $model : 'test-adapter';
-        $result = $this->catalog->complete($chosen);
+        $result = $this->catalog->complete($chosen, (array) $row);
         $this->audit($actor, 'ai_provider_tested', 'ai_provider', $id, ['model' => $chosen, 'ok' => $result['ok'], 'outcome' => $result['outcome'], 'external' => $this->catalog->callsExternalNetwork()]);
 
         return $result;
@@ -125,11 +125,12 @@ final class MySqlAiAdmin
 
     public function models(string $id, string $query, int $limit): array
     {
-        if ($this->db->table('ai_providers')->where('id', $id)->doesntExist()) {
+        $provider = $this->db->table('ai_providers')->where('id', $id)->first();
+        if ($provider === null) {
             throw new Problem(404, 'not_found', 'سرویس پیدا نشد');
         }
         $needle = mb_strtolower(mb_substr($query, 0, 80));
-        $models = array_values(array_filter($this->catalog->models(), fn ($model) => $needle === '' || str_contains(mb_strtolower($model['id'].' '.$model['name']), $needle)));
+        $models = array_values(array_filter($this->catalog->models((array) $provider), fn ($model) => $needle === '' || str_contains(mb_strtolower($model['id'].' '.$model['name']), $needle)));
 
         return ['fetchedAt' => CivilDates::now()->format('Y-m-d\TH:i:s.v\Z'), 'total' => count($models), 'suggested' => FixedAiCatalog::SUGGESTED, 'items' => array_slice($models, 0, $limit)];
     }
@@ -256,10 +257,10 @@ final class MySqlAiAdmin
         if ((int) $pool->enabled !== 1) {
             $result = ['ok' => false, 'answer' => null, 'usage' => null, 'chain' => [], 'errorCode' => 'pool_disabled'];
         } else {
-            $member = $this->db->table('ai_pool_members')->where('pool_id', $pool->id)->where('enabled', 1)->orderBy('position')->value('model');
+            $member = $this->db->table('ai_pool_members as m')->join('ai_providers as p', 'p.id', '=', 'm.provider_id')->where('m.pool_id', $pool->id)->where('m.enabled', 1)->where('p.active', 1)->select('p.*', 'm.model')->orderBy('m.position')->first();
             $result = $member === null
                 ? ['ok' => false, 'answer' => null, 'usage' => null, 'chain' => [], 'errorCode' => 'pool_empty']
-                : $this->catalog->complete($member);
+                : $this->catalog->complete($member->model, (array) $member);
         }
         $this->audit($actor, 'ai_pool_tested', 'ai_pool', $pool->id, ['code' => $code, 'ok' => $result['ok'], 'external' => $this->catalog->callsExternalNetwork()]);
 

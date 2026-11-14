@@ -1,13 +1,30 @@
-FROM php:8.4-cli
+FROM node:22-alpine AS frontend-build
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM php:8.4-fpm AS api
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip libsodium-dev \
-    && docker-php-ext-install pdo_mysql sodium \
+    && apt-get install -y --no-install-recommends git unzip libsodium-dev libonig-dev libcurl4-openssl-dev \
+    && docker-php-ext-install pdo_mysql sodium mbstring curl pcntl opcache \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-WORKDIR /app
-COPY composer.json composer.lock ./
+WORKDIR /var/www/backend-laravel
+COPY backend-laravel/composer.json backend-laravel/composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts
-COPY . .
-RUN composer dump-autoload --no-dev --optimize
-EXPOSE 8000
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]
+COPY backend-laravel/ ./
+COPY admin/ /var/www/admin/
+COPY doctor/ /var/www/doctor/
+RUN composer dump-autoload --no-dev --optimize \
+    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
+    && chown -R www-data:www-data storage bootstrap/cache
+USER www-data
+EXPOSE 9000
+CMD ["php-fpm"]
+
+FROM nginx:stable-alpine AS web
+COPY --from=frontend-build /frontend/dist/ /usr/share/nginx/html/
+COPY backend-laravel/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080
