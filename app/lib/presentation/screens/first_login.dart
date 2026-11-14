@@ -33,8 +33,13 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
     final phone = latinDigits(_phone.text).trim();
     final initial = RegExp(r'^09\d{9}$').hasMatch(phone) ? phone : null;
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SignupOnboardingPage(store: store, initialPhone: initial),
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 560),
+        reverseTransitionDuration: const Duration(milliseconds: 380),
+        pageBuilder: (_, animation, _) => FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          child: SignupOnboardingPage(store: store, initialPhone: initial),
+        ),
       ),
     );
   }

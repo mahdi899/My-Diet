@@ -139,7 +139,7 @@ class HeroGoalScreen extends StatelessWidget {
                                   width: 44,
                                   height: 44,
                                   child: Icon(
-                                    Icons.arrow_forward_rounded,
+                                    Icons.arrow_back_rounded,
                                     color: AppColors.ink,
                                   ),
                                 ),

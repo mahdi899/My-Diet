@@ -274,7 +274,7 @@ class _QuestionView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        QuestionHeader(title: _title, subtitle: q.subtitle),
+        QuestionHeader(title: _title),
         Expanded(
           child: KeyedSubtree(
             key: ValueKey(q.key),

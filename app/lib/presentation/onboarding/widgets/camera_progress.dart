@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../core/motion/motion.dart';
-import '../../../core/theme/tokens.dart';
 
 /// Camera hole reported by the device. Insets alone are not a camera.
 Rect? topCameraBounds(MediaQueryData media) {
@@ -85,18 +84,27 @@ class _CutoutRingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    const stroke = 2.4;
+    const stroke = 3.8;
     final radius = math.min(size.width, size.height) / 2 - stroke;
+    final circle = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke + 2.4
+        ..color = Colors.white,
+    );
     canvas.drawCircle(
       center,
       radius,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = stroke
-        ..color = Colors.white.withValues(alpha: 0.45),
+        ..color = const Color(0xFFD7E0D4),
     );
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
+      circle,
       -math.pi / 2,
       math.pi * 2 * progress.clamp(0, 1),
       false,
@@ -104,7 +112,7 @@ class _CutoutRingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeWidth = stroke
-        ..color = AppColors.lime,
+        ..color = const Color(0xFF063D2C),
     );
   }
 

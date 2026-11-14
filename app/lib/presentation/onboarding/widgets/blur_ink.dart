@@ -29,7 +29,7 @@ class _BlurSwapState extends State<BlurSwap>
     with SingleTickerProviderStateMixin {
   late final AnimationController _settle = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 520),
+    duration: const Duration(milliseconds: 1100),
   );
   var _playedIn = false;
 

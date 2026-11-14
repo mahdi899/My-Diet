@@ -198,7 +198,7 @@ class _CircleBack extends StatelessWidget {
           child: const SizedBox(
             width: 44,
             height: 44,
-            child: Icon(Icons.arrow_forward_rounded, color: AppColors.ink),
+            child: Icon(Icons.arrow_back_rounded, color: AppColors.ink),
           ),
         ),
       ),
@@ -208,9 +208,8 @@ class _CircleBack extends StatelessWidget {
 
 /// Headline + helper line used at the top of a question.
 class QuestionHeader extends StatelessWidget {
-  const QuestionHeader({super.key, required this.title, this.subtitle});
+  const QuestionHeader({super.key, required this.title});
   final String title;
-  final String? subtitle;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -221,14 +220,6 @@ class QuestionHeader extends StatelessWidget {
           text: title,
           style: Theme.of(context).textTheme.headlineMedium!,
         ),
-        if (subtitle != null && subtitle!.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: BlurSwap(
-              text: subtitle!,
-              style: const TextStyle(color: muted, fontSize: 13, height: 1.7),
-            ),
-          ),
       ],
     ),
   );

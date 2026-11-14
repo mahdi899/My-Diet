@@ -9,7 +9,7 @@ import '../../data/network/customer_api_client.dart';
 import '../../data/onboarding/http_onboarding_repository.dart';
 import '../../domain/onboarding/onboarding.dart';
 import '../../domain/onboarding/spec.dart';
-import '../widgets/brand_mark.dart';
+import '../../core/photos/food_image.dart';
 import '../widgets/kit/pill_button.dart';
 import 'controller.dart';
 import 'onboarding_flow.dart';
@@ -128,8 +128,32 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
   Widget build(BuildContext context) {
     if (loading) {
       return const Scaffold(
-        backgroundColor: AppColors.bg,
-        body: Center(child: SabzineMark(size: 84)),
+        backgroundColor: AppColors.emeraldDark,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            FoodImage(
+              photoId: 'emerald_sprout_rising_through_ring',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.18, 0.48, 0.72, 1],
+                  colors: [
+                    Color(0x14000000),
+                    Color(0x660A5C42),
+                    Color(0xF20A5C42),
+                    AppColors.bg,
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
     if (error != null || controller == null) {
