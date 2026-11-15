@@ -4,13 +4,13 @@ import { asRecord, asRows, formatFaNumber } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { staff } from '../../session'
 import { CatalogImport, FoodEditor } from './FoodDialogs'
-import { categories, costs, display, exportFoodFile, foodError, foodPath, meals, sampleFoods, values, type FoodRow } from './catalog'
+import { categories, display, exportFoodFile, foodError, foodPath, meals, sampleFoods, values, type FoodRow } from './catalog'
 import '../users/users.css'
 import './foods.css'
 
 const catalogKey = ['admin-food-catalog']
 const pageSize = 15
-const columns = ['عکس', 'غذا', 'دسته', 'وعده‌ها', 'پرس', 'انرژی', 'پ / ک / چ', 'آلرژن', 'هزینه', 'وضعیت', 'عملیات']
+const columns = ['عکس', 'غذا', 'دسته', 'وعده‌ها', 'وضعیت', 'عملیات']
 const normalize = (value: string) => value.trim().toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک')
 const number = (value: unknown) => value == null ? '—' : formatFaNumber(Number(value))
 
@@ -101,9 +101,6 @@ export function FoodsPage({ preview }: { preview: boolean }) {
               <td><div className="food-name"><strong>{display(food.nameFa)}</strong><small><bdi>{display(food.slug)}</bdi></small></div></td>
               <td>{categories[String(food.category)] ?? display(food.category)}</td>
               <td>{values(food.mealTypes).map(key => meals[key] ?? key).join('، ') || '—'}</td>
-              <td>{display(food.servingLabel)}</td><td><span className="food-nowrap">{number(food.kcal)} kcal</span></td>
-              <td><span className="food-nowrap">{[food.proteinG, food.carbsG, food.fatG].map(number).join(' / ')}</span></td>
-              <td>{values(food.allergens).join('، ') || '—'}</td><td>{costs[String(food.costTier)] ?? '—'}</td>
               <td><span className="food-status" data-active={!!food.active}><i aria-hidden="true" />{food.active ? 'فعال' : 'غیرفعال'}</span></td>
               <td><div className="food-row-actions">
                 <button type="button" aria-label={`ویرایش ${food.nameFa}`} onClick={() => setModal({ kind: 'editor', food })}><Icon name="sliders" />ویرایش</button>

@@ -37,14 +37,36 @@ final class MySqlFoods implements FoodStore
 
     public function all(): array
     {
-        return array_map($this->view(...), $this->db->table('food_catalog')->orderBy('slug')->get()->all());
+        $foods = array_map($this->view(...), $this->db->table('food_catalog')->orderBy('slug')->get()->all());
+        $linked = $this->db->table('food_recipe_ingredients as r')->join('food_ingredients as i', 'i.code', '=', 'r.ingredient_code')->join('food_recipe_details as d', 'd.food_id', '=', 'r.food_id')->orderBy('r.position')->get(['r.food_id', 'i.name_fa', 'i.category', 'r.quantity', 'r.unit', 'd.servings']);
+        $groups = [];
+        foreach ($linked as $item) {
+            $groups[$item->food_id][] = ['name' => $item->name_fa, 'quantity' => (float) $item->quantity / $item->servings, 'unit' => $item->unit, 'category' => $item->category];
+        }
+        foreach ($foods as &$food) {
+            if (isset($groups[$food['id']])) {
+                $food['ingredients'] = $groups[$food['id']];
+            }
+        }
+
+        return $foods;
     }
 
     public function get(string $slug): ?array
     {
         $row = $this->db->table('food_catalog')->where('slug', $slug)->first();
 
-        return $row ? $this->view($row) : null;
+        if (! $row) {
+            return null;
+        }
+        $food = $this->view($row);
+        $details = $this->db->table('food_recipe_details')->where('food_id', $row->id)->first();
+        if ($details) {
+            $food['recipe'] = ['sourceCode' => $details->source_code, 'servings' => $details->servings, 'cookMinutes' => $details->cook_minutes, 'instructions' => $details->instructions, 'metadata' => json_decode($details->metadata, true, 512, JSON_THROW_ON_ERROR), 'sourceMarkdown' => $details->source_markdown];
+            $food['ingredients'] = $this->db->table('food_recipe_ingredients as r')->join('food_ingredients as i', 'i.code', '=', 'r.ingredient_code')->where('r.food_id', $row->id)->orderBy('r.position')->get()->map(fn ($i) => ['name' => $i->name_fa, 'quantity' => (float) $i->quantity / $details->servings, 'unit' => $i->unit, 'category' => $i->category])->all();
+        }
+
+        return $food;
     }
 
     public function put(array $food, bool $new, array $photo): void
@@ -63,6 +85,19 @@ final class MySqlFoods implements FoodStore
         } else {
             $row['updated_at'] = $this->db->raw('current_timestamp(6)');
             $this->db->table('food_catalog')->where('slug', $food['slug'])->update($row);
+        }
+        $id = $this->db->table('food_catalog')->where('slug', $food['slug'])->value('id');
+        $details = $this->db->table('food_recipe_details')->where('food_id', $id)->first();
+        if ($details) {
+            $this->db->table('food_recipe_ingredients')->where('food_id', $id)->delete();
+            foreach ($food['ingredients'] as $position => $ingredient) {
+                $code = $this->db->table('food_ingredients')->where('name_fa', $ingredient['name'])->value('code');
+                if (! $code) {
+                    $code = 'ADM-'.substr(hash('sha256', $ingredient['name']), 0, 24);
+                    $this->db->table('food_ingredients')->insertOrIgnore(['code' => $code, 'name_fa' => $ingredient['name'], 'category' => $ingredient['category'] ?? 'other']);
+                }
+                $this->db->table('food_recipe_ingredients')->insert(['food_id' => $id, 'ingredient_code' => $code, 'position' => $position, 'quantity' => $ingredient['quantity'] * $details->servings, 'unit' => $ingredient['unit']]);
+            }
         }
     }
 
@@ -115,7 +150,9 @@ final class MySqlFoods implements FoodStore
     public function transaction(\Closure $work): mixed
     {
         return $this->db->transaction(function () use ($work): mixed {
-            $this->db->statement('insert into identity_mutexes(lock_key) values(?) as incoming on duplicate key update lock_key=incoming.lock_key', [hash('sha256', 'food:catalog')]);
+            $key = hash('sha256', 'food:catalog');
+            $this->db->table('identity_mutexes')->insertOrIgnore(['lock_key' => $key]);
+            $this->db->table('identity_mutexes')->where('lock_key', $key)->lockForUpdate()->first();
 
             return $work();
         });

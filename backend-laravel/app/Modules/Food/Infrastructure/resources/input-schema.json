@@ -38,7 +38,8 @@
           "breakfast",
           "lunch",
           "dinner",
-          "snack"
+          "snack",
+          "side"
         ]
       }
     },

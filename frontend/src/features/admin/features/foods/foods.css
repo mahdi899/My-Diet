@@ -14,7 +14,7 @@
 .admin-reference .food-catalog-card > header { padding: 22px 24px; }
 .admin-reference .food-catalog-card h2 { font-size: 16px; font-weight: 700; }
 .admin-reference .food-catalog-card header p { margin-top: 6px; color: var(--muted); font-size: 12px; }
-.admin-reference .food-catalog-card table { min-width: 1140px; table-layout: auto; }
+.admin-reference .food-catalog-card table { min-width: 720px; table-layout: auto; }
 .admin-reference .food-catalog-card th { background: var(--users-soft); font-weight: 600; white-space: nowrap; }
 .admin-reference .food-catalog-card th:first-child { width: 82px; }
 .admin-reference .food-catalog-card th:last-child { width: 96px; }

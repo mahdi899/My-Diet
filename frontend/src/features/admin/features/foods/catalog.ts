@@ -7,7 +7,7 @@ export const categories: Record<string, string> = {
   breakfast: 'صبحانه', main: 'غذای اصلی', side: 'مخلفات', soup: 'سوپ و آش', salad: 'سالاد',
   protein: 'پروتئین', carb: 'نان و غلات', dairy: 'لبنیات', fruit: 'میوه', snack: 'میان‌وعده', drink: 'نوشیدنی', dessert: 'دسر',
 }
-export const meals: Record<string, string> = { breakfast: 'صبحانه', lunch: 'ناهار', dinner: 'شام', snack: 'میان‌وعده' }
+export const meals: Record<string, string> = { breakfast: 'صبحانه', lunch: 'ناهار', dinner: 'شام', snack: 'میان‌وعده', side: 'کنار غذا' }
 export const costs: Record<string, string> = { 1: 'ارزان', 2: 'متوسط', 3: 'گران' }
 export const seasons = { spring: 'بهار', summer: 'تابستان', autumn: 'پاییز', winter: 'زمستان' }
 export const values = (input: unknown) => Array.isArray(input) ? input.map(String) : []

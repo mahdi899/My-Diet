@@ -48,6 +48,15 @@ const split = (text: string) => text.split(/[,،|]/).map(value => value.trim()).
 export function FoodEditor({ food, preview, close, saved }: { food: FoodRow | null; preview: boolean; close: () => void; saved: (message: string) => void }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [recipe, setRecipe] = useState<FoodRow | null>(null)
+  useEffect(() => {
+    if (!food?.slug || preview) return
+    let current = true
+    staff.api(`${foodPath}/${encodeURIComponent(String(food.slug))}`).then(result => {
+      if (current) setRecipe(asRecord(asRecord(result)?.recipe))
+    }).catch(() => { if (current) setRecipe(null) })
+    return () => { current = false }
+  }, [food?.slug, preview])
   const initialIngredients = asRows(food?.ingredients).map(item => [item.name, item.quantity, item.unit, item.category].join(':')).join('\n')
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -102,7 +111,8 @@ export function FoodEditor({ food, preview, close, saved }: { food: FoodRow | nu
       {([['mealTypes', 'وعده‌ها', meals], ['seasons', 'فصل‌ها', seasons]] as const).map(([key, title, options]) =>
         <fieldset className="food-checks" key={key}><legend>{title}</legend>{Object.entries(options).map(([value, name]) =>
           <label key={value}><input name={key} type="checkbox" value={value} defaultChecked={values(food?.[key] ?? (key === 'mealTypes' ? ['lunch'] : [])).includes(value)} />{name}</label>)}</fieldset>)}
-      <label>مواد (هر خط: نام:مقدار:واحد:گروه)<textarea name="ingredients" rows={5} required defaultValue={initialIngredients} /></label>
+      <label>مواد هر سهم (هر خط: نام:مقدار:واحد:گروه)<textarea name="ingredients" rows={5} required defaultValue={initialIngredients} /></label>
+      {recipe && <section><h3>دستور تهیه</h3><p>مواد این فرم برای هر سهم است؛ رسپی اصلی {String(recipe.servings)} سهم دارد. زمان پخت: {String(recipe.cookMinutes)} دقیقه.</p><p style={{ whiteSpace: 'pre-wrap', marginBlock: 16 }}>{String(recipe.instructions ?? '')}</p><details><summary>تمام اطلاعات منبع و برآوردهای تغذیه‌ای</summary><pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 12 }}>{String(recipe.sourceMarkdown ?? '')}</pre></details></section>}
       {error && <p className="form-error" role="alert">{error}</p>}
       <Actions busy={busy} preview={preview} title="ذخیره" close={close} />
     </form>
