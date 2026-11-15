@@ -64,7 +64,7 @@ final class MarkdownRecipes
                     'seasons' => $tokens('فصل‌های پیشنهادی'), 'cost_tier' => match ($tokens('سطح هزینه پیشنهادی')[0] ?? '') {
                         'low', 'cheap' => 1, 'high', 'expensive' => 3, default => 2
                     },
-                    'prep_minutes' => (int) $this->number($fields['زمان آماده‌سازی — دقیقه'] ?? ''), 'active' => false, 'image' => null, 'source' => 'FoodRecepie.md'],
+                    'prep_minutes' => (int) $this->number($fields['زمان آماده‌سازی — دقیقه'] ?? ''), 'active' => false, 'image' => null, 'source' => 'seed'],
                 'cook_minutes' => (int) $this->number($fields['زمان پخت — دقیقه'] ?? '')];
         }
         if (count($recipes) !== 998 || count(array_unique(array_column($recipes, 'code'))) !== 998) {

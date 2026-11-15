@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { asRecord, asRows, formatFaNumber } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
@@ -53,6 +53,9 @@ export function FoodsPage({ preview }: { preview: boolean }) {
     },
     getNextPageParam: last => last.cursor || undefined,
   })
+  useEffect(() => {
+    if (query.hasNextPage && !query.isFetching && !query.isFetchNextPageError) void query.fetchNextPage()
+  }, [query.hasNextPage, query.isFetching, query.isFetchNextPageError, query.fetchNextPage])
   function saved(message: string) {
     setModal(null)
     setNotice(message)
@@ -92,7 +95,7 @@ export function FoodsPage({ preview }: { preview: boolean }) {
     {notice && <p className="info-note" role="status">{notice}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
     <section className="users-table-card food-catalog-card" aria-label="کاتالوگ غذاهای ایرانی">
-      <header><h2>کاتالوگ غذاهای ایرانی</h2>{query.data && <p>{number(rows.length)} غذا بارگذاری شد</p>}</header>
+      <header><h2>کاتالوگ غذاهای ایرانی</h2>{query.data && <p>{number(rows.length)} غذا{query.hasNextPage ? ' تا اینجا؛ بقیه در حال بارگذاری است' : ''}</p>}</header>
       {query.data ? <>
         <div className="users-table-scroll" role="region" aria-label="جدول غذاها" tabIndex={0}>
           <table><thead><tr>{columns.map(title => <th scope="col" key={title}>{title === 'عملیات' ? <span className="sr-only">{title}</span> : title}</th>)}</tr></thead>
