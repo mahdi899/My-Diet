@@ -18,7 +18,7 @@ final class MySqlFoods implements FoodStore
     private function view(object $row): array
     {
         $food = [];
-        $columns = ['id', 'slug', 'name_fa', 'category', 'meal_types', 'serving_label', 'serving_g', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g', 'allergens', 'tags', 'regions', 'seasons', 'cost_tier', 'prep_minutes', 'ingredients', 'image', 'active', 'source', 'nutrition'];
+        $columns = ['id', 'slug', 'name_fa', 'category', 'meal_types', 'serving_label', 'serving_g', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g', 'allergens', 'tags', 'regions', 'seasons', 'cost_tier', 'prep_minutes', 'ingredients', 'image', 'active', 'source', 'nutrition', 'nutrition_status'];
         foreach ($columns as $column) {
             $key = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $column))));
             $value = $row->$column;

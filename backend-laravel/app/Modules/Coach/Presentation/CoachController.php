@@ -13,7 +13,10 @@ final class CoachController
 {
     private const ACTIONS = ['confirm_meal', 'dismiss', 'confirm_swap', 'log_as_planned', 'log_water', 'log_weight', 'show_ring'];
 
-    public function __construct(private CoachGateway $coach) {}
+    public function __construct(
+        private CoachGateway $coach,
+        private \App\Modules\Coach\Application\CoachQuotaService $quota
+    ) {}
 
     public function thread(Request $request): array
     {
@@ -36,6 +39,11 @@ final class CoachController
 
     public function messages(Request $request): StreamedResponse
     {
+        $userId = $this->actor($request);
+        
+        // Check quota before processing
+        $this->quota->requireChat($userId);
+        
         $body = Input::body($request, ['clientMessageId', 'kind', 'text', 'value', 'label', 'action', 'args', 'sourceMessageId', 'mediaId', 'caption', 'mealType']);
         $kind = Input::string($body, 'kind', 20);
         if (! in_array($kind, ['text', 'quick_reply', 'card_action', 'photo'], true)) {
@@ -44,13 +52,23 @@ final class CoachController
         $text = $kind === 'quick_reply'
             ? (Input::optional($body, 'label', 80) ?? Input::optional($body, 'value', 200) ?? Input::optional($body, 'text', 8000) ?? '')
             : (Input::optional($body, 'text', 8000) ?? Input::optional($body, 'caption', 300) ?? '');
-        $accepted = $this->coach->accept($this->actor($request), Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $text);
+        $accepted = $this->coach->accept($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $text);
+
+        // Consume quota after successful reply
+        if (!$accepted['replay'] && $accepted['blocked'] === null && count($accepted['replies']) > 0) {
+            $this->quota->consumeChat($userId);
+        }
 
         return $this->stream($accepted);
     }
 
     public function photo(Request $request): array
     {
+        $userId = $this->actor($request);
+        
+        // Check vision quota
+        $this->quota->requireVision($userId);
+        
         $body = Input::body($request, ['clientMessageId', 'image', 'mime', 'caption', 'mealType']);
         $image = Input::string($body, 'image', 2_800_000);
         $bytes = base64_decode($image, true);
@@ -59,7 +77,12 @@ final class CoachController
         }
         $mime = Input::optional($body, 'mime', 80) ?? 'image/jpeg';
 
-        return $this->coach->photo($this->actor($request), Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $bytes, $mime);
+        $result = $this->coach->photo($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $bytes, $mime);
+        
+        // Consume vision quota after successful analysis
+        $this->quota->consumeVision($userId);
+        
+        return $result;
     }
 
     public function patch(Request $request, string $id): array
@@ -98,6 +121,40 @@ final class CoachController
         }
 
         return response($row['content'], 200, ['Content-Type' => $row['mime'], 'Content-Length' => (string) strlen($row['content']), 'Cache-Control' => 'private, max-age=86400', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
+    public function confirmPhoto(Request $request, string $id): array
+    {
+        return $this->coach->confirmPhoto($this->actor($request), Input::uuid($id));
+    }
+
+    public function followUps(Request $request): array
+    {
+        return ['questions' => $this->coach->followUps($this->actor($request))];
+    }
+
+    public function quotaStatus(Request $request): array
+    {
+        return $this->quota->state($this->actor($request));
+    }
+
+    public function swapMeal(Request $request): array
+    {
+        $body = Input::body($request, ['mealId', 'reason', 'budgetOk', 'foodSlug']);
+        $mealId = Input::uuid($body['mealId']);
+        
+        $swap = app(\App\Modules\Plans\Application\MealSwapService::class);
+        
+        // If foodSlug provided, apply the swap; otherwise return alternatives
+        if (isset($body['foodSlug']) && is_string($body['foodSlug'])) {
+            $reason = Input::optional($body, 'reason', 32) ?? 'variety';
+            return $swap->apply($this->actor($request), $mealId, $body['foodSlug'], $reason);
+        }
+        
+        $reason = Input::optional($body, 'reason', 32) ?? 'variety';
+        $budgetOk = isset($body['budgetOk']) && $body['budgetOk'] === true;
+        
+        return $swap->alternatives($this->actor($request), $mealId, $reason, $budgetOk);
     }
 
     private function stream(array $accepted): StreamedResponse

@@ -585,5 +585,8 @@ class _Scripted implements CoachRepository {
   Future<CoachDayBrief?> ensureDayBrief() async => null;
 
   @override
+  Future<Map<String, dynamic>?> quota() async => null;
+
+  @override
   void close() {}
 }

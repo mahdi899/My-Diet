@@ -3,13 +3,19 @@
 namespace App\Providers;
 
 use App\Modules\Admin\Application\AdminQueries;
+use Illuminate\Support\Facades\Http;
 use App\Modules\Admin\Infrastructure\MySqlAdminQueries;
 use App\Modules\Ai\Application\AiCatalog;
 use App\Modules\Ai\Infrastructure\ConfiguredAiCatalog;
+use App\Modules\Coach\Application\CoachContextBuilder;
 use App\Modules\Coach\Application\CoachGateway;
+use App\Modules\Coach\Application\CoachIntentParser;
 use App\Modules\Coach\Application\CoachModel;
+use App\Modules\Coach\Application\CoachQuotaService;
+use App\Modules\Coach\Application\CoachQuotaStore;
 use App\Modules\Coach\Infrastructure\ConfiguredCoachModel;
 use App\Modules\Coach\Infrastructure\MySqlCoach;
+use App\Modules\Coach\Infrastructure\MySqlCoachQuotas;
 use App\Modules\Food\Application\FoodStore;
 use App\Modules\Food\Application\IngredientStore;
 use App\Modules\Food\Domain\FoodRules;
@@ -117,6 +123,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(StreakStore::class, MySqlStreak::class);
         $this->app->bind(CoachModel::class, ConfiguredCoachModel::class);
         $this->app->bind(CoachGateway::class, MySqlCoach::class);
+        $this->app->bind(CoachQuotaStore::class, MySqlCoachQuotas::class);
+        $this->app->singleton(CoachQuotaService::class);
+        $this->app->singleton(CoachContextBuilder::class);
+        $this->app->singleton(CoachIntentParser::class);
         $this->app->singleton(AiCatalog::class, ConfiguredAiCatalog::class);
         $this->app->singleton(QuestionnaireRules::class, fn () => new QuestionnaireRules(
             json_decode(file_get_contents(app_path('Modules/Questionnaire/Infrastructure/resources/schema.json')), true, 512, JSON_THROW_ON_ERROR)));
@@ -133,6 +143,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $ca = storage_path('certs/cacert.pem');
+        if (is_file($ca)) {
+            Http::globalOptions(['verify' => $ca]);
+        }
         if (config('database.default') !== 'mysql') {
             throw new LogicException('The Laravel API requires DB_CONNECTION=mysql. PostgreSQL is a read-only migration source.');
         }

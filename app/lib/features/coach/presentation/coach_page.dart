@@ -14,6 +14,7 @@ import 'today_summary.dart';
 import 'composer.dart';
 import 'message_list.dart';
 import 'profile_sheet.dart';
+import 'quota_indicator.dart';
 import 'today_ring_sheet.dart';
 
 class CoachPage extends StatefulWidget {
@@ -43,12 +44,14 @@ class _CoachPageState extends State<CoachPage> {
   int _companionCue = 0;
   CompanionMood _companionMood = CompanionMood.calm;
   bool _greeted = false;
+  Map<String, dynamic>? _quota;
   bool _wasBusy = false;
   Timer? _companionReset;
 
   @override
   void initState() {
     super.initState();
+    unawaited(_loadQuota());
     _controller.onToday = (today, {required bool reloadPlan}) {
       if (!mounted) return;
       final store = DemoScope.of(context);
@@ -113,6 +116,14 @@ class _CoachPageState extends State<CoachPage> {
     super.dispose();
   }
 
+  Future<void> _loadQuota() async {
+    try {
+      final quota = await widget.repository.quota();
+      if (!mounted || quota == null) return;
+      setState(() => _quota = quota);
+    } catch (_) {}
+  }
+
   void _toggleSummary() {
     if (MediaQuery.viewInsetsOf(context).bottom > 0) {
       FocusScope.of(context).unfocus();
@@ -156,6 +167,14 @@ class _CoachPageState extends State<CoachPage> {
                     ? null
                     : () => _react(CompanionMood.greeting),
               ),
+              if (_quota?['hasQuota'] == true &&
+                  _quota?['dailyRemaining'] is num &&
+                  _quota?['dailyLimit'] is num)
+                QuotaIndicator(
+                  dailyRemaining: (_quota!['dailyRemaining'] as num).toInt(),
+                  dailyLimit: (_quota!['dailyLimit'] as num).toInt(),
+                  periodRemaining: (_quota!['periodRemaining'] as num?)?.toInt() ?? 0,
+                ),
               if (!keyboardOpen &&
                   (mood == CompanionMood.greeting ||
                       mood == CompanionMood.celebrate))

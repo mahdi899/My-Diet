@@ -28,5 +28,8 @@ abstract class CoachRepository {
   /// Morning brief, created once per Tehran date. Null in the local coach.
   Future<CoachDayBrief?> ensureDayBrief();
 
+  /// Remaining coach messages. Null when the local coach has no server quota.
+  Future<Map<String, dynamic>?> quota() async => null;
+
   void close() {}
 }

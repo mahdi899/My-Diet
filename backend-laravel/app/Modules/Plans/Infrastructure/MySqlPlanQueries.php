@@ -35,10 +35,21 @@ final class MySqlPlanQueries implements PlanQueryStore
         $meals = $this->db->table('plan_meals as m')->join('plan_days as d', 'd.id', '=', 'm.plan_day_id')->where('d.plan_version_id', $version)->select('m.*')->orderBy('m.position')->get()->all();
         $items = $this->db->table('plan_meal_items as i')->join('plan_meals as m', 'm.id', '=', 'i.meal_id')->join('plan_days as d', 'd.id', '=', 'm.plan_day_id')->where('d.plan_version_id', $version)->select('i.*')->orderBy('i.position')->get()->all();
         $options = $this->db->table('plan_meal_options as o')->join('plan_meals as m', 'm.id', '=', 'o.meal_id')->join('plan_days as d', 'd.id', '=', 'm.plan_day_id')->where('d.plan_version_id', $version)->select('o.*')->orderBy('o.kind')->get()->all();
+        $mealIds = array_map(fn ($meal) => $meal->id, $meals);
+        $swaps = $mealIds === [] ? [] : $this->db->table('meal_swap_logs')->whereIn('meal_id', $mealIds)->orderBy('created_at')->get()->all();
+        $latestSwap = [];
+        foreach ($swaps as $swap) {
+            $latestSwap[$swap->meal_id] = $swap;
+        }
 
         return array_map(fn ($day) => ['id' => $day->id, 'dayIndex' => $day->day_index, 'meals' => array_map(fn ($meal) => [
+            'id' => $meal->id,
             'mealUid' => $meal->meal_uid, 'options' => array_map(fn ($option) => json_decode($option->document, true, 512, JSON_THROW_ON_ERROR), array_values(array_filter($options, fn ($option) => $option->meal_id === $meal->id))),
-            'mealType' => $meal->meal_type, 'suggestedTime' => $meal->suggested_time, 'title' => $meal->title, 'calories' => $meal->calories, 'notes' => $meal->notes,
+            'mealType' => $meal->meal_type, 'suggestedTime' => $meal->suggested_time,
+            'title' => isset($latestSwap[$meal->id]) ? $latestSwap[$meal->id]->new_title : $meal->title,
+            'calories' => isset($latestSwap[$meal->id]) && $latestSwap[$meal->id]->new_kcal !== null ? (int) $latestSwap[$meal->id]->new_kcal : $meal->calories,
+            'plannedTitle' => $meal->title,
+            'notes' => $meal->notes,
             'items' => array_map(fn ($item) => ['name' => $item->name, 'quantity' => $item->quantity === null ? null : (float) $item->quantity, 'unit' => $item->unit], array_values(array_filter($items, fn ($item) => $item->meal_id === $meal->id))),
         ], array_values(array_filter($meals, fn ($meal) => $meal->plan_day_id === $day->id)))], $days->all());
     }
@@ -107,6 +118,13 @@ final class MySqlPlanQueries implements PlanQueryStore
             $q->whereRaw($where[$bucket]);
         }
 
-        return $this->rows($q->get()->all());
+        return array_map(function (array $row): array {
+            $waiting = ! in_array($row['status'], ['published', 'cancelled'], true);
+            $elapsed = time() - strtotime((string) $row['created_at']);
+            $row['overdue'] = $waiting && $elapsed > 86400;
+            $row['slaHoursLeft'] = $waiting ? max(0, (int) ceil((86400 - $elapsed) / 3600)) : null;
+
+            return $row;
+        }, $this->rows($q->get()->all()));
     }
 }

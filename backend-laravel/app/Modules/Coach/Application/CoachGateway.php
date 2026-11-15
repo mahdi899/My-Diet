@@ -10,6 +10,10 @@ interface CoachGateway
 
     public function photo(string $user, string $client, string $bytes, string $mime): array;
 
+    public function confirmPhoto(string $user, string $entryId): array;
+
+    public function followUps(string $user): array;
+
     public function media(string $user, string $id): ?array;
 
     public function today(string $user): array;

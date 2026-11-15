@@ -324,8 +324,11 @@ String parseErrorText(String body) {
 CoachProblem classifyCoachProblem({int? status, String? code}) {
   if (status == 401 || code == 'unauthorized') return CoachProblem.expired;
   if (status == 402 ||
+      status == 429 ||
       code == 'ai_budget_exceeded' ||
       code == 'coach_daily_limit' ||
+      code == 'quota_exceeded' ||
+      code == 'vision_quota_exceeded' ||
       code == 'budget' ||
       code == 'insufficient_funds') {
     return CoachProblem.budget;
@@ -345,7 +348,7 @@ CoachProblem classifyCoachProblem({int? status, String? code}) {
 String coachProblemText(CoachProblem problem, String? serverText) {
   final server = serverText?.trim() ?? '';
   return switch (problem) {
-    CoachProblem.budget => 'سهم امروز مربی تمام شد',
+    CoachProblem.budget => server.isNotEmpty ? server : 'سهمیه پیام‌های مربی پر شده است. می‌توانید یک بسته اضافی خریداری کنید.',
     CoachProblem.expired => 'نشست پایان یافته؛ دوباره وارد شو.',
     CoachProblem.offline => 'ارتباط قطع شد. وقتی آنلاین شدی، دوباره بفرست.',
     CoachProblem.safety =>

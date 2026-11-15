@@ -7,6 +7,7 @@ use App\Modules\Admin\Presentation\CampaignController;
 use App\Modules\Admin\Presentation\IntegrationsController;
 use App\Modules\Ai\Presentation\AiAdminController;
 use App\Modules\Coach\Presentation\CoachController;
+use App\Modules\Coach\Presentation\CoachQuotaAdminController;
 use App\Modules\Food\Presentation\FoodController;
 use App\Modules\Food\Presentation\IngredientController;
 use App\Modules\Health\Presentation\HealthController;
@@ -133,6 +134,8 @@ Route::prefix('v1/me')->middleware('session:user')->controller(TrackingControlle
     Route::get('rewards/pending', 'pending');
     Route::post('rewards/{id}/acknowledge', 'acknowledge');
     Route::post('reviews', 'review');
+    Route::get('tracking/summary', 'summary');
+    Route::get('tracking/summary/{date}', 'summary');
 });
 Route::prefix('v1/me')->middleware('session:user')->controller(StreakController::class)->group(function (): void {
     Route::get('streak', 'snapshot');
@@ -264,6 +267,8 @@ Route::prefix('v1/admin/foods')->middleware('session:admin')->controller(FoodCon
     Route::post('', 'create');
     Route::put('{slug}', 'update');
     Route::post('{slug}/active', 'activate');
+    Route::post('{slug}/nutrition-status', 'nutritionStatus');
+    Route::post('{slug}/nutrition-estimate', 'nutritionEstimate');
 });
 
 Route::get('health/live', [HealthController::class, 'live']);
@@ -310,11 +315,19 @@ Route::middleware('session:user')->controller(CoachController::class)->group(fun
     Route::get('v1/me/coach/thread', 'thread');
     Route::post('v1/me/coach/messages', 'messages');
     Route::post('v1/me/coach/food-photos', 'photo');
+    Route::post('v1/me/coach/food-entries/{id}/confirm', 'confirmPhoto');
+    Route::get('v1/me/coach/follow-ups', 'followUps');
     Route::patch('v1/me/coach/meals/{id}', 'patch');
     Route::get('v1/me/coach/today', 'today');
     Route::post('v1/me/coach/day-brief', 'dayBrief');
     Route::post('v1/me/coach/actions', 'action');
     Route::get('v1/me/coach/media/{id}', 'media');
+    Route::get('v1/me/coach/quota', 'quotaStatus');
+    Route::post('v1/me/coach/swap-meal', 'swapMeal');
+});
+Route::prefix('v1/admin/coach-quotas')->middleware('session:admin')->controller(CoachQuotaAdminController::class)->group(function (): void {
+    Route::get('', 'index');
+    Route::put('{planCode}', 'update');
 });
 Route::prefix('v1/admin')->middleware('session:admin')->group(function (): void {
     Route::controller(AdminDeskController::class)->group(function (): void {

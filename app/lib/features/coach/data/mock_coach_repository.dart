@@ -32,6 +32,9 @@ class MockCoachRepository implements CoachRepository {
   @override
   Future<CoachDayBrief?> ensureDayBrief() async => null;
 
+  @override
+  Future<Map<String, dynamic>?> quota() async => null;
+
   static const _prefsKey = 'rejime_man.coach.messages.v1';
   final _seen = <String>{};
   int _seq = 1;

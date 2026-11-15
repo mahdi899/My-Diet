@@ -62,6 +62,16 @@ final class FoodController
         return $this->service->save($this->actor($request), $this->body($request), $slug);
     }
 
+    public function nutritionStatus(Request $request, string $slug): array
+    {
+        return app(\App\Modules\Food\Application\NutritionReview::class)->setStatus($slug, (string) ($this->body($request)['status'] ?? ''));
+    }
+
+    public function nutritionEstimate(string $slug): array
+    {
+        return app(\App\Modules\Food\Application\NutritionReview::class)->estimate($slug);
+    }
+
     public function activate(Request $request, string $slug): JsonResponse
     {
         return response()->json($this->service->activate($this->actor($request), $slug, $this->body($request)['active'] ?? null), 201);

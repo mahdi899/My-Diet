@@ -13,7 +13,12 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class TrackingController
 {
-    public function __construct(private TrackingService $tracking, private MealActivityService $activity, private PlanQueries $plans) {}
+    public function __construct(
+        private TrackingService $tracking,
+        private MealActivityService $activity,
+        private PlanQueries $plans,
+        private \Illuminate\Database\ConnectionInterface $db
+    ) {}
 
     public function reasons(): array
     {
@@ -47,6 +52,41 @@ final class TrackingController
     public function dashboard(Request $request): array
     {
         return $this->tracking->dashboard($this->actor($request));
+    }
+
+    /**
+     * Daily summary: actual consumed kcal + water for home tab ring.
+     */
+    public function summary(Request $request, ?string $date = null): array
+    {
+        $date = $date ?? $request->query('date') ?? \App\Modules\Plans\Domain\CivilDates::today();
+        $this->date($date);
+        $userId = $this->actor($request);
+
+        $photoKcal = (int) $this->db->table('coach_food_entries')
+            ->where(['user_id' => $userId, 'civil_date' => $date, 'status' => 'logged'])
+            ->get()
+            ->sum(fn ($row) => (int) (json_decode($row->totals, true)['kcal'] ?? 0));
+
+        $actualKcal = $photoKcal + (int) $this->db->table('meal_logs as l')
+            ->join('plan_meals as m', 'm.id', '=', 'l.plan_meal_id')
+            ->where('l.user_id', $userId)
+            ->where('l.scheduled_date', $date)
+            ->where('l.eaten', 1)
+            ->sum('m.calories');
+
+        // Water intake
+        $waterMl = (int) ($this->db
+            ->table('coach_water')
+            ->where('user_id', $userId)
+            ->where('civil_date', $date)
+            ->value('ml') ?? 0);
+
+        return [
+            'date'       => $date,
+            'actualKcal' => $actualKcal,
+            'waterMl'    => $waterMl,
+        ];
     }
 
     public function meal(Request $request): array

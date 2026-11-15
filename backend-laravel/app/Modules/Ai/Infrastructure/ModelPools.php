@@ -27,6 +27,7 @@ final class ModelPools
             usort($members, fn ($a, $b) => $a->weightedPriority <=> $b->weightedPriority);
         }
         $last = null;
+        $detail = null;
         foreach (array_slice($members, 0, max(1, $pool->max_attempts)) as $index => $member) {
             $inputBound = strlen(json_encode($messages, JSON_THROW_ON_ERROR)) + 256;
             $estimate = (int) ceil(($inputBound * $member->price_in_micros_per_m + $pool->max_tokens * $member->price_out_micros_per_m) / 1_000_000);
@@ -45,6 +46,9 @@ final class ModelPools
                 $outcome = $error instanceof Problem ? $error->problemCode :
                     ($error instanceof \InvalidArgumentException ? 'invalid_plan' : 'outcome_unknown');
                 $last = $outcome;
+                if ($error instanceof \InvalidArgumentException) {
+                    $detail = $error->getMessage();
+                }
                 $cost = $result['costMicros'] ?? ($outcome === 'outcome_unknown' ? $estimate : 0);
                 $this->finish($reservation, $member, $code, $request, $index + 1,
                     ($result ?? ['tokensIn' => 0, 'tokensOut' => 0]) + ['costMicros' => $cost], $outcome, $started);
@@ -53,7 +57,7 @@ final class ModelPools
                 }
             }
         }
-        throw new Problem(503, $last ?? 'pool_empty', 'هیچ مدل آماده‌ای پاسخ معتبر نداد');
+        throw new Problem(503, $last ?? 'pool_empty', $detail ?? 'هیچ مدل آماده‌ای پاسخ معتبر نداد');
     }
 
     private function reserve(int $estimate, ?string $request, ?string $user): string

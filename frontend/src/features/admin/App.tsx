@@ -14,6 +14,7 @@ import { FoodsPage } from './features/foods/FoodsPage'
 import { IngredientsPage } from './features/ingredients/IngredientsPage'
 import { ArticlesPage } from './features/articles/ArticlesPage'
 import { AiPage } from './features/ai/AiPage'
+import { QuotaPage } from './features/quota/QuotaPage'
 import { StreaksPage } from './features/streaks/StreaksPage'
 import { SubscriptionPricesPage } from './features/settings/SubscriptionPricesPage'
 import { QuestionnairePage } from './features/questionnaire/QuestionnairePage'
@@ -57,6 +58,7 @@ function Panel() {
         section === 'notifications' ? <NotificationsPage preview={preview} modal={notificationModal} closeModal={() => setNotificationModal(null)} /> :
         section === 'articles' ? <ArticlesPage preview={preview} /> :
         section === 'ai' ? <AiPage preview={preview} /> :
+        section === 'coach-quotas' ? <QuotaPage preview={preview} /> :
         section === 'subscription-prices' ? <SubscriptionPricesPage preview={preview} /> :
         section === 'streaks' ? <StreaksPage preview={preview} /> :
         section === 'questionnaire' ? <QuestionnairePage preview={preview} /> :

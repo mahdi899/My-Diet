@@ -14,10 +14,17 @@ final class FixedCoachModel implements CoachModel
         return false;
     }
 
-    public function reply(string $text): array
+    public function reply(string $userId, string $userMessage): array
     {
         $this->calls++;
 
         return ['text' => 'پاسخ آزمایشی', 'tokensIn' => 10, 'tokensOut' => 5, 'costMicros' => 100];
+    }
+
+    public function analyzePhoto(string $userId, string $imageBase64, string $caption = ''): array
+    {
+        $this->calls++;
+
+        return ['foods' => [], 'confidence' => 0.0, 'questions' => [], 'needsConfirmation' => true, 'tokensIn' => 0, 'tokensOut' => 0, 'costMicros' => 0, 'text' => 'تحلیل آزمایشی'];
     }
 }

@@ -38,6 +38,14 @@ class HttpCoachRepository implements CoachRepository {
   }
 
   @override
+  Future<Map<String, dynamic>?> quota() async {
+    final value = await _json('quota');
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return value.cast<String, dynamic>();
+    return null;
+  }
+
+  @override
   Future<CoachThreadPage> loadThread({String? cursor}) async {
     final path = cursor == null || cursor.isEmpty
         ? 'thread'

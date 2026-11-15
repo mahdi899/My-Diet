@@ -3,6 +3,7 @@ import '../../core/theme/tokens.dart';
 import '../../data/day.dart';
 import '../../data/demo_store.dart';
 import '../../presentation/widgets/kit/kit.dart';
+import 'ai_swap_sheet.dart';
 
 /// Keeps approved alternatives and their confirmation flow out of the meal overview.
 class MealSubstitutionSheet extends StatefulWidget {
@@ -133,6 +134,24 @@ class _MealSubstitutionSheetState extends State<MealSubstitutionSheet> {
                   style: TextStyle(color: AppColors.muted),
                 ),
                 const SizedBox(height: 16),
+                if (store.serverAuthEnabled && store.customerAuth != null)
+                  Builder(builder: (context) {
+                    final mealId = store.serverMealUids['${dateKey(widget.date)}|${widget.index}'];
+                    if (mealId == null) return const SizedBox.shrink();
+                    return Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton.icon(
+                        onPressed: () => openAiSwapSheet(
+                          context,
+                          mealId: mealId,
+                          mealTitle: meal.title,
+                          auth: store.customerAuth!,
+                        ),
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('جایگزین از کاتالوگ'),
+                      ),
+                    );
+                  }),
                 if (alternatives.isEmpty)
                   const Text(
                     'جایگزین تأییدشده‌ای نیست',
