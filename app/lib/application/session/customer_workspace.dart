@@ -20,6 +20,10 @@ abstract interface class CustomerWorkspace implements NutritionSource {
   bool get canLoadProfilePhoto;
   Future<void> loadHomePhoto();
   int? get coachWaterGlasses;
+  String? get userRequestId;
+  int? waterGlassesOn(DateTime date);
+  void rememberWater(DateTime date, int glasses);
+  int mealCheckInsOn(DateTime date);
   WaterRepository get waterLog;
   bool get serverAuthEnabled;
   bool get liveReady;

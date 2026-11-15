@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
+import '../../../data/day.dart';
 import '../../../presentation/session/live_session.dart';
 import '../presentation/coach_controller.dart';
 import '../domain/coach_repository.dart';
 import 'coach_header.dart';
+import 'coach_companion.dart';
+import 'today_summary.dart';
 import 'composer.dart';
 import 'message_list.dart';
 import 'profile_sheet.dart';
@@ -36,6 +39,12 @@ class _CoachPageState extends State<CoachPage> {
     repository: widget.repository,
   );
   bool _endingSession = false;
+  bool _summaryExpanded = false;
+  int _companionCue = 0;
+  CompanionMood _companionMood = CompanionMood.calm;
+  bool _greeted = false;
+  bool _wasBusy = false;
+  Timer? _companionReset;
 
   @override
   void initState() {
@@ -44,18 +53,30 @@ class _CoachPageState extends State<CoachPage> {
       if (!mounted) return;
       final store = DemoScope.of(context);
       if (!store.applyCoachToday(today)) return;
-      final glasses = store.coachWaterGlasses;
+      final glasses = store.waterGlassesOn(store.today);
       if (glasses != null) {
         unawaited(store.waterLog.write(store.today, glasses));
       }
       if (reloadPlan && store.serverAuthEnabled) unawaited(refreshLive(store));
     };
+    _controller.onTurnCompleted = ({required bool saved}) =>
+        _react(saved ? CompanionMood.celebrate : CompanionMood.reply);
     _controller.addListener(_rebuild);
     Future<void>.microtask(() => _controller.start(autoSend: widget.autoSend));
   }
 
   void _rebuild() {
     if (!mounted) return;
+    if (_controller.busy && !_wasBusy) {
+      _companionReset?.cancel();
+      _companionMood = CompanionMood.calm;
+      _companionCue++;
+    }
+    _wasBusy = _controller.busy;
+    if (!_greeted && !_controller.loading && !_controller.historyFailed) {
+      _greeted = true;
+      if (!_controller.busy) _react(CompanionMood.greeting);
+    }
     if (_controller.sessionExpired && !_endingSession) {
       _endingSession = true;
       final store = DemoScope.of(context);
@@ -72,16 +93,52 @@ class _CoachPageState extends State<CoachPage> {
     setState(() {});
   }
 
+  void _react(CompanionMood mood) {
+    if (!mounted) return;
+    _companionReset?.cancel();
+    setState(() {
+      _companionMood = mood;
+      _companionCue++;
+    });
+    _companionReset = Timer(const Duration(milliseconds: 2800), () {
+      if (mounted) setState(() => _companionMood = CompanionMood.calm);
+    });
+  }
+
   @override
   void dispose() {
+    _companionReset?.cancel();
     _controller.removeListener(_rebuild);
     _controller.dispose();
     super.dispose();
   }
 
+  void _toggleSummary() {
+    if (MediaQuery.viewInsetsOf(context).bottom > 0) {
+      FocusScope.of(context).unfocus();
+      setState(() => _summaryExpanded = true);
+    } else {
+      setState(() => _summaryExpanded = !_summaryExpanded);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final failed = _controller.historyFailed && _controller.messages.isEmpty;
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final store = DemoScope.of(context);
+    final mood = _controller.busy || _controller.typing
+        ? CompanionMood.thinking
+        : _controller.error != null || _controller.budgetNote != null
+        ? CompanionMood.support
+        : _companionMood;
+    final brief = _controller.messages
+        .where(
+          (m) =>
+              m.type == 'day_brief' &&
+              dateKey(m.createdAt.toLocal()) == dateKey(store.today),
+        )
+        .lastOrNull;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: DecoratedBox(
@@ -93,6 +150,26 @@ class _CoachPageState extends State<CoachPage> {
                 typing: _controller.typing,
                 onClose: widget.onClose ?? () => closeCoachToHome(context),
                 onAvatar: () => showCoachProfileSheet(context),
+                mood: mood,
+                cue: _companionCue,
+                onGreet: _controller.busy
+                    ? null
+                    : () => _react(CompanionMood.greeting),
+              ),
+              if (!keyboardOpen &&
+                  (mood == CompanionMood.greeting ||
+                      mood == CompanionMood.celebrate))
+                CoachCompanionNote(
+                  typing: false,
+                  celebrated: mood == CompanionMood.celebrate,
+                  mood: mood,
+                  cue: _companionCue,
+                ),
+              CoachTodaySummary(
+                expanded: _summaryExpanded,
+                keyboardOpen: keyboardOpen,
+                brief: brief,
+                onToggle: _toggleSummary,
                 onRing: () async {
                   await _controller.refreshToday();
                   if (!context.mounted) return;
@@ -134,10 +211,14 @@ class _CoachPageState extends State<CoachPage> {
                           child: const Text('تلاش دوباره'),
                         ),
                       )
-                    : CoachMessageList(controller: _controller),
+                    : CoachMessageList(
+                        controller: _controller,
+                        pinnedBriefId: brief?.id,
+                      ),
               ),
               CoachComposer(
                 controller: _controller,
+                onTodayPlan: _toggleSummary,
                 prefill: widget.autoSend == null ? widget.prefill : null,
               ),
             ],

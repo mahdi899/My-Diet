@@ -152,6 +152,11 @@ void main() {
     );
     expect(find.text('بررسی و ثبت'), findsOneWidget);
     expect(find.text('کالری امروز'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('ثبت وزن'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('ثبت وزن'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     store.dispose();

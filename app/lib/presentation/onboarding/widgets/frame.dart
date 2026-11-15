@@ -17,7 +17,7 @@ class ProgressRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
     tween: Tween(begin: 0, end: value),
-    duration: Motion.slow,
+    duration: Motion.of(context, Motion.slow),
     curve: Motion.curve,
     builder: (context, v, _) => SizedBox(
       width: size,
@@ -83,6 +83,7 @@ class OnboardingFrame extends StatelessWidget {
     this.syncHint,
     this.secondary,
     this.forward = true,
+    this.profilePreview,
   });
   final double progress;
   final Widget child;
@@ -92,6 +93,7 @@ class OnboardingFrame extends StatelessWidget {
   final String primaryLabel;
   final bool busy, forward;
   final Widget? secondary;
+  final Widget? profilePreview;
 
   @override
   Widget build(BuildContext context) {
@@ -106,72 +108,73 @@ class OnboardingFrame extends StatelessWidget {
           children: [
             CameraProgressRing(progress: progress),
             SafeArea(
-          child: Column(
-            children: [
-              if (!hasCamera)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(99),
-                    child: LinearProgressIndicator(
-                      value: progress.clamp(0, 1),
-                      minHeight: 5,
-                      backgroundColor: AppColors.mint,
-                      color: AppColors.emerald,
-                    ),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 20, 0),
-                child: Row(
-                  children: [
-                    _CircleBack(onPressed: onBack),
-                    Expanded(
-                      child: BlurSwap(
-                        text: groupTitle ?? '',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+              child: Column(
+                children: [
+                  if (!hasCamera)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          value: progress.clamp(0, 1),
+                          minHeight: 5,
+                          backgroundColor: AppColors.mint,
+                          color: AppColors.emerald,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 44),
-                  ],
-                ),
-              ),
-              Expanded(child: child),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (syncHint != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          syncHint!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.danger,
-                            fontSize: 12.5,
-                            height: 1.6,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 20, 0),
+                    child: Row(
+                      children: [
+                        _CircleBack(onPressed: onBack),
+                        Expanded(
+                          child: BlurSwap(
+                            text: groupTitle ?? '',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                      ),
-                    PillButton(
-                      label: primaryLabel,
-                      onPressed: busy ? null : onPrimary,
-                      loading: busy,
+                        const SizedBox(width: 44),
+                      ],
                     ),
-                    ?secondary,
-                  ],
-                ),
+                  ),
+                  ?profilePreview,
+                  Expanded(child: child),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (syncHint != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              syncHint!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.danger,
+                                fontSize: 12.5,
+                                height: 1.6,
+                              ),
+                            ),
+                          ),
+                        PillButton(
+                          label: primaryLabel,
+                          onPressed: busy ? null : onPrimary,
+                          loading: busy,
+                        ),
+                        ?secondary,
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
           ],
         ),
       ),

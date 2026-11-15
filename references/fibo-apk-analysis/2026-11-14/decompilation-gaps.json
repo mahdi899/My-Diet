@@ -1,0 +1,372 @@
+[
+  {
+    "file": "sources\\A1\\z.java",
+    "line": 139,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: A1.z.a(long, z1.r):void\");"
+  },
+  {
+    "file": "sources\\C\\C0050u.java",
+    "line": 65,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: C.C0050u.<init>(info.fiboapp.fibo.AiFoodCameraActivity):void\");"
+  },
+  {
+    "file": "sources\\C1\\B.java",
+    "line": 140,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: C1.B.close():void\");"
+  },
+  {
+    "file": "sources\\C1\\C0060e.java",
+    "line": 134,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: C1.C0060e.close():void\");"
+  },
+  {
+    "file": "sources\\D0\\d.java",
+    "line": 727,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: D0.d.b(B0.e, boolean):void\");"
+  },
+  {
+    "file": "sources\\D3\\c.java",
+    "line": 155,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: D3.c.b(w1.p):int\");"
+  },
+  {
+    "file": "sources\\D5\\D.java",
+    "line": 222,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: D5.D.c():void\");"
+  },
+  {
+    "file": "sources\\D6\\C.java",
+    "line": 46,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: D6.C.emit(java.lang.Object, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\D8\\r.java",
+    "line": 124,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: D8.r.k(D8.g, long):long\");"
+  },
+  {
+    "file": "sources\\E6\\c.java",
+    "line": 44,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: E6.c.b(O7.c):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\F1\\U.java",
+    "line": 256,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: F1.U.j(float, w1.Q, boolean):S1.v\");"
+  },
+  {
+    "file": "sources\\F3\\p.java",
+    "line": 174,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: F3.p.c(B0.d, android.graphics.BitmapFactory$Options, F3.o, z3.a):android.graphics.Bitmap\");"
+  },
+  {
+    "file": "sources\\h8\\c.java",
+    "line": 424,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: h8.c.b(M7.d, java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\C0204b.java",
+    "line": 61,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.C0204b.invoke(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\C0229j0.java",
+    "line": 79,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.C0229j0.a(V7.o, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\C0229j0.java",
+    "line": 102,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.C0229j0.b(V7.o, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\C0241n0.java",
+    "line": 113,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.C0241n0.a(V7.o, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\C0241n0.java",
+    "line": 212,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.C0241n0.b(V7.o, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\C0260u.java",
+    "line": 37,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.C0260u.collect(i8.g, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\I1.java",
+    "line": 255,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.I1.b(I2.j0, O7.c):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\I1.java",
+    "line": 366,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.I1.c(I2.n0, O7.c):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\M.java",
+    "line": 112,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.M.f(I2.V1, I2.v, O7.c):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\N1.java",
+    "line": 132,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.N1.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\O0.java",
+    "line": 158,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.O0.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I2\\U0.java",
+    "line": 238,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I2.U0.b(I2.U0, I2.Z, I2.N, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\I5\\C0297u.java",
+    "line": 307,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: I5.C0297u.put(java.lang.Object, java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\i8\\Q.java",
+    "line": 373,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: i8.Q.j(i8.g, h8.q, boolean, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\i8\\X.java",
+    "line": 51,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: i8.X.collect(i8.g, M7.d):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\L1\\f.java",
+    "line": 466,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: L1.f.u(w1.p[], long, long, P1.D):void\");"
+  },
+  {
+    "file": "sources\\M1\\q.java",
+    "line": 1133,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: M1.q.Z(com.google.android.gms.internal.measurement.H1):F1.h\");"
+  },
+  {
+    "file": "sources\\M1\\q.java",
+    "line": 1475,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: M1.q.u(w1.p[], long, long, P1.D):void\");"
+  },
+  {
+    "file": "sources\\M5\\b.java",
+    "line": 389,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: M5.b.f():void\");"
+  },
+  {
+    "file": "sources\\p009b\\e.java",
+    "line": 303,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p009b.e.e(b.a, int, int):void\");"
+  },
+  {
+    "file": "sources\\p028d\\C.java",
+    "line": 110,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p028d.C.invoke(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\p030d1\\k.java",
+    "line": 94,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p030d1.k.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\p045f0\\c.java",
+    "line": 67,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p045f0.c.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\p069i\\A.java",
+    "line": 471,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p069i.A.H(i.z, android.view.KeyEvent):void\");"
+  },
+  {
+    "file": "sources\\p069i\\A.java",
+    "line": 1964,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p069i.A.y(o.l):void\");"
+  },
+  {
+    "file": "sources\\p075i7\\j.java",
+    "line": 605,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p075i7.j.z():void\");"
+  },
+  {
+    "file": "sources\\p093l1\\g.java",
+    "line": 1799,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p093l1.g.h(l1.b, int, int):void\");"
+  },
+  {
+    "file": "sources\\P1\\P.java",
+    "line": 80,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P1.P.e():void\");"
+  },
+  {
+    "file": "sources\\p112n3\\h.java",
+    "line": 45,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p112n3.h.a(o3.a, float):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\p185w4\\e.java",
+    "line": 238,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p185w4.e.handleMessage(android.os.Message):boolean\");"
+  },
+  {
+    "file": "sources\\p204z1\\x.java",
+    "line": 268,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: p204z1.x.D(android.net.Uri, java.lang.String):int\");"
+  },
+  {
+    "file": "sources\\P6\\b1.java",
+    "line": 377,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P6.a1.onClick(android.view.View):void\");"
+  },
+  {
+    "file": "sources\\P6\\b1.java",
+    "line": 416,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P6.a1.onClick(android.view.View):void\");"
+  },
+  {
+    "file": "sources\\P6\\b1.java",
+    "line": 453,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P6.a1.onClick(android.view.View):void\");"
+  },
+  {
+    "file": "sources\\P6\\b1.java",
+    "line": 490,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P6.a1.onClick(android.view.View):void\");"
+  },
+  {
+    "file": "sources\\P6\\b1.java",
+    "line": 566,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P6.a1.onClick(android.view.View):void\");"
+  },
+  {
+    "file": "sources\\P6\\b1.java",
+    "line": 699,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P6.a1.onClick(android.view.View):void\");"
+  },
+  {
+    "file": "sources\\P6\\b1.java",
+    "line": 732,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: P6.a1.onClick(android.view.View):void\");"
+  },
+  {
+    "file": "sources\\Q6\\C0648l7.java",
+    "line": 1018,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: Q6.C0648l7.j(Q6.U6, Q6.g7):Q6.g7\");"
+  },
+  {
+    "file": "sources\\Q6\\C0648l7.java",
+    "line": 1136,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: Q6.C0648l7.k(Q6.U6, Q6.g7):Q6.Q6\");"
+  },
+  {
+    "file": "sources\\Q6\\C0727t7.java",
+    "line": 112,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: Q6.C0727t7.invoke(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\Q6\\T5.java",
+    "line": 1416,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: Q6.T5.v(java.lang.String, Q6.V6):I7.g\");"
+  },
+  {
+    "file": "sources\\R4\\F0.java",
+    "line": 779,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: R4.F0.k0(java.lang.String, java.lang.String, android.os.Bundle, boolean, boolean, long):void\");"
+  },
+  {
+    "file": "sources\\t8\\h.java",
+    "line": 455,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: t8.h.i(p8.a, java.util.List):boolean\");"
+  },
+  {
+    "file": "sources\\W2\\C0893h.java",
+    "line": 150,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: W2.C0893h.l(android.view.ViewGroup, W2.A, W2.A):android.animation.Animator\");"
+  },
+  {
+    "file": "sources\\androidx\\startup\\InitializationProvider.java",
+    "line": 73,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: androidx.startup.InitializationProvider.onCreate():boolean\");"
+  },
+  {
+    "file": "sources\\androidx\\coordinatorlayout\\widget\\CoordinatorLayout.java",
+    "line": 1582,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: androidx.coordinatorlayout.widget.CoordinatorLayout.u():void\");"
+  },
+  {
+    "file": "sources\\androidx\\recyclerview\\widget\\GridLayoutManager.java",
+    "line": 155,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: androidx.recyclerview.widget.GridLayoutManager.X(android.view.View, int, P2.m0, P2.r0):android.view.View\");"
+  },
+  {
+    "file": "sources\\app\\rive\\RiveKt.java",
+    "line": 349,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: app.rive.RiveKt.C10131.AnonymousClass5.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\app\\rive\\RiveKt.java",
+    "line": 1951,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: app.rive.RiveKt.C10344.AnonymousClass1.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\app\\rive\\RiveView.java",
+    "line": 96,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: app.rive.RiveView.AnonymousClass1.C00121.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\app\\rive\\core\\CommandQueue.java",
+    "line": 495,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: app.rive.core.CommandQueue.AnonymousClass2.AnonymousClass1.invokeSuspend(java.lang.Object):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\app\\rive\\runtime\\kotlin\\controllers\\RiveFileController$activeArtboard$1$2.java",
+    "line": 45,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: app.rive.runtime.kotlin.controllers.RiveFileController$activeArtboard$1$2.invoke():java.lang.String\");"
+  },
+  {
+    "file": "sources\\app\\rive\\runtime\\kotlin\\core\\ViewModelProperty.java",
+    "line": 225,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: app.rive.runtime.kotlin.core.ViewModelProperty.updateFileLock$kotlin_release(java.util.concurrent.locks.ReentrantLock):void\");"
+  },
+  {
+    "file": "sources\\com\\google\\android\\gms\\internal\\measurement\\C1178e.java",
+    "line": 357,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: com.google.android.gms.internal.measurement.C1178e.o(java.lang.String, z6.l, java.util.ArrayList):com.google.android.gms.internal.measurement.n\");"
+  },
+  {
+    "file": "sources\\com\\google\\android\\gms\\internal\\measurement\\H1.java",
+    "line": 837,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: com.google.android.gms.internal.measurement.H1.x(X1.l, long):X1.h\");"
+  },
+  {
+    "file": "sources\\com\\google\\android\\gms\\internal\\measurement\\S.java",
+    "line": 52,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: com.google.android.gms.internal.measurement.S.f(android.os.Bundle, java.lang.Class):java.lang.Object\");"
+  },
+  {
+    "file": "sources\\com\\google\\android\\gms\\measurement\\internal\\AppMeasurementDynamiteService.java",
+    "line": 537,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: com.google.android.gms.measurement.internal.AppMeasurementDynamiteService.setCurrentScreen(F4.a, java.lang.String, java.lang.String, long):void\");"
+  },
+  {
+    "file": "sources\\com\\google\\android\\material\\bottomsheet\\BottomSheetBehavior.java",
+    "line": 492,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: com.google.android.material.bottomsheet.BottomSheetBehavior.M(int, android.view.View, boolean):void\");"
+  },
+  {
+    "file": "sources\\com\\google\\android\\material\\sidesheet\\SideSheetBehavior.java",
+    "line": 609,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: com.google.android.material.sidesheet.SideSheetBehavior.z(int, android.view.View, boolean):void\");"
+  },
+  {
+    "file": "sources\\com\\google\\firebase\\messaging\\FirebaseMessagingService.java",
+    "line": 115,
+    "method": "throw new UnsupportedOperationException(\"Method not decompiled: com.google.firebase.messaging.FirebaseMessagingService.b(android.content.Intent):void\");"
+  }
+]

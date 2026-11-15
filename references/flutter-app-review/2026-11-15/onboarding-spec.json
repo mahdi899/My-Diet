@@ -1,0 +1,2016 @@
+{
+  "version": 2,
+  "tracks": [
+    {
+      "id": "weight_loss",
+      "title": "لاغری",
+      "badge": "کاهش وزن",
+      "image": "goal-loss",
+      "description": "برنامه غذایی متناسب با هدف کاهش وزن و شرایط تو",
+      "kcalHint": "۱,۴۵۰ کیلوکالری در روز"
+    },
+    {
+      "id": "weight_gain",
+      "title": "افزایش وزن",
+      "badge": "افزایش سالم",
+      "image": "goal-gain",
+      "description": "رسیدن به وزن سالم با تغذیه متعادل",
+      "kcalHint": "۲,۶۵۰ کیلوکالری در روز"
+    },
+    {
+      "id": "pregnancy",
+      "title": "بارداری و شیردهی",
+      "badge": "ایمن و تخصصی",
+      "image": "goal-maternal",
+      "description": "تغذیه دوران بارداری و شیردهی با توجه به وضعیت پزشکی",
+      "kcalHint": "۲,۲۵۰ کیلوکالری در روز"
+    },
+    {
+      "id": "detox",
+      "title": "سلامت و پاکسازی بدن",
+      "badge": "تعادل و انرژی",
+      "image": "goal-wellness",
+      "description": "بهبود کیفیت تغذیه، گوارش و انرژی روزانه",
+      "kcalHint": "۱,۷۵۰ کیلوکالری در روز"
+    }
+  ],
+  "groups": {
+    "basics": "آشنایی",
+    "body": "بدن",
+    "lifestyle": "سبک زندگی",
+    "food": "غذا",
+    "goal": "هدف",
+    "health": "سلامت",
+    "culture": "سفرهٔ ایرانی"
+  },
+  "questions": [
+    {
+      "key": "name",
+      "group": "basics",
+      "kind": "text",
+      "title": "اسم شما چیست؟",
+      "subtitle": "نام و نام خانوادگی",
+      "placeholder": "نام و نام خانوادگی",
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "اسم شما چیست؟"
+      ]
+    },
+    {
+      "key": "age",
+      "group": "basics",
+      "kind": "age",
+      "title": "چند سال داری؟",
+      "subtitle": "برای محاسبهٔ دقیق نیاز انرژی",
+      "min": 18,
+      "max": 100,
+      "default": 30,
+      "unit": "سال",
+      "options": [
+        {
+          "code": "18_30",
+          "label": "۱۸ تا ۳۰ سال",
+          "image": "age-18-30"
+        },
+        {
+          "code": "30_40",
+          "label": "۳۰ تا ۴۰ سال",
+          "image": "age-30-40"
+        },
+        {
+          "code": "40_50",
+          "label": "۴۰ تا ۵۰ سال",
+          "image": "age-40-50"
+        },
+        {
+          "code": "50_plus",
+          "label": "بالای ۵۰ سال",
+          "image": "age-50-plus"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "چند سال داری؟"
+      ]
+    },
+    {
+      "key": "sex",
+      "group": "basics",
+      "kind": "single",
+      "title": "جنسیتت چیه؟",
+      "subtitle": "یک گزینه را انتخاب کن",
+      "options": [
+        {
+          "code": "female",
+          "label": "زن"
+        },
+        {
+          "code": "male",
+          "label": "مرد"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "جنسیتت چیه؟"
+      ]
+    },
+    {
+      "key": "height_cm",
+      "group": "body",
+      "kind": "number",
+      "title": "قدت چقدره؟",
+      "subtitle": "سانتی‌متر",
+      "min": 120,
+      "max": 230,
+      "step": 1,
+      "default": 165,
+      "unit": "سانتی‌متر",
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "قدت چقدره؟"
+      ]
+    },
+    {
+      "key": "weight_kg",
+      "group": "body",
+      "kind": "number",
+      "title": "وزن فعلیت چقدره؟",
+      "subtitle": "کیلوگرم",
+      "min": 35,
+      "max": 240,
+      "step": 0.5,
+      "default": 68,
+      "unit": "کیلوگرم",
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "وزن فعلیت چقدره؟"
+      ]
+    },
+    {
+      "key": "activity",
+      "group": "lifestyle",
+      "kind": "single",
+      "title": "میزان فعالیت روزانه‌ات چقدره؟",
+      "options": [
+        {
+          "code": "very_low",
+          "label": "خیلی کم"
+        },
+        {
+          "code": "low",
+          "label": "کم"
+        },
+        {
+          "code": "medium",
+          "label": "متوسط"
+        },
+        {
+          "code": "high",
+          "label": "زیاد"
+        },
+        {
+          "code": "very_high",
+          "label": "خیلی زیاد"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "میزان فعالیت روزانه‌ات چقدره؟"
+      ]
+    },
+    {
+      "key": "meals_per_day",
+      "group": "food",
+      "kind": "single",
+      "title": "معمولاً چند وعده در روز غذا می‌خوری؟",
+      "options": [
+        {
+          "code": "1",
+          "label": "۱ وعده"
+        },
+        {
+          "code": "2",
+          "label": "۲ وعده"
+        },
+        {
+          "code": "3",
+          "label": "۳ وعده"
+        },
+        {
+          "code": "4_plus",
+          "label": "بیشتر"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "معمولاً چند وعده در روز غذا می‌خوری؟"
+      ]
+    },
+    {
+      "key": "allergies",
+      "group": "food",
+      "kind": "multi",
+      "title": "به چه غذاهایی حساسیت داری؟",
+      "options": [
+        {
+          "code": "none",
+          "label": "بدون حساسیت",
+          "exclusive": true
+        },
+        {
+          "code": "dairy",
+          "label": "لبنیات"
+        },
+        {
+          "code": "nuts",
+          "label": "آجیل"
+        },
+        {
+          "code": "egg",
+          "label": "تخم‌مرغ"
+        },
+        {
+          "code": "gluten",
+          "label": "گلوتن"
+        },
+        {
+          "code": "other",
+          "label": "سایر"
+        }
+      ],
+      "followUp": {
+        "whenCodes": [
+          "dairy",
+          "nuts",
+          "egg",
+          "gluten",
+          "other"
+        ],
+        "key": "allergies_text",
+        "placeholder": "دقیقاً به کدام خوراکی‌ها حساسیت داری؟ مثلاً لبنیات: فقط شیر؛ آجیل: بادام",
+        "required": true
+      },
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "به چه غذاهایی حساسیت داری؟"
+      ]
+    },
+    {
+      "key": "diet_style",
+      "group": "food",
+      "kind": "single",
+      "title": "سبک تغذیه‌ات چیه؟",
+      "options": [
+        {
+          "code": "omnivore",
+          "label": "همه‌چیزخواری",
+          "image": "diet-normal",
+          "description": "غذاهای گیاهی و حیوانی"
+        },
+        {
+          "code": "vegetarian",
+          "label": "گیاه‌خواری با لبنیات یا تخم‌مرغ",
+          "image": "diet-vegetarian",
+          "description": "بدون گوشت، مرغ و ماهی"
+        },
+        {
+          "code": "vegan",
+          "label": "وگان (کاملاً گیاهی)",
+          "image": "diet-vegan",
+          "description": "بدون گوشت، لبنیات، تخم‌مرغ و سایر محصولات حیوانی"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "سبک تغذیه‌ات چیه؟"
+      ]
+    },
+    {
+      "key": "conditions",
+      "group": "health",
+      "kind": "multi",
+      "title": "بیماری خاص یا شرایط پزشکی داری؟",
+      "options": [
+        {
+          "code": "none",
+          "label": "خیر",
+          "exclusive": true
+        },
+        {
+          "code": "diabetes",
+          "label": "دیابت"
+        },
+        {
+          "code": "hypertension",
+          "label": "فشار خون"
+        },
+        {
+          "code": "kidney",
+          "label": "بیماری کلیوی"
+        },
+        {
+          "code": "thyroid",
+          "label": "تیروئید"
+        },
+        {
+          "code": "digestive",
+          "label": "مشکلات گوارشی"
+        },
+        {
+          "code": "other",
+          "label": "سایر"
+        }
+      ],
+      "followUp": {
+        "whenCodes": [
+          "other"
+        ],
+        "key": "conditions_text",
+        "placeholder": "نوع بیماری را بنویسید",
+        "required": true
+      },
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "بیماری خاص یا شرایط پزشکی داری؟"
+      ]
+    },
+    {
+      "key": "medications",
+      "group": "health",
+      "kind": "single",
+      "title": "دارو یا مکمل خاصی مصرف می‌کنی؟",
+      "subtitle": "در صورت «بله» نام را در کادر بنویس",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر"
+        },
+        {
+          "code": "yes",
+          "label": "بله"
+        }
+      ],
+      "followUp": {
+        "whenCodes": [
+          "yes"
+        ],
+        "key": "medications_text",
+        "placeholder": "نام دارو یا مکمل",
+        "required": true
+      },
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "دارو یا مکمل خاصی مصرف می‌کنی؟"
+      ]
+    },
+    {
+      "key": "dislikes",
+      "group": "food",
+      "kind": "text",
+      "title": "چه غذاهایی را دوست نداری یا نمی‌خوری؟",
+      "subtitle": "اختیاری",
+      "placeholder": "مثلاً بادمجان، ماهی…",
+      "required": false,
+      "demo": "all",
+      "demoTitles": [
+        "چه غذاهایی را دوست نداری یا نمی‌خوری؟"
+      ]
+    },
+    {
+      "key": "sleep_wake",
+      "group": "lifestyle",
+      "kind": "sleep_wake",
+      "title": "معمولاً چه ساعت‌هایی می‌خوابی و بیدار می‌شی؟",
+      "subtitle": "ساعت خواب و بیداری عادی‌ات",
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "معمولاً چه ساعت‌هایی می‌خوابی و بیدار می‌شی؟"
+      ]
+    },
+    {
+      "key": "prep_time",
+      "group": "food",
+      "kind": "single",
+      "title": "چقدر برای آماده‌کردن غذا وقت داری؟",
+      "options": [
+        {
+          "code": "lt15",
+          "label": "کمتر از ۱۵ دقیقه"
+        },
+        {
+          "code": "15_30",
+          "label": "۱۵ تا ۳۰ دقیقه"
+        },
+        {
+          "code": "more",
+          "label": "بیشتر"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "چقدر برای آماده‌کردن غذا وقت داری؟"
+      ]
+    },
+    {
+      "key": "budget",
+      "group": "food",
+      "kind": "single",
+      "title": "بودجه غذایی موردنظرت چقدره؟",
+      "options": [
+        {
+          "code": "low",
+          "label": "اقتصادی"
+        },
+        {
+          "code": "medium",
+          "label": "متوسط"
+        },
+        {
+          "code": "open",
+          "label": "بدون محدودیت"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "بودجه غذایی موردنظرت چقدره؟"
+      ]
+    },
+    {
+      "key": "job_activity",
+      "group": "lifestyle",
+      "kind": "single",
+      "title": "شغل یا فعالیت روزانه‌ات بیشتر چه شکلیه؟",
+      "options": [
+        {
+          "code": "sitting",
+          "label": "نشسته",
+          "image": "activity-sedentary"
+        },
+        {
+          "code": "mixed",
+          "label": "ترکیبی",
+          "image": "activity-mixed"
+        },
+        {
+          "code": "standing",
+          "label": "سرپا",
+          "image": "activity-standing"
+        },
+        {
+          "code": "heavy",
+          "label": "کار فیزیکی سنگین",
+          "image": "activity-heavy"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "شغل یا فعالیت روزانه‌ات بیشتر چه شکلیه؟"
+      ]
+    },
+    {
+      "key": "exercise_days",
+      "group": "lifestyle",
+      "kind": "single",
+      "title": "هفته‌ای چند روز ورزش می‌کنی؟",
+      "options": [
+        {
+          "code": "0",
+          "label": "ورزش نمی‌کنم"
+        },
+        {
+          "code": "1",
+          "label": "۱ روز"
+        },
+        {
+          "code": "2",
+          "label": "۲ روز"
+        },
+        {
+          "code": "3",
+          "label": "۳ روز"
+        },
+        {
+          "code": "4",
+          "label": "۴ روز"
+        },
+        {
+          "code": "5",
+          "label": "۵ روز"
+        },
+        {
+          "code": "6",
+          "label": "۶ روز"
+        },
+        {
+          "code": "7",
+          "label": "۷ روز"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "demoTitles": [
+        "هفته‌ای چند روز ورزش می‌کنی؟"
+      ]
+    },
+    {
+      "key": "exercise_duration",
+      "group": "lifestyle",
+      "kind": "single",
+      "title": "هر جلسه تقریباً چقدر ورزش می‌کنی؟",
+      "options": [
+        {
+          "code": "lt30",
+          "label": "کمتر از ۳۰ دقیقه"
+        },
+        {
+          "code": "30_60",
+          "label": "۳۰ تا ۶۰ دقیقه"
+        },
+        {
+          "code": "gt60",
+          "label": "بیشتر"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "showIf": {
+        "key": "exercise_days",
+        "notIn": [
+          "0"
+        ]
+      },
+      "demoTitles": [
+        "هر جلسه تقریباً چقدر ورزش می‌کنی؟"
+      ]
+    },
+    {
+      "key": "sport_type",
+      "group": "lifestyle",
+      "kind": "single",
+      "title": "چه نوع ورزشی انجام می‌دی؟",
+      "options": [
+        {
+          "code": "strength",
+          "label": "قدرتی",
+          "image": "sport-strength"
+        },
+        {
+          "code": "cardio",
+          "label": "هوازی",
+          "image": "sport-cardio"
+        },
+        {
+          "code": "combined",
+          "label": "ترکیبی",
+          "image": "sport-combined"
+        },
+        {
+          "code": "other",
+          "label": "سایر",
+          "image": "sport-other"
+        }
+      ],
+      "required": true,
+      "demo": "all",
+      "showIf": {
+        "key": "exercise_days",
+        "notIn": [
+          "0"
+        ]
+      },
+      "demoTitles": [
+        "چه نوع ورزشی انجام می‌دی؟"
+      ]
+    },
+    {
+      "key": "target_weight_kg",
+      "group": "goal",
+      "kind": "number",
+      "title": "دوست داری به چه وزنی برسی؟",
+      "subtitle": "کیلوگرم",
+      "min": 35,
+      "max": 240,
+      "step": 0.5,
+      "unit": "کیلوگرم",
+      "tracks": [
+        "weight_loss",
+        "weight_gain"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss",
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "دوست داری به چه وزنی برسی؟",
+        "دوست داری وزنت به چند کیلوگرم برسه؟"
+      ]
+    },
+    {
+      "key": "loss_pace",
+      "group": "goal",
+      "kind": "single",
+      "title": "ترجیح می‌دی با چه سرعتی وزن کم کنی؟",
+      "subtitle": "سرعت ایمن را سیستم بر اساس شرایط تو پیشنهاد می‌دهد",
+      "options": [
+        {
+          "code": "slow",
+          "label": "آهسته و تدریجی"
+        },
+        {
+          "code": "balanced",
+          "label": "متعادل و پایدار"
+        },
+        {
+          "code": "fast",
+          "label": "می‌خوام زودتر به نتیجه برسم"
+        },
+        {
+          "code": "auto",
+          "label": "نمی‌دونم، خود برنامه پیشنهاد بده"
+        }
+      ],
+      "tracks": [
+        "weight_loss"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss"
+      ],
+      "demoTitles": [
+        "ترجیح می‌دی با چه سرعتی وزن کم کنی؟"
+      ]
+    },
+    {
+      "key": "loss_challenges",
+      "group": "goal",
+      "kind": "multi",
+      "title": "بزرگ‌ترین چالشت برای کاهش وزن چیه؟",
+      "options": [
+        {
+          "code": "snacking",
+          "label": "ریزه‌خواری در طول روز"
+        },
+        {
+          "code": "sweets",
+          "label": "علاقه زیاد به شیرینی و تنقلات"
+        },
+        {
+          "code": "overeating",
+          "label": "پرخوری در وعده‌های اصلی"
+        },
+        {
+          "code": "stress_eating",
+          "label": "غذا خوردن هنگام استرس"
+        },
+        {
+          "code": "low_activity",
+          "label": "کمبود فعالیت بدنی"
+        },
+        {
+          "code": "irregular_meals",
+          "label": "نامنظم بودن وعده‌های غذایی"
+        }
+      ],
+      "tracks": [
+        "weight_loss"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss"
+      ],
+      "demoTitles": [
+        "بزرگ‌ترین چالشت برای کاهش وزن چیه؟"
+      ]
+    },
+    {
+      "key": "hunger_time",
+      "group": "goal",
+      "kind": "single",
+      "title": "معمولاً چه زمانی بیشتر احساس گرسنگی می‌کنی؟",
+      "options": [
+        {
+          "code": "morning",
+          "label": "صبح"
+        },
+        {
+          "code": "noon",
+          "label": "ظهر"
+        },
+        {
+          "code": "afternoon",
+          "label": "عصر"
+        },
+        {
+          "code": "night",
+          "label": "شب"
+        },
+        {
+          "code": "all_day",
+          "label": "در تمام طول روز"
+        }
+      ],
+      "tracks": [
+        "weight_loss"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss"
+      ],
+      "demoTitles": [
+        "معمولاً چه زمانی بیشتر احساس گرسنگی می‌کنی؟"
+      ]
+    },
+    {
+      "key": "fast_food_freq",
+      "group": "goal",
+      "kind": "single",
+      "title": "چقدر از غذاهای بیرون یا فست‌فود استفاده می‌کنی؟",
+      "options": [
+        {
+          "code": "rare",
+          "label": "به‌ندرت"
+        },
+        {
+          "code": "1_2",
+          "label": "۱ تا ۲ بار در هفته"
+        },
+        {
+          "code": "3_4",
+          "label": "۳ تا ۴ بار در هفته"
+        },
+        {
+          "code": "daily",
+          "label": "تقریباً هر روز"
+        }
+      ],
+      "tracks": [
+        "weight_loss"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss"
+      ],
+      "demoTitles": [
+        "چقدر از غذاهای بیرون یا فست‌فود استفاده می‌کنی؟"
+      ]
+    },
+    {
+      "key": "previous_diet",
+      "group": "goal",
+      "kind": "single",
+      "title": "در گذشته برای کاهش وزن رژیم گرفتی؟",
+      "options": [
+        {
+          "code": "first",
+          "label": "خیر، اولین بارم است"
+        },
+        {
+          "code": "kept",
+          "label": "بله، نتیجه گرفتم"
+        },
+        {
+          "code": "regained",
+          "label": "بله، ولی وزنم برگشت"
+        },
+        {
+          "code": "hard",
+          "label": "بله، ولی نتونستم ادامه بدم"
+        }
+      ],
+      "tracks": [
+        "weight_loss"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss"
+      ],
+      "demoTitles": [
+        "در گذشته برای کاهش وزن رژیم گرفتی؟"
+      ]
+    },
+    {
+      "key": "craving_level",
+      "group": "goal",
+      "kind": "single",
+      "title": "معمولاً در طول روز چقدر احساس گرسنگی یا ولع غذایی داری؟",
+      "options": [
+        {
+          "code": "very_low",
+          "label": "خیلی کم"
+        },
+        {
+          "code": "medium",
+          "label": "متوسط"
+        },
+        {
+          "code": "high",
+          "label": "زیاد"
+        },
+        {
+          "code": "very_high",
+          "label": "خیلی زیاد"
+        }
+      ],
+      "tracks": [
+        "weight_loss"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss"
+      ],
+      "demoTitles": [
+        "معمولاً در طول روز چقدر احساس گرسنگی یا ولع غذایی داری؟"
+      ]
+    },
+    {
+      "key": "binge_history",
+      "group": "health",
+      "kind": "single",
+      "title": "آیا سابقه پرخوری همراه با احساس از دست دادن کنترل، یا محدود کردن شدید غذا داری؟",
+      "subtitle": "این پاسخ فقط برای ایمنی تو و بررسی دکتر است",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر"
+        },
+        {
+          "code": "yes",
+          "label": "بله"
+        },
+        {
+          "code": "skip",
+          "label": "ترجیح می‌دم پاسخ ندم"
+        }
+      ],
+      "tracks": [
+        "weight_loss"
+      ],
+      "required": true,
+      "demo": [
+        "weight_loss"
+      ],
+      "demoTitles": [
+        "آیا سابقه پرخوری همراه با احساس از دست دادن کنترل، یا محدود کردن شدید غذا داری؟"
+      ]
+    },
+    {
+      "key": "gain_goal",
+      "group": "goal",
+      "kind": "single",
+      "title": "هدفت از افزایش وزن بیشتر چیه؟",
+      "options": [
+        {
+          "code": "muscle",
+          "label": "افزایش حجم عضلات"
+        },
+        {
+          "code": "healthy_weight",
+          "label": "رسیدن به وزن سالم"
+        },
+        {
+          "code": "fuller",
+          "label": "پرتر شدن اندام"
+        },
+        {
+          "code": "regain",
+          "label": "جبران کاهش وزن قبلی"
+        }
+      ],
+      "tracks": [
+        "weight_gain"
+      ],
+      "required": true,
+      "demo": [
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "هدفت از افزایش وزن بیشتر چیه؟"
+      ]
+    },
+    {
+      "key": "appetite",
+      "group": "goal",
+      "kind": "single",
+      "title": "وضعیت اشتهای خودت را چطور توصیف می‌کنی؟",
+      "options": [
+        {
+          "code": "very_low",
+          "label": "خیلی کم"
+        },
+        {
+          "code": "low",
+          "label": "کم"
+        },
+        {
+          "code": "normal",
+          "label": "معمولی"
+        },
+        {
+          "code": "high",
+          "label": "زیاد"
+        }
+      ],
+      "tracks": [
+        "weight_gain"
+      ],
+      "required": true,
+      "demo": [
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "وضعیت اشتهای خودت را چطور توصیف می‌کنی؟"
+      ]
+    },
+    {
+      "key": "gain_obstacle",
+      "group": "goal",
+      "kind": "single",
+      "title": "چرا فکر می‌کنی افزایش وزن برات سخته؟",
+      "options": [
+        {
+          "code": "early_full",
+          "label": "زود احساس سیری می‌کنم"
+        },
+        {
+          "code": "forget_meals",
+          "label": "معمولاً وعده‌های غذایی را فراموش می‌کنم"
+        },
+        {
+          "code": "high_activity",
+          "label": "فعالیت بدنی زیادی دارم"
+        },
+        {
+          "code": "no_gain",
+          "label": "با وجود غذا خوردن وزنم زیاد نمی‌شود"
+        },
+        {
+          "code": "unknown",
+          "label": "نمی‌دونم"
+        }
+      ],
+      "tracks": [
+        "weight_gain"
+      ],
+      "required": true,
+      "demo": [
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "چرا فکر می‌کنی افزایش وزن برات سخته؟"
+      ]
+    },
+    {
+      "key": "unintended_loss",
+      "group": "health",
+      "kind": "single",
+      "title": "آیا اخیراً بدون اینکه بخواهی وزن کم کردی؟",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر"
+        },
+        {
+          "code": "little",
+          "label": "بله، کمی"
+        },
+        {
+          "code": "significant",
+          "label": "بله، به مقدار قابل‌توجه"
+        }
+      ],
+      "tracks": [
+        "weight_gain"
+      ],
+      "required": true,
+      "demo": [
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "آیا اخیراً بدون اینکه بخواهی وزن کم کردی؟"
+      ]
+    },
+    {
+      "key": "gain_sport",
+      "group": "goal",
+      "kind": "single",
+      "title": "فعالیت ورزشی تو بیشتر از چه نوعیه؟",
+      "options": [
+        {
+          "code": "none",
+          "label": "ورزش نمی‌کنم"
+        },
+        {
+          "code": "bodybuilding",
+          "label": "تمرینات بدنسازی"
+        },
+        {
+          "code": "cardio",
+          "label": "تمرینات هوازی"
+        },
+        {
+          "code": "combined",
+          "label": "ورزش ترکیبی"
+        },
+        {
+          "code": "heavy_work",
+          "label": "فعالیت بدنی سنگین در کار"
+        }
+      ],
+      "tracks": [
+        "weight_gain"
+      ],
+      "required": true,
+      "showIf": {
+        "key": "exercise_days",
+        "notIn": [
+          "0"
+        ]
+      },
+      "demo": [
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "فعالیت ورزشی تو بیشتر از چه نوعیه؟"
+      ]
+    },
+    {
+      "key": "big_meals",
+      "group": "goal",
+      "kind": "single",
+      "title": "خوردن وعده‌های بزرگ برات چقدر راحته؟",
+      "options": [
+        {
+          "code": "easy",
+          "label": "راحت است"
+        },
+        {
+          "code": "small_pref",
+          "label": "وعده‌های کوچک را ترجیح می‌دهم"
+        },
+        {
+          "code": "full_fast",
+          "label": "خیلی زود سیر می‌شوم"
+        }
+      ],
+      "tracks": [
+        "weight_gain"
+      ],
+      "required": true,
+      "demo": [
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "خوردن وعده‌های بزرگ برات چقدر راحته؟"
+      ]
+    },
+    {
+      "key": "snack_readiness",
+      "group": "goal",
+      "kind": "single",
+      "title": "برای اضافه کردن میان‌وعده به برنامه روزانه‌ات آمادگی داری؟",
+      "options": [
+        {
+          "code": "two_plus",
+          "label": "بله، دو یا چند میان‌وعده"
+        },
+        {
+          "code": "one",
+          "label": "بله، یک میان‌وعده"
+        },
+        {
+          "code": "more_main",
+          "label": "ترجیح می‌دهم وعده‌های اصلی بیشتر شود"
+        }
+      ],
+      "tracks": [
+        "weight_gain"
+      ],
+      "required": true,
+      "demo": [
+        "weight_gain"
+      ],
+      "demoTitles": [
+        "برای اضافه کردن میان‌وعده به برنامه روزانه‌ات آمادگی داری؟"
+      ]
+    },
+    {
+      "key": "life_stage",
+      "group": "goal",
+      "kind": "single",
+      "title": "در چه مرحله‌ای هستی؟",
+      "options": [
+        {
+          "code": "pregnant",
+          "label": "باردار هستم"
+        },
+        {
+          "code": "breastfeeding",
+          "label": "در دوران شیردهی هستم"
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "demoTitles": [
+        "در چه مرحله‌ای هستی؟"
+      ]
+    },
+    {
+      "key": "pregnancy_week",
+      "group": "goal",
+      "kind": "number",
+      "title": "در هفته چندم بارداری هستی؟",
+      "subtitle": "هفته بارداری",
+      "min": 1,
+      "max": 42,
+      "step": 1,
+      "default": 12,
+      "unit": "هفته",
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
+      "demoTitles": [
+        "در هفته چندم بارداری هستی؟"
+      ]
+    },
+    {
+      "key": "pre_pregnancy_weight_kg",
+      "group": "goal",
+      "kind": "number",
+      "title": "قبل از بارداری چند کیلوگرم وزن داشتی؟",
+      "subtitle": "کیلوگرم",
+      "min": 35,
+      "max": 240,
+      "step": 0.5,
+      "default": 62,
+      "unit": "کیلوگرم",
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "demoTitles": [
+        "قبل از بارداری چند کیلوگرم وزن داشتی؟",
+        "وزنت قبل از بارداری چقدر بوده؟"
+      ]
+    },
+    {
+      "key": "babies",
+      "group": "goal",
+      "kind": "single",
+      "title": "بارداری تو از چه نوعیه؟",
+      "options": [
+        {
+          "code": "singleton",
+          "label": "تک‌قلو"
+        },
+        {
+          "code": "twins",
+          "label": "دوقلو"
+        },
+        {
+          "code": "triplets_plus",
+          "label": "سه‌قلو یا بیشتر"
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
+      "demoTitles": [
+        "بارداری تو از چه نوعیه؟"
+      ]
+    },
+    {
+      "key": "doctor_advice",
+      "group": "health",
+      "kind": "single",
+      "title": "آیا پزشک برای وزن‌گیری یا تغذیه‌ات توصیه خاصی داشته؟",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر"
+        },
+        {
+          "code": "control_gain",
+          "label": "بله، کنترل افزایش وزن"
+        },
+        {
+          "code": "more_gain",
+          "label": "بله، نیاز به افزایش وزن بیشتر"
+        },
+        {
+          "code": "other",
+          "label": "بله، محدودیت غذایی یا توصیه پزشکی دیگر"
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
+      "demoTitles": [
+        "آیا پزشک برای وزن‌گیری یا تغذیه‌ات توصیه خاصی داشته؟"
+      ]
+    },
+    {
+      "key": "preg_symptoms",
+      "group": "health",
+      "kind": "multi",
+      "title": "در دوران بارداری کدام مشکلات را تجربه می‌کنی؟",
+      "options": [
+        {
+          "code": "nausea",
+          "label": "تهوع"
+        },
+        {
+          "code": "vomiting",
+          "label": "استفراغ"
+        },
+        {
+          "code": "constipation",
+          "label": "یبوست"
+        },
+        {
+          "code": "heartburn",
+          "label": "سوزش معده"
+        },
+        {
+          "code": "no_appetite",
+          "label": "بی‌اشتهایی"
+        },
+        {
+          "code": "none",
+          "label": "هیچ‌کدام",
+          "exclusive": true
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
+      "demoTitles": [
+        "در دوران بارداری کدام مشکلات را تجربه می‌کنی؟"
+      ]
+    },
+    {
+      "key": "preg_conditions",
+      "group": "health",
+      "kind": "multi",
+      "title": "آیا به یکی از شرایط زیر مبتلا هستی؟",
+      "options": [
+        {
+          "code": "gestational_diabetes",
+          "label": "دیابت بارداری"
+        },
+        {
+          "code": "preeclampsia",
+          "label": "فشار خون بالا یا پره‌اکلامپسیا"
+        },
+        {
+          "code": "anemia",
+          "label": "کم‌خونی"
+        },
+        {
+          "code": "thyroid",
+          "label": "بیماری تیروئید"
+        },
+        {
+          "code": "other",
+          "label": "سایر مشکلات پزشکی"
+        },
+        {
+          "code": "none",
+          "label": "هیچ‌کدام",
+          "exclusive": true
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
+      "demoTitles": [
+        "آیا به یکی از شرایط زیر مبتلا هستی؟"
+      ]
+    },
+    {
+      "key": "preg_supplements",
+      "group": "health",
+      "kind": "multi",
+      "title": "چه مکمل‌هایی مصرف می‌کنی؟",
+      "options": [
+        {
+          "code": "folic_acid",
+          "label": "اسید فولیک"
+        },
+        {
+          "code": "iron",
+          "label": "آهن"
+        },
+        {
+          "code": "vitamin_d",
+          "label": "ویتامین D"
+        },
+        {
+          "code": "prenatal_multi",
+          "label": "مولتی‌ویتامین بارداری"
+        },
+        {
+          "code": "other",
+          "label": "سایر"
+        },
+        {
+          "code": "none",
+          "label": "هیچ‌کدام",
+          "exclusive": true
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
+      "demoTitles": [
+        "چه مکمل‌هایی مصرف می‌کنی؟"
+      ]
+    },
+    {
+      "key": "doctor_restrictions",
+      "group": "health",
+      "kind": "single",
+      "title": "آیا پزشک مصرف غذا یا مکمل خاصی را برای تو محدود یا توصیه کرده؟",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر"
+        },
+        {
+          "code": "yes",
+          "label": "بله"
+        }
+      ],
+      "followUp": {
+        "whenCodes": [
+          "yes"
+        ],
+        "key": "doctor_restrictions_text",
+        "placeholder": "توصیهٔ پزشک را بنویس",
+        "required": true
+      },
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "pregnant"
+        ]
+      },
+      "demoTitles": [
+        "آیا پزشک مصرف غذا یا مکمل خاصی را برای تو محدود یا توصیه کرده؟"
+      ]
+    },
+    {
+      "key": "months_postpartum",
+      "group": "goal",
+      "kind": "number",
+      "title": "چند ماه از زایمانت گذشته؟",
+      "subtitle": "ماه",
+      "min": 0,
+      "max": 36,
+      "step": 1,
+      "default": 4,
+      "unit": "ماه",
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "breastfeeding"
+        ]
+      },
+      "demoTitles": [
+        "چند ماه از زایمانت گذشته؟"
+      ]
+    },
+    {
+      "key": "feeding_mode",
+      "group": "goal",
+      "kind": "single",
+      "title": "به چه شکلی به نوزادت شیر می‌دی؟",
+      "options": [
+        {
+          "code": "breast_only",
+          "label": "فقط شیر مادر"
+        },
+        {
+          "code": "mixed",
+          "label": "ترکیبی از شیر مادر و شیر خشک"
+        },
+        {
+          "code": "occasional",
+          "label": "شیردهی کم یا گهگاهی"
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "breastfeeding"
+        ]
+      },
+      "demoTitles": [
+        "به چه شکلی به نوزادت شیر می‌دی؟"
+      ]
+    },
+    {
+      "key": "months_breastfeeding",
+      "group": "goal",
+      "kind": "number",
+      "title": "چند ماهه که شیردهی را شروع کردی؟",
+      "subtitle": "ماه",
+      "min": 0,
+      "max": 36,
+      "step": 1,
+      "default": 3,
+      "unit": "ماه",
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": false,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "breastfeeding"
+        ]
+      },
+      "demoTitles": [
+        "چند ماهه که شیردهی را شروع کردی؟"
+      ]
+    },
+    {
+      "key": "lactation_goal",
+      "group": "goal",
+      "kind": "single",
+      "title": "هدفت در دوران شیردهی چیه؟",
+      "options": [
+        {
+          "code": "balanced",
+          "label": "تغذیه سالم و متعادل"
+        },
+        {
+          "code": "maintain",
+          "label": "حفظ وزن فعلی"
+        },
+        {
+          "code": "gradual_loss",
+          "label": "بازگشت تدریجی به وزن قبل از بارداری"
+        },
+        {
+          "code": "more_energy",
+          "label": "تأمین انرژی بیشتر"
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "breastfeeding"
+        ]
+      },
+      "demoTitles": [
+        "هدفت در دوران شیردهی چیه؟"
+      ]
+    },
+    {
+      "key": "lactation_energy",
+      "group": "health",
+      "kind": "single",
+      "title": "وضعیت انرژی و اشتهای خودت را چطور ارزیابی می‌کنی؟",
+      "options": [
+        {
+          "code": "good",
+          "label": "انرژی و اشتهای مناسبی دارم"
+        },
+        {
+          "code": "tired",
+          "label": "بیشتر اوقات خسته‌ام"
+        },
+        {
+          "code": "big_appetite",
+          "label": "اشتهای زیادی دارم"
+        },
+        {
+          "code": "small_appetite",
+          "label": "اشتهای کمی دارم"
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "breastfeeding"
+        ]
+      },
+      "demoTitles": [
+        "وضعیت انرژی و اشتهای خودت را چطور ارزیابی می‌کنی؟"
+      ]
+    },
+    {
+      "key": "baby_concern",
+      "group": "health",
+      "kind": "single",
+      "title": "آیا درباره میزان شیر یا رشد نوزاد نگرانی پزشکی مطرح شده؟",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر"
+        },
+        {
+          "code": "yes",
+          "label": "بله"
+        },
+        {
+          "code": "reviewing",
+          "label": "در حال بررسی توسط پزشک هستم"
+        }
+      ],
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "breastfeeding"
+        ]
+      },
+      "demoTitles": [
+        "آیا درباره میزان شیر یا رشد نوزاد نگرانی پزشکی مطرح شده؟"
+      ]
+    },
+    {
+      "key": "lactation_meds",
+      "group": "health",
+      "kind": "single",
+      "title": "آیا مکمل یا داروی خاصی در دوران شیردهی مصرف می‌کنی؟",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر"
+        },
+        {
+          "code": "yes",
+          "label": "بله"
+        }
+      ],
+      "followUp": {
+        "whenCodes": [
+          "yes"
+        ],
+        "key": "lactation_meds_text",
+        "placeholder": "نام دارو یا مکمل",
+        "required": true
+      },
+      "tracks": [
+        "pregnancy"
+      ],
+      "required": true,
+      "demo": [
+        "pregnancy"
+      ],
+      "showIf": {
+        "key": "life_stage",
+        "in": [
+          "breastfeeding"
+        ]
+      },
+      "demoTitles": [
+        "آیا مکمل یا داروی خاصی در دوران شیردهی مصرف می‌کنی؟"
+      ]
+    },
+    {
+      "key": "health_focus",
+      "group": "goal",
+      "kind": "multi",
+      "title": "بیشتر دوست داری کدام بخش از سلامتت بهتر بشه؟",
+      "options": [
+        {
+          "code": "energy",
+          "label": "افزایش انرژی روزانه"
+        },
+        {
+          "code": "nutrition_quality",
+          "label": "بهبود کیفیت تغذیه"
+        },
+        {
+          "code": "digestive",
+          "label": "سلامت دستگاه گوارش"
+        },
+        {
+          "code": "sleep",
+          "label": "بهبود کیفیت خواب"
+        },
+        {
+          "code": "healthy_weight",
+          "label": "حفظ وزن سالم"
+        },
+        {
+          "code": "less_junk",
+          "label": "کاهش مصرف غذاهای ناسالم"
+        }
+      ],
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "بیشتر دوست داری کدام بخش از سلامتت بهتر بشه؟"
+      ]
+    },
+    {
+      "key": "water",
+      "group": "lifestyle",
+      "kind": "single",
+      "title": "معمولاً در طول روز چقدر آب می‌نوشی؟",
+      "options": [
+        {
+          "code": "under_4",
+          "label": "کمتر از ۴ لیوان"
+        },
+        {
+          "code": "4_6",
+          "label": "۴ تا ۶ لیوان"
+        },
+        {
+          "code": "7_9",
+          "label": "۷ تا ۹ لیوان"
+        },
+        {
+          "code": "10_plus",
+          "label": "بیشتر از ۹ لیوان"
+        }
+      ],
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "معمولاً در طول روز چقدر آب می‌نوشی؟"
+      ]
+    },
+    {
+      "key": "fruit_veg",
+      "group": "food",
+      "kind": "single",
+      "title": "در طول روز چقدر میوه و سبزیجات مصرف می‌کنی؟",
+      "options": [
+        {
+          "code": "none",
+          "label": "تقریباً هیچ"
+        },
+        {
+          "code": "1_2",
+          "label": "۱ تا ۲ وعده"
+        },
+        {
+          "code": "3_4",
+          "label": "۳ تا ۴ وعده"
+        },
+        {
+          "code": "5_plus",
+          "label": "۵ وعده یا بیشتر"
+        }
+      ],
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "در طول روز چقدر میوه و سبزیجات مصرف می‌کنی؟"
+      ]
+    },
+    {
+      "key": "digestion",
+      "group": "health",
+      "kind": "multi",
+      "title": "وضعیت گوارشت معمولاً چطوره؟",
+      "options": [
+        {
+          "code": "normal",
+          "label": "طبیعی",
+          "exclusive": true
+        },
+        {
+          "code": "constipation",
+          "label": "یبوست مکرر"
+        },
+        {
+          "code": "bloating",
+          "label": "نفخ"
+        },
+        {
+          "code": "heartburn",
+          "label": "سوزش معده"
+        },
+        {
+          "code": "diarrhea",
+          "label": "اسهال مکرر"
+        },
+        {
+          "code": "other",
+          "label": "مشکلات دیگر"
+        }
+      ],
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "وضعیت گوارشت معمولاً چطوره؟"
+      ]
+    },
+    {
+      "key": "sweets_freq",
+      "group": "food",
+      "kind": "single",
+      "title": "چقدر از خوراکی‌های شیرین یا غذاهای فرآوری‌شده استفاده می‌کنی؟",
+      "options": [
+        {
+          "code": "rare",
+          "label": "به‌ندرت"
+        },
+        {
+          "code": "weekly",
+          "label": "چند بار در هفته"
+        },
+        {
+          "code": "daily",
+          "label": "تقریباً هر روز"
+        },
+        {
+          "code": "multi_daily",
+          "label": "چند بار در روز"
+        }
+      ],
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "چقدر از خوراکی‌های شیرین یا غذاهای فرآوری‌شده استفاده می‌کنی؟"
+      ]
+    },
+    {
+      "key": "sleep_quality",
+      "group": "lifestyle",
+      "kind": "single",
+      "title": "کیفیت خوابت را چطور ارزیابی می‌کنی؟",
+      "options": [
+        {
+          "code": "very_good",
+          "label": "خیلی خوب"
+        },
+        {
+          "code": "good",
+          "label": "خوب"
+        },
+        {
+          "code": "medium",
+          "label": "متوسط"
+        },
+        {
+          "code": "poor",
+          "label": "ضعیف"
+        }
+      ],
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "کیفیت خوابت را چطور ارزیابی می‌کنی؟"
+      ]
+    },
+    {
+      "key": "diet_change",
+      "group": "goal",
+      "kind": "multi",
+      "title": "بیشتر دوست داری چه تغییری در تغذیه‌ات ایجاد کنی؟",
+      "options": [
+        {
+          "code": "regular_meals",
+          "label": "وعده‌های منظم‌تر"
+        },
+        {
+          "code": "more_veg",
+          "label": "مصرف سبزیجات بیشتر"
+        },
+        {
+          "code": "less_sugar",
+          "label": "کاهش قندهای افزوده"
+        },
+        {
+          "code": "home_cooked",
+          "label": "مصرف غذاهای خانگی بیشتر"
+        },
+        {
+          "code": "variety",
+          "label": "افزایش تنوع غذایی"
+        },
+        {
+          "code": "sustainable",
+          "label": "داشتن یک برنامه متعادل و قابل‌ادامه"
+        }
+      ],
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "بیشتر دوست داری چه تغییری در تغذیه‌ات ایجاد کنی؟"
+      ]
+    },
+    {
+      "key": "doctor_diet_advice",
+      "group": "health",
+      "kind": "multi",
+      "title": "آیا پزشک برای بهبود وضعیت سلامتت توصیه غذایی خاصی داشته؟",
+      "options": [
+        {
+          "code": "no",
+          "label": "خیر",
+          "exclusive": true
+        },
+        {
+          "code": "blood_sugar",
+          "label": "بله، کنترل قند خون"
+        },
+        {
+          "code": "blood_pressure",
+          "label": "بله، کنترل فشار خون"
+        },
+        {
+          "code": "blood_lipids",
+          "label": "بله، کنترل چربی خون"
+        },
+        {
+          "code": "digestive",
+          "label": "بله، برای مشکلات گوارشی"
+        },
+        {
+          "code": "other",
+          "label": "سایر موارد"
+        }
+      ],
+      "followUp": {
+        "whenCodes": [
+          "other"
+        ],
+        "key": "doctor_diet_advice_text",
+        "placeholder": "توصیهٔ پزشک را توضیح بده",
+        "required": true
+      },
+      "tracks": [
+        "detox"
+      ],
+      "required": true,
+      "demo": [
+        "detox"
+      ],
+      "demoTitles": [
+        "آیا پزشک برای بهبود وضعیت سلامتت توصیه غذایی خاصی داشته؟"
+      ]
+    }
+  ],
+  "insights": []
+}

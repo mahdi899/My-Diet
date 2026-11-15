@@ -3,17 +3,24 @@ import 'package:flutter/material.dart';
 import '../../../core/motion/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
+import '../../plan/meal_detail_page.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../presentation/coach_controller.dart';
 import '../data/coach_parse.dart';
 import '../domain/coach_message.dart';
 import 'bubbles.dart';
+import 'coach_companion.dart';
 import 'cards/coach_cards.dart';
 import 'nutrition_mode_page.dart';
 
 class CoachMessageList extends StatefulWidget {
-  const CoachMessageList({super.key, required this.controller});
+  const CoachMessageList({
+    super.key,
+    required this.controller,
+    this.pinnedBriefId,
+  });
   final CoachController controller;
+  final String? pinnedBriefId;
 
   @override
   State<CoachMessageList> createState() => _CoachMessageListState();
@@ -53,6 +60,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
     final rows = <Widget>[];
     DateTime? day;
     for (final message in controller.messages) {
+      if (message.id == widget.pinnedBriefId) continue;
       final stamp = DateTime(
         message.createdAt.year,
         message.createdAt.month,
@@ -64,7 +72,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
       }
       rows.add(
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.symmetric(vertical: 7),
           child: Reveal(child: _tile(context, controller, message)),
         ),
       );
@@ -73,7 +81,11 @@ class _CoachMessageListState extends State<CoachMessageList> {
       rows.add(
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
-          child: CoachTextBubble(text: controller.draftText!, isUser: false),
+          child: CoachTextBubble(
+            text: controller.draftText!,
+            isUser: false,
+            mood: CompanionMood.thinking,
+          ),
         ),
       );
     } else if (controller.typing) {
@@ -103,7 +115,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
         ListView.builder(
           controller: _scroll,
           reverse: true,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
           itemCount: rows.length,
           itemBuilder: (context, index) => rows[rows.length - 1 - index],
         ),
@@ -185,10 +197,9 @@ class _CoachMessageListState extends State<CoachMessageList> {
       ),
       'plan_meal' => PlanMealView(
         message: message,
-        onOpen: () => openNutritionMode(
-          context,
-          controller: controller,
-          message: message,
+        onOpen: () => _openPlanMeal(context, message),
+        onSwap: () => controller.sendText(
+          'می‌خوام برای «${asString(message.payload['title'])}» یک جایگزین داشته باشم.',
         ),
       ),
       'calorie_ring' => CalorieRingView(message: message),
@@ -205,6 +216,39 @@ class _CoachMessageListState extends State<CoachMessageList> {
       ),
     };
   }
+
+  void _openPlanMeal(BuildContext context, CoachMessage message) {
+    final store = DemoScope.of(context);
+    final now = store.today;
+    final stamp = message.createdAt.toLocal();
+    final sameDay =
+        now.year == stamp.year &&
+        now.month == stamp.month &&
+        now.day == stamp.day;
+    final matches = <int>[];
+    final meals = store.mealsOn(now);
+    for (var i = 0; i < meals.length; i++) {
+      if (meals[i].title == asString(message.payload['title']) &&
+          meals[i].name == asString(message.payload['meal_type_fa']) &&
+          meals[i].time == asString(message.payload['time'])) {
+        matches.add(i);
+      }
+    }
+    if (sameDay && matches.length == 1) {
+      Navigator.of(context).push(
+        foodDetailRoute<void>(
+          MealDetailPage(date: now, index: matches.single),
+          reduced: Motion.reduced(context),
+        ),
+      );
+    } else {
+      openNutritionMode(
+        context,
+        controller: widget.controller,
+        message: message,
+      );
+    }
+  }
 }
 
 class _DayHeader extends StatelessWidget {
@@ -213,7 +257,7 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now = DemoScope.of(context).today;
     final today = DateTime(now.year, now.month, now.day);
     final label = day == today
         ? 'امروز'
@@ -221,12 +265,16 @@ class _DayHeader extends StatelessWidget {
         ? 'دیروز'
         : fa('${day.year}/${day.month}/${day.day}');
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 12),
-        ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: AppColors.line, endIndent: 14)),
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          const Expanded(child: Divider(color: AppColors.line, indent: 14)),
+        ],
       ),
     );
   }

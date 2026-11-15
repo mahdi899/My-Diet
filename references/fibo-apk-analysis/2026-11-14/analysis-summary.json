@@ -1,0 +1,305 @@
+{
+  "analysis_date_local": "2026-11-14",
+  "timezone": "Asia/Tehran",
+  "input_path": "C:\\Users\\pc\\Downloads\\Telegram Desktop\\base.apk",
+  "apk_sha256": "f40804f2b439174d75b6613b5650b9062db73177874e63b4003a6fc7f87320f2",
+  "apk_bytes": 27123108,
+  "package": "info.fiboapp.fibo",
+  "version_name": "4.0.6",
+  "version_code": "46",
+  "min_sdk": "21",
+  "target_sdk": "36",
+  "java_output_files": 7375,
+  "app_namespace_java_files": 112,
+  "obfuscated_Q6_java_files": 505,
+  "layout_files": 442,
+  "strings_in_default_values": 1387,
+  "manifest_activities_total": 36,
+  "manifest_app_activities": 32,
+  "permission_count": 19,
+  "application_flags": {
+    "allowBackup": "true",
+    "usesCleartextTraffic": "true",
+    "supportsRtl": "true"
+  },
+  "jadx_reported_error_count": 65,
+  "method_not_decompiled_markers": 74,
+  "app_namespace_unrecovered_methods": 0,
+  "Q6_unrecovered_methods": 4,
+  "motion_index_classes": 48,
+  "custom_onDraw_classes": 41,
+  "lottie_files": [
+    {
+      "file": "jashn2.json",
+      "format_version": "5.9.2",
+      "fps": 24,
+      "width": 512,
+      "height": 512,
+      "duration_seconds": 3.0,
+      "sha256": "a60f0432ee4bc0a833b679c852e30e7cbc851b6a8748bda656faedf8c1169dc5",
+      "source": "resources\\res\\raw\\jashn2.json"
+    },
+    {
+      "file": "loading_tm_pink.json",
+      "format_version": "5.5.8",
+      "fps": 50,
+      "width": 800,
+      "height": 600,
+      "duration_seconds": 2.94,
+      "sha256": "9e007a131d3c4bb3047af436181598974abea242b06825b3fb205ee5011a098c",
+      "source": "resources\\res\\raw\\loading_tm_pink.json"
+    },
+    {
+      "file": "nowifi4.json",
+      "format_version": "5.5.8",
+      "fps": 23.9499969482422,
+      "width": 800,
+      "height": 1100,
+      "duration_seconds": 5.0104,
+      "sha256": "1976c4300184b6ddb6af748edff0bb80448e2a51ad4b78c390357aa2ebe91bdd",
+      "source": "resources\\res\\raw\\nowifi4.json"
+    },
+    {
+      "file": "no_find_folder_pink.json",
+      "format_version": "5.4.1",
+      "fps": 29.9700012207031,
+      "width": 1024,
+      "height": 768,
+      "duration_seconds": 4.4044,
+      "sha256": "8e339fbf75e0faab311721d211178dff5c51e2d3d0af552d4e64eb833bb338a3",
+      "source": "resources\\res\\raw\\no_find_folder_pink.json"
+    }
+  ],
+  "rive_file": "decompiled/resources/res/raw/fibo_sobo.riv",
+  "permissions": [
+    {
+      "name": "com.farsitel.bazaar.permission.PAY_THROUGH_BAZAAR",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.USE_EXACT_ALARM",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.ACCESS_NETWORK_STATE",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.INTERNET",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.ACCESS_WIFI_STATE",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.RECEIVE_BOOT_COMPLETED",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.READ_EXTERNAL_STORAGE",
+      "max_sdk": "32"
+    },
+    {
+      "name": "android.permission.WRITE_EXTERNAL_STORAGE",
+      "max_sdk": "32"
+    },
+    {
+      "name": "android.permission.POST_NOTIFICATIONS",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.SCHEDULE_EXACT_ALARM",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.RECORD_AUDIO",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.CAMERA",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.WAKE_LOCK",
+      "max_sdk": null
+    },
+    {
+      "name": "com.google.android.c2dm.permission.RECEIVE",
+      "max_sdk": null
+    },
+    {
+      "name": "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE",
+      "max_sdk": null
+    },
+    {
+      "name": "com.google.android.gms.permission.AD_ID",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.ACCESS_ADSERVICES_ATTRIBUTION",
+      "max_sdk": null
+    },
+    {
+      "name": "android.permission.ACCESS_ADSERVICES_AD_ID",
+      "max_sdk": null
+    },
+    {
+      "name": "info.fiboapp.fibo.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+      "max_sdk": null
+    }
+  ],
+  "activities": [
+    {
+      "name": "info.fiboapp.fibo.SubscriptionActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.AiFoodCameraActivity",
+      "exported": "false"
+    },
+    {
+      "name": "info.fiboapp.fibo.Reels.ReelsActivity",
+      "exported": "false"
+    },
+    {
+      "name": "info.fiboapp.fibo.Hadaf.Hadaf5ChoiceDietActivity",
+      "exported": "false"
+    },
+    {
+      "name": "com.yalantis.ucrop.UCropActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GuideFibo.TextGuideFiboActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.ChatOnline",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.TamrienShowDetails",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.TamrienShowDays",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.AppIntroProject.IntroActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.NoteDetailActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.NoteActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GozareshActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.AboutUsActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GhavaninActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.Hadaf.Hadaf4VaznhadafActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.Hadaf.Hadaf3FaaliatActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.Hadaf.Hadaf2VaznActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.Hadaf.Hadaf1ChoesseActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GetInfo.GetInfoActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GetInfo.Login2Activity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GetInfo.Login1Activity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GetInfo.GetInfo2Activity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.GetInfo.GetInfo1Activity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.ChoeseFaaliat",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.FaaliatAll",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.SaveFoodPerson",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.FoodCaleriActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.ShowFoodActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.FoodAllActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.choiceFoods.ChoeseFoodCaleriActivity",
+      "exported": "unspecified"
+    },
+    {
+      "name": "info.fiboapp.fibo.SplashActivity",
+      "exported": "true"
+    },
+    {
+      "name": "info.fiboapp.fibo.MainActivity",
+      "exported": "false"
+    },
+    {
+      "name": "com.google.android.gms.auth.api.signin.internal.SignInHubActivity",
+      "exported": "false"
+    },
+    {
+      "name": "com.google.android.gms.common.api.GoogleApiActivity",
+      "exported": "false"
+    },
+    {
+      "name": "com.google.android.play.core.common.PlayCoreDialogWrapperActivity",
+      "exported": "false"
+    }
+  ],
+  "runtime_status": "blocked_by_emulator_graphics",
+  "limits": [
+    "Counts describe decompiler output, including third-party libraries; they are not counts of product features.",
+    "JADX errors and method markers are different metrics.",
+    "Signature verified locally, not matched against an independently obtained official certificate.",
+    "Server code, server database contents, and end-to-end feature behavior are not recoverable from static APK inspection alone."
+  ]
+}

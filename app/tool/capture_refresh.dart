@@ -6,7 +6,7 @@ import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/presentation/screens/user.dart';
 import 'package:sabzine_flutter/presentation/screens/pricing_admin.dart';
 import 'package:sabzine_flutter/presentation/screens/wallet_flow.dart';
-import '../test/wallet_flow_test.dart' show tapWallet;
+import '../test/wallet_flow_test.dart' show tapPlan;
 import '../test/ui_refresh_test.dart' show completeProgram;
 
 void main() {
@@ -79,7 +79,7 @@ void main() {
     await completeProgram(done);
     await t.pumpWidget(SabzineApp(store: done, splashDuration: Duration.zero));
     await shot('09-reward');
-    await tapWallet(t, find.text('ثبت بازخورد این هفته'));
+    await tapPlan(t, find.text('ثبت بازخورد این هفته'));
     await shot('10-feedback');
     expect(find.byType(ProgramReviewSubmitScreen), findsOneWidget);
     expect(t.takeException(), isNull);

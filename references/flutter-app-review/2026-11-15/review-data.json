@@ -1,0 +1,177 @@
+{
+  "date": "2026-11-15",
+  "timezone": "Asia/Tehran",
+  "commit": "103ac3d",
+  "scope": "Focused review of the active Flutter customer flow, relevant API adapters, selected backend and web contracts, and five local fixture renders. Not every line of the 146 Dart files was reviewed.",
+  "existing": [
+    "سه مقصد خانه، مربی و برنامه با RTL و فونت فارسی",
+    "آنبوردینگ دریافت‌شده از spec سرور، ذخیرهٔ draft برای کاربر احرازشده و دریافت پاسخ‌های سایت",
+    "چت مربی با repository واقعی HTTP، تاریخچه، streaming، عکس و اقدام‌های سریع",
+    "روزها و وعده‌ها، دستورپخت، جایگزینی غذا، ثبت مصرف و لیست خرید",
+    "خانه با حلقهٔ کالری، وزن، آب و زنجیرهٔ روزها",
+    "کیت حرکت، haptic، skeleton، کاهش حرکت و تصاویر محلی با cacheWidth"
+  ],
+  "findings": [
+    {
+      "id": "R01", "priority": "P0", "area": "مسیر محصول",
+      "title": "مسیر واحد ساخت AI، پرداخت و تأیید متخصص",
+      "current": "پس از تکمیل آنبوردینگ، showServerPlan وضعیت entryStage را home و liveReady را true می‌کند؛ حتی اگر هنوز درخواستی وجود نداشته باشد. خرید از کیف پول در بک‌اند سفارش paid می‌سازد و سپس رویداد plan.generate را ثبت می‌کند. این ترتیب با تولید پیش‌نویس AI پیش از پرداخت و ورود به محیط اصلی پس از تأیید متخصص تفاوت دارد.",
+      "proposal": "یک JourneyState معتبر از سرور تعریف شود: تکمیل فرم، تولید پیش‌نویس، انتظار پرداخت، پرداخت‌شده و منتظر متخصص، نیاز به اصلاح و برنامهٔ منتشرشده. فقط وضعیت published محیط اصلی سه‌تب را برای نخستین برنامه باز کند. صفحهٔ انتظار و رسید سفارش قبل از آن مستقل باشند. برای تمدید برنامه، برنامهٔ معتبر قبلی تا انتشار نسخهٔ جدید در دسترس بماند.",
+      "acceptance": "کاربر پس از فرم واقعاً پیش‌نویس AI داشته باشد؛ پرداخت به همان draft متصل شود؛ تا تأیید متخصص محیط اصلی نخستین برنامه باز نشود؛ refresh و callback تکراری سفارش دوم نسازند.",
+      "note": "این یافته ناهماهنگی محصول است و به‌تنهایی اثبات دسترسی به برنامهٔ تأییدنشده از API نیست. تئاتر آنبوردینگ اکنون هنگام submit پاسخ‌ها اجرا می‌شود؛ متن‌های ساخت وعده و بررسی ایمنی باید به رخداد واقعی متصل شوند.",
+      "evidence": [
+        {"file":"app/lib/presentation/session/live_plan.dart","line":29},
+        {"file":"app/lib/app.dart","line":151},
+        {"file":"backend/src/money/money.service.ts","line":415},
+        {"file":"backend/src/money/money.service.ts","line":452},
+        {"file":"app/lib/presentation/onboarding/onboarding_flow.dart","line":99},
+        {"file":"app/lib/presentation/onboarding/widgets/plan_theater.dart","line":31}
+      ]
+    },
+    {
+      "id": "R02", "priority": "P0", "area": "غذا و برنامه",
+      "title": "حفظ مقدار، واحد، تصویر و هویت غذا از پنل تا اپ",
+      "current": "MealOptionView از مواد اولیه فقط نام را نگه می‌دارد. live_plan برای هر ماده مقدار ۱ و واحد عمومی می‌سازد و مبنای سرو را ثابت می‌گذارد؛ درحالی‌که قرارداد گزینهٔ غذا در بک‌اند portion، quantity، unit و basis دارد. FoodImage نیز در مسیر فعلی عمدتاً از نام غذا به عکس محلی می‌رسد و فیلد مستقیمی برای عکس غذا از پنل ندارد.",
+      "proposal": "FoodId، تصویر معتبر پنل و thumbnail، portion، گرم/واحد، مبنای خام یا پخته، مواد اولیهٔ ساختاریافته و دستورپخت بدون حذف اطلاعات وارد مدل Flutter شوند. اطلاعات نسخهٔ منتشرشده، نام متخصص و زمان تأیید هم منتقل شوند؛ diet.version=1 ثابت حذف شود. resolver تصاویر فعلی برای fallback مناسب است.",
+      "acceptance": "اگر پنل برای یک غذا ۱۵۰ گرم پخته و مواد اولیهٔ مشخص ذخیره کند، همان مقدار و مبنا و تصویر در برنامه و جزئیات دیده شود؛ دادهٔ ناقص با عدد یا زمان ساختگی کامل نشود.",
+      "note": "مدل سمت سرور برای افزودن foodId و imageUrl نیز ممکن است به توسعه نیاز داشته باشد؛ این پیشنهاد صرفاً تغییر ویجت عکس نیست.",
+      "evidence": [
+        {"file":"app/lib/domain/plan/plan.dart","line":72},
+        {"file":"app/lib/presentation/session/live_plan.dart","line":102},
+        {"file":"app/lib/presentation/session/live_plan.dart","line":63},
+        {"file":"backend/src/plans/options.ts","line":7},
+        {"file":"app/lib/core/photos/food_image.dart","line":16}
+      ]
+    },
+    {
+      "id": "R03", "priority": "P0", "area": "صحت داده",
+      "title": "اعداد تغذیه از دادهٔ واقعی کاتالوگ و متخصص بیایند",
+      "current": "macrosFor در goal_math پروتئین، کربوهیدرات و چربی را از کالری و نسبت ثابت نوع وعده تخمین می‌زند. nutritionOn هدف‌ها را از جمع/مقیاس همین تخمین‌ها می‌سازد؛ برای مصرف امروز در صورت دریافت اطلاعات coach/today بخشی از مقادیر جایگزین می‌شود. بنابراین تمام اعداد نمایش‌داده‌شده از اطلاعات واقعی غذا نیستند.",
+      "proposal": "ماکروهای هر غذا و هدف روزانهٔ تأییدشده مستقیماً در API و مدل برنامه منتقل شوند. مقادیر موجود جمع شوند و وضعیت مقدار نامعلوم مشخص باشد. اگر تخمین موقت نگه داشته می‌شود، برچسب تخمینی داشته باشد و مبنای گزارش دقیق معرفی نشود. برآورد زمان رسیدن به وزن در goalOf نیز از نرخ ثابت عمومی به هدف/تنظیم معتبر متخصص منتقل شود.",
+      "acceptance": "دو غذای هم‌کالری با ترکیب متفاوت، پروتئین و چربی متفاوت نشان دهند؛ هدف روزانه بین خانه، مربی و برنامه یکسان بماند؛ دادهٔ ناموجود به صفر قطعی یا تخمین بی‌برچسب تبدیل نشود.",
+      "note": "این پیشنهاد دربارهٔ صحت و منشأ داده در نرم‌افزار است؛ در این بررسی فرمول تغذیه‌ای یا توصیهٔ درمانی تجویز نشده است.",
+      "evidence": [
+        {"file":"app/lib/features/plan/goal_math.dart","line":107},
+        {"file":"app/lib/features/plan/goal_math.dart","line":127},
+        {"file":"app/lib/features/plan/goal_math.dart","line":190},
+        {"file":"app/lib/features/home/home_tab.dart","line":139}
+      ]
+    },
+    {
+      "id": "R04", "priority": "P1", "area": "آنبوردینگ مشترک",
+      "title": "تکمیل ادامهٔ فرم و هماهنگی واقعی وب و اپ",
+      "current": "کاربر احرازشده spec و draft سرور دارد و LiveEntry پاسخ‌های سایت را می‌پذیرد. اما ثبت‌نام اولیه در SignupOnboarding از repository حافظه‌ای استفاده می‌کند و ذخیرهٔ سرور را تا پایان و OTP عقب می‌اندازد. وب نیز questionnaire و endpoint تنظیمات خودش را دارد و پاسخ‌ها را با canonical mapping ارسال می‌کند. _Defaulted بعضی عددها و ساعت‌ها را بدون تغییر کاربر به‌عنوان پاسخ ثبت می‌کند.",
+      "proposal": "draft مهمان پایدار و نسخه‌دار با اتصال امن بعد از ورود ایجاد شود؛ بستن اپ فرم را از بین نبرد. وب و Flutter سؤال، شرط نمایش، واحد و اعتبارسنجی را از قرارداد canonical یکسان بگیرند و طراحی کنترل‌ها/حرکت‌ها مشخصات مشترک داشته باشد. مقدار پیشنهادی با جواب تأییدشدهٔ کاربر تفکیک شود. در صفحهٔ ورودی، برای کاربر جدید CTA اصلی شروع ساخت برنامه و برای کاربر قبلی ورود باشد.",
+      "acceptance": "نیمهٔ فرم در وب یا اپ پر شود، برنامه بسته و دوباره باز شود و همان مرحله و پاسخ‌ها برگردند؛ نسخهٔ سؤال و شروط یکسان باشند؛ کاربر وب بعد از ورود اپ دوباره آنبورد نشود.",
+      "note": "اشتراک هویت و بخشی از انتقال پاسخ‌ها از قبل وجود دارد؛ پیشنهاد، کامل کردن آن و هماهنگی تجربه است.",
+      "evidence": [
+        {"file":"app/lib/presentation/session/live_entry.dart","line":53},
+        {"file":"app/lib/presentation/onboarding/signup_onboarding.dart","line":162},
+        {"file":"app/lib/presentation/onboarding/signup_onboarding.dart","line":252},
+        {"file":"app/lib/presentation/onboarding/onboarding_flow.dart","line":299},
+        {"file":"onboarding/questionnaire-settings.js","line":1},
+        {"file":"app/lib/presentation/screens/first_login.dart","line":135}
+      ]
+    },
+    {
+      "id": "R05", "priority": "P1", "area": "دادهٔ روزانه",
+      "title": "آب، وزن و مصرف روزانه یک منبع مشترک داشته باشند",
+      "current": "دکمهٔ آب در خانه فقط WaterLog محلی را می‌نویسد، ولی اقدام آب در مربی log_water را به repository می‌فرستد. WaterLog یک کلید عمومی روزمحور دارد و userId در آن نیست. مقدار دریافت‌شده از coach نیز ممکن است بعداً عدد خانه را جایگزین کند.",
+      "proposal": "DailyLogRepository مشترک برای خانه، مربی و برنامه ایجاد شود. نوشتن در سرور، cache حساب‌محور و صف عملیات آفلاین با شناسهٔ یکتا یک قرارداد داشته باشند. برای تغییر حساب و روز تهران، دادهٔ همان کاربر/روز خوانده شود. ثبت و اصلاح آب و وزن از هر نقطه، بلافاصله تمام نقاط نمایش را به‌روز کند.",
+      "acceptance": "ثبت یک لیوان در خانه در مربی و دستگاه دوم دیده شود؛ تعویض حساب دادهٔ حساب قبلی را نمایش ندهد؛ بازیابی وضعیت مربی، ثبت تأییدشدهٔ خانه را عقب نبرد.",
+      "note": "نبود userId در کلید cache یک مشاهدهٔ کد است؛ بازتولید نشت بین دو حساب واقعی در این نوبت انجام نشده است.",
+      "evidence": [
+        {"file":"app/lib/features/home/home_tab.dart","line":377},
+        {"file":"app/lib/features/home/water_log.dart","line":13},
+        {"file":"app/lib/features/coach/presentation/composer.dart","line":63},
+        {"file":"app/lib/features/coach/presentation/coach_page.dart","line":44}
+      ]
+    },
+    {
+      "id": "R06", "priority": "P1", "area": "پایداری",
+      "title": "خطای به‌روزرسانی، برنامهٔ موجود را خالی نکند",
+      "current": "refreshLive خطاهای غیرانقضای نشست در دریافت آخرین درخواست و برنامه را می‌گیرد و با مقدار null ادامه می‌دهد. اگر هر دو دریافت ناموفق باشند، showServerPlan شناسهٔ درخواست کاربر را null می‌کند و liveReady را true می‌گذارد؛ در نتیجه مدل نمایش به نبود برنامه می‌رسد.",
+      "proposal": "خطای شبکه/سرور از پاسخ معتبرِ بدون برنامه جدا شود. آخرین نسخهٔ تأییدشده همراه با زمان آخرین همگام‌سازی حفظ شود؛ خطا به صورت قابل‌تلاش‌مجدد نمایش داده شود. فقط پاسخ معتبرِ نبود برنامه دادهٔ فعلی را پاک کند. cache با هویت و نسخهٔ برنامه ذخیره شود.",
+      "acceptance": "بعد از بارگذاری برنامه، خطای هم‌زمان دو endpoint یا قطع شبکه، وعده‌ها را از مدل نمایش حذف نکند؛ پس از اتصال، نسخهٔ جدید بارگذاری شود.",
+      "note": "این یافته از مسیر کد است؛ تست خرابی شبکهٔ زنده اجرا نشده و ادعای حذف دائمی دادهٔ سرور نیست.",
+      "evidence": [
+        {"file":"app/lib/presentation/session/live_session.dart","line":118},
+        {"file":"app/lib/presentation/session/live_session.dart","line":154},
+        {"file":"app/lib/presentation/session/live_plan.dart","line":35}
+      ]
+    },
+    {
+      "id": "R07", "priority": "P1", "area": "مربی و ناوبری",
+      "title": "حفظ وضعیت سه تب و دسترسی مستقیم میان آن‌ها",
+      "current": "PanelShell برای تب انتخاب‌شده یک صفحه می‌سازد و SharedAxisSwitcher آن را با AnimatedSwitcher عوض می‌کند. CoachPage کنترلر و Composer متن خود را در State محلی دارند و با حذف صفحه dispose می‌شوند. نوار سه‌تب نیز هنگام مربی پنهان است و خروج X به خانه برمی‌گردد.",
+      "proposal": "حیات کنترلر مربی، draft پیام، اسکرول و روز انتخابی برنامه در سطح session/tab حفظ شود؛ با IndexedStack همراه با TickerMode/کنترل فعالیت یا راهکار نگهداری معادل. دسترسی خانه/مربی/برنامه در چت نیز روشن بماند؛ کارت مربی با لینک به وعدهٔ مربوط، context را حفظ کند.",
+      "acceptance": "پیام نیمه‌نوشته و جای اسکرول بعد از رفتن به برنامه و برگشت باقی بمانند؛ خروج موقت از مربی درخواست تکراری غیرضروری نسازد؛ تغییر روز برنامه با هر رفت‌وبرگشت به امروز ریست نشود.",
+      "note": "بازخوانی تاریخچه از سرور وجود دارد؛ مسئلهٔ پیشنهادی، حفظ state موقت و تجربهٔ تعویض تب است.",
+      "evidence": [
+        {"file":"app/lib/app.dart","line":288},
+        {"file":"app/lib/app.dart","line":330},
+        {"file":"app/lib/core/motion/transitions.dart","line":151},
+        {"file":"app/lib/features/coach/presentation/coach_page.dart","line":35},
+        {"file":"app/lib/features/coach/presentation/composer.dart","line":18}
+      ]
+    },
+    {
+      "id": "R08", "priority": "P1", "area": "چیدمان و تجربه",
+      "title": "هر تب یک مأموریت روشن و یک اقدام اصلی داشته باشد",
+      "current": "رندر ۳۹۰×۸۴۴ نشان می‌دهد خانه با حلقهٔ بزرگ کالری شروع می‌شود. برنامه نیز ابتدا هدف و ماکرو، سپس کارت مسیر را می‌گذارد و انتخاب روز/وعده‌ها پایین‌تر می‌آیند. بخشی از محتوای مهم در ابتدای ورود به تب خارج از دید است. ظاهر فارسی، زمینهٔ کرم و هویت سبز موجودند.",
+      "proposal": "خانه: سلام، وضعیت امروز و وعدهٔ بعدی، سپس خلاصهٔ فشردهٔ کالری/ماکرو و ثبت سریع آب/وزن. برنامه: نوار روزها و وعده‌ها در بالای صفحه، اطلاعات هدف و مسیر در بخش جمع‌شونده یا صفحهٔ پیشرفت. مربی: گفتگو و اقدام‌های مربوط به همان برنامه. مرور روزهای قبل خواندنی باشد و قواعد ویرایش گذشته جدا بماند. واحد گرم و مقادیر قابل‌فهم کنار اعداد نمایش داده شوند.",
+      "acceptance": "در ارتفاع ۸۴۴، کاربر در تب برنامه بدون اسکرول به انتخاب روز و نخستین وعده برسد؛ خانه و برنامه اطلاعات تکراری غالب نداشته باشند؛ فونت بزرگ و صفحهٔ کوچک هم بررسی شوند.",
+      "note": "این توصیه با مشاهدهٔ رندر واقعی ویجت‌ها با دادهٔ نمونه تهیه شده؛ مصاحبه یا آزمون کاربردپذیری با کاربران واقعی نیست.",
+      "evidence": [
+        {"file":"app/lib/features/home/home_tab.dart","line":98},
+        {"file":"app/lib/features/plan/plan_tab.dart","line":117},
+        {"file":"app/lib/features/plan/plan_tab.dart","line":98},
+        {"file":"references/flutter-app-review/2026-11-15/captures/01-home-fixture.png","line":null},
+        {"file":"references/flutter-app-review/2026-11-15/captures/02-plan-fixture.png","line":null}
+      ]
+    },
+    {
+      "id": "R09", "priority": "P2", "area": "حرکت و هویت",
+      "title": "سه تعامل اختصاصی بر پایهٔ کیت حرکت موجود",
+      "current": "Motion، SharedAxisSwitcher، rise/pop، Ring، Ticker، PressableScale، Sparkle و رعایت کاهش حرکت در بخش‌هایی از پروژه وجود دارند. خط‌کش، انتخاب‌گر خواب و تئاتر آنبوردینگ هم پیاده شده‌اند. Rive و Lottie در pubspec فعلی وابستگی ندارند.",
+      "proposal": "روی همین پایه سه حرکت شاخص طراحی شود: ورودی دقیق وزن/قد با بازخورد کنترل‌شده، واکنش کوتاه آب/ثبت وعده به ذخیرهٔ موفق، و معرفی مرحله‌ای برنامهٔ واقعاً تأییدشده. شخصیت اختصاصی Rive می‌تواند آزمایش مرحلهٔ بعد باشد. trigger، مدت، easing و حالت کاهش حرکت برای وب و اپ مشترک تعریف شوند؛ loopها در تب غیرفعال متوقف شوند.",
+      "acceptance": "حرکت موفقیت فقط پس از ثبت موفق رخ دهد؛ کاهش حرکت حفظ شود؛ اسکرول و ورودی لگ نزنند؛ گذار مرحله‌ها در وب و اپ حس هماهنگ داشته باشد.",
+      "note": "افزودن کتابخانه یا انتقال دارایی فیبو در این نوبت انجام نشده است. وابستگی جدید تا زمان انتخاب نیاز واقعی لازم فرض نشده است.",
+      "evidence": [
+        {"file":"app/lib/core/motion/motion.dart","line":5},
+        {"file":"app/lib/core/motion/stagger.dart","line":17},
+        {"file":"app/lib/presentation/onboarding/widgets/number_inputs.dart","line":1},
+        {"file":"app/pubspec.yaml","line":10}
+      ]
+    },
+    {
+      "id": "R10", "priority": "P2", "area": "ساختار کد",
+      "title": "تکمیل تفکیک state واقعی و دادهٔ نمونه",
+      "current": "جداسازی domain، repository و feature شروع شده، اما DemoStore با ۳۰۲۰ خط همچنان state اصلی دادهٔ نمونه و مسیر واقعی را به هم متصل می‌کند. نشان دادن برنامهٔ سرور نیز آن را به مدل‌های قدیمی همین store تبدیل می‌کند. نام قدیمی sabzine در package و بعضی کلاس‌ها باقی مانده است.",
+      "proposal": "به‌تدریج AppSession/Journey، PlanController، DailyLogController، OnboardingController و CoachController مستقل شوند و fixtureها در لایهٔ تست/پیش‌نمایش بمانند. قرارداد DTO و خطاها برای Laravel تثبیت شود تا UI با تغییر فناوری سرور دوباره نوشته نشود. جابه‌جایی فایل‌های legacy با بررسی importها انجام شود؛ صرفاً به دلیل نام قدیمی حذف نشوند.",
+      "acceptance": "featureهای واقعی برای دادهٔ خود به DemoStore نمونه وابسته نباشند؛ تست‌های قرارداد برای state و API پاس شوند؛ پیش‌نمایش نمونه همچنان کار کند؛ برند نمایشی رژیم من یکدست بماند.",
+      "note": "کد فعلی چند لایهٔ درست دارد؛ پیشنهاد، تکمیل همین مسیر است. مهاجرت Laravel و بازسازی معماری در این نوبت انجام نشده است.",
+      "evidence": [
+        {"file":"app/lib/data/demo_store.dart","line":649},
+        {"file":"app/lib/main.dart","line":41},
+        {"file":"app/lib/presentation/session/live_plan.dart","line":15},
+        {"file":"app/lib/data/session/services.dart","line":1}
+      ]
+    }
+  ],
+  "validation": {
+    "flutter_analyze": "passed; No issues found",
+    "selected_existing_tests": {"passed":14,"failed":1,"files":5},
+    "failure": {"file":"app/test/features/tabs_test.dart","line":161,"test":"completing a plan meal uses the store","isolated_rerun":"failed again","explanation":"Test taps انجام شد and expects immediate consumption. Current PlanMeals opens ConsumeSheet; saving there calls recordMeal. This indicates a stale expectation relative to the current two-step UI, not proof that the full save flow is broken."},
+    "fixture_capture_harness": "passed; five customer UI snapshots generated with Flutter widget renderer",
+    "fixture_screen_size":"390x844",
+    "fixture_data_date":"2026-11-09 09:30",
+    "limitations":["No real user account, OTP, payment, specialist approval or AI generation was exercised against production.","Android device performance and frame timing were not measured.","This was a focused review, not a full backend security audit or whole-repository test run.","No application source code changed; reports and the visual capture harness were added under references."]
+  },
+  "phases": [
+    {"title":"۱. مسیر و دادهٔ معتبر","items":["R01","R02","R03"],"exit":"مسیر نخستین برنامه دقیقاً مطابق محصول باشد و مقدار و مواد مغذی از دادهٔ واقعی بیایند."},
+    {"title":"۲. ادامهٔ مسیر و پایداری","items":["R04","R05","R06","R07"],"exit":"فرم و گفتگو گم نشوند؛ دادهٔ خانه، مربی و برنامه هماهنگ بماند؛ قطع شبکه نسخهٔ موجود را خالی نکند."},
+    {"title":"۳. تمرکز رابط و حرکت","items":["R08","R09"],"exit":"وعده‌ها زود دیده شوند و حرکت‌ها به اقدام موفق واقعی پاسخ بدهند."},
+    {"title":"۴. تفکیک تدریجی معماری","items":["R10"],"exit":"هم‌زمان با مراحل قبلی، مالکیت state و قرارداد Laravel روشن و مستقل از fixture شود."}
+  ]
+}

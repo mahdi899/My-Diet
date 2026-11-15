@@ -3,16 +3,21 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
-import '../../../presentation/widgets/kit/kit.dart';
 import '../../home/weight_sheet.dart';
 import '../../plan/goal_math.dart';
 import '../presentation/coach_controller.dart';
 
 class CoachComposer extends StatefulWidget {
-  const CoachComposer({super.key, required this.controller, this.prefill});
+  const CoachComposer({
+    super.key,
+    required this.controller,
+    this.prefill,
+    this.onTodayPlan,
+  });
 
   final CoachController controller;
   final String? prefill;
+  final VoidCallback? onTodayPlan;
 
   @override
   State<CoachComposer> createState() => _CoachComposerState();
@@ -119,52 +124,105 @@ class _CoachComposerState extends State<CoachComposer> {
 
   @override
   Widget build(BuildContext context) {
-    final suggestions = widget.controller.suggestions;
+    final controller = widget.controller;
+    final suggestions = controller.suggestions.toSet().toList();
+    final starter =
+        !controller.messages.any((m) => m.isUser) &&
+        controller.messages.every(
+          (m) => const {
+            'text',
+            'day_brief',
+            'plan_meal',
+            'quick_replies',
+          }.contains(m.type),
+        );
+    final quickIndex = controller.messages.lastIndexWhere(
+      (m) => m.type == 'quick_replies',
+    );
+    final userIndex = controller.messages.lastIndexWhere((m) => m.isUser);
+    final inlinePrompt =
+        quickIndex > userIndex &&
+        !controller.answered.contains(controller.messages[quickIndex].id);
     final showChips =
-        !_hasText && suggestions.isNotEmpty && !widget.controller.busy;
+        !_hasText &&
+        !controller.busy &&
+        !inlinePrompt &&
+        (starter || suggestions.isNotEmpty);
+    final canSend = _hasText && !controller.busy;
+    final chipStyle = OutlinedButton.styleFrom(
+      foregroundColor: AppColors.emeraldDark,
+      backgroundColor: AppColors.surfaceWarm,
+      side: const BorderSide(color: AppColors.line),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      minimumSize: const Size(48, 40),
+      shape: const StadiumBorder(),
+      textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 12),
+    );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showChips)
             SizedBox(
-              height: 42,
-              child: ListView.separated(
+              height: 48,
+              child: ListView(
                 scrollDirection: Axis.horizontal,
-                itemCount: suggestions.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final label = suggestions[index];
-                  return ActionChip(
-                    label: Text(label),
-                    onPressed: () => widget.controller.sendText(label),
-                  );
-                },
+                children: starter
+                    ? [
+                        OutlinedButton.icon(
+                          key: const ValueKey('coach-quick-water'),
+                          style: chipStyle,
+                          onPressed: () => controller.sendAction(
+                            'log_water',
+                            const {'glasses': 1},
+                            label: 'ثبت آب',
+                          ),
+                          icon: const Icon(Icons.water_drop_outlined, size: 17),
+                          label: const Text('ثبت آب'),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          key: const ValueKey('coach-quick-weight'),
+                          style: chipStyle,
+                          onPressed: _weight,
+                          icon: const Icon(
+                            Icons.monitor_weight_outlined,
+                            size: 17,
+                          ),
+                          label: const Text('ثبت وزن'),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          key: const ValueKey('coach-quick-plan'),
+                          style: chipStyle,
+                          onPressed:
+                              widget.onTodayPlan ??
+                              () => controller.sendText('برنامهٔ امروز'),
+                          icon: const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 17,
+                          ),
+                          label: const Text('برنامهٔ امروز'),
+                        ),
+                      ]
+                    : [
+                        for (final label in suggestions)
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(end: 8),
+                            child: OutlinedButton(
+                              style: chipStyle,
+                              onPressed: () => controller.sendText(label),
+                              child: Text(label),
+                            ),
+                          ),
+                      ],
               ),
             ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              PressableScale(
-                semanticLabel: 'افزودن',
-                onTap: _plus,
-                child: Container(
-                  key: const ValueKey('composer-plus'),
-                  width: 48,
-                  height: 48,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.mint,
-                  ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    color: AppColors.emeraldDeep,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   key: const ValueKey('coach-input'),
@@ -173,43 +231,70 @@ class _CoachComposerState extends State<CoachComposer> {
                   maxLines: 4,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.ink,
+                    height: 1.7,
+                  ),
                   decoration: InputDecoration(
-                    hintText: 'برای مربی بنویس…',
+                    hintText: 'از مربی بپرس…',
+                    hintStyle: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 13,
+                    ),
                     filled: true,
                     fillColor: AppColors.surface,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 12,
+                      vertical: 13,
+                    ),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: IconButton(
+                        key: const ValueKey('composer-plus'),
+                        tooltip: 'افزودن عکس یا ثبت',
+                        onPressed: controller.busy ? null : _plus,
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.mint,
+                          foregroundColor: AppColors.emeraldDark,
+                        ),
+                        icon: const Icon(Icons.add_rounded, size: 24),
+                      ),
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      borderRadius: BorderRadius.circular(30),
                       borderSide: const BorderSide(color: AppColors.line),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      borderRadius: BorderRadius.circular(30),
                       borderSide: const BorderSide(color: AppColors.line),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: const BorderSide(
+                        color: AppColors.emeraldDeep,
+                      ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              PressableScale(
-                semanticLabel: 'ارسال',
-                onTap: _hasText && !widget.controller.busy ? _send : null,
-                child: Container(
-                  key: const ValueKey('coach-send'),
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: _hasText ? AppGradients.cta : null,
-                    color: _hasText ? null : AppColors.line,
-                  ),
-                  child: const Icon(
-                    Icons.send_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+              IconButton.filled(
+                key: const ValueKey('coach-send'),
+                tooltip: controller.busy ? 'در انتظار پاسخ مربی' : 'ارسال پیام',
+                onPressed: canSend ? _send : null,
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  backgroundColor: AppColors.emeraldDeep,
+                  disabledBackgroundColor: AppColors.mint,
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor: AppColors.muted,
+                ),
+                icon: Icon(
+                  controller.busy
+                      ? Icons.more_horiz_rounded
+                      : Icons.send_rounded,
+                  size: 22,
                 ),
               ),
             ],

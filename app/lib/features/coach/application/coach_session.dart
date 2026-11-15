@@ -18,6 +18,8 @@ class CoachSession {
   void Function(Map<String, dynamic> today, {required bool reloadPlan})?
   onToday;
 
+  void Function({required bool saved})? onTurnCompleted;
+
   List<CoachMessage> messages = const [];
   String? draftText;
   bool typing = false;
@@ -164,6 +166,7 @@ class CoachSession {
       });
       if (_disposed) return null;
       if (message != null) _upsert(message);
+      onTurnCompleted?.call(saved: true);
       _notify();
       await refreshToday(reloadPlan: true);
       return null;
@@ -256,6 +259,7 @@ class CoachSession {
     var refresh = _logsToday(request.action);
     var reloadPlan =
         request.action == 'confirm_meal' || request.action == 'log_as_planned';
+    var replayed = false;
     CoachTransportException? failure;
     final done = Completer<void>();
     _sub = repository
@@ -302,7 +306,12 @@ class CoachSession {
                   refresh = true;
                 }
                 _upsert(message);
-              case CoachDone(:final suggestions, :final userMessage):
+              case CoachDone(
+                :final suggestions,
+                :final userMessage,
+                replayed: final wasReplayed,
+              ):
+                replayed = wasReplayed;
                 settled = true;
                 succeeded = true;
                 draft.clear();
@@ -363,6 +372,7 @@ class CoachSession {
               succeeded: succeeded,
               refresh: refresh,
               reloadPlan: reloadPlan,
+              acknowledge: !replayed,
             );
             if (!done.isCompleted) done.complete();
           },
@@ -378,12 +388,21 @@ class CoachSession {
     required bool succeeded,
     required bool refresh,
     required bool reloadPlan,
+    bool acknowledge = false,
   }) {
     typing = false;
     busy = false;
     _sub = null;
     if (failure != null) {
       _failTurn(failure, draft, request.clientMessageId);
+    }
+    if (succeeded && failure == null && acknowledge) {
+      onTurnCompleted?.call(
+        saved:
+            reloadPlan ||
+            request.action == 'log_water' ||
+            request.action == 'log_weight',
+      );
     }
     if (succeeded && refresh) {
       unawaited(refreshToday(reloadPlan: reloadPlan));

@@ -1,0 +1,10 @@
+{
+  "python_syntax": "passed",
+  "json_parse": "passed",
+  "gallery_javascript_syntax": "passed",
+  "lottie_checksums": "passed",
+  "local_document_links": "passed",
+  "canvas_typescript_check": "passed with TypeScript 5.9.3",
+  "gallery_browser_visual_check": "not completed; browser-control initialization failed",
+  "app_runtime_visual_check": "not completed; emulator graphics infrastructure failure"
+}

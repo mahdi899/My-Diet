@@ -4,7 +4,10 @@ import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../data/demo_store.dart';
+import '../../../data/day.dart';
+import '../../home/water_log.dart';
 import '../../plan/goal_math.dart';
+import '../../home/home_day_focus.dart';
 import '../domain/coach_events.dart';
 import '../domain/coach_message.dart';
 import '../domain/coach_repository.dart';
@@ -15,7 +18,7 @@ class MockCoachRepository implements CoachRepository {
   MockCoachRepository({
     this.store,
     this.charDelay = const Duration(milliseconds: 12),
-  });
+  }) : _glasses = store == null ? 0 : store.waterGlassesOn(store.today) ?? 0;
 
   final DemoStore? store;
   final Duration charDelay;
@@ -32,7 +35,7 @@ class MockCoachRepository implements CoachRepository {
   static const _prefsKey = 'rejime_man.coach.messages.v1';
   final _seen = <String>{};
   int _seq = 1;
-  int _glasses = 0;
+  int _glasses;
   int _extraCalories = 0;
 
   @override
@@ -96,10 +99,13 @@ class MockCoachRepository implements CoachRepository {
 
   @override
   Future<Map<String, dynamic>> today() async => {
-    'calories_eaten': _eaten,
-    'calories_target': _goal,
-    'glasses': _glasses,
-    'weight': store?.latestWeight,
+    'date': dateKey(store?.today ?? DateTime.now()),
+    'calories': {'consumed': _eaten, 'target': _goal},
+    'water': {
+      'ml': _glasses * 250,
+      'targetMl': waterGoalFrom(store?.questionnaire.water ?? '') * 250,
+    },
+    'weight': {'latestKg': store?.latestWeight},
   };
 
   @override
@@ -111,14 +117,23 @@ class MockCoachRepository implements CoachRepository {
     return _m(type: 'text', text: 'انجام شد.');
   }
 
-  List<CoachMessage> _welcome() => [
-    _dayBrief(),
-    _m(
-      type: 'text',
-      text: 'سلام، من مربی رژیم منم. امروز رو با هم ساده و دقیق پیش می‌بریم.',
-    ),
-    _quick(),
-  ];
+  List<CoachMessage> _welcome() {
+    final current = store;
+    final next = current == null ? null : HomeDayFocus.from(current).next;
+    final rawName = current?.questionnaire.name.trim() ?? '';
+    final name = rawName.isEmpty
+        ? 'دوست من'
+        : rawName.split(RegExp(r'\s+')).first;
+    return [
+      _dayBrief(),
+      _m(
+        type: 'text',
+        text: 'سلام $name، خوش اومدی\nبرای وعدهٔ بعدی با هم آماده بشیم؟',
+      ),
+      if (next != null) _planMeal(selected: next.meal) else _quick(),
+      _m(type: 'text', text: 'هر سوالی دربارهٔ برنامه‌ات داری، من اینجام.'),
+    ];
+  }
 
   Stream<CoachEvent> _reply(String text) async* {
     final intent = _intent(text);
@@ -311,6 +326,8 @@ class MockCoachRepository implements CoachRepository {
         'photo_title': meal.title,
         'time': meal.time,
         'calories': meal.calories,
+        if (meal.preparationMinutes != null)
+          'preparation_minutes': meal.preparationMinutes,
         'protein_g': macros.protein,
         'carbs_g': macros.carbs,
         'fat_g': macros.fat,
@@ -332,8 +349,8 @@ class MockCoachRepository implements CoachRepository {
     );
   }
 
-  CoachMessage _planMeal() {
-    final meal = _pickMeal();
+  CoachMessage _planMeal({Meal? selected}) {
+    final meal = selected ?? _pickMeal();
     return _m(
       type: 'plan_meal',
       fallback: meal.title,
@@ -344,6 +361,8 @@ class MockCoachRepository implements CoachRepository {
         'photo_title': meal.title,
         'time': meal.time,
         'calories': meal.calories,
+        if (meal.preparationMinutes != null)
+          'preparation_minutes': meal.preparationMinutes,
       },
     );
   }
@@ -445,7 +464,7 @@ class MockCoachRepository implements CoachRepository {
     type: type,
     payload: {...payload, if (text.isNotEmpty) 'text': text},
     fallbackText: fallback ?? text,
-    createdAt: DateTime.now(),
+    createdAt: store?.today ?? DateTime.now(),
   );
 
   int get _goal {
@@ -457,7 +476,9 @@ class MockCoachRepository implements CoachRepository {
 
   int get _eaten {
     final current = store;
-    final base = current == null ? 0 : current.consumedCalories(current.today);
+    final base = current == null
+        ? 0
+        : current.localConsumedCalories(current.today);
     return base + _extraCalories;
   }
 

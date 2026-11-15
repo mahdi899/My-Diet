@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/core/theme/theme.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/features/home/home_tab.dart';
+import 'package:sabzine_flutter/features/home/home_day_focus.dart';
 import 'package:sabzine_flutter/features/plan/plan_tab.dart';
 import 'package:sabzine_flutter/features/plan/consume_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -131,10 +132,24 @@ void main() {
     expect(find.text('سارا'), findsOneWidget);
     expect(find.byKey(const ValueKey('home-calorie-ring')), findsOneWidget);
     expect(find.text('کالری'), findsOneWidget);
-    expect(find.text('ثبت وزن'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-next-meal')), findsOneWidget);
+    expect(
+      find.text(HomeDayFocus.from(store).next!.meal.title),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('home-water')),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const ValueKey('home-water')), findsOneWidget);
-    expect(find.text('۰ از ۶'), findsOneWidget);
-    expect(find.text(store.mealsOn(store.today).first.title), findsOneWidget);
+    expect(find.text('۰ از ۶ لیوان'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('ثبت وزن'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('ثبت وزن'), findsOneWidget);
     expect(find.text('تعویض'), findsNothing);
     expect(tester.takeException(), isNull);
 

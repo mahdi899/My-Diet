@@ -405,6 +405,25 @@ class ChatThread {
   final bool support;
 }
 
+/// An opaque, in-memory Undo token for one meal's exact saved state.
+class MealLogCheckpoint {
+  MealLogCheckpoint._(
+    this.date,
+    this.requestId,
+    this.index,
+    this._calories,
+    this._details,
+    this._revision,
+  );
+  final DateTime date;
+  final String? requestId;
+  final int index;
+  final Map<String, int> _calories;
+  final Map<String, Map<String, dynamic>> _details;
+  final int _revision;
+  String get _signature => jsonEncode([_revision, _calories, _details]);
+}
+
 /// Demo UI data. Only the questionnaire has optional local persistence; no backend.
 class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   bool _disposed = false;
@@ -747,6 +766,12 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   DateTime get today => _clock();
   final Map<String, int> _mealCalories = {};
   final Map<String, Map<String, dynamic>> _consumptionDetails = {};
+  final Map<String, int> _mealLogRevisions = {};
+  void _touchMealLog(DateTime date, int index) {
+    final key = '${dateKey(date)}|$userRequestId|$index';
+    _mealLogRevisions[key] = (_mealLogRevisions[key] ?? 0) + 1;
+  }
+
   @override
   Map<String, dynamic>? consumedMealOn(DateTime date, int index) {
     final prefix = '${dateKey(date)}|${userRequestId ?? 'none'}|$index|';
@@ -1093,6 +1118,118 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
 
   Map<String, dynamic>? mealRecordOn(DateTime date, int index) =>
       consumedMealOn(date, index);
+
+  /// Real check-ins, including an explicit skipped meal; independent of rewards.
+  /// Read persisted records directly so the calendar also works outside this plan week.
+  @override
+  int mealCheckInsOn(DateTime date) {
+    final ids = {...userRequestIds, ?userRequestId};
+    final slots = <String>{};
+    for (final key in {..._mealCalories.keys, ..._consumptionDetails.keys}) {
+      final parts = key.split('|');
+      if (parts.length >= 3 &&
+          parts[0] == dateKey(date) &&
+          ids.contains(parts[1])) {
+        slots.add('${parts[1]}|${parts[2]}');
+      }
+    }
+    return slots.length;
+  }
+
+  MealLogCheckpoint checkpointMeal(DateTime date, int index) {
+    final prefix = '${dateKey(date)}|${userRequestId ?? 'none'}|$index|';
+    return MealLogCheckpoint._(
+      DateTime(date.year, date.month, date.day),
+      userRequestId,
+      index,
+      Map.fromEntries(
+        _mealCalories.entries.where((e) => e.key.startsWith(prefix)),
+      ),
+      {
+        for (final e in _consumptionDetails.entries.where(
+          (e) => e.key.startsWith(prefix),
+        ))
+          e.key: Map<String, dynamic>.from(e.value),
+      },
+      _mealLogRevisions['${dateKey(date)}|$userRequestId|$index'] ?? 0,
+    );
+  }
+
+  /// Compare-and-restore: a stale Undo must never erase a newer correction.
+  Future<void> restoreMealCheckpoint(
+    MealLogCheckpoint before, {
+    required MealLogCheckpoint expected,
+  }) async {
+    if (savingMeal ||
+        savingSubstitution ||
+        savingShopping ||
+        before.index < 0 ||
+        before.index >= mealsOn(before.date).length ||
+        dateKey(before.date) != dateKey(today) ||
+        before.requestId != userRequestId ||
+        before.requestId != expected.requestId ||
+        before.index != expected.index ||
+        dateKey(before.date) != dateKey(expected.date) ||
+        checkpointMeal(before.date, before.index)._signature !=
+            expected._signature) {
+      throw StateError(
+        'ثبت تغییر کرده یا روز آن تمام شده است. دوباره بررسی کن.',
+      );
+    }
+    final prefix =
+        '${dateKey(before.date)}|${before.requestId ?? 'none'}|${before.index}|';
+    final calories = Map<String, int>.of(_mealCalories)
+      ..removeWhere((k, _) => k.startsWith(prefix));
+    final details = Map<String, Map<String, dynamic>>.of(_consumptionDetails)
+      ..removeWhere((k, _) => k.startsWith(prefix));
+    calories.addAll(before._calories);
+    details.addAll(before._details);
+    final previousSnapshot = _nutritionSnapshot();
+    var wrote = false;
+    savingMeal = true;
+    update();
+    try {
+      await _nutritionStorage?.write(
+        _nutritionSnapshot(meals: calories, consumption: details),
+      );
+      wrote = true;
+      final uid = serverMealUids['${dateKey(before.date)}|${before.index}'];
+      if (uid != null && reportEaten != null) {
+        await reportEaten!(uid, before._calories.isNotEmpty);
+      }
+      if (userRequestId != before.requestId) {
+        throw StateError('برنامهٔ فعال تغییر کرده است.');
+      }
+      _adjustCoachTotal(before.date, calories);
+      _touchMealLog(before.date, before.index);
+      _mealCalories
+        ..clear()
+        ..addAll(calories);
+      _consumptionDetails
+        ..clear()
+        ..addAll(details);
+      completedMeals
+        ..clear()
+        ..addAll(calories.keys);
+      _noteMealDay(before.date);
+      update();
+    } catch (_) {
+      if (wrote) await _nutritionStorage?.write(previousSnapshot);
+      rethrow;
+    } finally {
+      savingMeal = false;
+      update();
+    }
+  }
+
+  Future<void> clearMealRecord(DateTime date, int index) async {
+    final expected = checkpointMeal(date, index);
+    await restoreMealCheckpoint(
+      MealLogCheckpoint._(expected.date, expected.requestId, index, {}, {}, 0),
+      expected: expected,
+    );
+  }
+
   int recordedCount(DateTime date) => List.generate(
     mealsOn(date).length,
     (i) => i,
@@ -1178,6 +1315,8 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
       await _nutritionStorage?.write(
         _nutritionSnapshot(meals: next, consumption: details),
       );
+      _adjustCoachTotal(date, next);
+      _touchMealLog(date, index);
       _mealCalories
         ..clear()
         ..addAll(next);
@@ -1198,6 +1337,16 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     }
   }
 
+  void _adjustCoachTotal(DateTime date, Map<String, int> next) {
+    if (coachDay != dateKey(date) || coachConsumedKcal == null) return;
+    final prefix = '${dateKey(date)}|';
+    int sum(Map<String, int> records) => records.entries
+        .where((e) => e.key.startsWith(prefix))
+        .fold(0, (n, e) => n + e.value);
+    coachConsumedKcal = (coachConsumedKcal! + sum(next) - sum(_mealCalories))
+        .clamp(0, 1000000);
+  }
+
   /// Doctor-side daily target from the nutrition profile. Meal sums are only the fallback.
   int? liveTargetKcal;
 
@@ -1214,6 +1363,17 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   int? coachFat;
   @override
   int? coachWaterGlasses;
+  String? coachWaterDay;
+  @override
+  int? waterGlassesOn(DateTime date) =>
+      (coachWaterDay ?? coachDay) == dateKey(date) ? coachWaterGlasses : null;
+
+  @override
+  void rememberWater(DateTime date, int glasses) {
+    coachWaterDay = dateKey(date);
+    coachWaterGlasses = glasses;
+    update();
+  }
 
   @override
   int calorieTarget(DateTime date) {
@@ -1237,13 +1397,14 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     if (coachDay == dateKey(date) && coachConsumedKcal != null) {
       return coachConsumedKcal!;
     }
-    return _mealCalories.entries
-        .where(
-          (e) =>
-              e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
-        )
-        .fold(0, (n, e) => n + e.value);
+    return localConsumedCalories(date);
   }
+
+  int localConsumedCalories(DateTime date) => _mealCalories.entries
+      .where(
+        (e) => e.key.startsWith('${dateKey(date)}|${userRequestId ?? 'none'}|'),
+      )
+      .fold(0, (n, e) => n + e.value);
 
   /// Copies a coach `today` payload into the ring, water and plan checkmarks.
   bool applyCoachToday(Map<String, dynamic> today) {
@@ -1269,6 +1430,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     final water = today['water'];
     if (water is Map && water['ml'] is num) {
       coachWaterGlasses = ((water['ml'] as num) / 250).round();
+      coachWaterDay = date;
     }
     _mirrorCoachPlan(date, today['planMeals']);
     final weight = today['weight'];
@@ -1452,6 +1614,8 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
       _consumptionDetails
         ..clear()
         ..addAll(details);
+      _adjustCoachTotal(date, next);
+      _touchMealLog(date, index);
       _mealCalories
         ..clear()
         ..addAll(next);
@@ -2082,6 +2246,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     update();
   }
 
+  @override
   String? userRequestId;
   final userRequestIds = <String>{};
   bool notificationsEnabled = true;
@@ -2389,6 +2554,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     coachCarbs = null;
     coachFat = null;
     coachWaterGlasses = null;
+    coachWaterDay = null;
     serverMealUids.clear();
     reportEaten = null;
     liveServices = null;

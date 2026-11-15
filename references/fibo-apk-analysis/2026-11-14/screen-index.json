@@ -1,0 +1,3753 @@
+[
+  {
+    "layout": "activity_about_us.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "راه حلی امروزی\\nبرای رسیدن به اندام ایده‌آل"
+      },
+      {
+        "id": "",
+        "text": "رژیم ساده"
+      },
+      {
+        "id": "",
+        "text": "بدون رژیم‌های سخت؛ بر پایه راهنمای سازمان‌های معتبر سلامت."
+      },
+      {
+        "id": "",
+        "text": "تمرین کوتاه"
+      },
+      {
+        "id": "",
+        "text": "تمرین‌های HIIT طراحی مربیان بین‌المللی؛ جلسه‌های کوتاه، کالری‌سوزی بالا."
+      },
+      {
+        "id": "",
+        "text": "پشتوانه علمی"
+      },
+      {
+        "id": "",
+        "text": "همه بخش‌ها بر پایه این منابع ساخته شده‌اند:"
+      },
+      {
+        "id": "",
+        "text": "تغذیه"
+      },
+      {
+        "id": "@+id/about_source_who",
+        "text": "سازمان بهداشت جهانی"
+      },
+      {
+        "id": "@+id/about_source_health_gov",
+        "text": "health.gov"
+      },
+      {
+        "id": "@+id/about_source_fooddata",
+        "text": "FoodData Central"
+      },
+      {
+        "id": "",
+        "text": "ورزش"
+      },
+      {
+        "id": "@+id/about_source_nih",
+        "text": "موسسه ملی سلامت"
+      },
+      {
+        "id": "@+id/about_source_science_focus",
+        "text": "Science Focus"
+      },
+      {
+        "id": "@+id/about_source_science_direct",
+        "text": "ScienceDirect"
+      },
+      {
+        "id": "@+id/text_about_footer",
+        "text": "متولد ۱ مهر ۱۴۰۰"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_ai_food_camera.xml",
+    "texts": [
+      {
+        "id": "@+id/camera_hint_text",
+        "text": "همه خوراکی‌ها را از بالا داخل قاب بگیرید"
+      },
+      {
+        "id": "@+id/camera_hint_label",
+        "text": "جدول ارزش غذایی را هم می‌خوانیم"
+      },
+      {
+        "id": "@+id/camera_hint_near",
+        "text": "خیلی نزدیک است؛ کمی دورتر با ⁦۲×⁩ واضح می‌شود"
+      },
+      {
+        "id": "",
+        "text": "گالری"
+      },
+      {
+        "id": "@+id/camera_zoom_1",
+        "text": "۱×"
+      },
+      {
+        "id": "@+id/camera_zoom_2",
+        "text": "۲×"
+      },
+      {
+        "id": "@+id/camera_note",
+        "text": "یادداشت برای هوش مصنوعی (اختیاری)"
+      },
+      {
+        "id": "",
+        "text": "دوباره"
+      },
+      {
+        "id": "@+id/camera_send",
+        "text": "بفرست"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.AiFoodCameraFrame"
+    ]
+  },
+  {
+    "layout": "activity_chat_online.xml",
+    "texts": [
+      {
+        "id": "@+id/linear_question_repeat",
+        "text": "سوالات متداول"
+      },
+      {
+        "id": "@+id/linear_guide",
+        "text": "راهنمای برنامه"
+      },
+      {
+        "id": "@+id/chat_online_edit_messege",
+        "text": "سوالتون رو بنویسید…"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_choese.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_choese_faaliat.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "جستجو در فعالیت‌ها"
+      },
+      {
+        "id": "",
+        "text": "هنوز هیزمی در آتش نیست"
+      },
+      {
+        "id": "",
+        "text": "افزودن فعالیت"
+      },
+      {
+        "id": "",
+        "text": "فعالیت‌های همیشگی شما"
+      },
+      {
+        "id": "",
+        "text": "۳۰ روز اخیر"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.FaaliatFireView"
+    ]
+  },
+  {
+    "layout": "activity_choese_faaliat2.xml",
+    "texts": [
+      {
+        "id": "@+id/activity_choese_faalait_AllFaaliat",
+        "text": "همه"
+      },
+      {
+        "id": "@+id/activity_choese_faalait_fragmentFaaliatMontakhab",
+        "text": "منتخب"
+      },
+      {
+        "id": "@+id/activity_choese_faalait_fragmentFaaliatPortecrar",
+        "text": "پرتکرار"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_food_all.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_food_caleri.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_get_info.xml",
+    "texts": [
+      {
+        "id": "@+id/text_signup_step",
+        "text": "قدم ۳ از ۵"
+      },
+      {
+        "id": "@+id/text_signup_title",
+        "text": "اسمتون رو بنویسید"
+      },
+      {
+        "id": "@+id/text_signup_subtitle",
+        "text": "یه اسم و یه چهره؛ هر وقت خواستید، از پروفایل عوضش می‌کنید."
+      },
+      {
+        "id": "@+id/getinfo_editText1",
+        "text": "اسمتون رو اینجا بنویسید"
+      },
+      {
+        "id": "",
+        "text": "+۲۵"
+      },
+      {
+        "id": "@+id/text_signup_caption",
+        "text": "یکی رو بزنید؛ خونه‌ی اول (دوربین) عکس خودتونه."
+      },
+      {
+        "id": "@+id/btn_getinfo",
+        "text": "ادامه"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupNameView"
+    ]
+  },
+  {
+    "layout": "activity_get_info1.xml",
+    "texts": [
+      {
+        "id": "@+id/text_signup_step",
+        "text": "قدم ۴ از ۵"
+      },
+      {
+        "id": "",
+        "text": "سال"
+      },
+      {
+        "id": "",
+        "text": "ماه"
+      },
+      {
+        "id": "",
+        "text": "روز"
+      },
+      {
+        "id": "",
+        "text": "باردار یا شیرده هستید؟"
+      },
+      {
+        "id": "@+id/text_signup_pregnancy",
+        "text": "بارداری"
+      },
+      {
+        "id": "@+id/text_signup_lactation",
+        "text": "شیردهی"
+      },
+      {
+        "id": "@+id/btn_signup_next",
+        "text": "بعدی"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupBodyView",
+      "info.fiboapp.fibo.Class.SignupGenderView",
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupRulerView"
+    ]
+  },
+  {
+    "layout": "activity_get_info2.xml",
+    "texts": [
+      {
+        "id": "@+id/text_signup_step",
+        "text": "قدم ۵ از ۵"
+      },
+      {
+        "id": "",
+        "text": "سؤال ۱ از ۲"
+      },
+      {
+        "id": "",
+        "text": "بیشتر روزتون چطور می‌گذره؟"
+      },
+      {
+        "id": "",
+        "text": "کار، درس یا خونه؛ یه روز معمولی‌تون رو بگید."
+      },
+      {
+        "id": "",
+        "text": "سؤال ۲ از ۲"
+      },
+      {
+        "id": "",
+        "text": "هفته‌ای چند روز ورزش می‌کنید؟"
+      },
+      {
+        "id": "",
+        "text": "ورزش یعنی حداقل نیم ساعت که نفستون تند بشه؛ پیاده‌روی تند هم قبوله."
+      },
+      {
+        "id": "@+id/text_signup_result_count",
+        "text": "با همین دو جواب"
+      },
+      {
+        "id": "@+id/text_signup_result_hint",
+        "text": "اگه فکر می‌کنید فرق داره، روی یکی از پنج سنگ بزنید."
+      },
+      {
+        "id": "",
+        "text": "کالری مورد نیاز روزانه بدنتون"
+      },
+      {
+        "id": "",
+        "text": "کالری"
+      },
+      {
+        "id": "@+id/btn_login2_save",
+        "text": "ثبت و ادامه"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupActivityView",
+      "info.fiboapp.fibo.Class.SignupLevelView"
+    ]
+  },
+  {
+    "layout": "activity_ghavanin.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "در یک نگاه"
+      },
+      {
+        "id": "",
+        "text": "خلاصه سیاست حفظ حریم خصوصی فیبو"
+      },
+      {
+        "id": "",
+        "text": "شماره موبایل فقط برای ورود و شناسایی شما استفاده می‌شود و به کسی نشان داده نمی‌شود."
+      },
+      {
+        "id": "",
+        "text": "مشخصات بدن، غذاها و فعالیت‌هایتان روی سرور فیبو نگه‌داری می‌شود تا با تعویض گوشی از دست نروند."
+      },
+      {
+        "id": "",
+        "text": "اگر جزو کاربران برتر شوید، دیگران نام، عکس و برنامه آن روز شما را می‌بینند."
+      },
+      {
+        "id": "",
+        "text": "اطلاعات شما به هیچ شرکت، سازمان یا شخص دیگری فروخته یا داده نمی‌شود."
+      },
+      {
+        "id": "",
+        "text": "متن کامل"
+      },
+      {
+        "id": "",
+        "text": "۱"
+      },
+      {
+        "id": "",
+        "text": "سیاست حفظ حریم خصوصی"
+      },
+      {
+        "id": "",
+        "text": "استفاده از فیبو رایگان است، اما برای دسترسی به برخی برنامه‌های آموزشی و ویژگی‌های ویژه ممکن است نیاز به خرید اشتراک داشته باشید."
+      },
+      {
+        "id": "",
+        "text": "این صفحه برای اطلاع شما از نحوه جمع‌آوری، استفاده، اشتراک‌گذاری و حفاظت از اطلاعات شخصی‌تان نوشته شده است. با استفاده از خدمات فیبو، با جمع‌آوری و استفاده از اطلاعات طبق این سیاست موافقت می‌کنید."
+      },
+      {
+        "id": "",
+        "text": "۲"
+      },
+      {
+        "id": "",
+        "text": "چه اطلاعاتی جمع‌آوری می‌شود"
+      },
+      {
+        "id": "",
+        "text": "شماره موبایل: برای ورود به حساب و شناسایی شما."
+      },
+      {
+        "id": "",
+        "text": "مشخصات و هدف: نام، عکس پروفایل، وزن، قد، سن، جنسیت، سطح فعالیت، هدف وزنی و در صورت ثبت، دوره بارداری یا شیردهی."
+      },
+      {
+        "id": "",
+        "text": "اطلاعات روزانه: غذاها، آب، فعالیت‌ها، رژیم انتخابی و امتیاز پیشرفت هر روز."
+      },
+      {
+        "id": "",
+        "text": "پیام‌های پشتیبانی: پیام‌هایی که در گفتگوی پشتیبانی برای ما می‌فرستید."
+      },
+      {
+        "id": "",
+        "text": "از این اطلاعات برای محاسبه کالری و برنامه شخصی شما، نگه‌داری نسخه پشتیبان روزهایتان (تا با نصب دوباره یا گوشی جدید از دست نروند) و بهبود خدمات فیبو استفاده می‌شود."
+      },
+      {
+        "id": "",
+        "text": "۳"
+      },
+      {
+        "id": "",
+        "text": "چه کسانی اطلاعات شما را می‌بینند"
+      },
+      {
+        "id": "",
+        "text": "کاربران برتر: هر روز کاربرانی که بیشترین امتیاز پیشرفت را دارند در فهرست کاربران برتر به همه نشان داده می‌شوند. اگر در این فهرست باشید، دیگران نام، عکس پروفایل، آخرین بازدید، رژیم، وزن فعلی و هدف وزنی، و غذاها، آب و فعالیت‌های همان روز شما را می‌بینند."
+      },
+      {
+        "id": "",
+        "text": "آمار و گزارش خطا: برای پیدا کردن خطاها و آمار کلی استفاده (مثل صفحه‌هایی که باز می‌شوند) از سرویس Firebase گوگل استفاده می‌شود؛ شماره موبایل و مشخصات بدن شما به آن فرستاده نمی‌شود."
+      },
+      {
+        "id": "",
+        "text": "ثبت غذا با هوش مصنوعی: اگر غذا را با هوش مصنوعی ثبت کنید، عکس، صدا یا متن شما برای تحلیل به سرویس‌های هوش مصنوعی خارج از فیبو فرستاده می‌شود و ممکن است این سرویس‌ها از آن برای بهتر کردن خدمات خود استفاده کنند. عکس غذا فقط برای بررسی به سرویس هوش مصنوعی فرستاده می‌شود و فیبو آن را کنار غذای شما نگه نمی‌دارد."
+      },
+      {
+        "id": "",
+        "text": "پرداخت: خرید اشتراک از طریق مارکتی انجام می‌شود که برنامه را از آن نصب کرده‌اید و اطلاعات کارت بانکی شما به فیبو نمی‌رسد."
+      },
+      {
+        "id": "",
+        "text": "جز این موارد، اطلاعات شما به هیچ شرکت، سازمان یا شخص دیگری فروخته یا داده نمی‌شود و شماره موبایل شما هرگز به کسی نشان داده نمی‌شود."
+      },
+      {
+        "id": "",
+        "text": "۴"
+      },
+      {
+        "id": "",
+        "text": "امنیت اطلاعات شخصی"
+      },
+      {
+        "id": "",
+        "text": "ما از اعتماد شما به سپردن اطلاعات شخصی‌تان به فیبو قدردانی می‌کنیم و تلاش می‌کنیم با ابزارهای قابل قبول از آن محافظت کنیم. اما به یاد داشته باشید که هیچ روش انتقال از طریق اینترنت یا ذخیره الکترونیکی ۱۰۰٪ ایمن نیست و ما نمی‌توانیم امنیت مطلق آن را تضمین کنیم."
+      },
+      {
+        "id": "",
+        "text": "۵"
+      },
+      {
+        "id": "",
+        "text": "تغییرات در این سیاست"
+      },
+      {
+        "id": "",
+        "text": "ممکن است هر از گاهی این سیاست را به‌روزرسانی کنیم؛ پس پیشنهاد می‌کنیم این صفحه را گاهی مرور کنید. هر تغییری با انتشار متن جدید در همین صفحه اطلاع داده می‌شود."
+      },
+      {
+        "id": "",
+        "text": "۶"
+      },
+      {
+        "id": "",
+        "text": "تماس با ما"
+      },
+      {
+        "id": "@+id/txt_ghavanin_contact",
+        "text": "چنانچه درباره سیاست حفظ حریم خصوصی سؤال یا پیشنهادی دارید، از طریق fiboapp.info@gmail.com با ما در تماس باشید."
+      },
+      {
+        "id": "",
+        "text": "ارسال ایمیل"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_gozaresh.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_gozaresh_period_week",
+        "text": "۷ روز آخر"
+      },
+      {
+        "id": "@+id/txt_gozaresh_period_month",
+        "text": "۳۰ روز آخر"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_gozaresh_card.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_gozaresh_card_hint",
+        "text": "برای دیدن هر روز، رویش بزنید"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.GozareshChartView"
+    ]
+  },
+  {
+    "layout": "activity_hadaf1_choesse.xml",
+    "texts": [
+      {
+        "id": "@+id/text_hadaf_note",
+        "text": "رسیدید به پرچم! حالا نوبت هدفه"
+      },
+      {
+        "id": "",
+        "text": "هدفتون رو انتخاب کنید"
+      },
+      {
+        "id": "@+id/btn_hadaf1_save",
+        "text": "ادامه"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.HadafTypeView"
+    ]
+  },
+  {
+    "layout": "activity_hadaf2_vazn.xml",
+    "texts": [
+      {
+        "id": "@+id/text_hadaf_title",
+        "text": "وزن هدفتون رو انتخاب کنید"
+      },
+      {
+        "id": "",
+        "text": "کیلوگرم"
+      },
+      {
+        "id": "",
+        "text": "↔ خط‌کش رو بکشید؛ برای عدد دقیق روی عدد بزنید"
+      },
+      {
+        "id": "",
+        "text": "وزن الانتون"
+      },
+      {
+        "id": "@+id/text_hadaf_edit",
+        "text": "ویرایش"
+      },
+      {
+        "id": "@+id/btn_hadaf2_save",
+        "text": "ادامه"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.HadafRouteView",
+      "info.fiboapp.fibo.Class.SignupRulerView",
+      "info.fiboapp.fibo.Class.HadafBmiView"
+    ]
+  },
+  {
+    "layout": "activity_hadaf4_vaznhadaf.xml",
+    "texts": [
+      {
+        "id": "@+id/text_hadaf_title",
+        "text": "سرعت رسیدن به هدف رو انتخاب کنید"
+      },
+      {
+        "id": "",
+        "text": "گرم در هفته"
+      },
+      {
+        "id": "",
+        "text": "کی می‌رسید؟"
+      },
+      {
+        "id": "",
+        "text": "سهم هر روزتون"
+      },
+      {
+        "id": "@+id/btn_hadaf4_save",
+        "text": "ثبت هدف"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.HadafRouteView",
+      "info.fiboapp.fibo.Class.SignupRulerView"
+    ]
+  },
+  {
+    "layout": "activity_hadaf5_choice_diet.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "سبک غذا خوردنتون رو انتخاب کنید"
+      },
+      {
+        "id": "@+id/text_hadaf_sub",
+        "text": "هر وقت خواستید از تب رژیم عوضش می‌کنید."
+      },
+      {
+        "id": "@+id/btn_save",
+        "text": "ادامه"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.HadafDietView"
+    ]
+  },
+  {
+    "layout": "activity_intro.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_login1.xml",
+    "texts": [
+      {
+        "id": "@+id/login_editText1",
+        "text": "شماره موبایل"
+      },
+      {
+        "id": "@+id/text_signup_step",
+        "text": "قدم ۱ از ۵"
+      },
+      {
+        "id": "@+id/text_signup_title",
+        "text": "شماره موبایلتون رو بنویسید"
+      },
+      {
+        "id": "@+id/text_signup_subtitle",
+        "text": "با همین شماره، همیشه به حسابتون برمی‌گردید."
+      },
+      {
+        "id": "",
+        "text": "با ورود،"
+      },
+      {
+        "id": "@+id/login1_ghavanin",
+        "text": "قوانین فیبو"
+      },
+      {
+        "id": "",
+        "text": "را می‌پذیرم."
+      },
+      {
+        "id": "@+id/btn_login1",
+        "text": "دریافت کد ورود"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupPhoneView"
+    ]
+  },
+  {
+    "layout": "activity_login2.xml",
+    "texts": [
+      {
+        "id": "@+id/login2_edittext",
+        "text": "کد ورود"
+      },
+      {
+        "id": "@+id/text_signup_step",
+        "text": "قدم ۲ از ۵"
+      },
+      {
+        "id": "@+id/text_signup_title",
+        "text": "کد ۶ رقمی پیامک رو بنویسید"
+      },
+      {
+        "id": "@+id/btn_login2",
+        "text": "تأیید کد"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupCodeView"
+    ]
+  },
+  {
+    "layout": "activity_main.xml",
+    "texts": [
+      {
+        "id": "@+id/title_timer",
+        "text": "تخفیف ویژه اولین خرید"
+      },
+      {
+        "id": "@+id/title2_timer",
+        "text": "اعتبار پیشنهاد تا"
+      },
+      {
+        "id": "@+id/text_timer",
+        "text": "00:54:18"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_note.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "دفترچه یادداشت"
+      },
+      {
+        "id": "@+id/edit_note_search",
+        "text": "جستجو در یادداشت ها"
+      },
+      {
+        "id": "@+id/text_note_new",
+        "text": "یادداشت تازه"
+      },
+      {
+        "id": "",
+        "text": "یادداشت پاک شد"
+      },
+      {
+        "id": "@+id/btn_note_undo",
+        "text": "برگردون"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_note_detail.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "ذخیره شد"
+      },
+      {
+        "id": "@+id/notedetail_edit",
+        "text": "از اینجا بنویسید"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_reels.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_save_food_person.xml",
+    "texts": [
+      {
+        "id": "@+id/text_delete",
+        "text": "حذف غذا"
+      },
+      {
+        "id": "@+id/edit_name",
+        "text": "اسم غذا"
+      },
+      {
+        "id": "",
+        "text": "کالری"
+      },
+      {
+        "id": "",
+        "text": "در هر"
+      },
+      {
+        "id": "",
+        "text": "گرم"
+      },
+      {
+        "id": "",
+        "text": "پروتئین"
+      },
+      {
+        "id": "",
+        "text": "کربوهیدرات"
+      },
+      {
+        "id": "",
+        "text": "چربی"
+      },
+      {
+        "id": "",
+        "text": "واحدها"
+      },
+      {
+        "id": "",
+        "text": "گرم"
+      },
+      {
+        "id": "@+id/text_unit_add",
+        "text": "واحد"
+      },
+      {
+        "id": "@+id/edit_unit_name",
+        "text": "اسم واحد، مثلاً برش"
+      },
+      {
+        "id": "@+id/edit_unit_gram",
+        "text": "چند گرم"
+      },
+      {
+        "id": "@+id/text_unit_ok",
+        "text": "افزودن"
+      },
+      {
+        "id": "",
+        "text": "جزئیات بیشتر"
+      },
+      {
+        "id": "",
+        "text": "قند، سدیم، فیبر و ۱۰ مورد دیگه"
+      },
+      {
+        "id": "@+id/text_save",
+        "text": "ذخیره غذا"
+      },
+      {
+        "id": "@+id/btn_only_save",
+        "text": "فقط ذخیره"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.FoodPersonCardView",
+      "info.fiboapp.fibo.Class.FoodSaucerView",
+      "info.fiboapp.fibo.Class.FoodSaucerView",
+      "info.fiboapp.fibo.Class.FoodSaucerView"
+    ]
+  },
+  {
+    "layout": "activity_show_food.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "مواد لازم"
+      },
+      {
+        "id": "",
+        "text": "دستور پخت"
+      },
+      {
+        "id": "",
+        "text": "نوش جان!"
+      },
+      {
+        "id": "",
+        "text": "حالا بشقابتان را در وعده ثبت کنید."
+      },
+      {
+        "id": "",
+        "text": "کالری"
+      },
+      {
+        "id": "",
+        "text": "در ۱۰۰ گرم"
+      },
+      {
+        "id": "",
+        "text": "۱۳ ارزش دیگر، از شکر و سدیم تا آهن"
+      },
+      {
+        "id": "",
+        "text": "همه"
+      },
+      {
+        "id": "",
+        "text": "اضافه کردن به وعده"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.CookingSkyView",
+      "info.fiboapp.fibo.Class.CookingGardenView",
+      "info.fiboapp.fibo.Class.CookingChipFlowLayout"
+    ]
+  },
+  {
+    "layout": "activity_subscription.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "اشتراک فیبو"
+      },
+      {
+        "id": "@+id/txt_sub_hero_subtitle",
+        "text": "با تهیه اشتراک فیبو، از همه امکانات استفاده کنین."
+      },
+      {
+        "id": "",
+        "text": "اشتراک باقیمانده:"
+      },
+      {
+        "id": "@+id/sub_text3",
+        "text": "لیست امکانات اشتراکی فیبو"
+      },
+      {
+        "id": "",
+        "text": "مربی روزانه فیبو؛ هر روز کنارته، قدم به قدم تا هدفت"
+      },
+      {
+        "id": "",
+        "text": "هوش مصنوعی فیبو؛ کالری غذا با عکس، صدا یا متن"
+      },
+      {
+        "id": "",
+        "text": "دسترسی به تمامی رژیم های شخصی‌سازی‌ شده برای شما"
+      },
+      {
+        "id": "",
+        "text": "انواع رژیم (نرمال، کتوژنیک، فستینگ، بدنسازی و…)"
+      },
+      {
+        "id": "",
+        "text": "دسترسی به تمامی برنامه های ورزشی"
+      },
+      {
+        "id": "",
+        "text": "دسترسی به محاسبات رژیم پیشرفت روزانه"
+      },
+      {
+        "id": "",
+        "text": "دسترسی به وعده‌های غذایی متنوع برای هر رژیم"
+      },
+      {
+        "id": "",
+        "text": "ماکرو شماری و ریزشماری ویژه براساس رژیم موردنظر"
+      },
+      {
+        "id": "",
+        "text": "میکرو شماری (فیبر، شکر، آهن، کلسیم، منیزیم و …)"
+      },
+      {
+        "id": "",
+        "text": "پکیج‌های غذایی ویژه (پروتئین، کربوهیدرات، چربی و …)"
+      },
+      {
+        "id": "",
+        "text": "نمایش کامل اطلاعات غذایی تمام خوراکی‌ها"
+      },
+      {
+        "id": "",
+        "text": "پشتیبانی فعال که همیشه کنار شماست!"
+      },
+      {
+        "id": "",
+        "text": "نظر برخی از کاربران"
+      },
+      {
+        "id": "",
+        "text": "در صورت بروز مشکل در پرداخت، انتقاد یا\\nپیشنهاد به پشتیبانی پیام دهید"
+      },
+      {
+        "id": "",
+        "text": "ارتباط با پشتیبانی"
+      },
+      {
+        "id": "@+id/main_choice_hadaf",
+        "text": "Ok!"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_tamrien_show_days.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "مسیر دوره"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "activity_tamrien_show_details.xml",
+    "texts": [],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.TamrienRailView",
+      "info.fiboapp.fibo.Class.TamrienSwipeHintView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_add_food_meal.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_add_food_meal_edit",
+        "text": "ویرایش مقدار"
+      },
+      {
+        "id": "",
+        "text": "حذف"
+      },
+      {
+        "id": "@+id/txt_add_food_meal_hint",
+        "text": "روی هر خوراکی بزنید تا مقدار و ارزش غذایی خودش را ببینید"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.CenteredFlowLayout",
+      "info.fiboapp.fibo.Class.MealBandView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_body_info.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_body_save",
+        "text": "ثبت"
+      },
+      {
+        "id": "@+id/btn_body_close",
+        "text": "بستن"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.BodySheetSceneView",
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupRulerView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_diet_doreh_warning.xml",
+    "texts": [
+      {
+        "id": "@+id/check_doreh_warning_doctor",
+        "text": "با پزشکم هماهنگ کرده‌ام"
+      },
+      {
+        "id": "@+id/btn_doreh_warning_other",
+        "text": "رژیم دیگری انتخاب می‌کنم"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_diet_fasting_picker.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_fasting_current",
+        "text": "فعلی"
+      },
+      {
+        "id": "",
+        "text": "ساعت ناشتایی رو انتخاب کنید"
+      },
+      {
+        "id": "@+id/btn_fasting_no_breakfast",
+        "text": "بدون صبحانه"
+      },
+      {
+        "id": "@+id/btn_fasting_no_dinner",
+        "text": "بدون شام"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_diet_picker.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "انتخاب رژیم"
+      },
+      {
+        "id": "@+id/txt_diet_picker_free",
+        "text": "نرمال و روزه‌داری رایگان‌اند، بقیه با اشتراک باز می‌شن"
+      },
+      {
+        "id": "",
+        "text": "فستینگ و روزه‌داری"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_doreh_date.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_doreh_date_today",
+        "text": "امروز"
+      },
+      {
+        "id": "@+id/btn_doreh_date_save",
+        "text": "تایید"
+      },
+      {
+        "id": "@+id/btn_doreh_date_dismiss",
+        "text": "انصراف"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_goal_detail.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "سرعت"
+      },
+      {
+        "id": "",
+        "text": "رسیدن"
+      },
+      {
+        "id": "",
+        "text": "رژیم"
+      },
+      {
+        "id": "",
+        "text": "محدوده وزن سالم"
+      },
+      {
+        "id": "@+id/btn_goal_detail_close",
+        "text": "بستن"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.GoalSheetSceneView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_goal_reached.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "رسیدی!"
+      },
+      {
+        "id": "",
+        "text": "کیلوگرم"
+      },
+      {
+        "id": "",
+        "text": "به وزن هدفت رسیدی!"
+      },
+      {
+        "id": "",
+        "text": "روز ثبت غذا"
+      },
+      {
+        "id": "",
+        "text": "سرزمین"
+      },
+      {
+        "id": "@+id/btn_goal_reached_new_goal",
+        "text": "هدف تازه بگذار"
+      },
+      {
+        "id": "@+id/btn_goal_reached_later",
+        "text": "بعداً"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_invite_friends.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "دعوت از دوستان"
+      },
+      {
+        "id": "",
+        "text": "لحن پیامت رو انتخاب کن"
+      },
+      {
+        "id": "",
+        "text": "برای"
+      },
+      {
+        "id": "@+id/edit_invite_friend_name",
+        "text": "اسم دوستت"
+      },
+      {
+        "id": "@+id/txt_invite_optional",
+        "text": "اختیاری"
+      },
+      {
+        "id": "",
+        "text": "دوستت این پیام رو می‌بینه"
+      },
+      {
+        "id": "",
+        "text": "فیبو - مدیریت تغذیه و تناسب اندام"
+      },
+      {
+        "id": "@+id/txt_invite_send",
+        "text": "ارسال برای دوستت"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_journey_map.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "نقشه سفر"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.JourneyMapView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_lactation.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "تاریخ شروع شیردهی"
+      },
+      {
+        "id": "",
+        "text": "تعداد نوزاد"
+      },
+      {
+        "id": "@+id/btn_lactation_save",
+        "text": "ذخیره"
+      },
+      {
+        "id": "@+id/btn_lactation_dismiss",
+        "text": "انصراف"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.LactationCradleView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_note_font.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "اندازه و قلم"
+      },
+      {
+        "id": "@+id/text_note_font_sample",
+        "text": "امروز ناهار رو سبک خوردم و حالم خوبه"
+      },
+      {
+        "id": "",
+        "text": "اندازه"
+      },
+      {
+        "id": "",
+        "text": "آ"
+      },
+      {
+        "id": "",
+        "text": "آ"
+      },
+      {
+        "id": "",
+        "text": "قلم"
+      },
+      {
+        "id": "@+id/text_note_font1",
+        "text": "پیش‌فرض"
+      },
+      {
+        "id": "@+id/text_note_font2",
+        "text": "متوسط"
+      },
+      {
+        "id": "@+id/text_note_font3",
+        "text": "برجسته"
+      },
+      {
+        "id": "@+id/text_note_font4",
+        "text": "کودک"
+      },
+      {
+        "id": "@+id/text_note_font6",
+        "text": "هما"
+      },
+      {
+        "id": "@+id/text_note_font5",
+        "text": "Jost"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_no_goal.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "هنوز هدفی انتخاب نکرده‌ای"
+      },
+      {
+        "id": "",
+        "text": "هدفت در این مسیر چیه؟"
+      },
+      {
+        "id": "",
+        "text": "الان کالری روزانه‌ات برای ثابت ماندن وزن حساب می‌شود. هدفت را انتخاب کن تا کالری و برنامه‌ات با آن هماهنگ شود."
+      },
+      {
+        "id": "@+id/btn_no_goal_choose",
+        "text": "انتخاب هدف"
+      },
+      {
+        "id": "@+id/btn_no_goal_later",
+        "text": "بعداً"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_pregnancy.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "تاریخ شروع بارداری"
+      },
+      {
+        "id": "",
+        "text": "یعنی اولین روز آخرین قاعدگی، مثل حساب پزشک."
+      },
+      {
+        "id": "",
+        "text": "وزن قبل از بارداری"
+      },
+      {
+        "id": "@+id/edit_pregnancy_weight",
+        "text": "مثلاً 65"
+      },
+      {
+        "id": "",
+        "text": "کیلوگرم"
+      },
+      {
+        "id": "",
+        "text": "تعداد جنین"
+      },
+      {
+        "id": "@+id/btn_pregnancy_save",
+        "text": "ذخیره"
+      },
+      {
+        "id": "@+id/btn_pregnancy_dismiss",
+        "text": "انصراف"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.PregnancyMoonView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_pregnancy_end.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "هفته ۴۲ بارداری گذشت"
+      },
+      {
+        "id": "",
+        "text": "کوچولو به دنیا اومده؟"
+      },
+      {
+        "id": "",
+        "text": "اگر زایمان کرده‌ای، برنامه‌ات را به شیردهی می‌برم تا کالری و هدف‌هایت با این روزها هماهنگ بماند."
+      },
+      {
+        "id": "@+id/btn_pregnancy_end_yes",
+        "text": "بله، برو به شیردهی"
+      },
+      {
+        "id": "@+id/btn_pregnancy_end_not_yet",
+        "text": "هنوز نه"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_quick_add_food.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_quick_add_avatar",
+        "text": "؟"
+      },
+      {
+        "id": "@+id/edit_quick_add_name",
+        "text": "اسم غذا، مثلا سالاد سزار با مرغ"
+      },
+      {
+        "id": "@+id/btn_quick_add_cancel",
+        "text": "انصراف"
+      },
+      {
+        "id": "",
+        "text": "گرم"
+      },
+      {
+        "id": "",
+        "text": "اختیاری"
+      },
+      {
+        "id": "",
+        "text": "در غذاهای شخصی هم بماند، برای دفعه بعد"
+      },
+      {
+        "id": "@+id/key_quick_add_1",
+        "text": "۱"
+      },
+      {
+        "id": "@+id/key_quick_add_2",
+        "text": "۲"
+      },
+      {
+        "id": "@+id/key_quick_add_3",
+        "text": "۳"
+      },
+      {
+        "id": "@+id/key_quick_add_4",
+        "text": "۴"
+      },
+      {
+        "id": "@+id/key_quick_add_5",
+        "text": "۵"
+      },
+      {
+        "id": "@+id/key_quick_add_6",
+        "text": "۶"
+      },
+      {
+        "id": "@+id/key_quick_add_plus",
+        "text": "+۵۰"
+      },
+      {
+        "id": "@+id/key_quick_add_7",
+        "text": "۷"
+      },
+      {
+        "id": "@+id/key_quick_add_8",
+        "text": "۸"
+      },
+      {
+        "id": "@+id/key_quick_add_9",
+        "text": "۹"
+      },
+      {
+        "id": "@+id/key_quick_add_next",
+        "text": "بعدی"
+      },
+      {
+        "id": "@+id/key_quick_add_dot",
+        "text": "٫"
+      },
+      {
+        "id": "@+id/key_quick_add_0",
+        "text": "۰"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.FoodPersonCardView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_quick_faaliat.xml",
+    "texts": [
+      {
+        "id": "@+id/edit_quick_faaliat_name",
+        "text": "اسم فعالیت، مثلا والیبال ساحلی"
+      },
+      {
+        "id": "@+id/btn_quick_faaliat_cancel",
+        "text": "انصراف"
+      },
+      {
+        "id": "",
+        "text": "دقیقه"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_1",
+        "text": "۱"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_2",
+        "text": "۲"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_3",
+        "text": "۳"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_4",
+        "text": "۴"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_5",
+        "text": "۵"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_6",
+        "text": "۶"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_plus",
+        "text": "+۱۰"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_7",
+        "text": "۷"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_8",
+        "text": "۸"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_9",
+        "text": "۹"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_next",
+        "text": "بعدی"
+      },
+      {
+        "id": "@+id/key_quick_faaliat_0",
+        "text": "۰"
+      },
+      {
+        "id": "@+id/txt_quick_faaliat_save",
+        "text": "ثبت فعالیت"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.FaaliatGrainCardView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_rating.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_rating_title",
+        "text": "فیبو تا اینجا به کارت اومده؟"
+      },
+      {
+        "id": "@+id/btn_rating_yes",
+        "text": "آره"
+      },
+      {
+        "id": "@+id/btn_rating_no",
+        "text": "نه زیاد"
+      },
+      {
+        "id": "@+id/btn_rating_later",
+        "text": "بعداً"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_reminder_list.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_reminder_list_done",
+        "text": "تمام"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_reminder_personal.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_reminder_personal_delete",
+        "text": "حذف یادآور"
+      },
+      {
+        "id": "",
+        "text": "سر همین ساعت یه نوتیف میاد؛ بدون زنگ."
+      },
+      {
+        "id": "@+id/edt_reminder_personal_name",
+        "text": "مثلاً قرص آهن"
+      },
+      {
+        "id": "",
+        "text": ":"
+      },
+      {
+        "id": "",
+        "text": "کدوم روزها؟"
+      },
+      {
+        "id": "@+id/chip_reminder_personal_all",
+        "text": "هر روز"
+      },
+      {
+        "id": "@+id/btn_reminder_personal_save",
+        "text": "ذخیره"
+      },
+      {
+        "id": "@+id/btn_reminder_personal_cancel",
+        "text": "انصراف"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_reminder_time.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_reminder_time_delete",
+        "text": "حذف"
+      },
+      {
+        "id": "",
+        "text": ":"
+      },
+      {
+        "id": "",
+        "text": "کی نیاد؟"
+      },
+      {
+        "id": "@+id/btn_reminder_time_minus",
+        "text": "−"
+      },
+      {
+        "id": "@+id/btn_reminder_time_plus",
+        "text": "+"
+      },
+      {
+        "id": "@+id/chip_reminder_time_always",
+        "text": "همیشه بیاد"
+      },
+      {
+        "id": "@+id/btn_reminder_time_save",
+        "text": "ذخیره"
+      },
+      {
+        "id": "@+id/btn_reminder_time_cancel",
+        "text": "انصراف"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SignupWheelView",
+      "info.fiboapp.fibo.Class.SignupWheelView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_theme.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "رنگ برنامه"
+      },
+      {
+        "id": "@+id/btn_theme_save",
+        "text": "ذخیره"
+      },
+      {
+        "id": "@+id/btn_theme_cancel",
+        "text": "انصراف"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.ThemeSceneView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_top_users_settings.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "کاربران برتر"
+      },
+      {
+        "id": "",
+        "text": "نمایش"
+      },
+      {
+        "id": "",
+        "text": "کارت در داشبورد"
+      },
+      {
+        "id": "@+id/text_card_sub",
+        "text": "خاموش: کارت از داشبورد برداشته می‌شود"
+      },
+      {
+        "id": "",
+        "text": "نمایش من در لیست"
+      },
+      {
+        "id": "",
+        "text": "خاموش: دیگران اسم و عکس شما را نمی‌بینند"
+      },
+      {
+        "id": "",
+        "text": "چه کسانی را ببینم"
+      },
+      {
+        "id": "",
+        "text": "هدف"
+      },
+      {
+        "id": "@+id/chip_goal_all",
+        "text": "همه"
+      },
+      {
+        "id": "@+id/chip_goal_same",
+        "text": "هم‌هدف من"
+      },
+      {
+        "id": "",
+        "text": "جنسیت"
+      },
+      {
+        "id": "@+id/chip_gender_all",
+        "text": "همه"
+      },
+      {
+        "id": "@+id/chip_gender_women",
+        "text": "خانم‌ها"
+      },
+      {
+        "id": "@+id/chip_gender_men",
+        "text": "آقایان"
+      },
+      {
+        "id": "",
+        "text": "رژیم"
+      },
+      {
+        "id": "@+id/chip_diet_all",
+        "text": "همه"
+      },
+      {
+        "id": "@+id/chip_diet_same",
+        "text": "هم‌رژیم من"
+      },
+      {
+        "id": "@+id/btn_top_users_save",
+        "text": "ذخیره"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_top_user_faaliat.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "فعالیت‌های امروز"
+      },
+      {
+        "id": "",
+        "text": "سوزانده"
+      },
+      {
+        "id": "@+id/txt_faaliat_empty",
+        "text": "فعالیتی ثبت نکرده"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_update_app.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "نسخه جدید"
+      },
+      {
+        "id": "",
+        "text": "یه فیبوی تازه‌نفس رسیده!"
+      },
+      {
+        "id": "",
+        "text": "با نصب نسخه جدید، همه روزها و غذاهات سر جاشون می‌مونن."
+      },
+      {
+        "id": "@+id/btn_update_app_later",
+        "text": "فردا یادم بنداز"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_user_name.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "اسمتون چیه؟"
+      },
+      {
+        "id": "@+id/edit_name",
+        "text": "اسمتون رو اینجا بنویسید"
+      },
+      {
+        "id": "@+id/btn_name_save",
+        "text": "ثبت"
+      },
+      {
+        "id": "@+id/btn_name_close",
+        "text": "بستن"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.NameSheetSceneView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_water.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "ثبت مصرف آب"
+      },
+      {
+        "id": "@+id/txt_water_count",
+        "text": "۰"
+      },
+      {
+        "id": "@+id/txt_water_target_detail",
+        "text": "از ۸ لیوان"
+      },
+      {
+        "id": "",
+        "text": "یک لیوان آب"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.WaterGardenView",
+      "info.fiboapp.fibo.Class.WaterDropsView"
+    ]
+  },
+  {
+    "layout": "dialog_bottom_sheet_zanjir_guide.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "زنجیر چطور کار می‌کند؟"
+      },
+      {
+        "id": "",
+        "text": "هر روز یک حلقه"
+      },
+      {
+        "id": "",
+        "text": "روزی که دست‌کم یک غذا ثبت کنی، حتی یک چای، یک حلقه به زنجیرت اضافه می‌شود."
+      },
+      {
+        "id": "",
+        "text": "تا آخر شب فرصت داری"
+      },
+      {
+        "id": "",
+        "text": "امروزِ خالی زنجیر را پاره نمی‌کند؛ ولی روزی که بدون غذا تمام شود، زنجیر از نو شروع می‌شود."
+      },
+      {
+        "id": "",
+        "text": "هر ۷ روز یک پرچم"
+      },
+      {
+        "id": "",
+        "text": "۷، ۱۴، ۲۱ روز پیاپی و… هر کدام یک ایستگاه تازه است."
+      },
+      {
+        "id": "",
+        "text": "رکورد تازه"
+      },
+      {
+        "id": "",
+        "text": "وقتی از بلندترین زنجیر قبلی‌ات جلو بزنی، جام رکورد مال توست."
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "dialog_bottom_sheet_zanjir_moment.xml",
+    "texts": [],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.ZanjirChainView"
+    ]
+  },
+  {
+    "layout": "fragment1_botom_navigation.xml",
+    "texts": [
+      {
+        "id": "@+id/text_hero_calorie_mode",
+        "text": "باقی‌مانده"
+      },
+      {
+        "id": "@+id/text_hero_calorie_unit",
+        "text": "kcal"
+      },
+      {
+        "id": "@+id/text_hero_calorie_remaining",
+        "text": "1 800"
+      },
+      {
+        "id": "@+id/text_hero_calorie_goal",
+        "text": "هدف: 1800 کالری"
+      },
+      {
+        "id": "@+id/text_empty_logged_food_header",
+        "text": "وعده‌های امروز"
+      },
+      {
+        "id": "@+id/text_empty_logged_food_title",
+        "text": "هنوز غذایی ثبت نشده"
+      },
+      {
+        "id": "@+id/text_empty_logged_food_subtitle",
+        "text": "برای ثبت اولین وعده امروز روی + ضربه بزنید"
+      },
+      {
+        "id": "",
+        "text": "آب"
+      },
+      {
+        "id": "@+id/fragmen1_pishnhade_water",
+        "text": "پیشنهاد ما: 8 لیوان"
+      },
+      {
+        "id": "@+id/text_value_water_fragment1",
+        "text": "0"
+      },
+      {
+        "id": "",
+        "text": "فعالیت"
+      },
+      {
+        "id": "@+id/text_faaliat_detail_fragment1",
+        "text": "هنوز فعالیتی ثبت نشده"
+      },
+      {
+        "id": "@+id/text_faaliat_fragment1",
+        "text": "0 کالری"
+      },
+      {
+        "id": "",
+        "text": "وزن شما"
+      },
+      {
+        "id": "@+id/txt_vazn_last_update",
+        "text": "وزن خود را بروزرسانی کنید"
+      },
+      {
+        "id": "@+id/text_vazn_value_fragment1",
+        "text": "0 کیلوگرم"
+      },
+      {
+        "id": "@+id/text_top_users",
+        "text": "کاربران برتر امروز"
+      },
+      {
+        "id": "",
+        "text": "مشاهده همه"
+      },
+      {
+        "id": "@+id/fragment1_layout_snakbar_personal_text1",
+        "text": "تبریک به هدف تون رسیدید!"
+      },
+      {
+        "id": "@+id/fragment1_layout_snakbar_personal_text2",
+        "text": "ثبت هدف جدید"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.SoboRiveView",
+      "info.fiboapp.fibo.Class.SoboCoachChipsView",
+      "info.fiboapp.fibo.Class.SoboGreetingView",
+      "info.fiboapp.fibo.Class.FaaliatStarsView"
+    ]
+  },
+  {
+    "layout": "fragment1_buy_sub.xml",
+    "texts": [
+      {
+        "id": "@+id/text",
+        "text": "فقط با یک اشتراک"
+      },
+      {
+        "id": "@+id/text2",
+        "text": "رژیم غذایی، برنامه ورزشی و امکانات دیگر"
+      },
+      {
+        "id": "",
+        "text": "مشاهده اشتراک"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment1_choese_food.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_caleri_sobhaneh",
+        "text": "0 کالری"
+      },
+      {
+        "id": "@+id/foods_text1",
+        "text": "صبحانه"
+      },
+      {
+        "id": "@+id/fragment1_text_pishnhad_sobhaneh",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "@+id/text1",
+        "text": "مشاهده غذا"
+      },
+      {
+        "id": "@+id/text_empty_title_sobhaneh",
+        "text": "افزودن صبحانه"
+      },
+      {
+        "id": "@+id/text_empty_pishnhad_sobhaneh",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "@+id/txt_caleri_nahar",
+        "text": "0 کالری"
+      },
+      {
+        "id": "@+id/foods_text2",
+        "text": "ناهار"
+      },
+      {
+        "id": "@+id/fragment1_text_pishnhad_nahar",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "@+id/text2",
+        "text": "مشاهده غذا"
+      },
+      {
+        "id": "@+id/text_empty_title_nahar",
+        "text": "افزودن ناهار"
+      },
+      {
+        "id": "@+id/text_empty_pishnhad_nahar",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "@+id/txt_caleri_shame",
+        "text": "0 کالری"
+      },
+      {
+        "id": "@+id/foods_text3",
+        "text": "شام"
+      },
+      {
+        "id": "@+id/fragment1_text_pishnhad_shame",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "@+id/text3",
+        "text": "مشاهده غذا"
+      },
+      {
+        "id": "@+id/text_empty_title_shame",
+        "text": "افزودن شام"
+      },
+      {
+        "id": "@+id/text_empty_pishnhad_shame",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "@+id/txt_caleri_mianvadeh",
+        "text": "0 کالری"
+      },
+      {
+        "id": "@+id/foods_text4",
+        "text": "میان وعده ها"
+      },
+      {
+        "id": "@+id/fragment1_text_pishnhad_mianvade",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "@+id/text4",
+        "text": "مشاهده غذا"
+      },
+      {
+        "id": "@+id/text_empty_title_mianvadeh",
+        "text": "افزودن میان وعده ها"
+      },
+      {
+        "id": "@+id/text_empty_pishnhad_mianvade",
+        "text": "پیشنهاد ما: 0 کالری"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment1_cooking_and_reels.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "آشپزی"
+      },
+      {
+        "id": "@+id/text_name_motivition",
+        "text": "انگیزه"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment1_how_start_app.xml",
+    "texts": [
+      {
+        "id": "@+id/text",
+        "text": "چطوری شروع کنیم"
+      },
+      {
+        "id": "@+id/text2",
+        "text": "راهنمای استفاده از برنامه و تناسب اندام"
+      },
+      {
+        "id": "",
+        "text": "مشاهده"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment1_layout_final_choice_hadaf.xml",
+    "texts": [],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.HadafWaitView"
+    ]
+  },
+  {
+    "layout": "fragment1_mizan_pishraft.xml",
+    "texts": [
+      {
+        "id": "@+id/text_mizan_pishraft",
+        "text": "پیشرفت امروز"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.PishraftGardenView"
+    ]
+  },
+  {
+    "layout": "fragment1_music.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment1_tab_layout.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "رژیم‌های خاص"
+      },
+      {
+        "id": "",
+        "text": "فستینگ و روزه‌داری"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment1_tab_layout_arzesh_food.xml",
+    "texts": [
+      {
+        "id": "@+id/txtMealsTitle",
+        "text": "از کدام وعده آمد؟"
+      },
+      {
+        "id": "",
+        "text": "بزن"
+      },
+      {
+        "id": "@+id/btnLockedBuy",
+        "text": "خرید اشتراک"
+      },
+      {
+        "id": "",
+        "text": "یک اشتراک، هر ۹ ریزمغذی را باز می‌کند"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.arzeshfood.NutrientBarView",
+      "info.fiboapp.fibo.arzeshfood.NutrientBarView"
+    ]
+  },
+  {
+    "layout": "fragment1_today_guide.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "توصیه امروز"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment1_views.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "پروفایل"
+      },
+      {
+        "id": "",
+        "text": "پشتیبانی"
+      },
+      {
+        "id": "",
+        "text": "یادداشت"
+      },
+      {
+        "id": "",
+        "text": "گزارش"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment2_banner_weekly_diet.xml",
+    "texts": [
+      {
+        "id": "@+id/tv_banner_diet_title",
+        "text": "برنامه هفتگی رژیم"
+      },
+      {
+        "id": "@+id/tv_banner_diet_subtitle",
+        "text": "متعادل، سالم و متناسب با هدف"
+      },
+      {
+        "id": "@+id/tv_btn_banner_diet",
+        "text": "مشاهده برنامه"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment2_botom_navigation.xml",
+    "texts": [
+      {
+        "id": "@+id/fragment2_rozeh_text",
+        "text": "رژیم روزه داری"
+      },
+      {
+        "id": "",
+        "text": "باقی‌مانده امروز"
+      },
+      {
+        "id": "@+id/fragment2_text_caleri_bagimandeh",
+        "text": "753"
+      },
+      {
+        "id": "",
+        "text": "kcal"
+      },
+      {
+        "id": "",
+        "text": "هدف"
+      },
+      {
+        "id": "@+id/fragment2_text_caleri_all",
+        "text": "2200"
+      },
+      {
+        "id": "",
+        "text": "دریافتی"
+      },
+      {
+        "id": "@+id/fragment2_text_caleri_masrafi",
+        "text": "1447"
+      },
+      {
+        "id": "",
+        "text": "لیست روزهای رژیم"
+      },
+      {
+        "id": "",
+        "text": "هر روزی رو که دوست داری انتخاب کن"
+      },
+      {
+        "id": "",
+        "text": "��"
+      },
+      {
+        "id": "",
+        "text": "روز شانسی"
+      },
+      {
+        "id": "",
+        "text": "وعده‌های غذایی"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment2_tab_layout.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_ready_diet",
+        "text": "وعده‌های رژیم"
+      },
+      {
+        "id": "@+id/txt_ready_person",
+        "text": "وعده‌های شخصی"
+      },
+      {
+        "id": "@+id/btn_ready_meal_lock",
+        "text": "خرید اشتراک"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment2_view_go_to_diet.xml",
+    "texts": [
+      {
+        "id": "@+id/title",
+        "text": "رژیم‌های دیگه فیبو"
+      },
+      {
+        "id": "",
+        "text": "مشاهده همه"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment3_botom_navigation.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_sport_burned_title",
+        "text": "کالری‌سوزی امروز"
+      },
+      {
+        "id": "@+id/txt_sport_burned",
+        "text": "0"
+      },
+      {
+        "id": "",
+        "text": "kcal"
+      },
+      {
+        "id": "@+id/txt_sport_count",
+        "text": "هنوز فعالیتی ثبت نشده"
+      },
+      {
+        "id": "@+id/txt_sport_week",
+        "text": "این هفته هنوز ورزش نکردی"
+      },
+      {
+        "id": "@+id/txt_sport_add_faaliat",
+        "text": "فعالیت امروزت رو ثبت کن"
+      },
+      {
+        "id": "",
+        "text": "ثبت فعالیت"
+      },
+      {
+        "id": "",
+        "text": "دوره‌های ورزشی"
+      },
+      {
+        "id": "",
+        "text": "هر دوره‌ای که مناسبته رو شروع کن"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment3_tab_layout.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment4_botom_navigation.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "آشپزخونه"
+      },
+      {
+        "id": "@+id/cooking_card_go",
+        "text": "دستور پخت"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.CookingSkyView",
+      "info.fiboapp.fibo.Class.CookingGardenView",
+      "info.fiboapp.fibo.Class.CookingSkyLayout",
+      "info.fiboapp.fibo.Class.CookingTabStrip"
+    ]
+  },
+  {
+    "layout": "fragment4_tab_layout.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment5_botom_navigation.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "دوره 1: شروع تغییر"
+      },
+      {
+        "id": "",
+        "text": "1 / 7 جلسه"
+      },
+      {
+        "id": "",
+        "text": "شروع مسیر تناسب اندام با اقتصادی ترین رژیم ممکن همون سفره همشیگی شما و تغییر سبک زندگی برای پذیرش عادت های خوب"
+      },
+      {
+        "id": "",
+        "text": "مشاهده"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_add_food.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "افزودن غذا"
+      },
+      {
+        "id": "",
+        "text": "افزودن سریع: کالری را خودتان بنویسید"
+      },
+      {
+        "id": "@+id/edit_add_food_query",
+        "text": "جستجو در غذاها"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_app_layout.xml",
+    "texts": [
+      {
+        "id": "@+id/btn_segment_dashboard",
+        "text": "داشبورد"
+      },
+      {
+        "id": "@+id/btn_segment_diet",
+        "text": "تب رژیم"
+      },
+      {
+        "id": "",
+        "text": "کارت‌هایی که می‌خواهید ببینید روشن بمانند. برای جابه‌جایی، ردیف را از دستگیره بکشید."
+      },
+      {
+        "id": "",
+        "text": "کالری بالای داشبورد و دکمه افزودن سریع همیشه هستند"
+      },
+      {
+        "id": "",
+        "text": "بخش‌هایی از تب رژیم که می‌خواهید ببینید روشن بمانند. ترتیب این تب ثابت است."
+      },
+      {
+        "id": "",
+        "text": "رژیم‌های دیگه فیبو"
+      },
+      {
+        "id": "",
+        "text": "کپسول زیر عدد کالری"
+      },
+      {
+        "id": "",
+        "text": "پیشنهاد رژیم"
+      },
+      {
+        "id": "",
+        "text": "غذاهای برنامه در کارت هر وعده"
+      },
+      {
+        "id": "@+id/text_diet_days_title",
+        "text": "لیست روزهای رژیم"
+      },
+      {
+        "id": "@+id/text_diet_days_sub",
+        "text": "روز برنامه، با «روز شانسی»"
+      },
+      {
+        "id": "@+id/text_diet_days_why",
+        "text": "با «پیشنهاد رژیم» خاموش می‌شود"
+      },
+      {
+        "id": "",
+        "text": "وعده‌های غذایی"
+      },
+      {
+        "id": "",
+        "text": "همیشه"
+      },
+      {
+        "id": "",
+        "text": "تب‌های وعده"
+      },
+      {
+        "id": "",
+        "text": "خاموش: همه وعده‌ها زیر هم"
+      },
+      {
+        "id": "@+id/text_open_title",
+        "text": "اول کدام وعده باز شود"
+      },
+      {
+        "id": "@+id/text_open_sub",
+        "text": "وقتی تب رژیم را باز می‌کنید"
+      },
+      {
+        "id": "@+id/text_open_why",
+        "text": "با «تب‌های وعده» خاموش می‌شود"
+      },
+      {
+        "id": "@+id/chip_open_now",
+        "text": "وعده همین ساعت"
+      },
+      {
+        "id": "@+id/chip_open_all",
+        "text": "همه"
+      },
+      {
+        "id": "",
+        "text": "وعده‌ها پنهان نمی‌شوند: سهم کالری هر وعده در برنامه می‌ماند و جمع روز به هم می‌ریزد."
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_arzesh_food.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "ارزش غذایی"
+      },
+      {
+        "id": "",
+        "text": "انرژی و درشت‌مغذی"
+      },
+      {
+        "id": "",
+        "text": "ریزمغذی‌ها"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_choice_food_calorie.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "افزودن غذا"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_diet.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_diet_description.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "رژیم فعلی شما"
+      },
+      {
+        "id": "",
+        "text": "درباره این رژیم"
+      },
+      {
+        "id": "@+id/txt_diet_desc_more",
+        "text": "ادامه"
+      },
+      {
+        "id": "",
+        "text": "دیدن برنامه"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.DietDayRibbonView"
+    ]
+  },
+  {
+    "layout": "fragment_diet_layout_show_time_fassting.xml",
+    "texts": [
+      {
+        "id": "@+id/title",
+        "text": "زمان خوردن"
+      },
+      {
+        "id": "@+id/txt_fasting_waiting_label",
+        "text": "تا فست"
+      },
+      {
+        "id": "@+id/txt_fasting_band_fast",
+        "text": "فست"
+      },
+      {
+        "id": "@+id/txt_fasting_band_eat",
+        "text": "خوردن"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_diet_show.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_diet_show_child.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_doreh.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "شروع"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_foodcaleri_person.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "برای ساخت غذا شخصی کلیک کنید"
+      },
+      {
+        "id": "@+id/no_exist_text",
+        "text": "هنوز غذایی وجود ندارد!"
+      },
+      {
+        "id": "",
+        "text": "لیست غذاهای شخصی خالی است"
+      },
+      {
+        "id": "",
+        "text": "اگر غذایی را از بخش جست و جو پیدا نکردید اما اطلاعاتش را دارید، می توانید آن را به این لیست اضافه کنید."
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_guide_fibo.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "سرزمین راهنمای فیبو"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.GuideLandView"
+    ]
+  },
+  {
+    "layout": "fragment_motivation_show_video.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_pakeage_food_details.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_person.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_person_vadeh_food_show_foodcaleri.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_toolbar",
+        "text": "انتخاب غذا"
+      },
+      {
+        "id": "@+id/btn_person_meal_bar_back",
+        "text": "برگشت به وعده"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_profile.xml",
+    "texts": [
+      {
+        "id": "@+id/text_account_namecarbar",
+        "text": "نام کاربر"
+      },
+      {
+        "id": "",
+        "text": "وزن"
+      },
+      {
+        "id": "",
+        "text": "قد"
+      },
+      {
+        "id": "",
+        "text": "امکانات و ظاهر برنامه"
+      },
+      {
+        "id": "",
+        "text": "خرید اشتراک"
+      },
+      {
+        "id": "",
+        "text": "راهنمای برنامه"
+      },
+      {
+        "id": "",
+        "text": "آموزش تصویری"
+      },
+      {
+        "id": "",
+        "text": "رنگ برنامه"
+      },
+      {
+        "id": "@+id/title_account_layout",
+        "text": "چیدمان"
+      },
+      {
+        "id": "",
+        "text": "داشبورد، تب رژیم"
+      },
+      {
+        "id": "",
+        "text": "کاربران برتر"
+      },
+      {
+        "id": "",
+        "text": "مربی روزانه فیبو"
+      },
+      {
+        "id": "",
+        "text": "داشبورد"
+      },
+      {
+        "id": "",
+        "text": "اطلاعات بدنی"
+      },
+      {
+        "id": "",
+        "text": "وزن"
+      },
+      {
+        "id": "",
+        "text": "قد"
+      },
+      {
+        "id": "@+id/text_sen_account",
+        "text": "تولد"
+      },
+      {
+        "id": "",
+        "text": "جنسیت"
+      },
+      {
+        "id": "",
+        "text": "سطح فعالیت"
+      },
+      {
+        "id": "",
+        "text": "محاسبه کالری"
+      },
+      {
+        "id": "",
+        "text": "فرمول کالری"
+      },
+      {
+        "id": "",
+        "text": "بارداری"
+      },
+      {
+        "id": "",
+        "text": "شیردهی"
+      },
+      {
+        "id": "",
+        "text": "درباره فیبو"
+      },
+      {
+        "id": "",
+        "text": "درباره ما"
+      },
+      {
+        "id": "",
+        "text": "قوانین برنامه"
+      },
+      {
+        "id": "",
+        "text": "دعوت از دوستان"
+      },
+      {
+        "id": "",
+        "text": "خروج از حساب"
+      },
+      {
+        "id": "",
+        "text": "خروج از حساب کاربری"
+      },
+      {
+        "id": "",
+        "text": "همراه هوشمند سلامت و تناسب اندام شما"
+      },
+      {
+        "id": "",
+        "text": "نسخهٔ جدید آماده است"
+      },
+      {
+        "id": "",
+        "text": "به‌روزرسانی"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_profile_hadaf_capsule.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_profile_quick_actions.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "پشتیبانی"
+      },
+      {
+        "id": "",
+        "text": "یادآور"
+      },
+      {
+        "id": "",
+        "text": "یادداشت"
+      },
+      {
+        "id": "",
+        "text": "گزارش"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_question_repeat.xml",
+    "texts": [
+      {
+        "id": "@+id/faq_search_edit",
+        "text": "دنبال چی می‌گردید؟"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_reels.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_reminder.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "یادآورها"
+      },
+      {
+        "id": "@+id/btn_reminder_quiet",
+        "text": "امروز ساکت"
+      },
+      {
+        "id": "",
+        "text": "نوتیفیکیشن فیبو خاموشه"
+      },
+      {
+        "id": "",
+        "text": "تا روشن نشه، هیچ یادآوری نمیاد"
+      },
+      {
+        "id": "@+id/btn_reminder_perm",
+        "text": "روشن کردن"
+      },
+      {
+        "id": "",
+        "text": "یادآورها ممکنه دیرتر بیان"
+      },
+      {
+        "id": "",
+        "text": "با اجازه آلارم دقیق، سر ساعت میان"
+      },
+      {
+        "id": "@+id/btn_reminder_exact",
+        "text": "روشن کردن"
+      },
+      {
+        "id": "",
+        "text": "فست"
+      },
+      {
+        "id": "",
+        "text": "ساعت فست از تب رژیم عوض می‌شه"
+      },
+      {
+        "id": "",
+        "text": "تب رژیم"
+      },
+      {
+        "id": "",
+        "text": "یادآورهای روزانه"
+      },
+      {
+        "id": "",
+        "text": "هر کدوم با کلید خودش روشن می‌شه"
+      },
+      {
+        "id": "",
+        "text": "یادآور خودم"
+      },
+      {
+        "id": "",
+        "text": "مثلاً قرص یا یه کار هر روزه"
+      },
+      {
+        "id": "",
+        "text": "یادآورها ممکنه دیرتر بیان"
+      },
+      {
+        "id": "",
+        "text": "·"
+      },
+      {
+        "id": "",
+        "text": "روشن کردن"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.ReminderSkyView"
+    ]
+  },
+  {
+    "layout": "fragment_save_person_vadeh_food.xml",
+    "texts": [
+      {
+        "id": "@+id/txt_person_meal_protein",
+        "text": "۰"
+      },
+      {
+        "id": "",
+        "text": "پروتئین"
+      },
+      {
+        "id": "@+id/txt_person_meal_carb",
+        "text": "۰"
+      },
+      {
+        "id": "",
+        "text": "کربوهیدرات"
+      },
+      {
+        "id": "@+id/txt_person_meal_fat",
+        "text": "۰"
+      },
+      {
+        "id": "",
+        "text": "چربی"
+      },
+      {
+        "id": "",
+        "text": "اسم وعده"
+      },
+      {
+        "id": "@+id/edit_person_meal_name",
+        "text": "مثلا صبحونه همیشگی"
+      },
+      {
+        "id": "@+id/txt_person_meal_name_hint",
+        "text": "از روی غذاها پر شد؛ اگه خواستید عوضش کنید"
+      },
+      {
+        "id": "@+id/btn_person_meal_undo",
+        "text": "برگردون"
+      },
+      {
+        "id": "@+id/btn_person_meal_save",
+        "text": "ذخیره وعده"
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.PersonMealCardView",
+      "info.fiboapp.fibo.Class.FoodSaucerView",
+      "info.fiboapp.fibo.Class.FoodSaucerView",
+      "info.fiboapp.fibo.Class.FoodSaucerView"
+    ]
+  },
+  {
+    "layout": "fragment_tab_layout_tamrien.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_test_frament.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_base_list_all.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_details_pishraft.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "پیشرفت امروز"
+      },
+      {
+        "id": "",
+        "text": "جزئیات"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_profile.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "وعده‌های امروز"
+      },
+      {
+        "id": "",
+        "text": "ارزش غذایی"
+      },
+      {
+        "id": "@+id/text_water_faaliat",
+        "text": "آب و فعالیت"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_profile_hadaf.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_profile_profile.xml",
+    "texts": [],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_profile_vadeh.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "کالری"
+      },
+      {
+        "id": "@+id/txt_vadeh_empty",
+        "text": "چیزی ثبت نکرده"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_show_all_user.xml",
+    "texts": [
+      {
+        "id": "@+id/text_no_exit_user",
+        "text": "کاربری یافت نشد"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "fragment_top_user_water_faaliat.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "آب"
+      },
+      {
+        "id": "",
+        "text": "فعالیت"
+      },
+      {
+        "id": "@+id/txt_faaliat_empty",
+        "text": "فعالیتی ثبت نکرده"
+      },
+      {
+        "id": "",
+        "text": "کالری"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment1.xml",
+    "texts": [
+      {
+        "id": "@+id/text_intro_title_first",
+        "text": "یه هدف بزرگ داری؟"
+      },
+      {
+        "id": "@+id/text_intro_title",
+        "text": "خردش می‌کنیم؛ هر روز یه قدم!"
+      },
+      {
+        "id": "@+id/text_intro_body",
+        "text": "هدف وزنت رو تعیین کن؛ فیبو اون رو به قدم‌های کوچیک، سالم و بی‌عوارض روزانه تبدیل می‌کنه."
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.IntroStoneView"
+    ]
+  },
+  {
+    "layout": "intro_fragment2.xml",
+    "texts": [
+      {
+        "id": "@+id/text_intro_title",
+        "text": "رژیمی که توش گرسنه نمی‌مونی"
+      },
+      {
+        "id": "@+id/text_intro_body",
+        "text": "رژیم‌های متنوع، علمی و به‌روز؛ سیر می‌مونی، از غذات لذت می‌بری و نتیجه هم می‌گیری."
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.IntroDietView"
+    ]
+  },
+  {
+    "layout": "intro_fragment3.xml",
+    "texts": [
+      {
+        "id": "@+id/text_intro_title",
+        "text": "ورزشی که از پسش برمیای!"
+      },
+      {
+        "id": "@+id/text_intro_body",
+        "text": "تمرین‌های ۱۵ دقیقه‌ای HIIT، طراحی مربیان بین‌المللی؛ از مبتدی تا بدنسازی، برای آقایون و بانوان."
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.IntroSportView"
+    ]
+  },
+  {
+    "layout": "intro_fragment4.xml",
+    "texts": [
+      {
+        "id": "@+id/text_intro_title_first",
+        "text": "یه نامه برات اومده!"
+      },
+      {
+        "id": "@+id/text_intro_title",
+        "text": "بیا با هم به این روز برسیم"
+      },
+      {
+        "id": "@+id/text_intro_body",
+        "text": "فیبو قدم‌به‌قدم، سالم و بدون عوارض تا وزن دلخواهت همراهته."
+      }
+    ],
+    "custom_views": [
+      "info.fiboapp.fibo.Class.IntroLetterView"
+    ]
+  },
+  {
+    "layout": "intro_fragment_how_start_app.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "بزن بریم برای بدن رویایی ��"
+      },
+      {
+        "id": "",
+        "text": "سلام به قهرمان جدید دنیای تناسب اندام! ��"
+      },
+      {
+        "id": "",
+        "text": "آماده‌ای که تغییر رو شروع کنی؟ ��"
+      },
+      {
+        "id": "",
+        "text": "با فیبو به شما کمک می‌کنیم تا به بهترین نسخه از خودت تبدیل بشی."
+      },
+      {
+        "id": "",
+        "text": "اینجا نه خبری از سختی‌ها و محدودیت‌هاست، نه از رژیم‌های خسته‌کننده! فقط یه مسیر هیجان‌انگیز به سمت تناسب اندام و سلامتی در انتظارته! ��"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app1.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "انتخاب هدف ��"
+      },
+      {
+        "id": "",
+        "text": "برای شروع اول هدف انتخاب کنید! ��"
+      },
+      {
+        "id": "",
+        "text": "هدف"
+      },
+      {
+        "id": "@+id/fragment1_text_pishnhad_hadaf",
+        "text": "کاهش ، افزایش ، تثبیت وزن"
+      },
+      {
+        "id": "@+id/fragment1_layout_hadaf_text",
+        "text": "موفقیت تصادفی نیست بلکه یک انتخابه\\10انتخاب کن و براش تلاش کن!"
+      },
+      {
+        "id": "",
+        "text": "�� فقط یک انتخاب کافیه، فیبو باقی کارها رو به عهده می‌گیره."
+      },
+      {
+        "id": "",
+        "text": " هدفت رو مشخص کن! می‌خوای وزن کم کنی؟ �� یا عضله بسازی؟ �� یا شاید هم می‌خوای وزنت رو ثابت نگه داری و سالم‌تر از همیشه بشی؟"
+      },
+      {
+        "id": "",
+        "text": "با انتخاب هدف وزن ایده آل، وزن سلامتی، زمان رسیدن به وزن دلخواهتون و خیلی چیزای دیگه مشخص میشه. ��"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app2.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "کالری رو بشناس ��"
+      },
+      {
+        "id": "",
+        "text": "میزان سوخت بدنت رو پیدا کن! ��"
+      },
+      {
+        "id": "@+id/text_fragment1_caleri_fire",
+        "text": "0"
+      },
+      {
+        "id": "",
+        "text": "کالری فعالیت ها"
+      },
+      {
+        "id": "@+id/text_fragment1_caleri_baghimandeh",
+        "text": "2289"
+      },
+      {
+        "id": "@+id/text1",
+        "text": "کالری باقیمانده"
+      },
+      {
+        "id": "@+id/fragment1_progressbar_caleri_text_hadaf",
+        "text": "بدون هدف"
+      },
+      {
+        "id": "@+id/text_fragment1_caleri_masrafi",
+        "text": "0"
+      },
+      {
+        "id": "",
+        "text": "کالری خوراکی ها"
+      },
+      {
+        "id": "",
+        "text": "الان که هدفت رو انتخاب کردی، باید بدونی چقدر سوخت (کالری) نیاز داری."
+      },
+      {
+        "id": "",
+        "text": "فیبو بهت میگه روزانه چقدر کالری می‌خوای و با این اطلاعات می‌تونی انتخاب‌های غذایی بهتری داشته باشی. ��"
+      },
+      {
+        "id": "",
+        "text": "اگه خواستی جزئیات بیشتر رو بدونی، روی نمودارها کلیک کنید! ��✨"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app3.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "ماکروها رو بشناس ��"
+      },
+      {
+        "id": "",
+        "text": "بدن‌ ایده آلت رو بساز! ��"
+      },
+      {
+        "id": "",
+        "text": "109"
+      },
+      {
+        "id": "",
+        "text": "پروتئین"
+      },
+      {
+        "id": "",
+        "text": "310"
+      },
+      {
+        "id": "",
+        "text": "کربوهیدرات"
+      },
+      {
+        "id": "",
+        "text": "65"
+      },
+      {
+        "id": "",
+        "text": "چربی"
+      },
+      {
+        "id": "",
+        "text": "29"
+      },
+      {
+        "id": "",
+        "text": "فیبر"
+      },
+      {
+        "id": "",
+        "text": "�� این قهرمان های غذایی خیلی مهمن!"
+      },
+      {
+        "id": "",
+        "text": "پروتئین‌ها، کربوهیدرات‌ها، چربی‌ها و همه‌چیز رو خودت مدیریت ‌کن."
+      },
+      {
+        "id": "",
+        "text": "فیبو این قهرمان‌ها رو به‌ خوبی بهت معرفی میکنه تا بتونی بهترین انتخاب‌ها رو داشته باشی! ��"
+      },
+      {
+        "id": "",
+        "text": "اگه خواستی جزئیات بیشتر رو بدونی، روی نمودارها کلیک کنید! ��"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app4.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "غذاهایی که خوردی رو وارد کن ��"
+      },
+      {
+        "id": "",
+        "text": "سوخت بدنت رو دقیق اندازه بگیر! ��"
+      },
+      {
+        "id": "@+id/txt_caleri_sobhaneh",
+        "text": "0 کالری"
+      },
+      {
+        "id": "@+id/foods_text1",
+        "text": "صبحانه"
+      },
+      {
+        "id": "@+id/fragment1_text_pishnhad_sobhaneh",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "",
+        "text": "انتخاب غذا"
+      },
+      {
+        "id": "@+id/txt_caleri_nahar",
+        "text": "0 کالری"
+      },
+      {
+        "id": "@+id/foods_text2",
+        "text": "ناهار"
+      },
+      {
+        "id": "@+id/fragment1_text_pishnhad_nahar",
+        "text": "پیشنهاد ما: 0 کالری"
+      },
+      {
+        "id": "",
+        "text": "انتخاب غذا"
+      },
+      {
+        "id": "",
+        "text": "یه کار خیلی ساده! ��"
+      },
+      {
+        "id": "",
+        "text": "فقط غذاهایی که خوردی رو وارد کن."
+      },
+      {
+        "id": "",
+        "text": "��فیبو خودش کالری و مواد مغذی رو محاسبه می‌کنه و بهت میگه چقدر دقیق پیش میری."
+      },
+      {
+        "id": "",
+        "text": "هرچی دقیق‌تر وارد کنی، سریع‌تر به نتیجه میرسی! ��"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app5.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "رژیم دلخواهت رو انتخاب کن ��"
+      },
+      {
+        "id": "",
+        "text": "با هر ذائقه و سلیقه‌ای، فیبو همراهته! ��"
+      },
+      {
+        "id": "@+id/fragment2_card_name1",
+        "text": "صبحانه"
+      },
+      {
+        "id": "@+id/fragment_caleri_masrafi_vade1",
+        "text": "356"
+      },
+      {
+        "id": "",
+        "text": "زمان مناسب: بین ساعت 7 تا 9"
+      },
+      {
+        "id": "",
+        "text": "ن"
+      },
+      {
+        "id": "",
+        "text": "نان بربری"
+      },
+      {
+        "id": "",
+        "text": "2 کف دست"
+      },
+      {
+        "id": "",
+        "text": "60 گرم"
+      },
+      {
+        "id": "",
+        "text": "163 کالری"
+      },
+      {
+        "id": "",
+        "text": "پ"
+      },
+      {
+        "id": "",
+        "text": "پنیر سفید"
+      },
+      {
+        "id": "",
+        "text": "1.5 قوطی کبریت"
+      },
+      {
+        "id": "",
+        "text": "25.5 گرم"
+      },
+      {
+        "id": "",
+        "text": "79 کالری"
+      },
+      {
+        "id": "",
+        "text": "گ"
+      },
+      {
+        "id": "",
+        "text": "گردو (مغز)"
+      },
+      {
+        "id": "",
+        "text": "2 عدد (4 گرم)"
+      },
+      {
+        "id": "",
+        "text": "8 گرم"
+      },
+      {
+        "id": "",
+        "text": "52 کالری"
+      },
+      {
+        "id": "",
+        "text": "ا"
+      },
+      {
+        "id": "",
+        "text": "انجیر خشک"
+      },
+      {
+        "id": "",
+        "text": "2 عدد (8 گرم)"
+      },
+      {
+        "id": "",
+        "text": "16 گرم"
+      },
+      {
+        "id": "",
+        "text": "40 کالری"
+      },
+      {
+        "id": "",
+        "text": "خ"
+      },
+      {
+        "id": "",
+        "text": "خرما"
+      },
+      {
+        "id": "",
+        "text": "1 عدد (7 گرم)"
+      },
+      {
+        "id": "",
+        "text": "7 گرم"
+      },
+      {
+        "id": "",
+        "text": "20 کالری"
+      },
+      {
+        "id": "",
+        "text": "چ"
+      },
+      {
+        "id": "",
+        "text": "چای سیاه"
+      },
+      {
+        "id": "",
+        "text": "1 لیوان (240 گرم)"
+      },
+      {
+        "id": "",
+        "text": "240 گرم"
+      },
+      {
+        "id": "",
+        "text": "2 کالری"
+      },
+      {
+        "id": "",
+        "text": "�� از رژیم کتو گرفته تا مدیترانه‌ای، پروتئینی، گیاه‌خواری و..."
+      },
+      {
+        "id": "",
+        "text": "هر چی که بخوای!"
+      },
+      {
+        "id": "",
+        "text": "فیبو بهت رژیم‌هایی میده که به هدفت بخوره. فقط کافیه انتخاب کنی ��"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app6.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "تمرینات خانگی ��"
+      },
+      {
+        "id": "",
+        "text": "عضلاتت رو بساز، بدون تجهیزات! ��"
+      },
+      {
+        "id": "",
+        "text": "فعالیت"
+      },
+      {
+        "id": "",
+        "text": "پیشنهاد ما: 30 دقیقه"
+      },
+      {
+        "id": "@+id/text_faaliat_fragment1",
+        "text": "0 کالری"
+      },
+      {
+        "id": "",
+        "text": "حالا دیگه هیچ بهونه‌ای برای ورزش نکردن، وجود نداره! ��"
+      },
+      {
+        "id": "",
+        "text": "�� فیبو مجموعه‌ای از تمرینات جذاب برای خونه بهت می‌ده."
+      },
+      {
+        "id": "",
+        "text": "بدون نیاز به تجهیزات و با تمرینات متنوع، می‌تونی خیلی سریع به تناسب اندام برسی ��"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app7.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "فیبو فقط یه اپ نیست ��"
+      },
+      {
+        "id": "",
+        "text": "یه همراه وفادارِ! ��"
+      },
+      {
+        "id": "",
+        "text": "آب"
+      },
+      {
+        "id": "",
+        "text": "پیشنهاد ما: 8 لیوان"
+      },
+      {
+        "id": "@+id/text_value_water_fragment1",
+        "text": "0"
+      },
+      {
+        "id": "",
+        "text": "�� می‌تونی میزان آب مصرفیت رو اندازه‌گیری کنی!"
+      },
+      {
+        "id": "",
+        "text": "وزن شما"
+      },
+      {
+        "id": "",
+        "text": "وزن خود را بروزرسانی کنید"
+      },
+      {
+        "id": "@+id/text_vazn_value_fragment1",
+        "text": "0 کیلوگرم"
+      },
+      {
+        "id": "",
+        "text": "وزنت رو چک کنی ��"
+      },
+      {
+        "id": "",
+        "text": "و از گزارش‌های پیشرفت دقیق فیبو استفاده کنی."
+      },
+      {
+        "id": "",
+        "text": "ببین چطور روز به روز به هدفت نزدیک‌تر میشی! ��"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app8.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "انگیزه روزانه ��"
+      },
+      {
+        "id": "",
+        "text": "همیشه کنارتم! ��"
+      },
+      {
+        "id": "",
+        "text": "این مسیر شاید طولانی باشه، ولی تو تنها نیستی! ��"
+      },
+      {
+        "id": "",
+        "text": "فیبو همیشه بهت انگیزه میده تا هر روز با انرژی شروع کنی و حتی تو روزهای سخت، دست از تلاش برنداری."
+      },
+      {
+        "id": "",
+        "text": "�� نکات نهایی برای قهرمان شدن:"
+      },
+      {
+        "id": "",
+        "text": "دقیق باش! �� هر چی دقیق‌تر غذاها و تمریناتت ��️‍♂️ رو وارد کنی، پیشرفتت سریع‌تر خواهد بود."
+      },
+      {
+        "id": "",
+        "text": "ورزش رو ادامه بده! با تمرینات منظم، به هدفت نزدیک‌تر می‌شی. ��"
+      },
+      {
+        "id": "",
+        "text": "پیشرفتت رو دنبال کن! گزارش‌های فیبو همیشه بهت نشون می‌ده که چقدر عالی پیش میری!"
+      },
+      {
+        "id": "",
+        "text": "حالا بزن بریم! �� هر چی سریع‌تر شروع کنی، سریع‌تر به اون بدن رویایی که همیشه می‌خواستی میرسی. فیبو همیشه باهات همراهه!"
+      },
+      {
+        "id": "",
+        "text": "پیش به سوی سلامتی ��"
+      },
+      {
+        "id": "",
+        "text": "تیم کارشناسان فیبو، سلامتی\\10تندرستی و شادابی برای شما آرزومند است.����"
+      }
+    ],
+    "custom_views": []
+  },
+  {
+    "layout": "intro_fragment_how_start_app9.xml",
+    "texts": [
+      {
+        "id": "",
+        "text": "پیشرفتت رو ببین ��"
+      },
+      {
+        "id": "",
+        "text": "هر روز یک قدم به هدفت نزدیک‌تر شو! ��"
+      },
+      {
+        "id": "",
+        "text": "پیشرفت امروز"
+      },
+      {
+        "id": "",
+        "text": "جزئیات"
+      },
+      {
+        "id": "",
+        "text": "هیجان‌ انگیزترین قسمت: پیشرفت شماست! ��"
+      },
+      {
+        "id": "",
+        "text": "فیبو بهت نشون میده چطور با تغییرات کوچک روزانه، به هدف بزرگت نزدیک‌تر می‌شی."
+      },
+      {
+        "id": "",
+        "text": "حالا دیگه می‌دونی دقیقا کجا هستی و چطور بهتر بشی! ��"
+      }
+    ],
+    "custom_views": []
+  }
+]

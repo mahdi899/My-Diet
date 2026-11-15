@@ -1,0 +1,1083 @@
+[
+  {
+    "class": "AiFoodCameraFrame",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\AiFoodCameraFrame.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 75,
+        "marker": "onDraw("
+      },
+      {
+        "line": 77,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "ArzeshDotMeterView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\ArzeshDotMeterView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 52,
+        "marker": "onDraw("
+      },
+      {
+        "line": 54,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "ArzeshGrainCardView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\ArzeshGrainCardView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 221,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 331,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 418,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 456,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 543,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 679,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 923,
+        "marker": "onDraw("
+      },
+      {
+        "line": 925,
+        "marker": "onDraw("
+      },
+      {
+        "line": 1044,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "b",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\b.java",
+    "markers": [
+      "onDraw(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 351,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 1196,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "BodySheetSceneView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\BodySheetSceneView.java",
+    "markers": [
+      "onTouchEvent("
+    ],
+    "references": [
+      {
+        "line": 603,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "CookingGardenView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\CookingGardenView.java",
+    "markers": [
+      "onDraw(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 102,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 193,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "CookingSkyLayout",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\CookingSkyLayout.java",
+    "markers": [
+      "onDraw(",
+      "areAnimatorsEnabled",
+      "setDuration("
+    ],
+    "references": [
+      {
+        "line": 130,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 188,
+        "marker": "setDuration("
+      },
+      {
+        "line": 383,
+        "marker": "setDuration("
+      },
+      {
+        "line": 386,
+        "marker": "setDuration("
+      },
+      {
+        "line": 430,
+        "marker": "onDraw("
+      },
+      {
+        "line": 434,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "CookingSkyView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\CookingSkyView.java",
+    "markers": [
+      "onDraw(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 92,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 154,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "CookingTabStrip",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\CookingTabStrip.java",
+    "markers": [
+      "setDuration("
+    ],
+    "references": [
+      {
+        "line": 124,
+        "marker": "setDuration("
+      }
+    ]
+  },
+  {
+    "class": "DietDayRibbonView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\DietDayRibbonView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 190,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "FaaliatFireView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\FaaliatFireView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 319,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 501,
+        "marker": "onDraw("
+      },
+      {
+        "line": 521,
+        "marker": "onDraw("
+      },
+      {
+        "line": 1091,
+        "marker": "onTouchEvent("
+      },
+      {
+        "line": 1097,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "FaaliatGrainCardView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\FaaliatGrainCardView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 217,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 479,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 553,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 585,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 658,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 689,
+        "marker": "onDraw("
+      },
+      {
+        "line": 702,
+        "marker": "onDraw("
+      },
+      {
+        "line": 887,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "FaaliatStarsView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\FaaliatStarsView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 54,
+        "marker": "onDraw("
+      },
+      {
+        "line": 56,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "FaceRingView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\FaceRingView.java",
+    "markers": [
+      "setDuration("
+    ],
+    "references": [
+      {
+        "line": 265,
+        "marker": "setDuration("
+      },
+      {
+        "line": 280,
+        "marker": "setDuration("
+      }
+    ]
+  },
+  {
+    "class": "FoodGrainCardView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\FoodGrainCardView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 239,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 700,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 779,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 827,
+        "marker": "onDraw("
+      },
+      {
+        "line": 834,
+        "marker": "onDraw("
+      },
+      {
+        "line": 989,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "FoodPersonCardView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\FoodPersonCardView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 141,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 334,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 475,
+        "marker": "onDraw("
+      },
+      {
+        "line": 477,
+        "marker": "onDraw("
+      },
+      {
+        "line": 521,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "FoodSaucerView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\FoodSaucerView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 120,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 226,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 230,
+        "marker": "onDraw("
+      },
+      {
+        "line": 232,
+        "marker": "onDraw("
+      },
+      {
+        "line": 262,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "GozareshChartView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\GozareshChartView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "setDuration("
+    ],
+    "references": [
+      {
+        "line": 1314,
+        "marker": "setDuration("
+      },
+      {
+        "line": 1367,
+        "marker": "onDraw("
+      },
+      {
+        "line": 2058,
+        "marker": "onTouchEvent("
+      },
+      {
+        "line": 2063,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "GuideLandView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\GuideLandView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 363,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 1403,
+        "marker": "onDraw("
+      },
+      {
+        "line": 2291,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "HadafBmiView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\HadafBmiView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 112,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "HadafTypeView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\HadafTypeView.java",
+    "markers": [
+      "onTouchEvent("
+    ],
+    "references": [
+      {
+        "line": 166,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "JourneyFogView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\JourneyFogView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 52,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "JourneyMapView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\JourneyMapView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 183,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "LactationCradleView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\LactationCradleView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 236,
+        "marker": "onDraw("
+      },
+      {
+        "line": 244,
+        "marker": "onDraw("
+      },
+      {
+        "line": 248,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 510,
+        "marker": "onTouchEvent("
+      },
+      {
+        "line": 516,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "MealBandView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\MealBandView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 91,
+        "marker": "onDraw("
+      },
+      {
+        "line": 95,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "PersonMealCardView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\PersonMealCardView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 134,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 320,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 356,
+        "marker": "onDraw("
+      },
+      {
+        "line": 362,
+        "marker": "onDraw("
+      },
+      {
+        "line": 442,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 513,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "PishraftDialogGardenView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\PishraftDialogGardenView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 369,
+        "marker": "onDraw("
+      },
+      {
+        "line": 380,
+        "marker": "onDraw("
+      },
+      {
+        "line": 385,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 615,
+        "marker": "onTouchEvent("
+      },
+      {
+        "line": 621,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "PishraftGardenView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\PishraftGardenView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 264,
+        "marker": "onDraw("
+      },
+      {
+        "line": 276,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "PregnancyMoonView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\PregnancyMoonView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 166,
+        "marker": "onDraw("
+      },
+      {
+        "line": 175,
+        "marker": "onDraw("
+      },
+      {
+        "line": 179,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 341,
+        "marker": "onTouchEvent("
+      },
+      {
+        "line": 347,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "ReminderSkyView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\ReminderSkyView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 173,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "SignupBodyView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SignupBodyView.java",
+    "markers": [
+      "onTouchEvent("
+    ],
+    "references": [
+      {
+        "line": 368,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "SignupGenderView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SignupGenderView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent("
+    ],
+    "references": [
+      {
+        "line": 284,
+        "marker": "onDraw("
+      },
+      {
+        "line": 430,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "SignupLevelView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SignupLevelView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent("
+    ],
+    "references": [
+      {
+        "line": 119,
+        "marker": "onDraw("
+      },
+      {
+        "line": 176,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "SignupRulerView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SignupRulerView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent("
+    ],
+    "references": [
+      {
+        "line": 207,
+        "marker": "onDraw("
+      },
+      {
+        "line": 266,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "SignupWeekView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SignupWeekView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 45,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "SignupWheelView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SignupWheelView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "postInvalidateOnAnimation"
+    ],
+    "references": [
+      {
+        "line": 142,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 172,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 245,
+        "marker": "onDraw("
+      },
+      {
+        "line": 315,
+        "marker": "onTouchEvent("
+      },
+      {
+        "line": 340,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "SoboCoachChipsView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SoboCoachChipsView.java",
+    "markers": [
+      "setDuration("
+    ],
+    "references": [
+      {
+        "line": 111,
+        "marker": "setDuration("
+      },
+      {
+        "line": 171,
+        "marker": "setDuration("
+      },
+      {
+        "line": 268,
+        "marker": "setDuration("
+      }
+    ]
+  },
+  {
+    "class": "SoboGreetingView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SoboGreetingView.java",
+    "markers": [
+      "onDraw(",
+      "setDuration("
+    ],
+    "references": [
+      {
+        "line": 238,
+        "marker": "setDuration("
+      },
+      {
+        "line": 280,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "SoboRiveView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\SoboRiveView.java",
+    "markers": [
+      "RiveAnimationView"
+    ],
+    "references": [
+      {
+        "line": 10,
+        "marker": "RiveAnimationView"
+      },
+      {
+        "line": 16,
+        "marker": "RiveAnimationView"
+      },
+      {
+        "line": 63,
+        "marker": "RiveAnimationView"
+      }
+    ]
+  },
+  {
+    "class": "TamrienKcalView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\TamrienKcalView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 79,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 90,
+        "marker": "onDraw("
+      },
+      {
+        "line": 92,
+        "marker": "onDraw("
+      },
+      {
+        "line": 141,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "TamrienPathNodeView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\TamrienPathNodeView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 159,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 232,
+        "marker": "onDraw("
+      },
+      {
+        "line": 235,
+        "marker": "onDraw("
+      },
+      {
+        "line": 248,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "TamrienRailView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\TamrienRailView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 102,
+        "marker": "onDraw("
+      },
+      {
+        "line": 104,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "TamrienStarsView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\TamrienStarsView.java",
+    "markers": [
+      "onDraw("
+    ],
+    "references": [
+      {
+        "line": 59,
+        "marker": "onDraw("
+      },
+      {
+        "line": 62,
+        "marker": "onDraw("
+      }
+    ]
+  },
+  {
+    "class": "TamrienSwipeHintView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\TamrienSwipeHintView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 194,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 253,
+        "marker": "onDraw("
+      },
+      {
+        "line": 262,
+        "marker": "onDraw("
+      },
+      {
+        "line": 359,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "ThemeSceneView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\ThemeSceneView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "postInvalidateOnAnimation",
+      "areAnimatorsEnabled"
+    ],
+    "references": [
+      {
+        "line": 256,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 514,
+        "marker": "onDraw("
+      },
+      {
+        "line": 739,
+        "marker": "postInvalidateOnAnimation"
+      },
+      {
+        "line": 761,
+        "marker": "onTouchEvent("
+      }
+    ]
+  },
+  {
+    "class": "WaterDropsView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\WaterDropsView.java",
+    "markers": [
+      "onDraw(",
+      "postInvalidateOnAnimation"
+    ],
+    "references": [
+      {
+        "line": 92,
+        "marker": "onDraw("
+      },
+      {
+        "line": 98,
+        "marker": "onDraw("
+      },
+      {
+        "line": 175,
+        "marker": "postInvalidateOnAnimation"
+      }
+    ]
+  },
+  {
+    "class": "WaterGardenView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\WaterGardenView.java",
+    "markers": [
+      "onDraw(",
+      "onTouchEvent(",
+      "areAnimatorsEnabled",
+      "performHapticFeedback"
+    ],
+    "references": [
+      {
+        "line": 464,
+        "marker": "areAnimatorsEnabled"
+      },
+      {
+        "line": 688,
+        "marker": "onDraw("
+      },
+      {
+        "line": 702,
+        "marker": "onDraw("
+      },
+      {
+        "line": 1236,
+        "marker": "onTouchEvent("
+      },
+      {
+        "line": 1257,
+        "marker": "performHapticFeedback"
+      }
+    ]
+  },
+  {
+    "class": "ZanjirChainView",
+    "source": "sources\\info\\fiboapp\\fibo\\Class\\ZanjirChainView.java",
+    "markers": [
+      "onDraw(",
+      "setDuration("
+    ],
+    "references": [
+      {
+        "line": 155,
+        "marker": "setDuration("
+      },
+      {
+        "line": 181,
+        "marker": "onDraw("
+      },
+      {
+        "line": 184,
+        "marker": "onDraw("
+      }
+    ]
+  }
+]

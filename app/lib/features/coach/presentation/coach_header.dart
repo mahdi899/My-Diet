@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/motion/motion.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../data/demo_store.dart';
-import '../../../presentation/widgets/kit/kit.dart';
-import '../../../presentation/widgets/ui.dart';
+import 'coach_companion.dart';
 
 class CoachHeader extends StatelessWidget {
   const CoachHeader({
@@ -12,98 +9,86 @@ class CoachHeader extends StatelessWidget {
     required this.typing,
     required this.onClose,
     required this.onAvatar,
-    required this.onRing,
+    this.mood = CompanionMood.calm,
+    this.cue = 0,
+    this.onGreet,
   });
-
   final bool typing;
-  final VoidCallback onClose;
-  final VoidCallback onAvatar;
-  final VoidCallback onRing;
+  final CompanionMood mood;
+  final int cue;
+  final VoidCallback? onGreet;
+  final VoidCallback onClose, onAvatar;
 
   @override
-  Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    final name = store.userSignedIn ? store.questionnaire.name : 'مهمان';
-    return GlassBar(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      radius: AppRadius.xxl,
-      child: Row(
-        children: [
-          PressableScale(
-            semanticLabel: 'پروفایل',
-            onTap: onAvatar,
-            child: KeyedSubtree(
-              key: const ValueKey('coach-avatar'),
-              child: PersonAvatar(name, size: 42, color: AppColors.mint),
-            ),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(12, 7, 16, 11),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: AppColors.line)),
+    ),
+    child: Row(
+      children: [
+        IconButton(
+          key: const ValueKey('coach-companion-greet'),
+          tooltip: 'سلام به جوانه',
+          padding: EdgeInsets.zero,
+          onPressed: onGreet,
+          icon: ExcludeSemantics(
+            child: CoachCompanion(size: 56, cue: cue, mood: mood),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'مربی رژیم من',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: AppColors.ink,
-                    height: 1.4,
-                  ),
-                ),
-                Text(
-                  typing ? 'در حال نوشتن…' : 'همراه تغذیهٔ تو',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.6,
-                    color: typing ? AppColors.emeraldDeep : AppColors.muted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          PressableScale(
-            semanticLabel: 'حلقهٔ امروز',
-            onTap: onRing,
-            child: const _TodayChip(),
-          ),
-          IconButton(
-            key: const ValueKey('coach-close'),
-            tooltip: 'بستن',
-            onPressed: onClose,
-            icon: const Icon(Icons.close_rounded, color: AppColors.inkSoft),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TodayChip extends StatelessWidget {
-  const _TodayChip();
-
-  @override
-  Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    final goal = store.calorieTarget(store.today);
-    final safe = goal <= 0 ? 1 : goal;
-    final eaten = store.consumedCalories(store.today);
-    return SizedBox(
-      key: const ValueKey('coach-today'),
-      width: 42,
-      height: 42,
-      child: Ring(
-        value: eaten / safe,
-        size: 42,
-        strokeWidth: 4,
-        duration: Motion.base,
-        child: const Icon(
-          Icons.bolt_rounded,
-          size: 16,
-          color: AppColors.emeraldDeep,
         ),
-      ),
-    );
-  }
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'مربی رژیم من',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                  color: AppColors.emeraldDark,
+                  height: 1.5,
+                ),
+              ),
+              Text(
+                switch (mood) {
+                  CompanionMood.thinking => 'در حال نوشتن…',
+                  CompanionMood.celebrate => 'ثبتت انجام شد؛ آفرین به پیگیریت',
+                  CompanionMood.greeting => 'جوانه؛ همراه کوچک تو',
+                  CompanionMood.reply => 'جوابت اینجاست؛ با هم ادامه بدیم',
+                  CompanionMood.support => 'کنارت هستم؛ قدم‌به‌قدم',
+                  CompanionMood.calm => 'جوانه · دستیار هوشمند تغذیه',
+                },
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.7,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          key: const ValueKey('coach-avatar'),
+          tooltip: 'پروفایل',
+          onPressed: onAvatar,
+          icon: const Icon(
+            Icons.person_outline_rounded,
+            color: AppColors.emeraldDark,
+            size: 23,
+          ),
+        ),
+        IconButton(
+          key: const ValueKey('coach-close'),
+          tooltip: 'بستن',
+          onPressed: onClose,
+          icon: const Icon(
+            Icons.close_rounded,
+            color: AppColors.emeraldDark,
+            size: 23,
+          ),
+        ),
+      ],
+    ),
+  );
 }

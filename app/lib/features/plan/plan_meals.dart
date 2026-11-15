@@ -24,7 +24,6 @@ class _PlanMealCardState extends State<PlanMealCard> {
 
   Future<void> _toggle(DemoStore store) async {
     if (!canLogMeal(store, widget.date)) return;
-    if (store.mealEaten(widget.date, widget.index)) return;
     final saved = await showConsumeSheet(context, widget.date, widget.index);
     if (saved && mounted) {
       Haptics.success();
@@ -34,8 +33,9 @@ class _PlanMealCardState extends State<PlanMealCard> {
 
   void _open() {
     Navigator.of(context, rootNavigator: true).push(
-      fadeThroughRoute<void>(
+      foodDetailRoute<void>(
         MealDetailPage(date: widget.date, index: widget.index),
+        reduced: Motion.reduced(context),
       ),
     );
   }
@@ -48,7 +48,6 @@ class _PlanMealCardState extends State<PlanMealCard> {
     final meal = meals[widget.index];
     final eaten = store.mealEaten(widget.date, widget.index);
     final record = store.mealRecordOn(widget.date, widget.index);
-    final protein = macrosFor(meal.calories, meal.name).protein;
     final mode = record?['mode'];
     final caption = mode is String ? consumeLabels[mode] : null;
     final logging = canLogMeal(store, widget.date);
@@ -60,7 +59,7 @@ class _PlanMealCardState extends State<PlanMealCard> {
         children: [
           FoodHeroCard(
             title: meal.title,
-            subtitle: protein > 0 ? '${fa(protein)} گرم پروتئین' : meal.amount,
+            subtitle: meal.amount,
             kcal: meal.calories > 0 ? meal.calories : null,
             badge: meal.time.isEmpty
                 ? meal.name
@@ -100,9 +99,7 @@ class _PlanMealCardState extends State<PlanMealCard> {
                   variant: eaten ? PillVariant.lime : PillVariant.primary,
                   height: 46,
                   loading: store.savingMeal,
-                  onPressed: logging && !eaten && record == null
-                      ? () => _toggle(store)
-                      : null,
+                  onPressed: logging ? () => _toggle(store) : null,
                 ),
               ),
             ],

@@ -3,12 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../core/format/digits.dart';
-import '../../../../core/photos/photos.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../presentation/widgets/kit/kit.dart';
 import '../../presentation/coach_controller.dart';
 import '../../data/coach_parse.dart';
 import '../../domain/coach_message.dart';
+import 'coach_food_card.dart';
 
 class MealCardView extends StatelessWidget {
   const MealCardView({
@@ -32,140 +32,66 @@ class MealCardView extends StatelessWidget {
       payload['meal_type_fa'],
       asString(payload['meal_name']),
     );
-    final confidence = payload['confidence'];
-    final calories = asInt(payload['calories']);
-    return AppCard(
-      padding: EdgeInsets.zero,
-      clip: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Stack(
-            children: [
-              photo == null
-                  ? FoodImage(
-                      title: asString(payload['photo_title'], title),
-                      mealType: meal,
-                      height: 168,
-                    )
-                  : Image.memory(
-                      photo!,
-                      height: 168,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      cacheWidth: _photoCacheWidth(context),
-                      gaplessPlayback: true,
-                    ),
-              const Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(gradient: AppGradients.photoScrim),
-                ),
+    return CoachFoodCard(
+      title: title,
+      mealType: meal,
+      photoTitle: asString(payload['photo_title'], title),
+      photo: photo,
+      time: asString(payload['time']),
+      calories: asInt(payload['calories']),
+      preparationMinutes: payload['preparation_minutes'] is num
+          ? asInt(payload['preparation_minutes'])
+          : null,
+      subtitle: 'پیشنهاد مربی؛ قبل از ثبت بررسی کن',
+      primaryLabel: 'بررسی و ثبت',
+      onOpen: onReview,
+      onSwap: onSwap,
+      extra: payload.containsKey('protein_g')
+          ? ExpansionTile(
+              title: const Text(
+                'اطلاعات تغذیه',
+                style: TextStyle(fontSize: 12),
               ),
-              Positioned(
-                right: 12,
-                left: 12,
-                bottom: 12,
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-              if (confidence is num)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: _Chip('اطمینان ${fa((confidence * 100).round())}٪'),
-                ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 8),
               children: [
-                Text(
-                  '${meal.isEmpty ? 'وعده' : meal}  ·  ${fa(calories)} کالری',
-                  style: const TextStyle(color: AppColors.inkSoft, height: 1.6),
-                ),
-                const SizedBox(height: 8),
                 _Macros(
                   protein: asInt(payload['protein_g']),
                   carbs: asInt(payload['carbs_g']),
                   fat: asInt(payload['fat_g']),
                 ),
-                const SizedBox(height: 12),
-                PillButton(label: 'بررسی و ثبت', onPressed: onReview),
-                const SizedBox(height: 8),
-                PillButton(
-                  label: 'پیشنهاد دیگه',
-                  variant: PillVariant.outline,
-                  onPressed: onSwap,
-                ),
               ],
-            ),
-          ),
-        ],
-      ),
+            )
+          : null,
     );
   }
 }
 
 class PlanMealView extends StatelessWidget {
-  const PlanMealView({super.key, required this.message, required this.onOpen});
-
+  const PlanMealView({
+    super.key,
+    required this.message,
+    required this.onOpen,
+    required this.onSwap,
+  });
   final CoachMessage message;
-  final VoidCallback onOpen;
-
+  final VoidCallback onOpen, onSwap;
   @override
   Widget build(BuildContext context) {
     final payload = message.payload;
     final title = asString(payload['title'], message.fallbackText);
-    return AppCard(
-      padding: EdgeInsets.zero,
-      clip: true,
-      onTap: onOpen,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FoodImage(
-            title: asString(payload['photo_title'], title),
-            mealType: asString(payload['meal_type_fa']),
-            height: 140,
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  asString(payload['meal_type_fa'], 'وعدهٔ برنامه'),
-                  style: const TextStyle(
-                    color: AppColors.emeraldDeep,
-                    fontSize: 12,
-                  ),
-                ),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    height: 1.6,
-                  ),
-                ),
-                Text(
-                  '${asString(payload['time'])}  ·  ${fa(asInt(payload['calories']))} کالری',
-                  style: const TextStyle(color: AppColors.muted, height: 1.6),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return CoachFoodCard(
+      title: title,
+      mealType: asString(payload['meal_type_fa']),
+      time: asString(payload['time']),
+      photoTitle: asString(payload['photo_title'], title),
+      calories: asInt(payload['calories']),
+      preparationMinutes: payload['preparation_minutes'] is num
+          ? asInt(payload['preparation_minutes'])
+          : null,
+      subtitle: 'یک وعده از برنامهٔ مخصوص تو',
+      onOpen: onOpen,
+      onSwap: onSwap,
     );
   }
 }
@@ -539,33 +465,6 @@ class _Macro extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.92),
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: AppColors.emeraldDark,
-      ),
-    ),
-  );
-}
-
-int _photoCacheWidth(BuildContext context) {
-  final logical = MediaQuery.sizeOf(context).width;
-  final dpr = MediaQuery.devicePixelRatioOf(context);
-  return (logical * dpr).ceil().clamp(64, 900);
 }
 
 class _Step extends StatelessWidget {

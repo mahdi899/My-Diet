@@ -1,0 +1,20 @@
+{
+  "status": "blocked_by_emulator_graphics",
+  "avd_name": "FiboAnalysis20261114",
+  "avd_path": "D:/dev-tools/avd/FiboAnalysis-20261114",
+  "system_image": "system-images;android-37.1;google_apis_playstore_ps16k;x86_64",
+  "emulator_version": "37.1.11.0",
+  "successful_install_message_observed": true,
+  "successful_install_command": "adb -s emulator-5580 install --no-streaming <user-provided APK>",
+  "stable_app_launch_observed": false,
+  "valid_screenshots": 0,
+  "videos": 0,
+  "login_attempted": false,
+  "account_created": false,
+  "subscription_purchased": false,
+  "infrastructure_failure": "SurfaceFlinger/GoldfishMapper abort: Assertion failed: !rcEnc->featureInfo()->hasReadColorBufferDma",
+  "tested_graphics_configurations": ["default", "swiftshader with Vulkan disabled", "swangle with Vulkan, GLDMA and GLDMA2 disabled"],
+  "task_emulator_stopped": true,
+  "existing_user_avds_modified": false,
+  "interpretation": "This infrastructure failure is not evidence of a bug or crash in the Fibo APK. Runtime behavior and animation appearance remain unverified."
+}

@@ -9,6 +9,7 @@ import 'widgets/plan_theater.dart';
 import 'widgets/sleep_dial.dart';
 import 'widgets/steps.dart';
 import '../../core/format/digits.dart';
+import 'widgets/profile_preview.dart';
 import '../../core/theme/tokens.dart';
 
 /// The spec-driven questionnaire. It renders whatever the server's spec says, so adding or
@@ -130,6 +131,15 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         onPrimary: !c.canAdvance ? null : _next,
         busy: c.submitting,
         syncHint: c.submitError ?? c.syncError,
+        profilePreview: c.track == null
+            ? null
+            : OnboardingProfilePreview(
+                controller: c,
+                onRevisit: (id) {
+                  forward = false;
+                  c.revisit(id);
+                },
+              ),
         child: _content(step),
       ),
     );
@@ -275,9 +285,7 @@ class _QuestionView extends StatelessWidget {
         body = _Defaulted(
           questionKey: q.key,
           value: raw,
-          fallback: q.key == 'height_cm'
-              ? (q.defaultValue ?? 165)
-              : fallback,
+          fallback: q.key == 'height_cm' ? (q.defaultValue ?? 165) : fallback,
           controller: controller,
           builder: (v) {
             final chosen = (v as num).toDouble();

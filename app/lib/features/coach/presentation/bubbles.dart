@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/tokens.dart';
+import 'coach_companion.dart';
 
 class CoachTextBubble extends StatelessWidget {
   const CoachTextBubble({
@@ -11,51 +12,76 @@ class CoachTextBubble extends StatelessWidget {
     required this.isUser,
     this.pending = false,
     this.failed = false,
+    this.mood = CompanionMood.calm,
   });
 
   final String text;
   final bool isUser;
   final bool pending;
   final bool failed;
+  final CompanionMood mood;
 
   @override
   Widget build(BuildContext context) {
     const radius = Radius.circular(22);
     const tail = Radius.circular(6);
-    return Align(
-      alignment: isUser
-          ? AlignmentDirectional.centerEnd
-          : AlignmentDirectional.centerStart,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.82,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: isUser ? AppGradients.cta : null,
-            color: isUser ? null : AppColors.surface,
-            borderRadius: BorderRadiusDirectional.only(
-              topStart: radius,
-              topEnd: radius,
-              bottomStart: isUser ? radius : tail,
-              bottomEnd: isUser ? tail : radius,
-            ),
-            boxShadow: isUser ? AppShadows.cta : AppShadows.soft,
+    final bubble = ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width * (isUser ? .82 : .76),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isUser ? AppColors.emeraldDeep : AppColors.surface,
+          borderRadius: BorderRadiusDirectional.only(
+            topStart: radius,
+            topEnd: radius,
+            bottomStart: isUser ? radius : tail,
+            bottomEnd: isUser ? tail : radius,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isUser ? Colors.white : AppColors.ink,
-                fontSize: 15,
-                height: 1.75,
-                fontWeight: isUser ? FontWeight.w600 : FontWeight.w500,
-              ),
+          boxShadow: isUser ? const [] : AppShadows.soft,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Text.rich(
+            TextSpan(
+              children:
+                  !isUser && text.startsWith('سلام') && text.contains('\n')
+                  ? [
+                      TextSpan(
+                        text: text.substring(0, text.indexOf('\n') + 1),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      TextSpan(text: text.substring(text.indexOf('\n') + 1)),
+                    ]
+                  : [TextSpan(text: text)],
+            ),
+            style: TextStyle(
+              color: isUser ? Colors.white : AppColors.emeraldDark,
+              fontSize: 13,
+              height: 1.9,
+              fontWeight: isUser ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
         ),
       ),
+    );
+    return Align(
+      alignment: isUser
+          ? AlignmentDirectional.centerEnd
+          : AlignmentDirectional.centerStart,
+      child: isUser
+          ? bubble
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ExcludeSemantics(child: CoachCompanion(size: 32, mood: mood)),
+                const SizedBox(width: 7),
+                Flexible(child: bubble),
+              ],
+            ),
     );
   }
 }
@@ -128,74 +154,38 @@ class CoachSystemNote extends StatelessWidget {
   }
 }
 
-class TypingDots extends StatefulWidget {
+/// A finite sprout reaction replaces the perpetual typing-dot loop.
+class TypingDots extends StatelessWidget {
   const TypingDots({super.key});
 
   @override
-  State<TypingDots> createState() => _TypingDotsState();
-}
-
-class _TypingDotsState extends State<TypingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  );
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    if (reduced) {
-      _controller.stop();
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    label: 'مربی در حال پاسخ‌دادن است',
+    excludeSemantics: true,
+    child: Align(
       alignment: AlignmentDirectional.centerStart,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: AppShadows.soft,
-        ),
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) => Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < 3; i++)
-                Container(
-                  width: 7,
-                  height: 7,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.emerald.withValues(
-                      alpha:
-                          0.35 +
-                          0.65 *
-                              (((_controller.value + i / 3) % 1) > 0.5
-                                  ? 1
-                                  : 0.4),
-                    ),
-                  ),
-                ),
-            ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CoachCompanion(size: 44, mood: CompanionMood.thinking),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: AppShadows.soft,
+              ),
+              child: const Text(
+                'دارم به حرفت فکر می‌کنم…',
+                style: TextStyle(fontSize: 12, color: AppColors.emeraldDark),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

@@ -1,4 +1,12 @@
+import '../../data/preferences_water_log.dart';
 export '../../domain/plan/water_repository.dart';
+
+/// Compatibility constructor for previews and injected preference stores.
+class WaterLog extends PreferencesWaterLog {
+  WaterLog({super.preferences});
+  static const key = PreferencesWaterLog.key;
+  static final changes = PreferencesWaterLog.changes;
+}
 
 /// Turns the questionnaire's water answer into a daily glass goal.
 int waterGoalFrom(String answer) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/format/digits.dart';
+import '../../../core/motion/motion.dart';
 import '../../../core/photos/photos.dart';
 import '../../../core/theme/tokens.dart';
 import 'pressable_scale.dart';
@@ -61,8 +62,18 @@ class FoodHeroCard extends StatelessWidget {
       ingredients: ingredients,
       mealType: mealType,
       exclude: exclude,
+      cacheWidth:
+          (MediaQuery.sizeOf(context).width *
+                  MediaQuery.devicePixelRatioOf(context))
+              .ceil()
+              .clamp(64, 900),
     );
-    if (heroTag != null) image = Hero(tag: heroTag!, child: image);
+    if (heroTag != null) {
+      image = HeroMode(
+        enabled: !Motion.reduced(context),
+        child: Hero(tag: heroTag!, child: image),
+      );
+    }
     final r = BorderRadius.circular(radius);
     return PressableScale(
       onTap: onTap,
@@ -102,10 +113,9 @@ class FoodHeroCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          FoodTitleHero(
+                            title: title,
+                            tag: heroTag,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 19,
@@ -134,28 +144,69 @@ class FoodHeroCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (done)
-                PositionedDirectional(
-                  top: 12,
-                  end: 12,
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppGradients.cta,
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 22,
+              PositionedDirectional(
+                top: 12,
+                end: 12,
+                child: IgnorePointer(
+                  child: AnimatedScale(
+                    scale: done ? 1 : .7,
+                    duration: Motion.of(context, Motion.quick),
+                    child: AnimatedOpacity(
+                      opacity: done ? 1 : 0,
+                      duration: Motion.of(context, Motion.quick),
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppGradients.cta,
+                        ),
+                        child: const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class FoodTitleHero extends StatelessWidget {
+  const FoodTitleHero({
+    super.key,
+    required this.title,
+    this.tag,
+    required this.style,
+  });
+  final String title;
+  final Object? tag;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Material(
+      type: MaterialType.transparency,
+      child: Text(
+        title,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: style.copyWith(
+          fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+        ),
+      ),
+    );
+    if (tag == null) return text;
+    return HeroMode(
+      enabled: !Motion.reduced(context),
+      child: Hero(tag: '$tag-title', child: text),
     );
   }
 }

@@ -180,6 +180,21 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A profile summary can revisit an existing answer, but cannot skip an
+  /// unanswered required question or revive a question hidden by this path.
+  bool revisit(String id) {
+    final at = steps.indexWhere((step) => step.id == id);
+    if (at < 0 || submitting) return false;
+    final step = steps[at];
+    if (step is QuestionStep && !spec.isAnswered(step.question, answers)) {
+      return false;
+    }
+    index = at;
+    _schedule(step: true);
+    notifyListeners();
+    return true;
+  }
+
   // ----------------------------------------------------------- persistence
 
   bool _trackDirty = false;
@@ -202,7 +217,7 @@ class OnboardingController extends ChangeNotifier {
     if (!hasUnsynced && !_stepDirty) return true;
     _flushing = true;
     final patch = Map<String, Object?>.from(_pending);
-      final step = current.id;
+    final step = current.id;
     try {
       _version = await repository.saveDraft(
         track: track,
