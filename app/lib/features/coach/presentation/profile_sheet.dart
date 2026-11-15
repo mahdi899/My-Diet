@@ -11,8 +11,8 @@ import '../../../presentation/screens/wallet_flow.dart';
 import '../../../presentation/screens/weekly_feedback.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../../../presentation/widgets/ui.dart';
-import '../../plan/goal_math.dart';
 import 'personal_details.dart';
+import 'profile_goal_screen.dart';
 
 void showCoachProfileSheet(BuildContext context) {
   unawaited(
@@ -106,7 +106,6 @@ class _SignedIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final goal = goalOf(store);
     final name = store.questionnaire.name;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -142,9 +141,10 @@ class _SignedIn extends StatelessWidget {
                 onTap: () => _open(context, PersonalDetails(store: store)),
               ),
               MenuRow(
-                'تغییر هدف',
+                'هدف من',
                 Icons.flag_outlined,
-                onTap: () => _open(context, ChangeGoal(store: store)),
+                key: const ValueKey('profile-goal-menu'),
+                onTap: () => _open(context, const ProfileGoalScreen()),
               ),
               MenuRow(
                 'پلن‌ها و اشتراک من',
@@ -157,29 +157,6 @@ class _SignedIn extends StatelessWidget {
                 Icons.medical_information_outlined,
                 onTap: () => _open(context, const DoctorDetailsScreen()),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'هدف‌ها',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-              ),
-              const SizedBox(height: 6),
-              Text('هدف: ${goal.goal}', style: const TextStyle(height: 1.7)),
-              Text(
-                'وزن فعلی: ${kilos(goal.current)} کیلو',
-                style: const TextStyle(height: 1.7),
-              ),
-              if (goal.target != null)
-                Text(
-                  'وزن هدف: ${kilos(goal.target!)} کیلو',
-                  style: const TextStyle(height: 1.7),
-                ),
             ],
           ),
         ),
