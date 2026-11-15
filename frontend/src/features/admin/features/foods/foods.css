@@ -34,6 +34,9 @@
 .admin-reference .food-row-actions .icon { width: 14px; height: 14px; }
 .admin-reference .food-catalog :is(button, select, [role="region"]):focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 .admin-reference .food-catalog-message { padding: 24px; }
+.admin-reference .ingredient-catalog .food-catalog-card table { min-width: 640px; }
+.admin-reference .ingredient-catalog .food-catalog-card td { height: auto; padding-block: 14px; vertical-align: top; }
+.admin-reference .ingredient-reference { max-width: 420px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .admin-reference .food-dialog { margin: auto; width: min(680px, calc(100% - 24px)); max-height: 92dvh; padding: 0; border: 1px solid var(--line); border-radius: 18px; background: white; color: var(--ink); }
 .admin-reference .food-dialog::backdrop { background: #142f2a91; backdrop-filter: blur(4px); }
 .admin-reference .food-dialog header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--soft); }

@@ -34,12 +34,12 @@ export async function exportFoodFile(kind: 'csv' | 'json') {
 }
 
 export const sampleFoods: FoodRow[] = [
-  ['ab_havij', 'آب‌هویج تازه', 'drink', ['snack'], '۱ لیوان', 90, 2, 20, 0, []],
-  ['adasi', 'عدسی', 'breakfast', ['breakfast', 'lunch', 'dinner'], '۱ کاسه (۳۰۰ گرم) با نان', 290, 14, 42, 7, ['gluten']],
-  ['adas_polo', 'عدس‌پلو', 'main', ['lunch', 'dinner'], '۱ پرس با کشمش و ماست', 600, 18, 102, 13, []],
-  ['albaloo_polo_morgh', 'آلبالوپلو با مرغ', 'main', ['lunch', 'dinner'], '۱ ران مرغ + ۱٫۵ کفگیر برنج', 700, 36, 86, 22, []],
-  ['anar', 'انار', 'fruit', ['snack'], '۱ عدد متوسط', 130, 3, 29, 2, []],
-  ['angoor', 'انگور', 'fruit', ['snack'], '۱ خوشه کوچک', 100, 1, 26, 0, []],
+  ['ir_0001', 'نان نخودچی', 'dessert', ['snack', 'side'], 'یک سهم؛ حدود ۳۱ گرم', 176, 3.9, 18.2, 9.8, []],
+  ['ir_0002', 'نان برنجی کرمانشاهی', 'dessert', ['snack', 'side'], 'یک سهم؛ حدود ۳۷ گرم', 187, 1.6, 24.6, 9.2, []],
+  ['ir_0003', 'نان پنجره‌ای', 'dessert', ['snack', 'side'], 'یک سهم؛ حدود ۳۷ گرم', 113, 2.3, 13.6, 5.4, []],
+  ['ir_0004', 'قطاب گردویی خانگی', 'dessert', ['snack', 'side'], 'یک سهم؛ حدود ۳۹ گرم', 185, 3.2, 20.7, 10.3, ['nuts']],
+  ['ir_0005', 'کلمپه خرمایی کرمان', 'dessert', ['snack', 'side'], 'یک سهم؛ حدود ۶۱ گرم', 271, 4.2, 35.2, 13.6, []],
+  ['ir_0006', 'کماج سهن کرمان', 'dessert', ['snack', 'side'], 'یک سهم؛ حدود ۶۰ گرم', 238, 4.6, 35, 10.2, []],
 ].map(([slug, nameFa, category, mealTypes, servingLabel, kcal, proteinG, carbsG, fatG, allergens], index) => ({
   slug, nameFa, category, mealTypes, servingLabel, kcal, proteinG, carbsG, fatG, allergens,
   costTier: index === 3 ? 2 : 1, active: index !== 5,

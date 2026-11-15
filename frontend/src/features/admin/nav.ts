@@ -8,6 +8,7 @@ export const adminNav: StaffNavItem[] = [
   { id: 'payments', title: 'پرداخت‌ها', icon: 'wallet', group: 'مدیریت خدمات' },
   { id: 'onboarding', title: 'ثبت‌نام و پروفایل‌ها', icon: 'users', group: 'مدیریت خدمات' },
   { id: 'foods', title: 'کاتالوگ غذا', icon: 'clipboard', group: 'مدیریت خدمات' },
+  { id: 'ingredients', title: 'مواد اولیه', icon: 'leaf', group: 'مدیریت خدمات' },
   { id: 'reviews', title: 'نظرات', icon: 'star', group: 'ارتباط با کاربران' },
   { id: 'messages', title: 'پیام‌ها', icon: 'message', group: 'ارتباط با کاربران' },
   { id: 'tickets', title: 'تیکت‌ها', icon: 'headphones', group: 'ارتباط با کاربران' },

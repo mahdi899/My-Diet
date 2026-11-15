@@ -8,6 +8,7 @@ use App\Modules\Admin\Presentation\IntegrationsController;
 use App\Modules\Ai\Presentation\AiAdminController;
 use App\Modules\Coach\Presentation\CoachController;
 use App\Modules\Food\Presentation\FoodController;
+use App\Modules\Food\Presentation\IngredientController;
 use App\Modules\Health\Presentation\HealthController;
 use App\Modules\Identity\Presentation\IdentityController;
 use App\Modules\Metrics\Presentation\MetricsController;
@@ -16,6 +17,7 @@ use App\Modules\Onboarding\Presentation\OnboardingAdminController;
 use App\Modules\Onboarding\Presentation\OnboardingController;
 use App\Modules\Onboarding\Presentation\OnboardingWebController;
 use App\Modules\Onboarding\Presentation\TransferController;
+
 Route::get('v1/me/onboarding-transfers/zibal/return', [TransferController::class, 'callback']);
 Route::prefix('v1/me/onboarding-transfers')->middleware('session:user')->controller(TransferController::class)->group(function (): void {
     Route::post('', 'create');
@@ -248,6 +250,7 @@ Route::prefix('v1/catalog')->middleware('session:specialist,admin')->controller(
     Route::get('foods', 'catalog');
     Route::post('compose', 'compose');
 });
+Route::get('v1/admin/ingredients', [IngredientController::class, 'listing'])->middleware('session:admin');
 Route::prefix('v1/admin/foods')->middleware('session:admin')->controller(FoodController::class)->group(function (): void {
     Route::get('', 'listing');
     Route::get('export.csv', 'exportCsv');

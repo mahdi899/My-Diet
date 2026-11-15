@@ -11,8 +11,10 @@ use App\Modules\Coach\Application\CoachModel;
 use App\Modules\Coach\Infrastructure\ConfiguredCoachModel;
 use App\Modules\Coach\Infrastructure\MySqlCoach;
 use App\Modules\Food\Application\FoodStore;
+use App\Modules\Food\Application\IngredientStore;
 use App\Modules\Food\Domain\FoodRules;
 use App\Modules\Food\Infrastructure\MySqlFoods;
+use App\Modules\Food\Infrastructure\MySqlIngredients;
 use App\Modules\Identity\Application\IdentitySettings;
 use App\Modules\Identity\Application\IdentityStore;
 use App\Modules\Identity\Application\OtpSender;
@@ -106,6 +108,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AdminQueries::class, MySqlAdminQueries::class);
         $this->app->bind(PublishingStore::class, MySqlPublishing::class);
         $this->app->bind(FoodStore::class, MySqlFoods::class);
+        $this->app->bind(IngredientStore::class, MySqlIngredients::class);
         $this->app->singleton(FoodRules::class, fn () => new FoodRules(
             json_decode(file_get_contents(app_path('Modules/Food/Infrastructure/resources/input-schema.json')), true, 512, JSON_THROW_ON_ERROR)));
         $this->app->bind(QuestionnaireStore::class, MySqlQuestionnaires::class);
