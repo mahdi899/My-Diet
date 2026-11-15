@@ -13,7 +13,13 @@ final class MoneyService
 
     public function catalog(): array
     {
-        return [...$this->store->catalog(), 'plans' => array_values(SubscriptionPlans::ALL)];
+        $plans = [];
+        foreach (SubscriptionPlans::ALL as $plan) {
+            $plan['priceToman'] = $this->store->planPrice($plan['id']);
+            $plans[] = $plan;
+        }
+
+        return [...$this->store->catalog(), 'plans' => $plans];
     }
 
     public function gateways(): array
@@ -91,7 +97,7 @@ final class MoneyService
             if ($service !== 'new_plan' && $context['includedChanges']) {
                 return ['status' => 'paid', ...$this->place($user, $key, $service, $expected, $parent)];
             }
-            $amount = $plan['priceToman'] ?? $this->store->price($service);
+            $amount = $plan === null ? $this->store->price($service) : $this->store->planPrice($plan['id']);
             if ($amount <= 0 || $amount !== $expected) {
                 throw new Problem(409, 'price_changed', 'تعرفه تغییر کرده است؛ پلن‌ها را دوباره دریافت کن');
             }

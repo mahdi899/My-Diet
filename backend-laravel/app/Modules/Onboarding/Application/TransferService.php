@@ -3,18 +3,22 @@
 namespace App\Modules\Onboarding\Application;
 
 use App\Modules\Identity\Application\IdentitySettings;
+use App\Modules\Money\Application\MoneyStore;
 use App\Modules\Money\Domain\SubscriptionPlans;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 
 final class TransferService
 {
-    public function __construct(private TransferStore $store, private TransferGateway $gateway, private PurchaseConfirmation $confirmation, private IdentitySettings $settings) {}
+    public function __construct(private TransferStore $store, private TransferGateway $gateway, private PurchaseConfirmation $confirmation, private IdentitySettings $settings, private MoneyStore $prices) {}
 
     public function create(string $user, string $plan, string $submission): array
     {
-        $price = SubscriptionPlans::ALL[$plan]['priceToman'] ?? null;
-        if (! $price) {
+        if (! isset(SubscriptionPlans::ALL[$plan])) {
+            throw new Problem(400, 'validation', 'پلن معتبر نیست');
+        }
+        $price = $this->prices->planPrice($plan);
+        if ($price <= 0) {
             throw new Problem(400, 'validation', 'پلن معتبر نیست');
         }
 

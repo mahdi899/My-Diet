@@ -4,6 +4,7 @@ namespace App\Modules\Admin\Infrastructure;
 
 use App\Modules\Admin\Domain\AdminRules;
 use App\Modules\Identity\Application\IdentitySettings;
+use App\Modules\Money\Domain\SubscriptionPlans;
 use App\Modules\Plans\Domain\CivilDates;
 use App\Modules\Worker\Application\WorkerStore;
 use App\Shared\Domain\Amount;
@@ -191,16 +192,27 @@ final class MySqlAdminDesk
         });
     }
 
-    public function setPrice(string $actor, string $service, int $amount): array
+    public function subscriptionPrices(): array
+    {
+        $plans = [];
+        foreach (SubscriptionPlans::ALL as $plan) {
+            $stored = $this->db->table('subscription_plan_prices')->where('plan_code', $plan['id'])->where('effective_from', '<=', $this->db->raw('current_timestamp(6)'))->orderByDesc('effective_from')->value('amount_toman');
+            $plans[] = ['id' => $plan['id'], 'title' => $plan['title'], 'days' => $plan['days'], 'priceToman' => (int) ($stored ?? $plan['priceToman'])];
+        }
+
+        return ['plans' => $plans];
+    }
+
+    public function setSubscriptionPrice(string $actor, string $plan, int $amount): array
     {
         $this->money($amount);
-        if (! $this->db->table('services')->where('code', $service)->exists()) {
-            throw new Problem(404, 'not_found', 'خدمت پیدا نشد');
+        if (! isset(SubscriptionPlans::ALL[$plan])) {
+            throw new Problem(404, 'not_found', 'پلن اشتراک پیدا نشد');
         }
-        $this->db->table('service_prices')->insert(['id' => Crypto::uuid(), 'service_code' => $service, 'amount_toman' => $amount]);
-        $this->audit($actor, 'price_changed', 'service', null, ['serviceCode' => $service, 'amountToman' => $amount]);
+        $this->db->table('subscription_plan_prices')->insert(['id' => Crypto::uuid(), 'plan_code' => $plan, 'amount_toman' => $amount]);
+        $this->audit($actor, 'subscription_price_changed', 'subscription_plan', null, ['planId' => $plan, 'amountToman' => $amount]);
 
-        return ['serviceCode' => $service, 'amountToman' => $amount];
+        return ['planId' => $plan, 'days' => SubscriptionPlans::ALL[$plan]['days'], 'amountToman' => $amount];
     }
 
     public function setReward(string $actor, int $amount): array

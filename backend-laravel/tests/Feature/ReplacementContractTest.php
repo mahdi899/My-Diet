@@ -18,7 +18,8 @@ final class ReplacementContractTest extends MySqlTestCase
         $this->postJson('/v1/admin/specialists/'.$specialist.'/verification', ['status' => 'verified'])->assertCreated();
         $this->postJson('/v1/admin/specialists/'.$specialist.'/members', ['userId' => $user['id']])->assertCreated()->assertJsonPath('ok', true);
         $this->getJson('/v1/admin/specialists/'.$specialist.'/members')->assertOk()->assertJsonPath('0.id', $user['id']);
-        $this->putJson('/v1/admin/prices', ['serviceCode' => 'new_plan', 'amountToman' => 250000])->assertOk()->assertJsonPath('amountToman', 250000);
+        $this->putJson('/v1/admin/subscription-prices', ['planId' => 'weekly', 'amountToman' => 250000])->assertOk()->assertJsonPath('amountToman', 250000)->assertJsonPath('days', 15);
+        $this->getJson('/v1/admin/subscription-prices')->assertOk()->assertJsonPath('plans.0.priceToman', 250000);
         $this->putJson('/v1/admin/reward', ['amountToman' => 10000])->assertOk();
         $reference = Crypto::uuid();
         $this->postJson('/v1/admin/wallet-adjustments', ['userId' => $user['id'], 'amountToman' => 500, 'direction' => 'credit', 'reason' => 'اصلاح آزمایش', 'referenceId' => $reference])->assertCreated()->assertJsonPath('cashToman', 500);

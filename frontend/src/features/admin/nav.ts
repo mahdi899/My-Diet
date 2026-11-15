@@ -15,7 +15,7 @@ export const adminNav: StaffNavItem[] = [
   { id: 'notifications', title: 'نوتفیکیشن', icon: 'bell', group: 'ارتباط با کاربران' },
   { id: 'articles', title: 'مقالات', icon: 'clipboard', group: 'محتوا' },
   { id: 'ai', title: 'هوش مصنوعی', icon: 'sparkles', group: 'تنظیمات و ابزارها' },
-  { id: 'settings', title: 'تعرفه و پاداش', icon: 'sliders', group: 'تنظیمات و ابزارها' },
+  { id: 'subscription-prices', title: 'تعرفه اشتراک', icon: 'wallet', group: 'تنظیمات و ابزارها' },
   { id: 'streaks', title: 'کمپین روزهای پیاپی', icon: 'calendar', group: 'تنظیمات و ابزارها' },
   { id: 'audit-logs', title: 'تاریخچه فعالیت', icon: 'history', group: 'تنظیمات و ابزارها' },
   { id: 'questionnaire', title: 'پیکربندی پرسش‌نامه', icon: 'clipboard', group: 'توسعه سامانه' },

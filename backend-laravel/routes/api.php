@@ -326,7 +326,8 @@ Route::prefix('v1/admin')->middleware('session:admin')->group(function (): void 
         Route::post('specialists/{id}/verification', 'verification');
         Route::post('requests/{id}/assignment', 'assign');
         Route::get('requests', 'requests');
-        Route::put('prices', 'price');
+        Route::get('subscription-prices', 'subscriptionPrices');
+        Route::put('subscription-prices', 'subscriptionPrice');
         Route::put('reward', 'reward');
         Route::get('reviews', 'reviews');
         Route::post('reviews/{id}', 'moderate');

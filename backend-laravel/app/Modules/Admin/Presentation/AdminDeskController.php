@@ -139,14 +139,19 @@ final class AdminDeskController
         return response()->json($this->desk->assign($this->actor($request), Input::uuid($id), Input::uuid(is_string($body['specialistId'] ?? null) ? $body['specialistId'] : ''), Input::string($body, 'reason', 200)), 201);
     }
 
-    public function price(Request $request): array
+    public function subscriptionPrices(): array
     {
-        $body = Input::body($request, ['serviceCode', 'amountToman']);
+        return $this->desk->subscriptionPrices();
+    }
+
+    public function subscriptionPrice(Request $request): array
+    {
+        $body = Input::body($request, ['planId', 'amountToman']);
         if (! is_int($body['amountToman'] ?? null)) {
             throw new Problem(400, 'validation', 'مبلغ درست نیست');
         }
 
-        return $this->desk->setPrice($this->actor($request), Input::string($body, 'serviceCode', 40), $body['amountToman']);
+        return $this->desk->setSubscriptionPrice($this->actor($request), Input::string($body, 'planId', 40), $body['amountToman']);
     }
 
     public function reward(Request $request): array

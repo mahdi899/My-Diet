@@ -201,6 +201,13 @@ final class MySqlMoney implements MoneyStore
         return Amount::safe((string) ($this->db->table('service_prices')->where('service_code', $service)->where('effective_from', '<=', $this->db->raw('current_timestamp(6)'))->orderByDesc('effective_from')->value('amount_toman') ?? 0));
     }
 
+    public function planPrice(string $plan): int
+    {
+        $stored = $this->db->table('subscription_plan_prices')->where('plan_code', $plan)->where('effective_from', '<=', $this->db->raw('current_timestamp(6)'))->orderByDesc('effective_from')->value('amount_toman');
+
+        return Amount::safe((string) ($stored ?? SubscriptionPlans::ALL[$plan]['priceToman'] ?? 0));
+    }
+
     public function assignSpecialist(): ?string
     {
         $this->db->statement('insert into identity_mutexes(lock_key) values(?) as incoming on duplicate key update lock_key=incoming.lock_key', [hash('sha256', 'plans:assignment')]);

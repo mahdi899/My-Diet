@@ -54,6 +54,8 @@ interface MoneyStore
 
     public function price(string $service): int;
 
+    public function planPrice(string $plan): int;
+
     public function assignSpecialist(): ?string;
 
     public function createOrder(array $order, array $request): void;
