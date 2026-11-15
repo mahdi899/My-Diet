@@ -21,7 +21,7 @@ String resolveApiBase() {
   if (kReleaseMode) return 'https://my-diet.ir';
   // Chrome/debug web: demo data only unless API_BASE_URL is set (see frontend-phase-0-1).
   if (kIsWeb) return '';
-  // 10.0.2.2 does not reach the host on this machine. adb reverse maps 127.0.0.1:8000.
+  // The debug build runs adb reverse so this address is the host Laravel server.
   // Pass --dart-define=API_BASE_URL=http://127.0.0.1:3000 to use the Nest process instead.
   return 'http://127.0.0.1:8000';
 }

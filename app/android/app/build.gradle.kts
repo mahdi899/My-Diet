@@ -61,15 +61,29 @@ tasks.register("reverseLocalApi") {
         val adbName = if (System.getProperty("os.name").lowercase().contains("windows")) "adb.exe" else "adb"
         val adb = File(sdk, "platform-tools" + File.separator + adbName)
         if (!adb.exists()) return@doLast
-        ProcessBuilder(adb.absolutePath, "reverse", "tcp:3000", "tcp:3000")
+        val listing = ProcessBuilder(adb.absolutePath, "devices")
             .redirectErrorStream(true)
             .start()
-            .waitFor()
+        val devices = listing.inputStream.bufferedReader().readText()
+        listing.waitFor()
+        val serials = devices.lineSequence()
+            .map { it.trim() }
+            .filter { it.endsWith("\tdevice") }
+            .map { it.substringBefore('\t') }
+            .filter { it.isNotEmpty() }
+            .toList()
+        for (serial in serials) {
+            val reverse = ProcessBuilder(adb.absolutePath, "-s", serial, "reverse", "tcp:8000", "tcp:8000")
+                .redirectErrorStream(true)
+                .start()
+            val output = reverse.inputStream.bufferedReader().readText().trim()
+            if (reverse.waitFor() != 0) logger.warn("adb reverse tcp:8000 failed for $serial: $output")
+        }
     }
 }
 
 afterEvaluate {
-    tasks.matching { it.name == "preDebugBuild" }.configureEach {
+    tasks.matching { it.name == "preBuild" || it.name == "preDebugBuild" }.configureEach {
         dependsOn("reverseLocalApi")
     }
 }
