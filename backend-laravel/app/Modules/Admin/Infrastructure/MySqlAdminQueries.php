@@ -36,7 +36,12 @@ final class MySqlAdminQueries implements AdminQueries
 
     public function payments(): array
     {
-        return array_map(fn ($row) => ['id' => $row->id, 'user' => $row->display_name ?: $row->phone_e164, 'packageCode' => $row->package_code, 'amountToman' => Amount::safe($row->amount_toman), 'status' => $row->status, 'createdAt' => Crypto::iso($row->created_at)],
+        return array_map(fn ($row) => [
+            'id' => $row->id, 'user' => $row->display_name ?: $row->phone_e164, 'phone' => $row->phone_e164,
+            'packageCode' => $row->package_code, 'amountToman' => Amount::safe($row->amount_toman), 'status' => $row->status,
+            'createdAt' => Crypto::iso($row->created_at), 'paidAt' => $row->credited_at === null ? null : Crypto::iso($row->credited_at),
+            'reference' => $row->ref_id,
+        ],
             $this->db->table('payments as p')->join('users as u', 'u.id', '=', 'p.user_id')->select('p.*', 'u.display_name', 'u.phone_e164')->orderByDesc('p.created_at')->orderByDesc('p.id')->limit(100)->get()->all());
     }
 

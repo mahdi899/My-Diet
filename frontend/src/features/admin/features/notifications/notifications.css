@@ -1,0 +1,79 @@
+.admin-reference .push-page-react { display: grid; gap: 24px; min-width: 0; }
+.admin-reference .push-overview { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 1.8fr); gap: 18px 24px; padding: 24px 28px; border: 1px solid var(--line); border-radius: 18px; background: #f8faf5; }
+.admin-reference .push-overview-title { display: flex; gap: 14px; align-items: flex-start; }
+.admin-reference .push-overview h2, .admin-reference .push-table-card h2 { font-size: 16px; font-weight: 700; }
+.admin-reference .push-overview-title p, .admin-reference .push-table-card header p { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.admin-reference .push-overview dl { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; }
+.admin-reference .push-overview dl > div { min-width: 0; border-inline-start: 1px solid var(--line); padding-inline-start: 16px; }
+.admin-reference .push-overview dt { color: var(--muted); font-size: 11px; }
+.admin-reference .push-overview dd { display: grid; justify-items: start; gap: 4px; margin: 8px 0 0; font-weight: 700; }
+.admin-reference .push-overview bdi { overflow-wrap: anywhere; font-size: 11px; font-weight: 400; }
+.admin-reference .push-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #f4f7f0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.admin-reference .push-note > .icon { flex: none; width: 16px; height: 16px; margin-top: 3px; color: var(--green); }
+.admin-reference .push-overview > .push-note { grid-column: 1 / -1; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.admin-reference .push-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: #eef1ed; color: #53634f; font-size: 11px; white-space: nowrap; font-weight: 500; }
+.admin-reference .push-badge i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.admin-reference .push-badge[data-tone="good"] { background: #e8f1e2; color: #365c38; }
+.admin-reference .push-badge[data-tone="pending"] { background: #f8efdb; color: #77571b; }
+.admin-reference .push-badge[data-tone="error"] { background: #fae9e7; color: #9b322d; }
+.admin-reference .push-table-card { border-radius: 16px; min-width: 0; }
+.admin-reference .push-table-card > header { padding: 20px 24px 22px; border-bottom: 1px solid var(--users-line); }
+.admin-reference .push-table-card .users-toolbar { padding: 16px 22px; }
+.admin-reference .push-table-card .users-search { width: min(350px, 100%); border-color: var(--users-line); }
+.admin-reference .push-table-card .users-table-scroll:focus-visible { outline: 2px solid var(--users-focus); outline-offset: -2px; }
+.admin-reference .push-table-card .users-status-menu { max-height: 48dvh; overflow-y: auto; }
+.admin-reference .push-table-card button.users-filter-labeled { width: auto; min-height: 44px; gap: 9px; border: 1px solid var(--users-line); font-size: 11px; }
+.admin-reference .push-table-card .users-filter-labeled .icon { width: 14px; height: 14px; }
+.admin-reference .push-table-card .users-filter-chevron { transform: rotate(-90deg); }
+.admin-reference .push-table-card table { min-width: 1060px; table-layout: auto; }
+.admin-reference .push-table-card th { background: var(--users-soft); font-weight: 600; white-space: nowrap; }
+.admin-reference .push-table-card th:first-child { width: 21%; }
+.admin-reference .push-table-card th:last-child { width: auto; }
+.admin-reference .push-table-card :is(td, th) { padding-inline: 14px; }
+.admin-reference .push-table-card td:first-child small { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.admin-reference .push-row-actions { display: flex; gap: 6px; }
+.admin-reference .push-row-actions button { padding: 7px 9px; min-height: 44px; white-space: nowrap; }
+.admin-reference .push-row-actions .push-delete { color: var(--users-danger); }
+.admin-reference .push-table-card .users-page-button { border: 1px solid var(--users-line); }
+.admin-reference .push-table-card .push-empty-cell { padding: 0; text-align: center; }
+.admin-reference .push-empty { min-height: 267px; display: grid; align-content: center; justify-items: center; gap: 14px; padding: 32px 18px; }
+.admin-reference .push-empty > .icon-tile { width: 58px; height: 58px; margin: 0 0 8px; border-radius: 20px; box-shadow: 0 0 0 8px #f4f7f2; }
+.admin-reference .push-empty h3 { font-size: 14px; font-weight: 700; }
+.admin-reference .push-empty p { color: var(--muted); max-width: 370px; font-size: 12px; }
+.admin-reference .push-feedback { padding: 20px; }
+.admin-reference .push-feedback button { margin-top: 12px; }
+.admin-reference .push-dialog { margin: auto; width: min(620px, calc(100% - 24px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 22px; color: var(--ink); background: white; box-shadow: 0 24px 100px #102e2940; }
+.admin-reference .push-dialog[open] { animation: push-dialog-enter 180ms ease-out; }
+.admin-reference .push-dialog::backdrop { background: #142f2a91; backdrop-filter: blur(4px); }
+.admin-reference .push-dialog header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 26px; border-bottom: 1px solid var(--line); background: #f7f9f5; }
+.admin-reference .push-dialog h2 { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; }
+.admin-reference .push-dialog h2 .icon-tile { width: 38px; height: 38px; border-radius: 11px; }
+.admin-reference .push-dialog header button { width: 44px; min-height: 44px; }
+.admin-reference .push-dialog-form { display: grid; gap: 16px; padding: 24px 28px; }
+.admin-reference .push-dialog-form label { margin: 0; }
+.admin-reference .push-dialog-form :is(input, select, textarea) { min-height: 46px; margin: 7px 0 0; }
+.admin-reference .push-dialog textarea { min-height: 108px; resize: vertical; }
+.admin-reference .push-dialog textarea.push-account { min-height: 220px; }
+.admin-reference .push-dialog-form small { display: block; margin-top: 6px; color: var(--muted); font-weight: 400; font-size: 11px; }
+.admin-reference .push-dialog :is(input, select, textarea, button):focus-visible { outline: 3px solid #507939; outline-offset: 2px; }
+.admin-reference .push-dialog-actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 18px; border-top: 1px solid var(--line); }
+.admin-reference .push-dialog-actions button { min-height: 46px; }
+.admin-reference .push-preview { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; min-height: 86px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 13px; background: #f3f6f0; }
+.admin-reference .push-preview strong, .admin-reference .push-preview p, .admin-reference .push-detail p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-reference .push-preview p { color: var(--muted); margin-top: 5px; }
+.admin-reference .push-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admin-reference .push-detail-grid > div { padding: 10px; background: var(--soft); border-radius: 8px; }
+.admin-reference .push-detail-grid dt { color: var(--muted); font-size: 12px; }
+.admin-reference .push-detail-grid dd { margin: 4px 0 0; }
+@keyframes push-dialog-enter { from { opacity: 0; transform: translateY(8px) scale(.99); } }
+@media (prefers-reduced-motion: reduce) { .admin-reference .push-dialog[open] { animation: none; } }
+@media (max-width: 820px) { .admin-reference .push-overview { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .admin-reference .push-dialog header, .admin-reference .push-dialog-form, .admin-reference .push-overview { padding: 16px; }
+  .admin-reference .push-overview dl > div { padding-inline-start: 7px; }
+  .admin-reference .push-overview .push-badge { white-space: normal; }
+  .admin-reference .push-table-card thead { display: table-header-group; }
+  .admin-reference .push-table-card tbody { display: table-row-group; }
+  .admin-reference .push-table-card tbody tr { display: table-row; border: 0; }
+  .admin-reference .push-table-card table:has(.push-empty-cell) .push-empty { width: min(100%, calc(100vw - 56px)); }
+}

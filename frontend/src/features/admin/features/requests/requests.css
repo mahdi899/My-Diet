@@ -1,0 +1,19 @@
+.admin-reference .requests-table-card table { min-width: 720px; }
+.admin-reference .requests-table-card th:first-child { width: 27%; }
+.admin-reference .requests-table-card th:last-child { width: 20%; }
+.admin-reference .requests-table-card th { background: var(--users-soft); }
+.admin-reference .requests-table-card .users-avatar .icon { width: 17px; height: 17px; }
+.admin-reference .requests-table-card .users-id { display: block; overflow-wrap: anywhere; }
+.admin-reference .requests-table-card .users-status-menu { max-height: min(24rem, 50dvh); overflow-y: auto; }
+.admin-reference .requests-table-card [data-status="published"] { color: var(--users-accent); }
+.admin-reference .requests-table-card [data-status="cancelled"] { color: var(--users-danger); }
+.admin-reference .requests-table-card [data-status="in_review"],
+.admin-reference .requests-table-card [data-status="generating"],
+.admin-reference .requests-table-card [data-status="response_received"] { color: #315b7a; }
+@media (max-width: 640px) {
+  .admin-reference .requests-table-card thead { display: table-header-group; }
+  .admin-reference .requests-table-card tbody { display: table-row-group; }
+  .admin-reference .requests-table-card tbody tr { display: table-row; border: 0; }
+  .admin-reference .requests-table-card th,
+  .admin-reference .requests-table-card td { padding: 12px 16px; }
+}

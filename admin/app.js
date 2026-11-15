@@ -227,55 +227,70 @@ function specialistMembers(doctor) {
   openModal('زیرمجموعه‌های ' + (doctor.displayName || 'پزشک'), async (body, dialog) => {
     dialog.classList.add('user-detail-modal');
     dialog.addEventListener('close', () => { void load(); }, { once: true });
-    const paint = (nodes) => { body.replaceChildren(...nodes); };
-    const showCurrent = async () => {
-      paint([skeleton()]);
-      const people = await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members');
-      const toolbar = element('div', null, 'member-toolbar');
-      toolbar.append(button('افزودن', () => { void showAvailable(); }, { iconName: 'plus' }));
-      const list = element('div', null, 'member-list');
-      if (!people.length) list.append(infoNote('هنوز کاربری در زیرمجموعهٔ این پزشک نیست.'));
-      for (const person of people) {
-        const remove = iconAction('حذف از زیرمجموعه', async () => {
-          remove.disabled = true;
-          try {
-            await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members/' + encodeURIComponent(person.id), 'DELETE');
-            notice('کاربر از زیرمجموعه خارج شد');
-            await showCurrent();
-          } catch (error) {
-            notice(error.message, 'error');
-            remove.disabled = false;
-          }
-        }, 'trash', 'danger');
-        list.append(memberLine(person, remove));
-      }
-      paint([toolbar, list]);
-    };
-    const showAvailable = async () => {
-      paint([skeleton()]);
-      const people = await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members?available=1');
-      const toolbar = element('div', null, 'member-toolbar');
-      toolbar.append(button('بازگشت', () => { void showCurrent(); }, { secondary: true, iconName: 'chevron-right' }));
-      const list = element('div', null, 'member-list');
-      if (!people.length) list.append(infoNote('کاربری که زیرمجموعهٔ هیچ پزشکی نباشد پیدا نشد.'));
-      for (const person of people) {
-        const add = button('افزودن', async () => {
-          add.disabled = true;
-          try {
-            await api('admin/specialists/' + encodeURIComponent(doctor.id) + '/members', 'POST', { userId: person.id });
-            notice('کاربر به زیرمجموعه اضافه شد');
-            await showCurrent();
-          } catch (error) {
-            notice(error.message, 'error');
-            add.disabled = false;
-          }
-        }, { secondary: true, iconName: 'plus' });
-        list.append(memberLine(person, add));
-      }
-      paint([toolbar, list]);
-    };
-    await showCurrent();
+    await renderSpecialistMembers(body, doctor);
   }, { iconName: 'users', modalClass: 'modal-wide' });
+}
+async function renderSpecialistMembers(body, doctor) {
+  const path = 'admin/specialists/' + encodeURIComponent(doctor.id) + '/members';
+  const paint = (nodes) => { body.replaceChildren(...nodes); };
+  const navigate = async view => {
+    try {
+      await view();
+      body.querySelector('.member-toolbar button')?.focus();
+    } catch (error) {
+      const alert = element('p', error.message, 'form-error');
+      alert.setAttribute('role', 'alert');
+      paint([alert, button('تلاش دوباره', () => navigate(view), { secondary: true })]);
+      body.querySelector('button')?.focus();
+    }
+  };
+  const showCurrent = async () => {
+    paint([skeleton()]);
+    const people = await api(path);
+    const toolbar = element('div', null, 'member-toolbar');
+    toolbar.append(button('افزودن زیرمجموعه', () => navigate(showAvailable), { iconName: 'plus' }));
+    const list = element('div', null, 'member-list');
+    if (!people.length) list.append(infoNote('هنوز کاربری در زیرمجموعهٔ این پزشک نیست.'));
+    for (const person of people) {
+      const remove = iconAction('حذف از زیرمجموعه', async () => {
+        remove.disabled = true;
+        try {
+          await api(path + '/' + encodeURIComponent(person.id), 'DELETE');
+          notice('کاربر از زیرمجموعه خارج شد');
+          await navigate(showCurrent);
+        } catch (error) {
+          notice(error.message, 'error');
+          remove.disabled = false;
+        }
+      }, 'trash', 'danger');
+      list.append(memberLine(person, remove));
+    }
+    paint([toolbar, list]);
+  };
+  const showAvailable = async () => {
+    paint([skeleton()]);
+    const people = await api(path + '?available=1');
+    const toolbar = element('div', null, 'member-toolbar');
+    toolbar.append(button('بازگشت به زیرمجموعه‌ها', () => navigate(showCurrent), { secondary: true, iconName: 'chevron-right' }));
+    const list = element('div', null, 'member-list');
+    if (!people.length) list.append(infoNote('کاربری که زیرمجموعهٔ هیچ پزشکی نباشد پیدا نشد.'));
+    for (const person of people) {
+      const add = button('افزودن', async () => {
+        add.disabled = true;
+        try {
+          await api(path, 'POST', { userId: person.id });
+          notice('کاربر به زیرمجموعه اضافه شد');
+          await navigate(showCurrent);
+        } catch (error) {
+          notice(error.message, 'error');
+          add.disabled = false;
+        }
+      }, { secondary: true, iconName: 'plus' });
+      list.append(memberLine(person, add));
+    }
+    paint([toolbar, list]);
+  };
+  await navigate(showCurrent);
 }
 function specialistRowActions(row) {
   const actions = element('div', null, 'cell-actions');
@@ -448,7 +463,12 @@ function addSpecialistModal() {
     profileSection.append(element('h3', 'اطلاعات فردی و حرفه‌ای'), element('p', 'مشخصات پزشک را مطابق مدارک وارد کنید.'), grid);
     const loginSection = element('section', null, 'specialist-form-section');
     loginSection.append(element('h3', 'دسترسی به پنل پزشک'), credentials);
-    form.append(profileSection, photoSection, loginSection, formFooter('ایجاد حساب پزشک', 'check', dialog));
+    const members = element('section', null, 'specialist-form-section specialist-create-members');
+    const membersTitle = element('h3', 'زیرمجموعه‌ها');
+    const membersBody = element('div');
+    membersBody.append(element('p', 'بعد از ایجاد حساب، کاربران را همین‌جا به زیرمجموعهٔ پزشک اضافه کنید.'));
+    members.append(membersTitle, membersBody);
+    form.append(profileSection, photoSection, loginSection, members, formFooter('ایجاد حساب پزشک', 'check', dialog));
     onForm(form, async data => {
       if (!prepared) throw new Error('تصویر پروفایل را انتخاب کنید و صبر کنید تا بارگذاری کامل شود');
       const councilNo = latinDigits(data.councilNo);
@@ -459,14 +479,20 @@ function addSpecialistModal() {
       const panelPassword = data.panelPassword ?? '';
       if (panelPassword.length < 8) throw new Error('رمز عبور باید حداقل ۸ نویسه باشد');
       if (!birth.value) throw new Error('تاریخ تولد را از تقویم شمسی انتخاب کنید');
-      await api('admin/specialists', 'POST', {
+      const doctor = await api('admin/specialists', 'POST', {
         firstName: data.firstName, lastName: data.lastName, birthDate: data.birthDate,
         councilNo, education: data.education, phone: mobile, portrait: prepared,
         username: data.username.trim().toLowerCase(), password: panelPassword,
       });
-      dialog.close();
+      if (!dialog.open) { await load(); return; }
+      const saved = element('p', 'حساب پزشک ایجاد شد.', 'info-note');
+      saved.setAttribute('role', 'status');
+      const finish = element('div', null, 'form-submit');
+      finish.append(button('پایان', () => dialog.close(), { iconName: 'check' }));
+      form.replaceChildren(saved, members, finish);
+      dialog.addEventListener('close', () => { void load(); }, { once: true });
       notice('پزشک ثبت شد');
-      await load();
+      await renderSpecialistMembers(membersBody, doctor);
     });
     body.append(form);
   }, { iconName: 'medical' });

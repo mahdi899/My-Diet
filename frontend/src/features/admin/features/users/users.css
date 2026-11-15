@@ -20,6 +20,7 @@
 .admin-reference button.users-filter-toggle { position: relative; width: 44px; height: 44px; padding: 12px; border: 0; border-radius: 8px; background: transparent; color: var(--users-muted); box-shadow: none; }
 .admin-reference button.users-filter-toggle:hover, .admin-reference button.users-filter-toggle[aria-expanded="true"] { background: var(--users-soft); color: var(--users-accent); box-shadow: none; }
 .admin-reference .users-filter-toggle .icon { width: 18px; height: 18px; }
+.admin-reference .users-filter-toggle:focus-visible { outline: 2px solid var(--users-focus); outline-offset: 2px; }
 .admin-reference .users-filter-anchor { position: relative; flex: none; }
 .admin-reference .users-filter-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; flex: none; }
 .admin-reference button.users-clear-filters { min-height: 44px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--users-accent); font-size: 12px; font-weight: 400; box-shadow: none; }

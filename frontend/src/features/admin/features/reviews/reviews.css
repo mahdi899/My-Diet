@@ -1,0 +1,30 @@
+.admin-reference .reviews-card { min-width: 0; border-radius: 16px; }
+.admin-reference .reviews-card .users-toolbar { padding: 18px 22px; }
+.admin-reference .reviews-card .users-search { width: min(350px, 100%); border-color: var(--users-line); }
+.admin-reference .reviews-card table { min-width: 620px; table-layout: auto; }
+.admin-reference .reviews-card th { background: var(--users-soft); font-weight: 600; white-space: nowrap; }
+.admin-reference .reviews-card th:first-child { width: 14%; }
+.admin-reference .reviews-card th:last-child { width: 22%; }
+.admin-reference .reviews-card th:nth-child(3) { width: 32%; }
+.admin-reference .reviews-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-reference .reviews-actions { display: flex; gap: 8px; }
+.admin-reference .reviews-actions button { min-height: 44px; white-space: nowrap; }
+.admin-reference .reviews-actions .reviews-reject { color: var(--users-danger); }
+.admin-reference .reviews-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: #f8efdb; color: #77571b; font-size: 11px; white-space: nowrap; }
+.admin-reference .reviews-status i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.admin-reference .reviews-card td.reviews-empty-cell { padding: 0; text-align: center; }
+.admin-reference .reviews-empty { display: grid; justify-items: center; align-content: center; gap: 12px; min-height: 244px; padding: 30px 20px; }
+.admin-reference .reviews-empty > span { display: grid; place-items: center; width: 58px; height: 58px; margin: 8px 0 10px; border-radius: 20px; background: #e8f1e2; color: #365c38; box-shadow: 0 0 0 8px #f4f7f2; }
+.admin-reference .reviews-empty h2 { font-size: 14px; font-weight: 700; }
+.admin-reference .reviews-empty p { color: var(--users-muted); font-size: 12px; }
+.admin-reference .reviews-card .users-page-button { border: 1px solid var(--users-line); }
+.admin-reference .reviews-error { margin: 0 22px 14px; }
+.admin-reference .reviews-card .users-table-scroll:focus-visible { outline: 2px solid var(--users-focus); outline-offset: -2px; }
+@media (max-width: 640px) {
+  .admin-reference .reviews-card thead { display: table-header-group; }
+  .admin-reference .reviews-card tbody { display: table-row-group; }
+  .admin-reference .reviews-card tbody tr { display: table-row; border: 0; }
+  .admin-reference .reviews-card :is(th, td) { padding: 12px; }
+  .admin-reference .reviews-card table:has(.reviews-empty-cell) { min-width: 0; }
+  .admin-reference .reviews-card table:has(.reviews-empty-cell) th { width: auto; padding-inline: 6px; }
+}

@@ -33,13 +33,16 @@ final class FoodService
             if (! empty($filter['cursor']) && strcmp($food['slug'], $filter['cursor']) <= 0) {
                 return false;
             }
+            if ($q !== '' && str_contains(strtolower($food['slug']), strtolower($q))) {
+                return true;
+            }
             if ($words) {
                 foreach ($words as $word) {
                     if (! preg_match('/(?:^|[^\p{L}\p{N}])'.preg_quote($word, '/').'/iu', $food['nameFa'])) {
                         return false;
                     }
                 }
-            } elseif ($q !== '' && ! str_contains(strtolower($food['slug']), strtolower($q))) {
+            } elseif ($q !== '') {
                 return false;
             }
 

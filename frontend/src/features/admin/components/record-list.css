@@ -1,0 +1,28 @@
+.admin-reference .record-list-card { min-width: 0; border-radius: 16px; }
+.admin-reference .record-list-heading { padding: 20px 24px 22px; border-bottom: 1px solid var(--users-line); }
+.admin-reference .record-list-heading h2 { font-size: 16px; font-weight: 700; }
+.admin-reference .record-list-heading p { margin-top: 6px; color: var(--users-muted); font-size: 12px; }
+.admin-reference .record-list-card .users-toolbar { padding: 17px 22px; }
+.admin-reference .record-list-card .users-search { width: min(350px, 100%); border-color: var(--users-line); }
+.admin-reference .record-list-card table { min-width: 370px; }
+.admin-reference .record-list-card th { background: var(--users-soft); font-weight: 600; white-space: nowrap; }
+.admin-reference .record-list-card[data-variant="tickets"] th:first-child,
+.admin-reference .record-list-card[data-variant="tickets"] th:nth-child(2) { width: 27%; }
+.admin-reference .record-list-card th:last-child { width: auto; }
+.admin-reference .record-list-card td { height: 54px; padding-block: 10px; }
+.admin-reference .record-list-card .users-id { color: var(--users-ink); }
+.admin-reference .record-list-card .users-page-button { border: 1px solid var(--users-line); }
+.admin-reference .record-list-card .users-table-scroll:focus-visible { outline: 2px solid var(--users-focus); outline-offset: -2px; }
+@media (max-width: 640px) {
+  .admin-reference .record-list-card thead { display: table-header-group; }
+  .admin-reference .record-list-card tbody { display: table-row-group; }
+  .admin-reference .record-list-card tbody tr { display: table-row; border: 0; }
+  .admin-reference .record-list-card :is(th, td) { padding: 10px 12px; }
+}
+
+.admin-reference .record-list-card[data-variant="audit"] table { min-width: 690px; }
+.admin-reference .record-list-card[data-variant="audit"] th:nth-child(1) { width: 29%; }
+.admin-reference .record-list-card[data-variant="audit"] th:nth-child(2) { width: 20%; }
+.admin-reference .record-list-card[data-variant="audit"] th:nth-child(3) { width: 13%; }
+.admin-reference .record-list-card[data-variant="audit"] th:nth-child(4) { width: 15%; }
+.admin-reference .record-list-card td { overflow-wrap: anywhere; }

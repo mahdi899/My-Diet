@@ -1,0 +1,17 @@
+.admin-reference .admin-settings { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; gap: 22px; }
+.admin-reference .settings-card { min-width: 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: white; }
+.admin-reference .settings-card > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 22px 24px; border-bottom: 1px solid var(--line); }
+.admin-reference .settings-card h2 { font-size: 16px; font-weight: 700; }
+.admin-reference .settings-card header p { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.admin-reference .settings-card form { display: grid; gap: 20px; padding: 24px; }
+.admin-reference .settings-card label { margin: 0; }
+.admin-reference .settings-card :is(input, select) { margin: 8px 0 0; min-height: 46px; }
+.admin-reference .settings-note { display: flex; align-items: flex-start; gap: 9px; padding: 12px 15px; border: 1px solid var(--line); border-radius: 10px; background: #f5f8f1; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.admin-reference .settings-note .icon { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--green); }
+.admin-reference .settings-card footer { display: flex; padding-top: 20px; border-top: 1px solid var(--line); }
+.admin-reference .settings-card footer button { min-height: 46px; }
+.admin-reference .settings-success { color: var(--green); font-size: 13px; }
+.admin-reference .settings-card .form-error { margin: 0; }
+.admin-reference .settings-card :is(button, input, select):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+@media (max-width: 850px) { .admin-reference .admin-settings { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .admin-reference .settings-card > header, .admin-reference .settings-card form { padding: 18px; } }
