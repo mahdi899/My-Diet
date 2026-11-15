@@ -179,7 +179,8 @@ final class OnboardingService
             }
             $mapped = $this->mapping->legacy($lead['goal'], $items);
             $name = is_string($mapped['answers']['name'] ?? null) ? trim($mapped['answers']['name']) : '';
-            $this->store->claimName($user, $name ?: AnswerMapping::displayName($items));
+            $campaign = is_string($lead['campaign_slug'] ?? null) && $lead['campaign_slug'] !== '' ? $lead['campaign_slug'] : null;
+            $this->store->claimName($user, $name ?: AnswerMapping::displayName($items), $campaign);
             $this->store->saveDraft($user, $mapped['track'], $this->clinical($mapped['answers'], true), null, 0, 'demo');
             $this->store->claimLead($user, $lead['id']);
             $this->store->audit($user, 'demo_lead_claimed', 'demo_lead', $lead['id'], ['track' => $mapped['track']]);

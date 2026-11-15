@@ -5,4 +5,8 @@
 .admin-reference .preview-notice { margin-bottom: 20px; justify-content: space-between; flex-wrap: wrap; }
 .admin-reference .preview-content { border: 0; padding: 0; margin: 0; min-width: 0; }
 .admin-reference .hero-action { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; color: #e9f4dd; background: #ffffff0e; border: 1px solid #8fb29255; border-radius: 10px; padding: 6px 13px; font-size: 11px; }
+.admin-reference .section-head a.secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 37px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font-size: 11px; font-weight: 600; }
+.admin-reference .section-head a.secondary:hover { background: var(--soft); border-color: var(--line-strong); }
+.admin-reference .section-head a.secondary .icon { width: 16px; height: 16px; }
+.admin-reference .dashboard-payments .person-cell .avatar { width: 38px; height: 38px; border-radius: 50%; background: #edf3e9; color: #52764a; font-size: 15px; font-weight: 500; }
 @media(max-width:760px) { .admin-reference .menu-open #sidebar { transform: none; } }

@@ -96,6 +96,9 @@ final class ProductSchema
         if ($this->db->selectOne("select count(*) as n from information_schema.columns where table_schema=database() and table_name='meal_log_history' and column_name='scheduled_date_key'")->n === 0) {
             $this->db->unprepared('alter table meal_log_history add column scheduled_date_key char(10) generated always as (json_unquote(json_extract(`current`, \'$.scheduled_date\'))) stored');
         }
+        if ($this->db->selectOne("select count(*) as n from information_schema.columns where table_schema=database() and table_name='demo_lead_submissions' and column_name='campaign_slug'")->n === 0) {
+            $this->db->unprepared('alter table demo_lead_submissions add column campaign_slug varchar(64) null');
+        }
         if ($this->db->selectOne("select count(*) as n from information_schema.columns where table_schema=database() and table_name='food_catalog' and column_name='name_fa_search'")->n === 0) {
             $this->db->unprepared('alter table food_catalog add column name_fa_search varchar(255) character set utf8mb4 collate utf8mb4_0900_ai_ci generated always as (left(name_fa, 255)) stored');
         }

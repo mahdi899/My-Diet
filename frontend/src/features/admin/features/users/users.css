@@ -82,6 +82,43 @@
 .admin-reference td.users-empty { text-align: center; height: 160px; color: var(--users-muted); }
 .admin-reference .users-dialog-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: #112e2980; }
 .admin-reference .users-dialog { display: grid; gap: 16px; width: min(460px, 100%); padding: 26px; border-radius: 16px; background: white; box-shadow: 0 12px 60px #0003; }
+.admin-reference .user-editor { display: flex; flex-direction: column; width: min(840px, 100%); max-height: calc(100dvh - 48px); overflow: hidden; border: 1px solid #dbe4d2; border-radius: 24px; background: #f5f8f3; color: var(--ink); box-shadow: 0 24px 100px #102e2940; }
+.admin-reference .user-editor-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: none; padding: 22px 26px; border-bottom: 1px solid var(--line); background: #fafbf7; }
+.admin-reference .user-editor-header > div { display: flex; align-items: center; gap: 10px; }
+.admin-reference .user-editor-header h2 { font-size: 18px; font-weight: 700; }
+.admin-reference .user-editor-header .icon-tile { width: 36px; height: 36px; border-radius: 12px; }
+.admin-reference .user-editor-header .icon { width: 18px; height: 18px; }
+.admin-reference .user-editor-body { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 16px; padding: 26px; }
+.admin-reference .user-editor-identity { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0 4px; text-align: center; }
+.admin-reference .user-editor-avatar { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: #edf3e9; color: #52764a; font-size: 32px; }
+.admin-reference .user-editor-identity strong { font-size: 16px; font-weight: 600; }
+.admin-reference .user-editor-identity small { color: var(--muted); font-size: 13px; }
+.admin-reference .user-editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.admin-reference .user-editor-grid > div { padding: 14px; border-radius: 12px; background: #f7faf5; }
+.admin-reference .user-editor-grid small, .admin-reference .user-editor-card header p { display: block; margin-bottom: 8px; color: #627368; font-size: 12px; }
+.admin-reference .user-editor-grid strong { display: block; font-size: 14px; font-weight: 600; }
+.admin-reference .user-editor-grid em { display: block; margin-top: 6px; color: #52764a; font-size: 12px; font-style: normal; }
+.admin-reference .user-editor-card { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.admin-reference .user-editor-card h3 { font-size: 16px; font-weight: 700; }
+.admin-reference .user-editor-card header { margin-bottom: 16px; }
+.admin-reference .user-editor-pairs { display: grid; gap: 14px 24px; }
+.admin-reference .user-editor-pairs > div { display: grid; grid-template-columns: minmax(140px, 42%) minmax(0, 1fr); gap: 18px; align-items: start; }
+.admin-reference .user-editor-pairs dt { color: #53634f; line-height: 1.8; }
+.admin-reference .user-editor-pairs dd { margin: 0; font-weight: 600; line-height: 1.9; overflow-wrap: anywhere; }
+.admin-reference .user-editor-package { display: flex; flex-direction: column; align-items: stretch; }
+.admin-reference .user-editor-package input { max-width: 240px; }
+.admin-reference .user-editor-package > p { margin: -8px 0 16px; color: var(--muted); font-size: 12px; }
+.admin-reference .user-editor-package button { align-self: flex-end; }
+.admin-reference .user-editor-note { padding: 16px 18px; border-radius: 14px; background: #fff; color: var(--muted); }
+.admin-reference .user-editor-actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.admin-reference .user-editor-actions button { min-height: 44px; }
+.admin-reference .user-editor-actions .danger { margin-inline-start: auto; }
+.admin-reference .user-editor-confirm { display: grid; gap: 12px; padding: 18px; border: 1px solid #f0d3d0; border-radius: 16px; background: #fff8f6; }
+.admin-reference .user-editor-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 760px) {
+  .admin-reference .user-editor-grid, .admin-reference .user-editor-pairs > div { grid-template-columns: 1fr; }
+  .admin-reference .user-editor-actions button, .admin-reference .user-editor-package button { width: 100%; margin-inline-start: 0; }
+}
 @media(max-width: 1000px) { .admin-reference .users-toolbar { flex-wrap: wrap; gap: 16px; } .admin-reference .users-controls { flex: 1; justify-content: flex-end; } }
 @media(max-width: 640px) {
   .admin-reference .users-toolbar { padding: 16px; }

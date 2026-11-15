@@ -44,7 +44,15 @@ final class WebIntakeRules
             }
         }
 
-        return ['id' => strtolower($body['id']), 'phone' => $body['phone'], 'goal' => $body['goal'], 'answers' => $body['answers']];
+        $campaign = null;
+        if (is_string($body['campaign'] ?? null) && $body['campaign'] !== '') {
+            $slug = strtolower($body['campaign']);
+            if (preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/D', $slug) && strlen($slug) <= 64) {
+                $campaign = $slug;
+            }
+        }
+
+        return ['id' => strtolower($body['id']), 'phone' => $body['phone'], 'goal' => $body['goal'], 'answers' => $body['answers'], 'campaign' => $campaign];
     }
 
     public static function questionnaire(string $goal, array $body): array

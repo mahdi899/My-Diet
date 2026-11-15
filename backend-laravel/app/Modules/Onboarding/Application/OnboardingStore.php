@@ -30,5 +30,5 @@ interface OnboardingStore
 
     public function claimLead(string $user, string $lead): void;
 
-    public function claimName(string $user, ?string $name): void;
+    public function claimName(string $user, ?string $name, ?string $campaign = null): void;
 }

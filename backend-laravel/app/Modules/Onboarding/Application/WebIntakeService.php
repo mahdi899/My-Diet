@@ -31,7 +31,8 @@ final class WebIntakeService
     {
         $key = $this->settings->fieldKey;
         $saved = $this->store->saveLead(['id' => $input['id'], 'phone_hash' => hash_hmac('sha256', $input['phone'], $key), 'goal' => $input['goal'],
-            'phone_encrypted' => Crypto::encrypt($input['phone'], $key), 'answers_encrypted' => Crypto::encrypt(json_encode($input['answers'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $key)]);
+            'phone_encrypted' => Crypto::encrypt($input['phone'], $key), 'answers_encrypted' => Crypto::encrypt(json_encode($input['answers'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $key),
+            'campaign_slug' => $input['campaign']]);
         if (! $saved) {
             throw new Problem(409, 'conflict', 'شناسهٔ ثبت تکراری است');
         }

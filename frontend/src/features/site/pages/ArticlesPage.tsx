@@ -1,51 +1,35 @@
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-
-const photos = ['salad.jpg', 'vegetables.jpg', 'breakfast.jpg', 'bowl.jpg']
-
-interface ArticleItem {
-  id: string
-  title: string
-  category: string
-  image: number
-  intro: string
-}
-
-async function loadMagazine() {
-  const response = await fetch('/v1/public/articles')
-  if (!response.ok) throw new Error('دریافت مقالات ممکن نشد.')
-  const body = (await response.json()) as { items?: ArticleItem[] }
-  return body.items ?? []
-}
-
-export function useMagazine() {
-  return useQuery({ queryKey: ['magazine'], queryFn: loadMagazine, staleTime: 60_000 })
-}
-
-export function ArticleCard({ item }: { item: ArticleItem }) {
-  const photo = photos[item.image] ?? photos[0]
-  return (
-    <Link to={'/article.html?id=' + encodeURIComponent(item.id)} className="overflow-hidden rounded-[22px] border border-[#d5e2cb] bg-white shadow-sm">
-      <img src={'/assets/' + photo} alt="" className="h-52 w-full object-cover" />
-      <div className="p-4">
-        <span className="text-xs text-pine">{item.category}</span>
-        <h3 className="mt-2 text-lg font-bold">{item.title}</h3>
-        <p className="mt-2 line-clamp-3 text-sm text-[#667566]">{item.intro.split('\n')[0]}</p>
-      </div>
-    </Link>
-  )
-}
+import { Icon } from '../icons'
+import { ArticleCard, useMagazine } from '../magazine'
+import { usePageTitle } from '../usePageTitle'
+import { useSiteUi } from '../components/SiteFrame'
 
 export default function ArticlesPage() {
+  usePageTitle('مجلهٔ رژیم من | رژیم من')
   const query = useMagazine()
+  const { toast } = useSiteUi()
   return (
-    <section className="mx-auto max-w-[1180px] px-6 py-12">
-      <h1 className="mb-8 text-4xl font-bold text-pine">مجله رژیم من</h1>
-      {query.isLoading && <p>در حال بارگذاری مقاله‌ها…</p>}
-      {query.isError && <p className="text-danger">دریافت مقالات ممکن نشد.</p>}
-      <div className="grid gap-6 md:grid-cols-3">
-        {query.data?.map((item) => <ArticleCard key={item.id} item={item} />)}
+    <>
+      <section className="subhero wrap">
+        <div className="eyebrow">مجلهٔ رژیم من</div>
+        <h1>سه نوشته دربارهٔ رژیم من</h1>
+      </section>
+      <section className="wrap articles-list">
+        <div className="magazine-grid" id="article-grid">
+          {query.isLoading ? <p>در حال بارگذاری مقاله‌ها…</p> : null}
+          {query.isError ? <p>دریافت مقالات ممکن نشد.</p> : null}
+          {query.data?.length === 0 ? <p>مقاله‌ای برای نمایش وجود ندارد.</p> : null}
+          {query.data?.map((item) => <ArticleCard key={item.id} item={item} />)}
+        </div>
+      </section>
+      <div className="cta wrap">
+        <div>
+          <h2>از یک انتخاب خوب شروع کن.</h2>
+          <p>یک برنامهٔ غذایی، متناسب با سلیقه و زندگی تو.</p>
+        </div>
+        <button className="btn" type="button" onClick={() => toast('نسخهٔ قابل دانلود به‌زودی منتشر می‌شود.')}>
+          دانلود اپلیکیشن <Icon name="arrow" />
+        </button>
       </div>
-    </section>
+    </>
   )
 }

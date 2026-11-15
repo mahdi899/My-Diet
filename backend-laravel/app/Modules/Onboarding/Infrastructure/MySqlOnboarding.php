@@ -141,10 +141,16 @@ final class MySqlOnboarding implements OnboardingStore
         $this->db->table('demo_lead_submissions')->where('id', $lead)->update(['claimed_user_id' => $user, 'claimed_at' => $this->db->raw('current_timestamp(6)'), 'phone_verified' => true]);
     }
 
-    public function claimName(string $user, ?string $name): void
+    public function claimName(string $user, ?string $name, ?string $campaign = null): void
     {
         if ($name !== null && $name !== '') {
             $this->db->table('users')->where('id', $user)->whereNull('display_name')->update(['display_name' => $name]);
+        }
+        $slug = is_string($campaign) ? strtolower($campaign) : '';
+        if ($slug !== '' && $this->db->table('demo_campaign_links')->where('slug', $slug)->exists()) {
+            $this->db->table('users')->where('id', $user)->whereIn('signup_channel', ['app', 'demo'])->update(['signup_channel' => $slug]);
+
+            return;
         }
         $this->db->table('users')->where('id', $user)->where('signup_channel', 'app')->update(['signup_channel' => 'demo']);
     }

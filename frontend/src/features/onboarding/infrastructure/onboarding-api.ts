@@ -6,7 +6,8 @@ export type { TransferOrder }
 
 export class OnboardingApi implements OnboardingGateway {
   submit(body: { id: string; phone: string; goal?: string; specialistId: string; answers: SubmissionAnswer[] }) {
-    return publicRequest('onboarding/submissions', 'POST', body)
+    const campaign = readCampaignSlug()
+    return publicRequest('onboarding/submissions', 'POST', campaign ? { ...body, campaign } : body)
   }
 
   requestOtp(phone: string) {
@@ -65,6 +66,17 @@ export class OnboardingApi implements OnboardingGateway {
     const count = Number(data.count)
     return Number.isFinite(count) && count > 0 ? count : null
   }
+}
+
+function readCampaignSlug() {
+  const pattern = /^[a-z0-9]+(-[a-z0-9]+)*$/i
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('mydiet.analytics.journey') || 'null') as { attribution?: { utm_campaign?: string } } | null
+    const stored = saved?.attribution?.utm_campaign
+    if (typeof stored === 'string' && pattern.test(stored)) return stored.toLowerCase()
+  } catch { /* storage may be blocked */ }
+  const current = new URLSearchParams(window.location.search).get('utm_campaign')
+  return current && pattern.test(current) ? current.toLowerCase() : null
 }
 
 export const onboardingApi = new OnboardingApi()

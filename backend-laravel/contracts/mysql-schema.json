@@ -115,7 +115,7 @@
     },
     {
       "name": "demo_lead_submissions",
-      "sql": "create table `demo_lead_submissions` (\n`id` char(36) not null,\n`phone_hash` varchar(255) not null,\n`phone_encrypted` longtext not null,\n`goal` longtext not null,\n`answers_encrypted` longtext not null,\n`phone_verified` tinyint not null default 0,\n`created_at` datetime(6) not null default current_timestamp(6),\n`claimed_user_id` char(36) null,\n`claimed_at` datetime(6) null,\n`spec_version` smallint null,\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
+      "sql": "create table `demo_lead_submissions` (\n`id` char(36) not null,\n`phone_hash` varchar(255) not null,\n`phone_encrypted` longtext not null,\n`goal` longtext not null,\n`answers_encrypted` longtext not null,\n`phone_verified` tinyint not null default 0,\n`created_at` datetime(6) not null default current_timestamp(6),\n`claimed_user_id` char(36) null,\n`claimed_at` datetime(6) null,\n`spec_version` smallint null,\n`campaign_slug` varchar(64) null,\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
     {
       "name": "demo_questionnaire_settings",

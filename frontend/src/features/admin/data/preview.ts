@@ -31,7 +31,7 @@ const createdAt = '2026-11-14T10:00:00Z'
 const userId = 'preview-user-001'
 const payment = { id: 'preview-payment-001', user: 'کاربر آزمایشی', packageCode: 'پکیج یک‌ماهه', amountToman: 490000, status: 'paid', createdAt }
 const rows: Record<string, Record<string, unknown>> = {
-  users: { id: userId, displayName: 'سارا آزمایشی', phone: '۰۹۱۲۰۰۰۰۰۰۰', status: 'active', createdAt },
+  users: { id: userId, displayName: 'زهره ارجمندی', phone: '+989194460014', status: 'pending', createdAt },
   specialists: { id: 'preview-specialist-001', displayName: 'دکتر نمونه', phone: '۰۹۱۲۰۰۰۰۰۰۱', councilNo: 'TEST-100', subordinateCount: 12, status: 'verified' },
   requests: { id: 'preview-request-001', userId, kind: 'new_plan', status: 'in_review', createdAt },
   reviews: { id: 'preview-review-001', userId, rating: 5, body: 'این نظر صرفاً برای نمایش ظاهر جدول ثبت شده است.', status: 'pending', createdAt },
@@ -64,7 +64,11 @@ export function previewSection(section: string) {
       createdAt: new Date(Date.parse(createdAt) - index * 86_400_000).toISOString(),
     })),
   }
-  if (section === 'dashboard') return { kind: 'dashboard' as const, stats: { users: 25, newUsers: 4, revenueToman: 490000, paidOrders: 1, unreadMessages: 1, aiToday: 3 }, payments: [payment] }
+  if (section === 'dashboard') return {
+    kind: 'dashboard' as const,
+    stats: { users: 25, newUsers: 4, revenueToman: 490000, paidOrders: 1, unreadMessages: 1, aiToday: 3 },
+    payments: [{ id: 'd155d987-0000-4000-8000-000000000001', user: 'ملیکا حسین پور', packageCode: 'monthly', amountToman: 1992170, status: 'credited', paidAt: '2026-11-12T12:13:00.000Z', createdAt: '2026-11-12T12:13:00.000Z' }],
+  }
   if (section === 'payments') return {
     kind: 'payments' as const,
     payments: [{ ...payment, phone: '+989120000000', packageCode: 'monthly', status: 'credited', paidAt: createdAt, reference: 'TEST-1001' }],

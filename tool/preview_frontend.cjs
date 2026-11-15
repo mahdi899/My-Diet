@@ -7,7 +7,8 @@ const { resolve, sep, extname } = require('node:path');
 const root = resolve(__dirname,'..');
 const apiTarget = new URL(process.env.SABZINE_API_TARGET || 'http://127.0.0.1:8000');
 const onboardingDir = existsSync(resolve(root, 'onboarding')) ? resolve(root, 'onboarding') : resolve(root, '..', 'onboarding');
-const mounts = {app:resolve(root,'app/build/web'),site:resolve(root,'site'),onboarding:onboardingDir};
+const foodsDir = resolve(root,'frontend','public','assets','foods');
+const mounts = {app:resolve(root,'app/build/web'),onboarding:onboardingDir};
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.ttf':'font/ttf','.woff2':'font/woff2','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.wasm':'application/wasm'};
 http.createServer(async(req,res)=>{
   if(req.method==='POST'&&req.url.startsWith('/local/food-photo')){
@@ -19,7 +20,7 @@ http.createServer(async(req,res)=>{
         if(!/^[a-z][a-z0-9_]{1,63}$/.test(body.slug||''))throw new Error('slug');
         const bytes=Buffer.from(String(body.jpeg||'').replace(/^data:image\/jpeg;base64,/,''),'base64');
         if(bytes.length<32||bytes.length>1500000||bytes[0]!==0xff||bytes[1]!==0xd8)throw new Error('jpeg');
-        const dir=resolve(root,'site','assets','foods');
+        const dir=foodsDir;
         const file=resolve(dir,body.slug+'.jpg');
         if(!file.startsWith(dir+sep))throw new Error('path');
         await mkdir(dir,{recursive:true});
@@ -34,7 +35,7 @@ http.createServer(async(req,res)=>{
     try{
       const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname.split('/').pop()||'');
       if(!/^[a-z0-9_-]+\.jpg$/.test(name))throw new Error('name');
-      const file=resolve(root,'site','assets','foods',name);
+      const file=resolve(foodsDir,name);
       const body=await readFile(file);
       res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'no-store'});res.end(body);
     }catch{res.writeHead(404).end();}
@@ -76,4 +77,4 @@ http.createServer(async(req,res)=>{
     }
     res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(body);
   }catch{res.writeHead(404).end('Not found');}
-}).listen(Number(process.env.SABZINE_PREVIEW_PORT||8781),'127.0.0.1',()=>console.log('Sabzine frontend preview: http://127.0.0.1:8781/app/ · /site/ · /onboarding/'));
+}).listen(Number(process.env.SABZINE_PREVIEW_PORT||8781),'127.0.0.1',()=>console.log('Sabzine frontend preview: http://127.0.0.1:8781/app/ · /onboarding/'));

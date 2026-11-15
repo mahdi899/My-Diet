@@ -45,6 +45,23 @@ final class OnboardingWebContractTest extends MySqlTestCase
         $this->getJson('/v1/admin/onboarding/profiles')->assertForbidden();
     }
 
+    public function test_website_signup_keeps_the_campaign_link_on_the_admin_user(): void
+    {
+        $owner = $this->actor();
+        $phone = $this->db->table('users')->where('id', $owner['id'])->value('phone_e164');
+        $this->db->table('demo_campaign_links')->insert(['id' => Crypto::uuid(), 'name' => 'بهار', 'slug' => 'spring-drive', 'source' => 'telegram']);
+        $id = $this->leadId();
+        $this->postJson('/v1/onboarding/submissions', ['id' => $id, 'phone' => $phone, 'goal' => 'weight_loss', 'campaign' => 'spring-drive', 'answers' => [['key' => 'name', 'question' => 'نام', 'answer' => 'زهره']]])->assertCreated();
+        self::assertSame('spring-drive', $this->db->table('demo_lead_submissions')->where('id', $id)->value('campaign_slug'));
+        $this->call('POST', '/v1/onboarding/submissions/'.$id.'/verify', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], '{}')->assertCreated();
+        self::assertSame('spring-drive', $this->db->table('users')->where('id', $owner['id'])->value('signup_channel'));
+        $this->actor('admin');
+        $this->getJson('/v1/admin/users/'.$owner['id'])->assertOk()
+            ->assertJsonPath('registration.label', 'آنبوردینگ وب')
+            ->assertJsonPath('registration.link', 'بهار')
+            ->assertJsonPath('registration.source', 'تلگرام');
+    }
+
     public function test_admin_profiles_facts_audit_filters_and_materialized_funnel_work_on_mysql(): void
     {
         $case = json_decode(file_get_contents(__DIR__.'/../Fixtures/node-onboarding.json'), true)['canonical'][0];

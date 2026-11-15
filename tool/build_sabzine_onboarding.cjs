@@ -6,7 +6,7 @@ const desktopHtml = resolve(root, '..', '..', 'sabzine.html');
 const onboardingDir = existsSync(resolve(root, 'onboarding'))
   ? resolve(root, 'onboarding')
   : resolve(root, '..', 'demo');
-const siteAssets = resolve(root, 'site', 'assets');
+const siteAssets = resolve(root, 'frontend', 'public', 'assets');
 const assetsDir = resolve(onboardingDir, 'assets');
 
 if (!existsSync(desktopHtml)) {

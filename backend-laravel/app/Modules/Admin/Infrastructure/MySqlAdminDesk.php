@@ -288,7 +288,10 @@ final class MySqlAdminDesk
         $details = $this->details($id);
         $intake = $this->intake($id);
 
-        return ['id' => $user->id, 'phone' => $user->phone_e164, 'role' => $user->role, 'displayName' => $details['name'] ?? $intake['displayName'] ?? $user->display_name, 'personalDetails' => $details, 'status' => $user->status, 'createdAt' => Crypto::iso($user->created_at), 'intake' => $intake === null ? null : ['trackId' => $intake['trackId'], 'trackLabel' => $intake['trackLabel'], 'source' => $intake['source'], 'answers' => $intake['answers']]];
+        $account = $this->account($id);
+        $registration = $this->registration($account);
+
+        return ['id' => $user->id, 'phone' => $user->phone_e164, 'role' => $user->role, 'displayName' => $details['name'] ?? $intake['displayName'] ?? $user->display_name, 'personalDetails' => $details, 'status' => $user->status, 'createdAt' => Crypto::iso($user->created_at), 'packageTitle' => $account->package_title, 'daysRemaining' => $this->daysRemaining($account->ends_at), 'registrationLabel' => $registration['label'], 'registration' => $registration, 'intake' => $intake === null ? null : ['trackId' => $intake['trackId'], 'trackLabel' => $intake['trackLabel'], 'source' => $intake['source'], 'answers' => $intake['answers']]];
     }
 
     public function requests(): array
@@ -321,7 +324,9 @@ final class MySqlAdminDesk
         return array_map(function ($row): array {
             $details = $this->openDetails($row->details_encrypted);
 
-            return ['id' => $row->id, 'phone' => $row->phone_e164, 'role' => $row->role, 'status' => $row->status, 'displayName' => $details['name'] ?? $row->display_name, 'photo' => is_string($details['photo'] ?? null) ? $details['photo'] : null, 'registrationLabel' => $this->label($row), 'packageTitle' => $row->package_title, 'daysRemaining' => $row->ends_at === null ? null : max(0, (int) ceil(((new \DateTimeImmutable($row->ends_at))->getTimestamp() - CivilDates::now()->getTimestamp()) / 86400))];
+            $registration = $this->registration($row);
+
+            return ['id' => $row->id, 'phone' => $row->phone_e164, 'role' => $row->role, 'status' => $row->status, 'displayName' => $details['name'] ?? $row->display_name, 'photo' => is_string($details['photo'] ?? null) ? $details['photo'] : null, 'registrationLabel' => $registration['label'], 'registration' => $registration, 'packageTitle' => $row->package_title, 'daysRemaining' => $this->daysRemaining($row->ends_at)];
         }, $rows);
     }
 
@@ -581,16 +586,33 @@ final class MySqlAdminDesk
         return is_string($photo) ? $photo : null;
     }
 
-    private function label(object $row): string
+    private function account(string $id): object
     {
-        if ($row->campaign_name) {
-            $names = ['telegram' => 'تلگرام', 'instagram' => 'اینستاگرام', 'whatsapp' => 'واتساپ', 'rubika' => 'روبیکا', 'eitaa' => 'ایتا', 'website' => 'وب‌سایت', 'app' => 'اپلیکیشن'];
-            $source = $names[$row->campaign_source] ?? $row->campaign_source;
+        $row = $this->db->selectOne("select u.signup_channel, p.source as profile_source, c.name as campaign_name, c.source as campaign_source, coalesce(s.title_fa, ordered.title_fa) as package_title, a.ends_at from users u left join nutrition_profiles p on p.user_id=u.id left join demo_campaign_links c on c.slug=u.signup_channel left join user_service_access a on a.user_id=u.id left join services s on s.code=a.service_code left join (select o.user_id, sv.title_fa from orders o join services sv on sv.code=o.service_code join (select user_id, max(created_at) as created_at from orders where status='paid' group by user_id) latest on latest.user_id=o.user_id and latest.created_at=o.created_at where o.status='paid') ordered on ordered.user_id=u.id where u.id=?", [$id]);
 
-            return $source ? $row->campaign_name.' · '.$source : $row->campaign_name;
+        return $row ?? (object) ['signup_channel' => 'app', 'profile_source' => null, 'campaign_name' => null, 'campaign_source' => null, 'package_title' => null, 'ends_at' => null];
+    }
+
+    private function daysRemaining(mixed $ends): ?int
+    {
+        if ($ends === null || $ends === '') {
+            return null;
         }
 
-        return $row->profile_source === 'demo' || $row->signup_channel === 'demo' ? 'آنبوردینگ وب' : 'اپلیکیشن';
+        return max(0, (int) ceil(((new \DateTimeImmutable((string) $ends))->getTimestamp() - CivilDates::now()->getTimestamp()) / 86400));
+    }
+
+    private function registration(object $row): array
+    {
+        $names = ['telegram' => 'تلگرام', 'instagram' => 'اینستاگرام', 'whatsapp' => 'واتساپ', 'rubika' => 'روبیکا', 'eitaa' => 'ایتا', 'website' => 'وب‌سایت', 'app' => 'اپلیکیشن'];
+        $web = ($row->profile_source ?? null) === 'demo' || ($row->signup_channel ?? null) === 'demo' || ($row->campaign_name ?? null);
+        $source = $row->campaign_source ?? null;
+
+        return [
+            'label' => $web ? 'آنبوردینگ وب' : 'اپلیکیشن',
+            'link' => $row->campaign_name ?: null,
+            'source' => $source ? ($names[$source] ?? $source) : null,
+        ];
     }
 
     private function tracks(): array

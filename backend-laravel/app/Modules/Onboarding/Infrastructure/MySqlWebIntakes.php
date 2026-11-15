@@ -36,8 +36,8 @@ final class MySqlWebIntakes implements WebIntakeStore
     public function saveLead(array $lead): bool
     {
         return $this->db->transaction(function () use ($lead): bool {
-            $this->db->statement('insert into demo_lead_submissions(id,phone_hash,phone_encrypted,goal,answers_encrypted) values(?,?,?,?,?) as incoming on duplicate key update id=demo_lead_submissions.id',
-                [$lead['id'], $lead['phone_hash'], $lead['phone_encrypted'], $lead['goal'], $lead['answers_encrypted']]);
+            $this->db->statement('insert into demo_lead_submissions(id,phone_hash,phone_encrypted,goal,answers_encrypted,campaign_slug) values(?,?,?,?,?,?) as incoming on duplicate key update id=demo_lead_submissions.id',
+                [$lead['id'], $lead['phone_hash'], $lead['phone_encrypted'], $lead['goal'], $lead['answers_encrypted'], $lead['campaign_slug']]);
 
             return $this->db->table('demo_lead_submissions')->where('id', $lead['id'])->where('phone_hash', $lead['phone_hash'])->exists();
         });

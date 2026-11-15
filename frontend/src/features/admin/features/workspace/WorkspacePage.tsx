@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { StaffError } from '@shared/api/staff-session'
 import { Button, Card, CardBody, DataTable, DefinitionList, Input } from '@shared/ui'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
-import { asRecord, asRows, formatFaNumber } from '@shared/utils'
+import { asRecord, asRows, formatFaDate, formatFaNumber, statusLabels } from '@shared/utils'
 import { staff } from '../../session'
 import { adminSectionPath } from '../../nav'
 import { UsersTable } from '../users/UsersTable'
@@ -36,6 +36,76 @@ async function loadSection(section: string) {
   if (rows.length || Array.isArray(payload)) return { kind: 'table' as const, rows }
   const record = asRecord(payload)
   return record ? { kind: 'object' as const, value: record } : { kind: 'table' as const, rows: [] }
+}
+
+const planNames: Record<string, string> = { weekly: 'شروع', monthly: 'همراه', quarterly: 'VIP' }
+
+function paymentStatusTone(status: string) {
+  if (['active', 'paid', 'credited', 'approved', 'verified', 'published'].includes(status)) return 'success'
+  if (['failed', 'rejected', 'suspended', 'deleted'].includes(status)) return 'danger'
+  if (['pending', 'queued', 'in_review', 'generating'].includes(status)) return 'warning'
+  return 'neutral'
+}
+
+function RecentPayments({ rows }: { rows: Record<string, unknown>[] }) {
+  const recent = rows.slice(0, 5)
+  return (
+    <section className="card data-panel compact-panel dashboard-payments">
+      <div className="section-head">
+        <div><h2>آخرین پرداخت‌ها</h2><p>پنج خرید اخیر پکیج</p></div>
+        <Link className="secondary" to="/admin/payments">همه پرداخت‌ها <Icon name="arrow" className="icon" /></Link>
+      </div>
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="آخرین پرداخت‌ها">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">کاربر</th>
+              <th scope="col">پکیج</th>
+              <th scope="col">مبلغ</th>
+              <th scope="col">وضعیت</th>
+              <th scope="col">زمان پرداخت</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recent.map(row => {
+              const name = String(row.user ?? '').trim() || 'بدون نام'
+              const status = String(row.status ?? '')
+              const amount = typeof row.amountToman === 'number' ? row.amountToman : Number(row.amountToman)
+              const code = String(row.packageCode ?? '')
+              return (
+                <tr key={String(row.id)}>
+                  <td>
+                    <div className="person-cell">
+                      <span className="avatar avatar-soft" aria-hidden="true">{name.charAt(0) || 'ک'}</span>
+                      <div>
+                        <strong>{name}</strong>
+                        <small>پرداخت <bdi>{String(row.id ?? '').slice(0, 8) || '—'}</bdi></small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{planNames[code] ?? (code || '—')}</td>
+                  <td>{Number.isFinite(amount) ? <span className="money">{formatFaNumber(amount)}<small>تومان</small></span> : '—'}</td>
+                  <td><span className={`badge badge-${paymentStatusTone(status)}`}><span className="badge-dot" />{statusLabels[status] ?? (status || '—')}</span></td>
+                  <td className="cell-nowrap">{formatFaDate(row.paidAt ?? row.createdAt) ?? '—'}</td>
+                </tr>
+              )
+            })}
+            {!recent.length && (
+              <tr>
+                <td className="empty-cell" colSpan={5}>
+                  <div className="empty-state">
+                    <span className="icon-tile"><Icon name="wallet" className="icon" /></span>
+                    <h3>هنوز پرداختی ثبت نشده</h3>
+                    <p>با خرید اولین پکیج، جزئیات آن را اینجا خواهید دید.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
 }
 
 function Metric({ label, value, note, icon, tone, unit }: { label: string; value: unknown; note: string; icon: string; tone: string; unit?: string }) {
@@ -118,10 +188,9 @@ export function WorkspacePage({ section, createSpecialist = false, onCloseCreate
           <Metric icon="message" tone="blue" label="پیام‌های خوانده‌نشده" value={stats.unreadMessages} note="پیام‌های پشتیبانی در انتظار بررسی" />
           <Metric icon="sparkles" tone="rose" label="درخواست‌های امروز AI" value={stats.aiToday} note="تلاش‌های ثبت‌شده امروز · وقت تهران" />
         </div>
-        <div className="dashboard-lower"><section className="card">
-          <div className="section-head"><div><h2>آخرین پرداخت‌ها</h2><p>پنج خرید اخیر پکیج</p></div><Link to="/admin/payments">همه پرداخت‌ها <Icon name="arrow" className="icon" /></Link></div>
-          <DataTable rows={data.payments.slice(0, 5)} />
-        </section><section className="card quick-panel"><div className="section-head"><div><h2>دسترسی سریع</h2><p>از کجا شروع می‌کنید؟</p></div></div><div className="quick-links">{[
+        <div className="dashboard-lower">
+          <RecentPayments rows={data.payments} />
+          <section className="card quick-panel"><div className="section-head"><div><h2>دسترسی سریع</h2><p>از کجا شروع می‌کنید؟</p></div></div><div className="quick-links">{[
           ['users', 'کاربران', 'حساب‌ها و اطلاعات کاربران', 'users'], ['payments', 'پرداخت‌ها', 'خرید پکیج‌ها', 'wallet'], ['messages', 'پیام‌ها', 'گفت‌وگو با کاربران', 'message'], ['tickets', 'تیکت‌ها', 'درخواست‌های پشتیبانی', 'headphones'],
         ].map(([id, title, description, icon]) => <Link className="quick-link" key={id} to={`/admin/${id}`}><span className="icon-tile"><Icon name={icon!} className="icon" /></span><div><strong>{title}</strong><small>{description}</small></div><Icon name="arrow" className="icon" /></Link>)}</div></section></div>
       </div>

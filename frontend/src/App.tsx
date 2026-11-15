@@ -34,7 +34,9 @@ export default function App() {
           <Route path="about.html" element={<AboutPage />} />
           <Route path="contact" element={<ContactPage />} />
           <Route path="contact.html" element={<ContactPage />} />
+          <Route path="terms" element={<TermsPage />} />
           <Route path="terms.html" element={<TermsPage />} />
+          <Route path="refund" element={<RefundPage />} />
           <Route path="refund.html" element={<RefundPage />} />
         </Route>
       </Routes>
