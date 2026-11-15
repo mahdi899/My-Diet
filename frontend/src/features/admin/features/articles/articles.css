@@ -1,0 +1,52 @@
+.admin-reference .admin-articles-page { display: grid; gap: 20px; min-width: 0; }
+.admin-reference .article-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; padding: 27px 22px; border-radius: 16px; }
+.admin-reference .article-tools label { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 12px; }
+.admin-reference .article-tools select { width: auto; min-width: 102px; min-height: 44px; margin: 0; padding-block: 8px; font-size: 12px; }
+.admin-reference .article-tools button { min-height: 46px; }
+.admin-reference .articles-table-card { min-width: 0; border-radius: 16px; }
+.admin-reference .articles-table-card > header { padding: 20px 24px; }
+.admin-reference .articles-table-card h2 { font-size: 16px; font-weight: 700; }
+.admin-reference .articles-table-card table { min-width: 710px; table-layout: fixed; }
+.admin-reference .articles-table-card th { background: var(--users-soft); font-weight: 600; }
+.admin-reference .articles-table-card th:first-child { width: 31%; }
+.admin-reference .articles-table-card th:nth-child(2) { width: 17%; }
+.admin-reference .articles-table-card th:nth-child(3) { width: 12%; }
+.admin-reference .articles-table-card th:last-child { width: 40%; }
+.admin-reference .articles-table-card td { height: 118px; overflow-wrap: anywhere; }
+.admin-reference .article-row-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding-block-start: 16px; border-top: 1px solid var(--line); }
+.admin-reference .article-row-actions button { min-height: 44px; white-space: nowrap; }
+.admin-reference .article-row-actions a { display: inline-flex; align-items: center; min-height: 44px; color: var(--green); white-space: nowrap; }
+.admin-reference .article-list-feedback { padding: 24px; }
+.admin-reference .article-list-feedback button { margin-top: 10px; }
+.admin-reference .admin-articles-page :is(select, button, a, summary, [role="region"]):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.admin-reference .article-editor-dialog { margin: auto; width: min(620px, calc(100% - 24px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 22px; color: var(--ink); background: white; overflow: auto; box-shadow: 0 24px 100px #102e2940; }
+.admin-reference .article-editor-dialog::backdrop { background: #142f2a91; backdrop-filter: blur(4px); }
+.admin-reference .article-editor-dialog[open] { animation: article-editor-enter 180ms ease-out; }
+.admin-reference .article-editor-dialog > header { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px; background: #f7f9f5; border-bottom: 1px solid var(--line); }
+.admin-reference .article-editor-dialog h2 { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; }
+.admin-reference .article-editor-dialog h2 .icon-tile { width: 38px; height: 38px; border-radius: 11px; }
+.admin-reference .article-editor-dialog header button { width: 44px; min-height: 44px; }
+.admin-reference .article-editor { display: grid; gap: 18px; padding: 24px 28px; }
+.admin-reference .article-editor label { margin: 0; }
+.admin-reference .article-editor :is(input, select, textarea) { margin: 8px 0 0; min-height: 46px; }
+.admin-reference .article-editor textarea { min-height: 108px; resize: vertical; }
+.admin-reference .article-editor small { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.admin-reference .article-section-fields { display: grid; gap: 16px; min-width: 0; border: 1px solid #aebcaf; padding: 12px; }
+.admin-reference .article-section-fields legend { color: var(--ink); font-size: 13px; padding-inline: 4px; }
+.admin-reference .article-section-fields textarea { min-height: 144px; }
+.admin-reference .article-section-fields button { justify-self: start; }
+.admin-reference .article-text-preview { padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.admin-reference .article-text-preview summary { min-height: 28px; cursor: pointer; }
+.admin-reference .article-text-preview p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-reference .article-editor-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+.admin-reference .article-editor button { min-height: 44px; }
+@keyframes article-editor-enter { from { opacity: 0; transform: translateY(8px) scale(.99); } }
+@media (prefers-reduced-motion: reduce) { .admin-reference .article-editor-dialog[open] { animation: none; } }
+@media (max-width: 640px) {
+  .admin-reference .article-tools { padding: 16px; gap: 14px; }
+  .admin-reference .articles-table-card thead { display: table-header-group; }
+  .admin-reference .articles-table-card tbody { display: table-row-group; }
+  .admin-reference .articles-table-card tbody tr { display: table-row; border: 0; }
+  .admin-reference .articles-table-card :is(th, td) { padding: 12px 14px; }
+  .admin-reference .article-editor-dialog > header, .admin-reference .article-editor { padding: 16px; }
+}

@@ -19,7 +19,7 @@ export interface StaffSessionPayload {
 }
 
 export interface StaffSession {
-  api: <T = unknown>(path: string, method?: string, body?: unknown) => Promise<T>
+  api: <T = unknown>(path: string, method?: string, body?: unknown, headers?: Record<string, string>) => Promise<T>
   login: <T = StaffSessionPayload>(path: string, body?: unknown) => Promise<T>
   accept: (session: StaffSessionPayload) => StaffSessionPayload
   restore: () => Promise<StaffSessionPayload>
@@ -55,7 +55,7 @@ export function createStaffSession(role: StaffRole, onExpired: () => void = () =
   let expiresAt = 0
   let refreshing: Promise<StaffSessionPayload> | null = null
 
-  const request = async <T>(path: string, method = 'GET', body?: unknown, withAuth = true): Promise<T> => {
+  const request = async <T>(path: string, method = 'GET', body?: unknown, withAuth = true, headers?: Record<string, string>): Promise<T> => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 15000)
     try {
@@ -67,6 +67,7 @@ export function createStaffSession(role: StaffRole, onExpired: () => void = () =
           'Content-Type': 'application/json',
           'x-sabzine-client': 'web',
           ...(withAuth && token ? { Authorization: 'Bearer ' + token } : {}),
+          ...headers,
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       })
@@ -127,14 +128,14 @@ export function createStaffSession(role: StaffRole, onExpired: () => void = () =
     return refreshing
   }
 
-  const api = async <T>(path: string, method = 'GET', body?: unknown): Promise<T> => {
+  const api = async <T>(path: string, method = 'GET', body?: unknown, headers?: Record<string, string>): Promise<T> => {
     if (!token || Date.now() >= expiresAt) {
       clear()
       onExpired()
       throw new StaffError('برای ادامه وارد حساب شوید.', 401)
     }
     try {
-      return await request<T>(path, method, body)
+      return await request<T>(path, method, body, true, headers)
     } catch (error) {
       if (!(error instanceof StaffError) || error.status !== 401) throw error
       try {
@@ -147,7 +148,7 @@ export function createStaffSession(role: StaffRole, onExpired: () => void = () =
         throw failure
       }
       try {
-        return await request<T>(path, method, body)
+        return await request<T>(path, method, body, true, headers)
       } catch (failure) {
         if (failure instanceof StaffError && failure.status === 401) {
           clear()

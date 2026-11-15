@@ -1,0 +1,25 @@
+.admin-reference .questionnaire-goals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; max-width: 760px; margin-inline: auto; }
+.admin-reference button.questionnaire-goal { min-height: 168px; padding: 18px; border: 1px solid #4b6756; border-radius: 20px; color: #fff; font-size: 18px; font-weight: 700; background-color: var(--forest); background-size: cover; background-position: center; text-shadow: 0 1px 4px #101c15; box-shadow: none; }
+.admin-reference button.questionnaire-goal:hover:not(:disabled) { box-shadow: inset 0 0 0 3px #ffffff65; }
+.admin-reference .questionnaire-editor { min-width: 0; border: 1px solid var(--line); border-radius: 15px; background: white; }
+.admin-reference button.questionnaire-back { width: 100%; min-height: 46px; border-width: 0 0 1px; border-radius: 14px 14px 0 0; }
+.admin-reference .questionnaire-editor h2 { margin: 20px 14px 12px; font-size: 17px; font-weight: 700; }
+.admin-reference .questionnaire-editor form { padding: 14px 14px 20px; }
+.admin-reference .questionnaire-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
+.admin-reference .questionnaire-list { display: grid; gap: 22px; margin: 28px 0 18px; }
+.admin-reference .questionnaire-question { min-width: 0; padding: 10px 13px 12px; border: 1px solid var(--line-strong); }
+.admin-reference .questionnaire-question legend { padding-inline: 4px; font-size: 13px; color: var(--ink); }
+.admin-reference .questionnaire-question textarea { min-height: 108px; resize: vertical; }
+.admin-reference .questionnaire-answers { margin: -7px 0 14px; color: var(--muted); font-size: 12px; }
+.admin-reference .questionnaire-answers summary { display: list-item; width: fit-content; min-height: 32px; padding-block: 5px; cursor: pointer; }
+.admin-reference .questionnaire-answers ul { margin: 6px 0; padding-inline-start: 25px; list-style: disc; }
+.admin-reference .questionnaire-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.admin-reference .questionnaire-editor form > .questionnaire-actions { margin-top: 18px; }
+.admin-reference .questionnaire-editor button { min-height: 44px; }
+.admin-reference :is(.questionnaire-editor, .questionnaire-goals) :is(button, summary, textarea, input):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.admin-reference .questionnaire-feedback { padding: 20px; }
+.admin-reference .questionnaire-feedback button { margin-top: 10px; }
+@media (max-width: 540px) {
+  .admin-reference .questionnaire-goals { gap: 10px; }
+  .admin-reference button.questionnaire-goal { min-height: 125px; padding: 8px; font-size: 14px; border-radius: 14px; }
+}

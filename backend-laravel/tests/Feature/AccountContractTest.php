@@ -50,6 +50,8 @@ final class AccountContractTest extends MySqlTestCase
         ]])->assertOk()->assertJsonPath('sessionType', 'first_visit');
         self::assertSame('first_visit', $this->db->table('journey_sessions')->where('id', $session)->value('session_type'));
         $this->actor('admin');
+        $this->getJson('/v1/admin/reports/journeys?from=2026-11-14&to=2026-11-14&sessionType=first_visit')->assertOk()->assertJsonPath('status', 'ready')->assertJsonPath('sessions', 1)->assertJsonPath('edges', []);
+        $this->getJson('/v1/admin/reports/journeys?from=2026-11-14&to=2026-11-14')->assertOk()->assertJsonPath('status', 'invalid');
         $this->getJson('/v1/admin/reports/retention?from=2026-11-14&to=2026-11-14&event=nope')->assertStatus(400);
         $this->getJson('/v1/admin/reports/retention?from=2026-11-14&to=2026-11-14')->assertOk()->assertJsonPath('rows.0.cells.week4.state', 'not_yet_measurable');
         $this->withToken($user['token']);

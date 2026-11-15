@@ -1,5 +1,6 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
+import { StatusFilter } from '../../components/StatusFilter'
 import { adminPreviewEnabled } from '../../data/preview'
 import { staff } from '../../session'
 import './users.css'
@@ -11,15 +12,6 @@ const normalize = (value: unknown) => String(value ?? '').replace(/ي/g, 'ی').r
 export function UsersTable({ rows, onChanged }: { rows: Record<string, unknown>[]; onChanged: () => void }) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const filterRoot = useRef<HTMLDivElement>(null)
-  const filterButton = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    if (!filtersOpen) return
-    const outside = (event: PointerEvent) => { if (!filterRoot.current?.contains(event.target as Node)) setFiltersOpen(false) }
-    document.addEventListener('pointerdown', outside)
-    return () => document.removeEventListener('pointerdown', outside)
-  }, [filtersOpen])
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null)
   const [action, setAction] = useState<'edit' | 'delete'>('edit')
@@ -50,20 +42,8 @@ export function UsersTable({ rows, onChanged }: { rows: Record<string, unknown>[
         <label className="users-search"><Icon name="search" /><span className="sr-only">جست‌وجو در کاربران</span><input type="search" placeholder="نام، موبایل یا شناسه…" value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} /></label>
         <div className="users-filter-actions">
         {(search || status) && <button type="button" className="users-clear-filters" onClick={() => { setSearch(''); setStatus(''); setPage(1) }}>حذف فیلترها<Icon name="close" /></button>}
-        <div className="users-filter-anchor" ref={filterRoot} onKeyDown={event => {
-          if (event.key === 'Escape') { setFiltersOpen(false); filterButton.current?.focus() }
-          if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-            event.preventDefault()
-            if (!filtersOpen) { setFiltersOpen(true); return }
-            const options = Array.from(filterRoot.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [])
-            const index = options.indexOf(document.activeElement as HTMLButtonElement)
-            const next = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length
-            options[next]?.focus()
-          }
-        }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFiltersOpen(false) }}>
-          <button ref={filterButton} type="button" className={`users-filter-toggle${status ? ' has-filter' : ''}`} aria-label="فیلترها" title="فیلترها" aria-haspopup="menu" aria-expanded={filtersOpen} aria-controls="users-filters" onClick={() => setFiltersOpen(value => !value)}><svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8v6l-4 2v-8L3 4Z" /></svg>{status && <span className="users-filter-dot" />}</button>
-          {filtersOpen && <div id="users-filters" className="users-status-menu" role="menu" aria-label="وضعیت حساب">{[['', 'همه وضعیت‌ها'], ...Object.entries(labels)].map(([value, label]) => <button key={value} type="button" role="menuitemradio" aria-checked={status === value} autoFocus={status === value} onClick={() => { setStatus(value!); setPage(1); setFiltersOpen(false); filterButton.current?.focus() }}><span>{label}</span>{status === value && <Icon name="check" />}</button>)}</div>}
-        </div>
+        <StatusFilter label="فیلترها" value={status} options={Object.entries(labels)}
+          onChange={value => { setStatus(value); setPage(1) }} />
         </div>
       </div>
     </div>

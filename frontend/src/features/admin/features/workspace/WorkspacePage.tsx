@@ -8,12 +8,16 @@ import { asRecord, asRows, formatFaNumber } from '@shared/utils'
 import { staff } from '../../session'
 import { adminSectionPath } from '../../nav'
 import { UsersTable } from '../users/UsersTable'
+import { RequestsTable } from '../requests/RequestsTable'
+import { ReviewsTable } from '../reviews/ReviewsTable'
+import { TicketsTable } from '../tickets/TicketsTable'
+import { AuditLogsTable } from '../audit/AuditLogsTable'
+import { PaymentsPage } from '../payments/PaymentsPage'
 import { SpecialistsPage } from '../specialists/SpecialistsPage'
 import { adminPreviewEnabled, previewSection } from '../../data/preview'
 
 async function loadSection(section: string) {
   if (adminPreviewEnabled()) return previewSection(section)
-  if (section === 'settings') return { kind: 'settings' as const }
   if (section === 'dashboard') {
     const [stats, payments] = await Promise.all([staff.api('admin/dashboard'), staff.api('admin/payments')])
     return { kind: 'dashboard' as const, stats, payments: asRows(payments) }
@@ -38,70 +42,6 @@ function Metric({ label, value, note, icon, tone, unit }: { label: string; value
   const shown = typeof value === 'number' ? formatFaNumber(value) : String(value ?? '—')
   return (
     <section className="card metric-card"><div className="metric-top"><p>{label}</p><span className={`icon-tile tone-${tone}`}><Icon name={icon} className="icon" /></span></div><div className="metric-value">{shown}{unit && <small>{unit}</small>}</div><div className="metric-foot">{note}</div></section>
-  )
-}
-
-function SettingsForm() {
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-
-  async function savePrice(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    setError('')
-    try {
-      await staff.api('admin/prices', 'PUT', {
-        serviceCode: String(data.get('serviceCode') ?? ''),
-        amountToman: Number(data.get('amountToman')),
-      })
-      setMessage('تعرفه ذخیره شد')
-    } catch (cause) {
-      setError(cause instanceof StaffError ? cause.message : 'ذخیره انجام نشد')
-    }
-  }
-
-  async function saveReward(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    setError('')
-    try {
-      await staff.api('admin/reward', 'PUT', { amountToman: Number(data.get('amountToman')) })
-      setMessage('پاداش ذخیره شد')
-    } catch (cause) {
-      setError(cause instanceof StaffError ? cause.message : 'ذخیره انجام نشد')
-    }
-  }
-
-  return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <Card>
-        <form onSubmit={savePrice} className="p-6">
-          <h2 className="mb-4 text-base font-bold">تعرفه خدمات</h2>
-          <label className="text-sm font-semibold">خدمت
-            <select name="serviceCode" required className="mb-4 mt-2 w-full rounded-[9px] border border-line-strong px-3 py-3">
-              <option value="new_plan">برنامه جدید</option>
-              <option value="ai_revision">بازنگری هوش مصنوعی</option>
-              <option value="specialist_revision">بازنگری پزشک</option>
-            </select>
-          </label>
-          <label className="text-sm font-semibold">مبلغ (تومان)
-            <Input name="amountToman" type="number" min={1} required className="mt-2" />
-          </label>
-          <Button type="submit">ذخیره تعرفه</Button>
-        </form>
-      </Card>
-      <Card>
-        <form onSubmit={saveReward} className="p-6">
-          <h2 className="mb-4 text-base font-bold">پاداش هفتگی</h2>
-          <label className="text-sm font-semibold">مبلغ پاداش (تومان)
-            <Input name="amountToman" type="number" min={0} required className="mt-2" />
-          </label>
-          <Button type="submit">ذخیره پاداش</Button>
-        </form>
-      </Card>
-      {message && <p className="text-sm text-green">{message}</p>}
-      {error && <p className="text-sm text-danger">{error}</p>}
-    </div>
   )
 }
 
@@ -143,25 +83,6 @@ export function SpecialistForm({ onCreated }: { onCreated: () => void }) {
   )
 }
 
-function ReviewActions({ id, onDone }: { id: string; onDone: () => void }) {
-  const [error, setError] = useState('')
-  async function setStatus(status: 'approved' | 'rejected') {
-    try {
-      await staff.api('admin/reviews/' + encodeURIComponent(id), 'POST', { status })
-      onDone()
-    } catch (cause) {
-      setError(cause instanceof StaffError ? cause.message : 'بررسی انجام نشد')
-    }
-  }
-  return (
-    <div className="flex gap-2">
-      <Button type="button" variant="secondary" onClick={() => setStatus('approved')}>تأیید</Button>
-      <Button type="button" variant="danger" onClick={() => setStatus('rejected')}>رد</Button>
-      {error && <span className="text-xs text-danger">{error}</span>}
-    </div>
-  )
-}
-
 export function WorkspacePage({ section, createSpecialist = false, onCloseCreate = () => {} }: { section: string; createSpecialist?: boolean; onCloseCreate?: () => void }) {
   const queryClient = useQueryClient()
   const query = useQuery({
@@ -186,7 +107,6 @@ export function WorkspacePage({ section, createSpecialist = false, onCloseCreate
   if (!data) return null
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', section] })
 
-  if (data.kind === 'settings') return <SettingsForm />
   if (data.kind === 'dashboard') {
     const stats = asRecord(data.stats) ?? {}
     return (
@@ -208,38 +128,19 @@ export function WorkspacePage({ section, createSpecialist = false, onCloseCreate
     )
   }
   if (data.kind === 'payments') {
-    return (
-      <div className="space-y-5">
-        <Card>
-          <h2 className="border-b border-line px-6 py-4 text-base font-bold">واریزهای آنبوردینگ</h2>
-          <DataTable rows={data.transfers} />
-        </Card>
-        <Card>
-          <h2 className="border-b border-line px-6 py-4 text-base font-bold">پرداخت‌ها</h2>
-          <DataTable rows={data.payments} />
-        </Card>
-      </div>
-    )
+    return <PaymentsPage transfers={data.transfers} payments={data.payments} preview={adminPreviewEnabled()} onChanged={refresh} />
   }
   if (data.kind === 'object') {
     return <Card><DefinitionList value={data.value} /></Card>
   }
   if (data.kind === 'empty') return null
   if (section === 'users') return <UsersTable rows={data.rows} onChanged={refresh} />
+  if (section === 'requests') return <RequestsTable rows={data.rows} />
   if (section === 'specialists') return <SpecialistsPage rows={data.rows} onChanged={refresh} creating={createSpecialist} onCloseCreate={onCloseCreate} />
 
-  return (
-    <div>
-      <Card>
-        <DataTable rows={data.rows} />
-        {section === 'reviews' && (
-          <div className="space-y-3 border-t border-line p-4">
-            {data.rows.map((row) => (
-              typeof row.id === 'string' ? <ReviewActions key={row.id} id={row.id} onDone={refresh} /> : null
-            ))}
-          </div>
-        )}
-      </Card>
-    </div>
-  )
+  if (section === 'reviews') return <ReviewsTable rows={data.rows} preview={adminPreviewEnabled()} onChanged={refresh} />
+  if (section === 'tickets') return <TicketsTable rows={data.rows} />
+  if (section === 'audit-logs') return <AuditLogsTable rows={data.rows} />
+
+  return <Card><DataTable rows={data.rows} /></Card>
 }

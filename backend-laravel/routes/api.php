@@ -16,8 +16,6 @@ use App\Modules\Onboarding\Presentation\OnboardingAdminController;
 use App\Modules\Onboarding\Presentation\OnboardingController;
 use App\Modules\Onboarding\Presentation\OnboardingWebController;
 use App\Modules\Onboarding\Presentation\TransferController;
-use App\Shared\Presentation\StaffAssets;
-
 Route::get('v1/me/onboarding-transfers/zibal/return', [TransferController::class, 'callback']);
 Route::prefix('v1/me/onboarding-transfers')->middleware('session:user')->controller(TransferController::class)->group(function (): void {
     Route::post('', 'create');
@@ -300,8 +298,6 @@ Route::prefix('v1/auth')->controller(IdentityController::class)->group(function 
 
 Route::get('metrics', [MetricsController::class, 'metrics']);
 Route::get('health/worker', [MetricsController::class, 'worker']);
-Route::get('admin/{path?}', [StaffAssets::class, 'admin'])->where('path', '.*');
-Route::get('doctor/{path?}', [StaffAssets::class, 'doctor'])->where('path', '.*');
 Route::match(['HEAD'], 'go/{slug}', [CampaignController::class, 'head']);
 Route::match(['GET'], 'go/{slug}', [CampaignController::class, 'open']);
 Route::get('v1/public/config', [AdminDeskController::class, 'config']);
@@ -388,6 +384,7 @@ Route::prefix('v1/admin')->middleware('session:admin')->group(function (): void 
         Route::get('', 'list');
         Route::post('', 'create');
         Route::patch('{id}', 'toggle');
+        Route::delete('{id}', 'delete');
     });
     Route::controller(AnalyticsController::class)->prefix('web-analytics')->group(function (): void {
         Route::get('', 'report');

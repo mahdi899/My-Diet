@@ -1,0 +1,63 @@
+.doctor-portal.admin-reference .page-eyebrow { display: none; }
+.doctor-portal.admin-reference .login-layout { display: flex; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; background: var(--bg); }
+.doctor-portal.admin-reference .login-form-area { width: min(480px, 100%); margin: -48px auto 0; }
+.doctor-portal.admin-reference .login-form-wrap h1 { white-space: nowrap; font-size: 28px; line-height: 1.4; margin: 0 0 36px; text-align: center; }
+.doctor-portal.admin-reference .login-form-wrap { max-width: 420px; }
+.doctor-portal.admin-reference .profile strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doctor-portal.admin-reference .login-submit,
+.doctor-portal.admin-reference .login-switch,
+.doctor-portal.admin-reference .login-form-wrap .secondary { width: 100%; justify-content: center; }
+.doctor-portal.admin-reference .login-switch { margin-top: 4px; }
+.doctor-portal.admin-reference .password-field button { color: var(--muted); }
+.doctor-portal .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 16px 0 24px; }
+.doctor-portal .count { font-size: 36px; margin: 12px 0; font-weight: 700; color: var(--forest, #153e35); }
+.doctor-portal .intro-card { background: var(--forest, #153e35); color: #fff; padding: 28px; border-radius: 20px; margin-bottom: 8px; }
+.doctor-portal .intro-card h2 { margin: 0 0 8px; font-size: 22px; color: #fff; }
+.doctor-portal .intro-card p { color: #d5e4cf; margin: 0; }
+.doctor-portal .workspace-note { font-size: 13px; padding: 12px 16px; background: #eaf1dc; border-radius: 12px; color: #244b39; margin-bottom: 12px; }
+.doctor-portal .definition-list { display: grid; grid-template-columns: 160px 1fr; gap: 12px 16px; margin: 0; }
+.doctor-portal .definition-list dt { color: #607261; }
+.doctor-portal .definition-list dd { margin: 0; overflow-wrap: anywhere; }
+.doctor-portal .card-pad { padding: 24px; margin-bottom: 20px; }
+.doctor-portal .stack { display: grid; gap: 12px; }
+.doctor-portal .weekly-users { background: #fff; border: 1px solid #dce6dc; border-radius: 16px; overflow: hidden; }
+.doctor-portal button.weekly-user { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; padding: 14px 16px; border: 0; border-bottom: 1px solid #edf0e8; border-radius: 0; background: #fff; color: #1d3328; box-shadow: none; font-weight: 600; }
+.doctor-portal button.weekly-user:last-child { border-bottom: 0; }
+.doctor-portal button.weekly-user:hover:not(:disabled) { background: #f6f8f3; box-shadow: none; }
+.doctor-portal .weekly-report { background: #fff; border: 1px solid #dce6dc; border-radius: 16px; padding: 20px 22px 8px; }
+.doctor-portal .report-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.doctor-portal .weekly-report h2 { margin: 18px 0 0; font-size: 24px; }
+.doctor-portal .report-meta { margin: 6px 0 0; color: #607261; font-size: 13px; }
+.doctor-portal .report-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0 4px; }
+.doctor-portal .report-stat { background: #f4f7f1; border-radius: 14px; padding: 14px 12px; }
+.doctor-portal .report-stat strong { display: block; color: #20563e; font-size: 15px; }
+.doctor-portal .report-stat span { color: #607261; font-size: 12px; }
+.doctor-portal .report-block { margin-top: 18px; }
+.doctor-portal .report-block h3 { margin: 0 0 8px; font-size: 14px; color: #20563e; }
+.doctor-portal .week-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.doctor-portal .week-switch button.active { background: #20563e; color: #fff; border-color: #20563e; }
+.doctor-portal .pr-root, .doctor-portal .clinical-workspace { display: grid; gap: 18px; }
+.doctor-portal .pr-bar, .doctor-portal .section-tabs, .doctor-portal .change-filters, .doctor-portal .pr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.doctor-portal .pr-actions { position: sticky; top: 0; z-index: 2; background: #f5f7f3; padding: 10px 0; }
+.doctor-portal .pr-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.doctor-portal .pr-stat { background: #f3f7f1; border: 1px solid #dce5db; border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; }
+.doctor-portal .pr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.doctor-portal .pr-chip { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 13px; background: #e8eee4; color: #244b39; }
+.doctor-portal .pr-chip.bad { background: #fbe4e1; color: #8f2a22; }
+.doctor-portal .pr-chip.warn { background: #fff1d6; color: #7a5611; }
+.doctor-portal .pr-chip.ok { background: #dff1e3; color: #1b6a3a; }
+.doctor-portal .pr-tab.on, .doctor-portal .section-tabs button[aria-pressed="true"], .doctor-portal .change-filters button.active { background: #205942; color: #fff; }
+.doctor-portal .pr-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.doctor-portal .pr-option { border: 1px solid #dce5db; border-radius: 14px; padding: 14px; display: grid; gap: 8px; align-content: start; background: #fbfcfa; }
+.doctor-portal .pr-option.approved { border-color: #7fb48f; background: #f1f9f2; }
+.doctor-portal .pr-option.empty { border-style: dashed; }
+.doctor-portal .pr-meta { color: #52665a; font-size: 13px; }
+.doctor-portal .pr-error, .doctor-portal .clinical-error, .doctor-portal .chat-error { color: #a02b2b; }
+.doctor-portal .clinical-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.doctor-portal .change-detail { display: grid; gap: 12px; }
+.doctor-portal .change-history { margin: 0; padding-inline-start: 18px; display: grid; gap: 8px; }
+.doctor-portal pre { white-space: pre-wrap; background: #f4f7f1; border-radius: 12px; padding: 12px; font: inherit; }
+@media (max-width: 760px) {
+  .doctor-portal .definition-list, .doctor-portal .report-stats, .doctor-portal .clinical-grid { grid-template-columns: 1fr; }
+  .doctor-portal.admin-reference .login-form-wrap h1 { white-space: normal; font-size: 24px; }
+}

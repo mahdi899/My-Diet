@@ -48,6 +48,20 @@ final class MySqlCampaigns
         });
     }
 
+    public function delete(string $actor, string $id): array
+    {
+        return $this->db->transaction(function () use ($actor, $id): array {
+            $row = $this->db->table('demo_campaign_links')->where('id', $id)->first();
+            if ($row === null) {
+                throw new Problem(404, 'not_found', 'لینک پیدا نشد');
+            }
+            $this->db->table('demo_campaign_links')->where('id', $id)->delete();
+            $this->audit($actor, 'campaign_link.deleted', 'demo_campaign_link', $id, ['slug' => $row->slug]);
+
+            return ['ok' => true];
+        });
+    }
+
     public function resolve(string $slug, bool $count): ?array
     {
         return $this->db->transaction(function () use ($slug, $count): ?array {

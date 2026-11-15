@@ -3,6 +3,7 @@ import { StaffError } from '@shared/api/staff-session'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { AdminBrand } from '../../components/AdminShell'
 import { staff } from '../../session'
+import { adminPreviewEnabled, loginToPreview } from '../../data/preview'
 
 export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [username, setUsername] = useState('')
@@ -12,12 +13,18 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const preview = adminPreviewEnabled()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     setBusy(true)
     setError('')
     try {
+      if (preview) {
+        if (loginToPreview(username, password)) onSuccess()
+        else setError('نام کاربری یا رمز عبور آزمایشی اشتباه است.')
+        return
+      }
       if (totpToken) {
         const session = await staff.login('auth/totp', { code, totpToken })
         staff.accept(session)
@@ -49,7 +56,7 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
       <div className="login-form-area"><div className="login-form-wrap">
         <span className="login-lock icon-tile"><Icon name="lock" className="icon" /></span><span className="eyebrow">پنل مدیریت رژیم من</span>
         <h1>{totpToken ? 'ورود دومرحله‌ای' : 'خوش برگشتید'}</h1>
-        <p className="login-intro">{totpToken ? 'کد شش‌رقمی برنامه احراز هویت را وارد کنید.' : 'برای ادامه، وارد حساب مدیریت خود شوید.'}</p>
+        <p className="login-intro">{preview ? 'برای دیدن داده‌های نمونه، با حساب آزمایشی وارد شوید.' : totpToken ? 'کد شش‌رقمی برنامه احراز هویت را وارد کنید.' : 'برای ادامه، وارد حساب مدیریت خود شوید.'}</p>
       <form onSubmit={submit}>
         {!totpToken && (
           <>

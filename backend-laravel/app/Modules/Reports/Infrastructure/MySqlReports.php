@@ -217,13 +217,149 @@ final class MySqlReports
         return ['accepted' => count($clean), 'sessionType' => $returning ? 'returning' : 'first_visit'];
     }
 
-    public function journeyReport(string $from, string $to): array
+    public function journeyReport(string $from, string $to, string $platform = 'all', string $appVersion = 'all', string $sessionType = ''): array
     {
-        if (! CivilDates::valid($from) || ! CivilDates::valid($to) || $from > $to) {
-            return ['status' => 'invalid', 'nodes' => [], 'edges' => []];
+        $limitations = 'Edges come only from recorded navigation. Active time sums activeMs and ignores background gaps. Linking an install to an account does not prove the same person across devices. This feed is not the payment or reward ledger.';
+        if (! CivilDates::valid($from) || ! CivilDates::valid($to) || $from > $to
+            || ! in_array($sessionType, ['first_visit', 'returning'], true)
+            || ! in_array($platform, ['all', 'android', 'ios', 'web'], true)
+            || ($appVersion !== 'all' && preg_match('/^\d+\.\d+\.\d+$/D', $appVersion) !== 1)) {
+            return ['status' => 'invalid'];
         }
-        $nodes = $this->db->select('select e.kind, count(*) as n from journey_events e join journey_sessions s on s.id=e.session_id where s.started_on between ? and ? group by e.kind order by n desc limit 40', [$from, $to]);
+        $size = $this->db->table('journey_sessions')->whereBetween('started_on', [$from, $to])
+            ->when($platform !== 'all', fn ($query) => $query->where('platform', $platform))
+            ->when($appVersion !== 'all', fn ($query) => $query->where('app_version', $appVersion))
+            ->count();
+        if ($size > 2000) {
+            return ['status' => 'too_large', 'limitations' => $limitations];
+        }
+        $rows = $this->db->select(
+            "select s.id, s.started_on, s.session_type, s.first_authenticated, s.gapped, e.kind, e.properties
+             from journey_sessions s
+             left join journey_events e on e.session_id = s.id
+             where s.started_on between ? and ?
+               and (? = 'all' or s.platform = ?)
+               and (? = 'all' or s.app_version = ?)
+             order by s.started_on, s.id, e.occurred_at",
+            [$from, $to, $platform, $platform, $appVersion, $appVersion],
+        );
+        $samples = [];
+        foreach ($rows as $row) {
+            $sample = $samples[$row->id] ?? ['sessionType' => $row->session_type, 'firstAuthenticated' => (bool) $row->first_authenticated, 'gapped' => (bool) $row->gapped, 'events' => []];
+            if ($row->kind !== null) {
+                $properties = is_string($row->properties) ? json_decode($row->properties, true) : (array) $row->properties;
+                $sample['events'][] = ['type' => $row->kind, 'properties' => is_array($properties) ? $properties : []];
+            }
+            $samples[$row->id] = $sample;
+        }
+        $samples = array_values($samples);
+        $comparison = [
+            'firstVisitSessions' => count(array_filter($samples, fn ($item) => $item['sessionType'] === 'first_visit')),
+            'returningSessions' => count(array_filter($samples, fn ($item) => $item['sessionType'] === 'returning')),
+            'firstAuthenticatedSessions' => count(array_filter($samples, fn ($item) => $item['firstAuthenticated'])),
+        ];
+        $selected = array_values(array_filter($samples, fn ($item) => $item['sessionType'] === $sessionType));
+        if ($selected === []) {
+            return ['status' => 'empty', 'nodes' => [], 'edges' => [], 'journeys' => [], 'entries' => [], 'exits' => [], 'dropOff' => [], 'active' => [], 'comparison' => $comparison, 'limitations' => $limitations];
+        }
 
-        return ['status' => 'ready', 'limitations' => 'This feed is not the payment or reward ledger.', 'nodes' => array_map(fn ($row) => ['screen' => $row->kind, 'count' => (int) $row->n], $nodes), 'edges' => []];
+        return ['status' => 'ready', ...$this->journeyGraph($selected), 'comparison' => $comparison, 'limitations' => $limitations];
+    }
+
+    /** @param list<array{sessionType: string, firstAuthenticated: bool, gapped: bool, events: list<array{type: string, properties: array<string, mixed>}>}> $sessions */
+    private function journeyGraph(array $sessions): array
+    {
+        $visits = [];
+        $active = [];
+        $exits = [];
+        $entries = [];
+        $edges = [];
+        $paths = [];
+        $signals = ['planPurchaseStarted' => 0, 'planPurchaseCompleted' => 0, 'questionnaireCompleted' => 0, 'mealRecorded' => 0, 'alternativeSelected' => 0, 'feedbackSubmitted' => 0, 'gappedSessions' => 0];
+        $signalTypes = ['plan_purchase_started' => 'planPurchaseStarted', 'plan_purchase_completed' => 'planPurchaseCompleted', 'questionnaire_completed' => 'questionnaireCompleted', 'meal_recorded' => 'mealRecorded', 'alternative_selected' => 'alternativeSelected', 'feedback_submitted' => 'feedbackSubmitted'];
+        foreach ($sessions as $item) {
+            if ($item['gapped']) {
+                $signals['gappedSessions']++;
+            }
+            $screens = array_values(array_filter($item['events'], fn ($event) => $event['type'] === 'screen_viewed'));
+            $path = implode(' → ', array_map(fn ($event) => (string) ($event['properties']['screenId'] ?? ''), $screens));
+            if ($path !== '') {
+                $paths[$path] = ($paths[$path] ?? 0) + 1;
+            }
+            if ($screens !== []) {
+                $first = (string) ($screens[0]['properties']['screenId'] ?? '');
+                $last = (string) ($screens[array_key_last($screens)]['properties']['screenId'] ?? '');
+                $entries[$first] = ($entries[$first] ?? 0) + 1;
+                $exits[$last] = ($exits[$last] ?? 0) + 1;
+            }
+            foreach ($screens as $event) {
+                $screenId = (string) ($event['properties']['screenId'] ?? '');
+                $visits[$screenId] = ($visits[$screenId] ?? 0) + 1;
+                $milliseconds = $event['properties']['activeMs'] ?? 0;
+                $active[$screenId] = ($active[$screenId] ?? 0) + (is_numeric($milliseconds) ? (int) $milliseconds : 0);
+            }
+            foreach ($item['events'] as $event) {
+                if ($event['type'] === 'navigation') {
+                    $key = ($event['properties']['fromScreenId'] ?? '')."\t".($event['properties']['toScreenId'] ?? '');
+                    $edges[$key] = ($edges[$key] ?? 0) + 1;
+                } elseif (isset($signalTypes[$event['type']])) {
+                    $signals[$signalTypes[$event['type']]]++;
+                }
+            }
+        }
+        $outgoing = [];
+        foreach ($edges as $key => $count) {
+            $fromScreenId = explode("\t", $key)[0];
+            $outgoing[$fromScreenId] = ($outgoing[$fromScreenId] ?? 0) + $count;
+        }
+        $share = fn (int $count, int $total): ?int => $total === 0 ? null : (int) round((100 * $count) / $total);
+        $edgeRows = [];
+        foreach ($edges as $key => $count) {
+            [$fromScreenId, $toScreenId] = array_pad(explode("\t", $key), 2, '');
+            $edgeRows[] = ['fromScreenId' => $fromScreenId, 'toScreenId' => $toScreenId, 'count' => $count, 'percent' => $share($count, $outgoing[$fromScreenId] ?? 0)];
+        }
+        usort($edgeRows, fn ($left, $right) => $right['count'] <=> $left['count'] ?: $left['fromScreenId'] <=> $right['fromScreenId']);
+        $ranked = function (array $map) use ($share, $sessions): array {
+            $rows = [];
+            foreach ($map as $screenId => $count) {
+                $rows[] = ['screenId' => (string) $screenId, 'count' => $count, 'percent' => $share($count, count($sessions))];
+            }
+            usort($rows, fn ($left, $right) => $right['count'] <=> $left['count'] ?: $left['screenId'] <=> $right['screenId']);
+
+            return $rows;
+        };
+        $nodes = [];
+        foreach ($visits as $screenId => $count) {
+            $nodes[] = ['screenId' => (string) $screenId, 'count' => $count];
+        }
+        usort($nodes, fn ($left, $right) => $right['count'] <=> $left['count'] ?: $left['screenId'] <=> $right['screenId']);
+        $journeys = [];
+        foreach ($paths as $path => $count) {
+            $journeys[] = ['path' => (string) $path, 'count' => $count, 'percent' => $share($count, count($sessions))];
+        }
+        usort($journeys, fn ($left, $right) => $right['count'] <=> $left['count'] ?: $left['path'] <=> $right['path']);
+        $dropOff = [];
+        foreach ($exits as $screenId => $count) {
+            $dropOff[] = ['screenId' => (string) $screenId, 'count' => $count, 'visits' => $visits[$screenId] ?? 0, 'percent' => $share($count, $visits[$screenId] ?? 0)];
+        }
+        usort($dropOff, fn ($left, $right) => ($right['percent'] ?? -1) <=> ($left['percent'] ?? -1) ?: $left['screenId'] <=> $right['screenId']);
+        $activeRows = [];
+        foreach ($active as $screenId => $milliseconds) {
+            $activeRows[] = ['screenId' => (string) $screenId, 'milliseconds' => $milliseconds];
+        }
+        usort($activeRows, fn ($left, $right) => $right['milliseconds'] <=> $left['milliseconds'] ?: $left['screenId'] <=> $right['screenId']);
+
+        return [
+            'sessions' => count($sessions),
+            'bounded' => count($nodes) > 40 || count($edgeRows) > 80 || count($journeys) > 25,
+            'nodes' => array_slice($nodes, 0, 40),
+            'edges' => array_slice($edgeRows, 0, 80),
+            'journeys' => array_slice($journeys, 0, 25),
+            'entries' => $ranked($entries),
+            'exits' => $ranked($exits),
+            'dropOff' => $dropOff,
+            'active' => $activeRows,
+            'signals' => [...$signals, 'authoritative' => false],
+        ];
     }
 }

@@ -1,0 +1,88 @@
+.admin-reference .onboarding-admin { width: min(100%, 1564px); min-width: 0; margin-inline: auto; }
+.admin-reference .onboarding-stack { display: grid; gap: 20px; min-width: 0; }
+.admin-reference .onboarding-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+.admin-reference .onboarding-tabs button { min-height: 48px; padding: 10px 16px; background: transparent; color: var(--muted); border: 0; border-bottom: 3px solid transparent; border-radius: 0; box-shadow: none; font-size: 13px; }
+.admin-reference .onboarding-tabs button:hover { background: var(--soft); box-shadow: none; }
+.admin-reference .onboarding-tabs button[aria-selected="true"] { color: var(--green); border-bottom-color: var(--green); }
+.admin-reference .onboarding-admin :is(button, select, [role="region"]):focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.admin-reference .onboarding-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.admin-reference .onboarding-filters select { width: auto; min-width: 155px; min-height: 44px; margin: 0; padding: 8px 12px; font-size: 13px; }
+.admin-reference .onboarding-admin .users-search { width: min(350px, 100%); border-color: var(--line); }
+.admin-reference .onboarding-filters .users-search {
+  --users-soft: #f7f9f6;
+  --users-ink: var(--ink);
+  --users-muted: var(--muted);
+  --users-focus: var(--green);
+}
+.admin-reference .onboarding-card { min-width: 0; border-radius: 16px; }
+.admin-reference .onboarding-card-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.admin-reference .onboarding-card-heading h2 { font-size: 16px; font-weight: 700; }
+.admin-reference .onboarding-card-heading p { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.admin-reference .onboarding-card table { min-width: 630px; table-layout: auto; }
+.admin-reference #ob-panel-profiles table { min-width: 1040px; }
+.admin-reference .onboarding-card :is(th:first-child, th:last-child) { width: auto; }
+.admin-reference .onboarding-card th { background: var(--users-soft); font-weight: 600; white-space: nowrap; }
+.admin-reference .onboarding-card td { height: auto; padding-block: 15px; }
+.admin-reference .onboarding-card .users-person { min-width: 126px; }
+.admin-reference .onboarding-card .users-person small { text-align: start; }
+.admin-reference .onboarding-card .users-page-button { border: 1px solid var(--users-line); }
+.admin-reference .onboarding-card button { white-space: nowrap; min-height: 44px; }
+.admin-reference .onboarding-nowrap { white-space: nowrap; }
+.admin-reference .onboarding-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; font-size: 11px; border-radius: 6px; background: #f8efdb; color: #77571b; white-space: nowrap; }
+.admin-reference .onboarding-badge[data-good="true"] { background: #e8f1e2; color: #365c38; }
+.admin-reference .onboarding-badge i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.admin-reference .onboarding-funnel { list-style: none; margin: 0; padding: 0 24px; }
+.admin-reference .onboarding-funnel li { display: grid; grid-template-columns: 155px minmax(0, 1fr) 125px; align-items: center; gap: 12px; min-height: 45px; padding-block: 8px; font-size: 13px; }
+.admin-reference .onboarding-bar { height: 14px; background: #edf2e9; border-radius: 20px; overflow: hidden; }
+.admin-reference .onboarding-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(270deg, #78a753, #1e6349); }
+.admin-reference .onboarding-doctor { padding: 24px; }
+.admin-reference .onboarding-doctor > div { display: flex; justify-content: space-between; align-items: center; }
+.admin-reference .onboarding-doctor h2 { font-size: 13px; color: var(--muted); }
+.admin-reference .onboarding-doctor > strong { display: block; margin-block: 10px; font-size: 30px; }
+.admin-reference .onboarding-doctor p { border-top: 1px solid var(--line); padding-top: 12px; font-size: 12px; color: var(--muted); }
+.admin-reference .onboarding-message { padding: 20px; }
+.admin-reference .onboarding-message button { margin-top: 10px; }
+.admin-reference .onboarding-detail { margin: auto; width: min(620px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 0; overflow: auto; border: 1px solid var(--line); border-radius: 22px; background: white; color: var(--ink); box-shadow: 0 24px 100px #102e2940; }
+.admin-reference .onboarding-detail[open] { animation: onboarding-detail-enter 180ms ease-out; }
+.admin-reference .onboarding-detail::backdrop { background: #142f2a91; backdrop-filter: blur(4px); animation: onboarding-backdrop-enter 180ms ease-out; }
+.admin-reference .onboarding-detail > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 26px; border-bottom: 1px solid var(--line); background: #f7f9f5; }
+.admin-reference .onboarding-detail h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; }
+.admin-reference .onboarding-detail h2 .icon-tile { width: 36px; height: 36px; border-radius: 10px; }
+.admin-reference .onboarding-detail > header button { min-width: 44px; min-height: 44px; }
+.admin-reference .onboarding-detail-body { padding: 24px 28px; }
+.admin-reference .onboarding-detail-body .info-note { margin: 0 0 18px; font-size: 11px; }
+.admin-reference .onboarding-detail-body .info-note .icon { width: 16px; height: 16px; flex: none; }
+.admin-reference .onboarding-detail-body h3 { margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 700; }
+.admin-reference .onboarding-detail dl { display: grid; gap: 6px; margin: 0 0 20px; }
+.admin-reference .onboarding-detail dl > div { display: grid; grid-template-columns: minmax(94px, max-content) minmax(0, 1fr); gap: 18px; align-items: baseline; }
+.admin-reference .onboarding-detail dt { color: var(--muted); font-size: 12px; }
+.admin-reference .onboarding-detail dd { margin: 0; font-size: 13px; }
+.admin-reference .onboarding-detail dd { overflow-wrap: anywhere; }
+.admin-reference .onboarding-detail-skeleton { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.admin-reference .onboarding-detail-skeleton > div { min-height: 140px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(110deg, #eaf0e3 8%, #f4f6ef 18%, #eaf0e3 33%); background-size: 200% 100%; animation: onboarding-skeleton-shimmer 1.5s linear infinite; }
+.admin-reference .onboarding-detail-skeleton > div:last-child { grid-column: 1 / -1; min-height: min(300px, 34dvh); }
+@keyframes onboarding-detail-enter { from { opacity: 0; transform: translateY(8px) scale(.99); } }
+@keyframes onboarding-backdrop-enter { from { opacity: 0; } }
+@keyframes onboarding-skeleton-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .admin-reference .onboarding-detail[open],
+  .admin-reference .onboarding-detail::backdrop,
+  .admin-reference .onboarding-detail-skeleton > div { animation: none; }
+}
+@media (max-width: 640px) {
+  .admin-reference .onboarding-tabs button { flex: 1; padding-inline: 5px; }
+  .admin-reference .onboarding-filters select { flex: 1 1 135px; min-width: 0; }
+  .admin-reference .onboarding-filters .users-search { width: 100%; }
+  .admin-reference .onboarding-card thead { display: table-header-group; }
+  .admin-reference .onboarding-card tbody { display: table-row-group; }
+  .admin-reference .onboarding-card tbody tr { display: table-row; border: 0; }
+  .admin-reference .onboarding-card :is(th, td, .onboarding-card-heading) { padding-inline: 14px; }
+  .admin-reference .onboarding-funnel { padding-inline: 14px; }
+  .admin-reference .onboarding-funnel li { grid-template-columns: 1fr auto; }
+  .admin-reference .onboarding-bar { grid-column: 1 / -1; grid-row: 2; }
+  .admin-reference .onboarding-detail { width: calc(100% - 24px); max-height: calc(100dvh - 28px); border-radius: 18px; }
+  .admin-reference .onboarding-detail > header,
+  .admin-reference .onboarding-detail-body { padding: 16px; }
+  .admin-reference .onboarding-detail-skeleton { gap: 8px; }
+  .admin-reference .onboarding-detail-skeleton > div { min-height: 88px; }
+}

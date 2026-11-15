@@ -205,12 +205,17 @@ final class MySqlAdminDesk
 
     public function setReward(string $actor, int $amount): array
     {
-        $this->money($amount);
-        $this->db->table('reward_policies')->where('kind', 'weekly_completion')->update(['amount_toman' => $amount]);
-        $this->db->statement("insert into app_settings (`key`, value) values ('reward.weekly_completion_toman', cast(? as json)) as incoming on duplicate key update value=incoming.value, version=app_settings.version+1, updated_at=current_timestamp(6)", [json_encode($amount)]);
-        $this->audit($actor, 'reward_changed', 'reward_policy', null, ['amountToman' => $amount]);
+        if ($amount !== 0) {
+            $this->money($amount);
+        }
 
-        return ['amountToman' => $amount];
+        return $this->db->transaction(function () use ($actor, $amount): array {
+            $this->db->table('reward_policies')->where('kind', 'weekly_completion')->update(['amount_toman' => $amount]);
+            $this->db->statement("insert into app_settings (`key`, value) values ('reward.weekly_completion_toman', cast(? as json)) as incoming on duplicate key update value=incoming.value, version=app_settings.version+1, updated_at=current_timestamp(6)", [json_encode($amount)]);
+            $this->audit($actor, 'reward_changed', 'reward_policy', null, ['amountToman' => $amount]);
+
+            return ['amountToman' => $amount];
+        });
     }
 
     public function reviews(string $status): array

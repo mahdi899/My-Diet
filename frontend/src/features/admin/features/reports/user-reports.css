@@ -1,0 +1,23 @@
+.admin-reference .user-reports, .admin-reference .specialist-reports, .admin-reference .journey-reports { display: grid; gap: 16px; }
+.admin-reference .user-reports h2, .admin-reference .specialist-reports h2, .admin-reference .journey-reports h2 { font-size: 18px; }
+.admin-reference .user-report-note { max-width: 760px; font-size: 13px; line-height: 2; }
+.admin-reference .user-report-filters { display: grid; gap: 12px; }
+.admin-reference .user-report-filters :is(input, select) { margin: 0; background: #fff; }
+.admin-reference .user-report-filters button { width: fit-content; justify-self: end; min-height: 40px; padding-inline: 18px; }
+.admin-reference .user-report-card { background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px 24px 28px; }
+.admin-reference .user-report-card h3 { font-size: 16px; font-weight: 700; }
+.admin-reference .user-report-card h4 { margin-top: 26px; font-size: 14px; font-weight: 700; }
+.admin-reference .user-report-card > p { margin-top: 8px; font-size: 13px; line-height: 2; }
+.admin-reference .user-report-cohort { display: grid; gap: 2px; margin-top: 22px; }
+.admin-reference .user-report-cohort strong { font-size: 14px; }
+.admin-reference .user-report-metric { display: grid; grid-template-columns: max-content minmax(140px, 1fr); align-items: center; column-gap: 28px; min-height: 34px; }
+.admin-reference .user-report-metric p { color: #3d5141; font-size: 13px; }
+.admin-reference .user-report-meter { height: 8px; border-radius: 99px; background: #e7eee4; overflow: hidden; direction: ltr; }
+.admin-reference .user-report-meter > span { display: block; height: 100%; background: #1f6b4a; border-radius: inherit; }
+.admin-reference .user-report-plain { margin: 4px 0; color: #3d5141; font-size: 13px; }
+.admin-reference .user-report-feedback { display: grid; gap: 4px; margin-top: 8px; }
+.admin-reference .user-report-feedback p { color: #3d5141; font-size: 13px; line-height: 2; }
+@media (max-width: 720px) {
+  .admin-reference .user-report-card { padding: 18px; }
+  .admin-reference .user-report-metric { grid-template-columns: 1fr; gap: 6px; }
+}

@@ -1,0 +1,12 @@
+.admin-reference .streaks-notice { grid-column: 1 / -1; margin: 0; }
+.admin-reference .streaks-intro { padding: 20px 24px 0; }
+.admin-reference .streaks-example { padding: 12px 24px 24px; }
+.admin-reference .streaks-history ul { list-style: none; margin: 0; padding: 0; }
+.admin-reference .streaks-history li { padding: 9px 24px; font-size: 13px; color: var(--muted); }
+.admin-reference .streaks-history li + li { border-top: 1px solid var(--line); }
+.admin-reference .streaks-feedback { padding: 20px 24px; }
+.admin-reference .streaks-feedback button { margin-top: 12px; }
+.admin-reference .streaks-editor input[type="date"] { text-align: left; }
+@media (max-width: 640px) {
+  .admin-reference .streaks-intro, .admin-reference .streaks-history li { padding-inline: 18px; }
+}

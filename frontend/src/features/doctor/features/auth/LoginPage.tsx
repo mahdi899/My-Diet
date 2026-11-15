@@ -1,8 +1,9 @@
 import { FormEvent, useState } from 'react'
 import { StaffError } from '@shared/api/staff-session'
-import { Button, Input } from '@shared/ui'
+import { AdminIcon as Icon } from '../../../admin/components/AdminIcon'
 import { toEnglishDigits } from '@shared/utils'
 import { staff } from '../../session'
+import { doctorPreviewEnabled, loginToDoctorPreview } from '../../data/preview'
 
 export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [mode, setMode] = useState<'phone' | 'password' | 'code' | 'totp'>('phone')
@@ -11,10 +12,11 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [totpToken, setTotpToken] = useState('')
+  const [shown, setShown] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  async function finish(session: { totpRequired?: boolean; totpToken?: string; role?: string; accessToken?: string; sessionExpiresAt?: string }) {
+  function finish(session: { totpRequired?: boolean; totpToken?: string; role?: string; accessToken?: string; sessionExpiresAt?: string }) {
     if (session.totpRequired && session.totpToken) {
       setTotpToken(session.totpToken)
       setMode('totp')
@@ -29,6 +31,7 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
     setBusy(true)
     setError('')
     try {
+      if (doctorPreviewEnabled() && mode !== 'password') throw new StaffError('در پیش‌نمایش فقط ورود با نام کاربری نمونه ممکن است.', 400)
       if (mode === 'phone') {
         const value = toEnglishDigits(phone).trim()
         if (!/^09\d{9}$/.test(value)) throw new StaffError('شماره تلفن ۱۱ رقمی با ۰۹ وارد کنید.', 400)
@@ -38,17 +41,18 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
         return
       }
       if (mode === 'password') {
-        await finish(await staff.login('auth/specialist/login', { username: username.trim().toLowerCase(), password }))
-        return
-      }
-      if (mode === 'code') {
-        const value = toEnglishDigits(code).trim()
-        if (!/^\d{6}$/.test(value)) throw new StaffError('کد شش‌رقمی را وارد کنید.', 400)
-        await finish(await staff.login('auth/otp/verify', { phone, code: value, platform: 'web', deviceLabel: 'Specialist workspace' }))
+        const name = username.trim().toLowerCase()
+        if (loginToDoctorPreview(name, password)) { onSuccess(); return }
+        if (!/^[a-z][a-z0-9._-]{2,31}$/.test(name)) throw new StaffError('نام کاربری درست نیست.', 400)
+        if (password.length < 8) throw new StaffError('رمز عبور درست نیست.', 400)
+        if (doctorPreviewEnabled()) throw new StaffError('نام کاربری یا رمز پیش‌نمایش درست نیست.', 401)
+        finish(await staff.login('auth/specialist/login', { username: name, password }))
         return
       }
       const value = toEnglishDigits(code).trim()
-      await finish(await staff.login('auth/totp', { code: value, totpToken }))
+      if (!/^\d{6}$/.test(value)) throw new StaffError('کد شش‌رقمی را وارد کنید.', 400)
+      if (mode === 'code') finish(await staff.login('auth/otp/verify', { phone, code: value, platform: 'web', deviceLabel: 'Specialist workspace' }))
+      else finish(await staff.login('auth/totp', { code: value, totpToken }))
     } catch (cause) {
       setError(cause instanceof StaffError ? cause.message : 'ورود انجام نشد.')
     } finally {
@@ -57,35 +61,51 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center bg-cream px-6">
-      <h1 className="mb-6 text-2xl font-bold">متخصص گرامی خوش آمدید!</h1>
-      {mode === 'phone' && (
-        <label className="text-sm font-semibold">شماره تلفن
-          <Input className="mt-2" dir="ltr" inputMode="tel" required maxLength={13} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="09123456789" />
-        </label>
-      )}
-      {mode === 'password' && (
-        <>
-          <label className="text-sm font-semibold">نام کاربری
-            <Input className="mt-2" dir="ltr" required maxLength={32} value={username} onChange={(event) => setUsername(event.target.value)} />
-          </label>
-          <label className="text-sm font-semibold">رمز عبور
-            <Input className="mt-2" dir="ltr" type="password" required maxLength={256} value={password} onChange={(event) => setPassword(event.target.value)} />
-          </label>
-        </>
-      )}
-      {(mode === 'code' || mode === 'totp') && (
-        <label className="text-sm font-semibold">{mode === 'totp' ? 'کد دومرحله‌ای' : 'کد ورود'}
-          <Input className="mt-2" dir="ltr" inputMode="numeric" required maxLength={6} value={code} onChange={(event) => setCode(event.target.value)} />
-        </label>
-      )}
-      {error && <p className="mb-4 text-sm text-danger" role="alert">{error}</p>}
-      <Button type="submit" disabled={busy}>{mode === 'phone' ? 'دریافت کد ورود' : 'ورود به پنل'}</Button>
-      {mode !== 'code' && mode !== 'totp' && (
-        <button type="button" className="mt-4 text-sm text-green" onClick={() => setMode(mode === 'phone' ? 'password' : 'phone')}>
-          {mode === 'phone' ? 'ورود با نام کاربری و رمز' : 'ورود با شماره تلفن و کد'}
-        </button>
-      )}
-    </form>
+    <section className="login-layout" aria-label="ورود به پنل پزشک">
+      <div className="login-form-area"><div className="login-form-wrap">
+        <h1>متخصص گرامی خوش آمدید!</h1>
+        <p className="form-error" role="alert">{error}</p>
+        <form onSubmit={submit}>
+          {mode === 'phone' && (
+            <label>شماره تلفن
+              <input dir="ltr" inputMode="tel" autoComplete="tel" required maxLength={13} placeholder="۰۹۱۲۳۴۵۶۷۸۹" value={phone} onChange={(event) => setPhone(event.target.value)} />
+            </label>
+          )}
+          {mode === 'password' && (
+            <>
+              <label>نام کاربری
+                <input dir="ltr" autoComplete="username" required maxLength={32} placeholder="doctor.name" value={username} onChange={(event) => setUsername(event.target.value)} />
+              </label>
+              <label>رمز عبور
+                <div className="password-field">
+                  <input dir="ltr" type={shown ? 'text' : 'password'} autoComplete="current-password" required maxLength={256} placeholder="رمز عبور شما" value={password} onChange={(event) => setPassword(event.target.value)} />
+                  <button type="button" className="icon-button" aria-label={shown ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'} aria-pressed={shown} onClick={() => setShown((value) => !value)}><Icon name="eye" /></button>
+                </div>
+              </label>
+            </>
+          )}
+          {mode === 'code' && (
+            <label>کد ورود
+              <input dir="ltr" inputMode="numeric" autoComplete="one-time-code" required maxLength={6} placeholder="کد شش‌رقمی" value={code} onChange={(event) => setCode(event.target.value)} />
+            </label>
+          )}
+          {mode === 'totp' && (
+            <>
+              <div className="info-note"><Icon name="shield" /><p>کد شش‌رقمی برنامهٔ احراز هویت خود را وارد کنید.</p></div>
+              <label>کد ورود دومرحله‌ای
+                <input dir="ltr" inputMode="numeric" autoComplete="one-time-code" required maxLength={6} value={code} onChange={(event) => setCode(event.target.value)} />
+              </label>
+            </>
+          )}
+          <button className="login-submit" type="submit" disabled={busy}>{mode === 'phone' ? 'دریافت کد ورود' : mode === 'totp' ? 'تأیید و ورود' : 'ورود به پنل'} <Icon name="arrow-left" /></button>
+          {mode === 'code' && <button className="secondary" type="button" onClick={() => { setMode('phone'); setCode('') }}>تغییر شماره</button>}
+        </form>
+        {mode !== 'code' && mode !== 'totp' && (
+          <button className="secondary login-switch" type="button" onClick={() => setMode(mode === 'phone' ? 'password' : 'phone')}>
+            {mode === 'phone' ? 'ورود با نام کاربری و رمز' : 'ورود با شماره تلفن و کد'}
+          </button>
+        )}
+      </div></div>
+    </section>
   )
 }

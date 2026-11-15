@@ -269,11 +269,42 @@ final class MySqlAiAdmin
 
     public function usage(): array
     {
-        $day = (new \DateTimeImmutable(CivilDates::today().' 00:00:00', new \DateTimeZone('Asia/Tehran')))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u');
-        $spent = (int) $this->db->table('ai_usage_ledger')->where('created_at', '>=', $day)->sum('cost_micros');
+        $today = new \DateTimeImmutable(CivilDates::today().' 00:00:00', new \DateTimeZone('Asia/Tehran'));
+        $utc = new \DateTimeZone('UTC');
+        $day = $today->setTimezone($utc)->format('Y-m-d H:i:s');
+        $month = $today->modify('first day of this month')->setTimezone($utc)->format('Y-m-d H:i:s');
+        $start = $today->modify('-29 days')->setTimezone($utc)->format('Y-m-d H:i:s');
+        $ledger = $this->db->table('ai_usage_ledger');
+        $spent = (int) (clone $ledger)->where('created_at', '>=', $day)->sum('cost_micros');
+        $monthSpent = (int) (clone $ledger)->where('created_at', '>=', $month)->sum('cost_micros');
+        $report = (clone $ledger)->where('created_at', '>=', $start);
+        $byModel = (clone $report)
+            ->selectRaw("model, count(*) as calls, sum(outcome='ok') as successful, sum(tokens_in + tokens_out) as tokens, sum(cost_micros) as cost")
+            ->groupBy('model')->orderByDesc('cost')->orderBy('model')->get()
+            ->map(fn ($row) => ['model' => $row->model, 'calls' => (int) $row->calls, 'ok' => (int) $row->successful, 'tokens' => (int) $row->tokens, 'costMicros' => (int) $row->cost])
+            ->all();
+        $daily = (clone $report)
+            ->selectRaw("date(convert_tz(created_at, '+00:00', ?)) as report_day, count(*) as calls, sum(cost_micros) as cost", [$today->format('P')])
+            ->groupBy('report_day')->orderBy('report_day')->get()
+            ->map(fn ($row) => ['day' => $row->report_day, 'calls' => (int) $row->calls, 'costMicros' => (int) $row->cost])
+            ->all();
         $controls = $this->budget();
+        $dailyCap = $controls['dailyCapMicros'];
+        $monthlyCap = $controls['monthlyCapMicros'];
+        $dailyShare = $dailyCap > 0 ? $spent / $dailyCap : null;
+        $monthlyShare = $monthlyCap > 0 ? $monthSpent / $monthlyCap : null;
+        $alert = match (true) {
+            $controls['killSwitch'] => 'killed',
+            ($dailyCap !== null && $spent >= $dailyCap) || ($monthlyCap !== null && $monthSpent >= $monthlyCap) => 'blocked',
+            max($dailyShare ?? 0, $monthlyShare ?? 0) >= 0.8 => 'warning',
+            default => 'ok',
+        };
 
-        return ['day' => CivilDates::today(), 'spentMicros' => $spent, 'dailyCapMicros' => $controls['dailyCapMicros'], 'monthlyCapMicros' => $controls['monthlyCapMicros'], 'killSwitch' => $controls['killSwitch']];
+        return [
+            'day' => $today->format('Y-m-d'), 'spentMicros' => $spent, 'dailyCapMicros' => $dailyCap, 'monthlyCapMicros' => $monthlyCap,
+            'killSwitch' => $controls['killSwitch'], 'todayMicros' => $spent, 'monthMicros' => array_sum(array_column($daily, 'costMicros')),
+            'dailyShare' => $dailyShare, 'alert' => $alert, 'controls' => $controls, 'byModel' => $byModel, 'daily' => $daily,
+        ];
     }
 
     public function budget(): array
