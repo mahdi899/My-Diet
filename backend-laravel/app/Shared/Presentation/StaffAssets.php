@@ -5,14 +5,9 @@ namespace App\Shared\Presentation;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Serves the admin and doctor panels from this repository, without the Nest process. */
+/** Serves the legacy doctor page. The admin panel is the React app in frontend. */
 final class StaffAssets
 {
-    public function admin(?string $path = null): Response
-    {
-        return $this->file(dirname(base_path()).DIRECTORY_SEPARATOR.'admin', $path);
-    }
-
     public function doctor(?string $path = null): Response
     {
         return $this->file(dirname(base_path()).DIRECTORY_SEPARATOR.'doctor', $path);

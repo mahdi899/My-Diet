@@ -50,6 +50,8 @@ final class ReplacementContractTest extends MySqlTestCase
         $link = $this->postJson('/v1/admin/campaign-links', ['name' => 'بهار', 'slug' => 'spring-drive', 'source' => 'telegram'])->assertCreated()->json();
         $this->get('/go/spring-drive')->assertRedirect('/onboarding/?utm_source=telegram&utm_medium=campaign&utm_campaign=spring-drive');
         self::assertSame(1, (int) $this->db->table('demo_campaign_links')->where('id', $link['id'])->value('opens'));
+        $this->deleteJson('/v1/admin/campaign-links/'.$link['id'])->assertOk()->assertJsonPath('ok', true);
+        self::assertSame(0, $this->db->table('demo_campaign_links')->where('id', $link['id'])->count());
         $this->getJson('/v1/admin/web-analytics?days=3')->assertStatus(400);
         $this->getJson('/v1/admin/web-analytics/live')->assertStatus(503)->assertJsonPath('code', 'analytics_unavailable');
         $this->get('/metrics')->assertOk()->assertSee('sabzine_outbox_undispatched', false);

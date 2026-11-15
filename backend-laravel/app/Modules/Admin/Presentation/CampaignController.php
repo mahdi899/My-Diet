@@ -36,6 +36,11 @@ final class CampaignController
         return $this->campaigns->toggle($request->attributes->get('actor')['id'], Input::uuid($id), $body['active']);
     }
 
+    public function delete(Request $request, string $id): array
+    {
+        return $this->campaigns->delete($request->attributes->get('actor')['id'], Input::uuid($id));
+    }
+
     public function open(string $slug): Response
     {
         return $this->redirect($slug, true);

@@ -1,9 +1,9 @@
 name: backend-laravel
 on:
   push:
-    paths: ['backend-laravel/**', 'frontend/**', 'admin/**', 'doctor/**', 'tool/test-laravel.cjs', 'tool/laravel-browser.spec.cjs', '.github/workflows/backend-laravel.yml']
+    paths: ['backend-laravel/**', 'frontend/**', 'doctor/**', 'tool/test-laravel.cjs', 'tool/laravel-browser.spec.cjs', '.github/workflows/backend-laravel.yml']
   pull_request:
-    paths: ['backend-laravel/**', 'frontend/**', 'admin/**', 'doctor/**', 'tool/test-laravel.cjs', 'tool/laravel-browser.spec.cjs', '.github/workflows/backend-laravel.yml']
+    paths: ['backend-laravel/**', 'frontend/**', 'doctor/**', 'tool/test-laravel.cjs', 'tool/laravel-browser.spec.cjs', '.github/workflows/backend-laravel.yml']
 jobs:
   standalone:
     runs-on: ubuntu-latest
@@ -43,7 +43,6 @@ jobs:
           sparse-checkout: |
             backend-laravel
             frontend
-            admin
             doctor
             tool
             .github

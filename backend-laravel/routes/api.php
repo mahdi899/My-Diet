@@ -300,7 +300,6 @@ Route::prefix('v1/auth')->controller(IdentityController::class)->group(function 
 
 Route::get('metrics', [MetricsController::class, 'metrics']);
 Route::get('health/worker', [MetricsController::class, 'worker']);
-Route::get('admin/{path?}', [StaffAssets::class, 'admin'])->where('path', '.*');
 Route::get('doctor/{path?}', [StaffAssets::class, 'doctor'])->where('path', '.*');
 Route::match(['HEAD'], 'go/{slug}', [CampaignController::class, 'head']);
 Route::match(['GET'], 'go/{slug}', [CampaignController::class, 'open']);
@@ -388,6 +387,7 @@ Route::prefix('v1/admin')->middleware('session:admin')->group(function (): void 
         Route::get('', 'list');
         Route::post('', 'create');
         Route::patch('{id}', 'toggle');
+        Route::delete('{id}', 'delete');
     });
     Route::controller(AnalyticsController::class)->prefix('web-analytics')->group(function (): void {
         Route::get('', 'report');

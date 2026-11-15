@@ -1,0 +1,30 @@
+.admin-reference .campaign-links { display: grid; gap: 16px; }
+.admin-reference .campaign-create-bar { display: flex; padding: 18px 22px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.admin-reference .campaign-create-bar button, .admin-reference .campaign-links .search-field { margin-inline-start: auto; }
+.admin-reference .campaign-create-bar button { min-height: 42px; }
+.admin-reference .campaign-links .info-note { margin: 0; }
+.admin-reference .campaign-link { direction: ltr; unicode-bidi: isolate; overflow-wrap: anywhere; }
+.admin-reference .campaign-row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-reference .campaign-row-actions button { min-height: 36px; padding: 6px 12px; font-size: 12px; background: #fff; color: var(--ink); border-color: var(--line-strong); }
+.admin-reference .campaign-row-actions button.campaign-delete { color: var(--danger); background: var(--danger-soft); border-color: #f0d3d0; }
+.admin-reference .campaign-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.admin-reference .campaign-pager { display: flex; align-items: center; gap: 8px; }
+.admin-reference .campaign-pager button { min-height: 34px; padding: 4px 10px; background: #fff; color: var(--ink); border-color: var(--line); }
+.admin-reference .campaign-pager .page-number { display: grid; place-items: center; min-width: 32px; height: 32px; border-radius: 8px; background: #eef3e8; color: var(--ink); font-weight: 700; }
+.admin-reference .campaign-dialog { margin: auto; width: min(620px, calc(100% - 24px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 22px; color: var(--ink); background: #fff; overflow: auto; box-shadow: 0 24px 100px #102e2940; }
+.admin-reference .campaign-dialog::backdrop { background: #142f2a91; backdrop-filter: blur(4px); }
+.admin-reference .campaign-dialog > header { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px; background: #f7f9f5; border-bottom: 1px solid var(--line); }
+.admin-reference .campaign-dialog h2 { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; }
+.admin-reference .campaign-dialog h2 .icon-tile { width: 38px; height: 38px; border-radius: 11px; }
+.admin-reference .campaign-dialog form { display: grid; gap: 4px; padding: 22px 26px 24px; }
+.admin-reference .campaign-dialog label { margin: 0; }
+.admin-reference .campaign-dialog :is(input, select) { margin: 8px 0 0; }
+.admin-reference .campaign-dialog .form-help { margin: 8px 0 0; }
+.admin-reference .campaign-preview { margin: 14px 0 0; direction: ltr; text-align: left; color: var(--muted); font-size: 13px; }
+.admin-reference .campaign-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.admin-reference .campaign-dialog-actions button { min-height: 44px; }
+.admin-reference .campaign-notice { margin: 0; color: var(--green); font-size: 13px; }
+@media (max-width: 720px) {
+  .admin-reference .campaign-footer { align-items: flex-start; flex-direction: column; }
+  .admin-reference .campaign-dialog > header, .admin-reference .campaign-dialog form { padding: 16px; }
+}

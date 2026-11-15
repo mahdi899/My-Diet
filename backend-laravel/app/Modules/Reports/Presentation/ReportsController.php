@@ -58,6 +58,12 @@ final class ReportsController
 
     public function journeys(Request $request): array
     {
-        return $this->reports->journeyReport((string) $request->query('from', ''), (string) $request->query('to', ''));
+        return $this->reports->journeyReport(
+            (string) $request->query('from', ''),
+            (string) $request->query('to', ''),
+            (string) $request->query('platform', 'all'),
+            (string) $request->query('appVersion', 'all'),
+            (string) $request->query('sessionType', ''),
+        );
     }
 }
