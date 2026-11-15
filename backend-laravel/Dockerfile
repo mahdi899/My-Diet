@@ -15,7 +15,6 @@ WORKDIR /var/www/backend-laravel
 COPY backend-laravel/composer.json backend-laravel/composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts
 COPY backend-laravel/ ./
-COPY doctor/ /var/www/doctor/
 RUN composer dump-autoload --no-dev --optimize \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
     && chown -R www-data:www-data storage bootstrap/cache

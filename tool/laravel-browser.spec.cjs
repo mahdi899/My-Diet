@@ -64,7 +64,7 @@ echo json_encode($roles);
   try {
     const apiPort = await freePort();
     const base = 'http://127.0.0.1:' + apiPort;
-    const allowed = [cwd, path.join(root, 'doctor'), os.tmpdir()].join(path.delimiter);
+    const allowed = [cwd, os.tmpdir()].join(path.delimiter);
     await start(php, ['-d', 'open_basedir=' + allowed, '-S', '127.0.0.1:' + apiPort, '-t', 'public', 'public/index.php'], env, cwd, base + '/health/ready');
     const api = async (route, method = 'GET', body, token) => {
       const response = await fetch(base + route, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
