@@ -45,6 +45,29 @@
 .admin-reference .food-checks label { display: flex; align-items: center; gap: 6px; margin: 0; min-height: 36px; }
 .admin-reference .food-checks input { width: 16px; min-height: 16px; margin: 0; }
 .admin-reference .food-replace-list { max-height: 220px; overflow-y: auto; padding: 12px 20px; }
+.admin-reference .recipe-ingredients,.admin-reference .recipe-details { border-top: 1px solid var(--line); padding-block: 18px; margin-top: 8px; }
+.admin-reference .recipe-section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.admin-reference .recipe-section-heading h3 { font-size:14px; }
+.admin-reference .recipe-section-heading :is(p,span) { font-size:12px; color:var(--muted); }
+.admin-reference .recipe-section-heading button { min-height:40px; padding:6px 10px; font-size:12px; }
+.admin-reference .recipe-section-heading .icon { width:16px; height:16px; }
+.admin-reference .recipe-ingredient-row { display:grid; grid-template-columns:minmax(0,2fr) minmax(70px,0.8fr) 50px minmax(0,1.2fr) 36px; gap:8px; align-items:center; margin-bottom:8px; }
+.admin-reference .recipe-ingredient-row label { min-width:0; }
+.admin-reference .recipe-ingredient-row :is(input,select) { width:100%; margin:0; min-height:40px; padding:7px 8px; font-size:12px; border-color:var(--line); }
+.admin-reference button.recipe-remove { min-height:36px; width:36px; padding:8px; background:transparent; color:var(--muted); box-shadow:none; }
+.admin-reference button.recipe-remove:hover:not(:disabled) { background:#fff0ef; color:var(--danger); box-shadow:none; }
+.admin-reference .recipe-remove .icon { width:16px; height:16px; }
+.admin-reference .recipe-steps { margin:0; padding-inline-start:24px; list-style:decimal; }
+.admin-reference .recipe-steps li { padding-inline-start:6px; margin-bottom:10px; font-size:13px; line-height:2; }
+.admin-reference .recipe-steps li::marker { color:var(--green); font-weight:600; }
+.admin-reference .recipe-region { font-size:12px; margin-top:12px; }
+.admin-reference .recipe-extra { margin-top:12px; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.admin-reference .recipe-extra summary { cursor:pointer; font-size:12px; color:var(--green); }
+.admin-reference .recipe-extra p { font-size:12px; margin-top:10px; line-height:1.9; }
+.admin-reference .recipe-extra summary:focus-visible { outline:2px solid var(--green); outline-offset:4px; }
+.admin-reference .recipe-nutrients { overflow-x:auto; margin-top:12px; }
+.admin-reference .recipe-nutrients :is(th,td) { font-size:12px; padding:8px; text-align:right; }
+@media(max-width:520px) { .admin-reference .recipe-ingredient-row { grid-template-columns:minmax(0,1fr) 80px 48px 36px; padding-bottom:10px; border-bottom:1px solid var(--line); } .admin-reference .recipe-ingredient-row label:nth-child(4) { grid-column:1/4; grid-row:2; } .admin-reference .recipe-ingredient-row .recipe-remove { grid-column:4; grid-row:1; } }
 @media (max-width: 640px) {
   .admin-reference .food-catalog-card thead { display: table-header-group; }
   .admin-reference .food-catalog-card tbody { display: table-row-group; }

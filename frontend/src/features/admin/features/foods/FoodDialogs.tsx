@@ -3,6 +3,7 @@ import { asRecord, asRows, formatFaNumber } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { staff } from '../../session'
 import { categories, costs, meals, seasons, foodPath, foodError, values, downloadFoodFile, type FoodRow } from './catalog'
+import { IngredientRows, RecipeDetails, readIngredients } from './RecipeDetails'
 
 function Dialog({ title, busy, close, children }: { title: string; busy: boolean; close: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -57,7 +58,7 @@ export function FoodEditor({ food, preview, close, saved }: { food: FoodRow | nu
     }).catch(() => { if (current) setRecipe(null) })
     return () => { current = false }
   }, [food?.slug, preview])
-  const initialIngredients = asRows(food?.ingredients).map(item => [item.name, item.quantity, item.unit, item.category].join(':')).join('\n')
+  const [ingredients, setIngredients] = useState(() => readIngredients(food))
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy || preview) return
@@ -66,13 +67,7 @@ export function FoodEditor({ food, preview, close, saved }: { food: FoodRow | nu
     setBusy(true)
     setError('')
     try {
-      const ingredients = read('ingredients').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
-        const [name, quantity, unit, category = 'other'] = line.split(':').map(part => part.trim())
-        if (!name || !unit || !quantity || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
-          throw new Error('مواد را در قالب نام:مقدار:واحد:گروه و با مقدار مثبت وارد کنید.')
-        }
-        return { name, quantity: Number(quantity), unit, category }
-      })
+      if (!ingredients.length || ingredients.some(item => !item.name.trim() || !item.unit.trim() || !Number.isFinite(item.quantity) || item.quantity <= 0)) throw new Error('نام، مقدار مثبت و واحد هر ماده را کامل کنید.')
       if (!data.getAll('mealTypes').length) throw new Error('حداقل یک وعده را انتخاب کنید.')
       const slug = String(food?.slug ?? read('slug'))
       const file = data.get('photo')
@@ -111,8 +106,8 @@ export function FoodEditor({ food, preview, close, saved }: { food: FoodRow | nu
       {([['mealTypes', 'وعده‌ها', meals], ['seasons', 'فصل‌ها', seasons]] as const).map(([key, title, options]) =>
         <fieldset className="food-checks" key={key}><legend>{title}</legend>{Object.entries(options).map(([value, name]) =>
           <label key={value}><input name={key} type="checkbox" value={value} defaultChecked={values(food?.[key] ?? (key === 'mealTypes' ? ['lunch'] : [])).includes(value)} />{name}</label>)}</fieldset>)}
-      <label>مواد هر سهم (هر خط: نام:مقدار:واحد:گروه)<textarea name="ingredients" rows={5} required defaultValue={initialIngredients} /></label>
-      {recipe && <section><h3>دستور تهیه</h3><p>مواد این فرم برای هر سهم است؛ رسپی اصلی {String(recipe.servings)} سهم دارد. زمان پخت: {String(recipe.cookMinutes)} دقیقه.</p><p style={{ whiteSpace: 'pre-wrap', marginBlock: 16 }}>{String(recipe.instructions ?? '')}</p><details><summary>تمام اطلاعات منبع و برآوردهای تغذیه‌ای</summary><pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 12 }}>{String(recipe.sourceMarkdown ?? '')}</pre></details></section>}
+      <IngredientRows ingredients={ingredients} onChange={setIngredients} />
+      {recipe && <RecipeDetails recipe={recipe} />}
       {error && <p className="form-error" role="alert">{error}</p>}
       <Actions busy={busy} preview={preview} title="ذخیره" close={close} />
     </form>
