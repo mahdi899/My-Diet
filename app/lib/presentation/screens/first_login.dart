@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/motion/motion.dart';
 import '../../core/photos/food_image.dart';
 import '../../core/theme/theme.dart';
 import '../../data/demo_store.dart' show DemoScope, latinDigits;
@@ -19,6 +20,8 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
   final _form = GlobalKey<FormState>();
+  final _inputFocus = FocusNode();
+  bool _inputSubmitted = false;
   bool _busy = false, _codeStep = false, _unregistered = false;
   String? _error;
   static var _resumedOnce = false;
@@ -26,6 +29,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
   @override
   void initState() {
     super.initState();
+    _inputFocus.addListener(_inputFocusChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _resumeIfNeeded());
   }
 
@@ -44,6 +48,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
 
   @override
   void dispose() {
+    _inputFocus.dispose();
     _phone.dispose();
     _code.dispose();
     super.dispose();
@@ -58,7 +63,10 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
         transitionDuration: const Duration(milliseconds: 560),
         reverseTransitionDuration: const Duration(milliseconds: 380),
         pageBuilder: (_, animation, _) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          ),
           child: SignupOnboardingPage(
             store: store,
             initialPhone: initial,
@@ -70,7 +78,9 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
   }
 
   Future<void> _continue() async {
-    if (_busy || !_form.currentState!.validate()) return;
+    if (_busy) return;
+    setState(() => _inputSubmitted = true);
+    if (!_form.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     final store = DemoScope.of(context);
     final auth = store.customerAuth;
@@ -92,7 +102,12 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
         await store.verifyLoginCode(phone, latinDigits(_code.text).trim());
       } else {
         await auth.requestCode(phone, existingAccountOnly: true);
-        if (mounted) setState(() => _codeStep = true);
+        if (mounted) {
+          setState(() {
+            _codeStep = true;
+            _inputSubmitted = false;
+          });
+        }
       }
     } on AuthFailure catch (failure) {
       if (!mounted) return;
@@ -104,6 +119,196 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _inputFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String? _inputError(String? value, {required bool requireComplete}) {
+    final digits = latinDigits(value ?? '').trim();
+    if (digits.isEmpty) {
+      return _inputSubmitted
+          ? (_codeStep ? 'کد تأیید را وارد کن.' : 'شماره موبایلت را وارد کن.')
+          : null;
+    }
+    if (!_codeStep &&
+        (!digits.startsWith('0') ||
+            (digits.length >= 2 && !digits.startsWith('09')))) {
+      return 'شماره موبایل باید با ۰۹ شروع شود.';
+    }
+    final length = _codeStep ? 6 : 11;
+    if (requireComplete && digits.length != length) {
+      return _codeStep
+          ? 'کد تأیید باید ۶ رقم باشد.'
+          : 'شماره موبایل باید ۱۱ رقم باشد.';
+    }
+    return null;
+  }
+
+  Widget _numberInput(BuildContext context) {
+    final digits = latinDigits((_codeStep ? _code : _phone).text).trim();
+    final valid = (_codeStep ? RegExp(r'^\d{6}$') : RegExp(r'^09\d{9}$'))
+        .hasMatch(digits);
+    final error = _inputError(
+      digits,
+      requireComplete: _inputSubmitted || !_inputFocus.hasFocus,
+    );
+    const mint = Color(0xFFB9E4CF);
+    const coral = Color(0xFFFFB4B4);
+    final accent = error != null ? coral : mint;
+    OutlineInputBorder border(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: color, width: width),
+        );
+    final title = _codeStep ? 'کد تأیید پیامکی' : 'شماره موبایل';
+    return Reveal(
+      dy: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ExcludeSemantics(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 4, bottom: 10),
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFFE6F4EA),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+          Semantics(
+            label: title,
+            child: TextFormField(
+              key: ValueKey(_codeStep),
+              focusNode: _inputFocus,
+              controller: _codeStep ? _code : _phone,
+              enabled: !_busy,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.done,
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.left,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+                height: 1.2,
+              ),
+              cursorColor: mint,
+              scrollPadding: const EdgeInsets.only(bottom: 80),
+              autofillHints: [
+                _codeStep
+                    ? AutofillHints.oneTimeCode
+                    : AutofillHints.telephoneNumberNational,
+              ],
+              inputFormatters: [
+                TextInputFormatter.withFunction((oldValue, newValue) {
+                  return newValue.copyWith(text: latinDigits(newValue.text));
+                }),
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(_codeStep ? 6 : 11),
+              ],
+              autovalidateMode: AutovalidateMode.always,
+              validator: (value) => _inputError(
+                value,
+                requireComplete: _inputSubmitted || !_inputFocus.hasFocus,
+              ),
+              decoration: InputDecoration(
+                hintText: _codeStep ? '— — — — — —' : '0912 345 6789',
+                hintTextDirection: TextDirection.ltr,
+                hintStyle: const TextStyle(
+                  color: Color(0xFFB2C4BC),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w400,
+                  height: 1.2,
+                ),
+                helperText: _codeStep
+                    ? 'کد پیامک‌شده را وارد کن.'
+                    : valid
+                    ? 'فرمت شماره درست است.'
+                    : 'شماره‌ات را با ۰۹ وارد کن؛ ۱۱ رقم.',
+                helperStyle: TextStyle(
+                  color: valid ? mint : const Color(0xFFB2C4BC),
+                  fontSize: 12,
+                  height: 1.6,
+                ),
+                helperMaxLines: 2,
+                errorStyle: const TextStyle(
+                  color: coral,
+                  fontSize: 12,
+                  height: 1.6,
+                ),
+                errorMaxLines: 2,
+                prefixIcon: Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 14, end: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _codeStep
+                            ? Icons.sms_outlined
+                            : Icons.phone_android_rounded,
+                        color: const Color(0xFFE6F4EA),
+                        size: 22,
+                      ),
+                      const SizedBox(width: 14),
+                      Container(
+                        width: 1,
+                        height: 22,
+                        color: Colors.white.withValues(alpha: 0.18),
+                      ),
+                    ],
+                  ),
+                ),
+                suffixIcon: SizedBox(
+                  width: 44,
+                  child: AnimatedSwitcher(
+                    duration: Motion.of(context, Motion.quick),
+                    child: error != null || valid
+                        ? Icon(
+                            error != null
+                                ? Icons.error_outline_rounded
+                                : Icons.check_circle_rounded,
+                            key: ValueKey(error != null),
+                            size: 20,
+                            color: accent,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.08),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 18,
+                ),
+                border: border(Colors.white.withValues(alpha: 0.22)),
+                enabledBorder: border(
+                  valid
+                      ? mint.withValues(alpha: 0.6)
+                      : Colors.white.withValues(alpha: 0.22),
+                ),
+                focusedBorder: border(mint, 1.5),
+                errorBorder: border(coral),
+                focusedErrorBorder: border(coral, 1.5),
+                disabledBorder: border(Colors.white.withValues(alpha: 0.12)),
+              ),
+              onChanged: (_) {
+                setState(() {
+                  _error = null;
+                  _unregistered = false;
+                });
+              },
+              onFieldSubmitted: (_) => _continue(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -163,45 +368,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                     style: TextStyle(color: Color(0xFFD7EDE3), height: 1.7),
                   ),
                   const SizedBox(height: 22),
-                  TextFormField(
-            key: ValueKey(_codeStep),
-            controller: _codeStep ? _code : _phone,
-            enabled: !_busy,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.done,
-            textDirection: TextDirection.ltr,
-            textAlign: TextAlign.center,
-            scrollPadding: const EdgeInsets.only(bottom: 80),
-            autofillHints: const [AutofillHints.telephoneNumberNational],
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(_codeStep ? 6 : 11),
-            ],
-            decoration: InputDecoration(
-              labelText: _codeStep ? 'کد تأیید پیامکی' : 'شماره موبایل',
-              hintText: _codeStep ? '123456' : '09123456789',
-              prefixIcon: const Icon(Icons.phone_android_rounded),
-            ),
-            onChanged: (_) {
-              if (_error != null || _unregistered) {
-                setState(() {
-                  _error = null;
-                  _unregistered = false;
-                });
-              }
-            },
-            onFieldSubmitted: (_) => _continue(),
-            validator: (value) {
-              final digits = latinDigits(value ?? '').trim();
-              if (_codeStep) {
-                return RegExp(r'^\d{6}$').hasMatch(digits)
-                    ? null
-                    : 'کد شش‌رقمی را وارد کن.';
-              }
-              return RegExp(r'^09\d{9}$').hasMatch(digits)
-                  ? null
-                  : 'شمارهٔ موبایل ۱۱ رقمی را با ۰۹ وارد کن.';
-            },
-          ),
+                  _numberInput(context),
                   const SizedBox(height: 18),
                   PillButton(
                     label: _busy
@@ -217,7 +384,10 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                     Text(
                       _error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFFFFB4B4), height: 1.7),
+                      style: const TextStyle(
+                        color: Color(0xFFFFB4B4),
+                        height: 1.7,
+                      ),
                     ),
                   ],
                   if (_unregistered) ...[
@@ -230,7 +400,9 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                     const SizedBox(height: 12),
                     PillButton(
                       label: 'ثبت‌نام',
-                      onPressed: _busy ? null : () => _openOnboarding(fresh: true),
+                      onPressed: _busy
+                          ? null
+                          : () => _openOnboarding(fresh: true),
                     ),
                   ],
                   if (_codeStep)
@@ -239,6 +411,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                           ? null
                           : () => setState(() {
                               _codeStep = false;
+                              _inputSubmitted = false;
                               _code.clear();
                               _error = null;
                               _unregistered = false;
@@ -250,7 +423,9 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                     )
                   else if (!_unregistered)
                     TextButton(
-                      onPressed: _busy ? null : () => _openOnboarding(fresh: true),
+                      onPressed: _busy
+                          ? null
+                          : () => _openOnboarding(fresh: true),
                       child: const Text(
                         'هنوز ثبت‌نام نکردی؟',
                         style: TextStyle(color: Colors.white),

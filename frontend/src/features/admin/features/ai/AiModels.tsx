@@ -7,6 +7,7 @@ import { AiBadge, AiCard, AiDialog, AiForm, AiLoad, AiNote, aiApi, date, errorTe
 const kinds: Record<string, string> = { openrouter: 'OpenRouter', openai_compatible: 'سازگار با OpenAI' }
 const strategies = { priority: 'به ترتیب اولویت', cost_first: 'ارزان‌ترین اول', weighted: 'وزنی (پخش بار)' }
 const sampleModel = 'deepseek/deepseek-v4.1-flash-1017'
+const pinnedModels = ['anthropic/claude-haiku-5.5']
 const demoProvider = { id: 'preview-provider', name: 'OpenRouter آزمایشی', kind: 'openrouter', active: true, hasKey: true, keyHint: '…demo', baseUrl: 'https://openrouter.ai/api/v1' }
 const demoPools = Object.keys(poolTitles).map((code, index) => ({
   code, strategy: 'priority', temperature: [0.1, 0.5, 0.2, 0.3, 0.3][index], maxTokens: [700, 1200, 1200, 6000, 6000][index],
@@ -88,6 +89,9 @@ function MemberDialog({ providers, close, add, preview }: { providers: Row[]; cl
   const [priceIn, setPriceIn] = useState('0')
   const [priceOut, setPriceOut] = useState('0')
   const catalog = useMutation({ mutationFn: (provider: string) => aiApi('providers/' + id(provider) + '/models?limit=500') })
+  const liveModels = itemRows(catalog.data)
+  const suggested = Array.isArray(catalog.data?.suggested) ? catalog.data.suggested.filter((model): model is string => typeof model === 'string') : pinnedModels
+  const modelOptions = [...suggested.filter(model => !liveModels.some(row => row.id === model)).map(model => ({ id: model, name: model })), ...liveModels]
   return <AiDialog title="افزودن مدل به استخر" close={close}>
     <AiForm preview={false} close={close} label="افزودن مدل" submit={async data => {
       const name = model.trim()
@@ -101,10 +105,10 @@ function MemberDialog({ providers, close, add, preview }: { providers: Row[]; cl
       <label>شناسهٔ مدل<input dir="ltr" list="ai-live-models" value={model} required onChange={event => {
         const value = event.target.value
         setModel(value)
-        const hit = itemRows(catalog.data).find(row => row.id === value)
+        const hit = modelOptions.find(row => row.id === value)
         if (hit) { setPriceIn(String(Number(hit.priceInMicrosPerM ?? 0) / 1e6)); setPriceOut(String(Number(hit.priceOutMicrosPerM ?? 0) / 1e6)) }
       }} /></label>
-      <datalist id="ai-live-models">{itemRows(catalog.data).map(row => <option key={str(row.id)} value={str(row.id)}>{str(row.name)}</option>)}</datalist>
+      <datalist id="ai-live-models">{modelOptions.map(row => <option key={str(row.id)} value={str(row.id)}>{str(row.name)}</option>)}</datalist>
       <button type="button" className="secondary" disabled={preview || catalog.isPending} onClick={() => catalog.mutate(providerId)}>{catalog.isPending ? 'در حال دریافت…' : 'دریافت فهرست زندهٔ مدل‌ها'}</button>
       {catalog.isError && <p role="alert">{errorText(catalog.error)}</p>}
       <label>قیمت ورودی (دلار برای هر میلیون توکن)<input type="number" min={0} step="any" value={priceIn} onChange={event => setPriceIn(event.target.value)} required /></label>

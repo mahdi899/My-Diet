@@ -9,7 +9,7 @@ final class FixedAiCatalog implements AiCatalog
 {
     public int $calls = 0;
 
-    public const SUGGESTED = ['deepseek/deepseek-v4.1-flash-1017', 'anthropic/claude-3.5-haiku', 'qwen/qwen-2.5-72b-instruct'];
+    public const SUGGESTED = ['deepseek/deepseek-v4.1-flash-1017', 'anthropic/claude-haiku-5.5', 'anthropic/claude-3.5-haiku', 'qwen/qwen-2.5-72b-instruct'];
 
     public function callsExternalNetwork(): bool
     {
