@@ -83,7 +83,6 @@ class OnboardingFrame extends StatelessWidget {
     this.syncHint,
     this.secondary,
     this.forward = true,
-    this.profilePreview,
   });
   final double progress;
   final Widget child;
@@ -93,7 +92,6 @@ class OnboardingFrame extends StatelessWidget {
   final String primaryLabel;
   final bool busy, forward;
   final Widget? secondary;
-  final Widget? profilePreview;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +141,6 @@ class OnboardingFrame extends StatelessWidget {
                       ],
                     ),
                   ),
-                  ?profilePreview,
                   Expanded(child: child),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
