@@ -79,8 +79,8 @@ final class ProviderClient
             throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس بیش از حد بزرگ است');
         }
         $value = $response->json();
-        $text = $value['choices'][0]['message']['content'] ?? null;
-        if (! is_string($text) || isset($value['error'])) {
+        $text = $this->messageText($value['choices'][0]['message']['content'] ?? null);
+        if ($text === null || trim($text) === '' || isset($value['error'])) {
             throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس قابل پردازش نیست');
         }
         $usage = $value['usage'] ?? [];
@@ -92,6 +92,26 @@ final class ProviderClient
             'costMicros' => is_numeric($cost) && is_finite((float) $cost) && $cost >= 0 ? (int) ceil(round($cost * 1_000_000, 6)) : null,
             'costSource' => is_numeric($cost) && $cost >= 0 ? 'provider' : 'estimate',
             'usageKnown' => $input !== null && $output !== null, 'model' => $model];
+    }
+
+    private function messageText(mixed $content): ?string
+    {
+        if (is_string($content)) {
+            return $content;
+        }
+        if (! is_array($content)) {
+            return null;
+        }
+        $parts = [];
+        foreach ($content as $part) {
+            if (is_string($part)) {
+                $parts[] = $part;
+            } elseif (is_array($part) && is_string($part['text'] ?? null)) {
+                $parts[] = $part['text'];
+            }
+        }
+
+        return $parts === [] ? null : implode('', $parts);
     }
 
     private function count(mixed $value): ?int

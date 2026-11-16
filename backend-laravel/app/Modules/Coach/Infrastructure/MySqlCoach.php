@@ -19,7 +19,6 @@ final class MySqlCoach implements CoachGateway
         private ConnectionInterface $db,
         private CoachModel $model,
         private CoachIntentParser $intents,
-        private CoachContextBuilder $context,
         private TrackingService $tracking,
         private CoachChatActions $actions,
     ) {}
@@ -329,24 +328,12 @@ final class MySqlCoach implements CoachGateway
         }
 
         return match ($intent['intent']) {
-            'show_plan' => $this->planText($user),
             'log_weight' => $this->saveWeight($user, $intent['params']['weight'] ?? null) ?? $memory,
             'log_water' => $this->saveWater($user),
             'swap_meal' => $this->actions->swap($user, $text) ?? $memory,
             'log_consumption' => $this->actions->logMeal($user, $text) ?? $memory,
             default => $memory,
         };
-    }
-
-    private function planText(string $user): string
-    {
-        $plan = $this->context->buildForChat($user, 'برنامه امروز')['todayPlan'] ?? null;
-        if (! is_array($plan) || ($plan['meals'] ?? []) === []) {
-            return 'برای امروز هنوز وعدهٔ فعالی در برنامه نیست. اگر پرونده در انتظار متخصص است، بعد از تأیید اینجا دیده می‌شود.';
-        }
-        $lines = array_map(fn (array $meal) => $meal['type'].': '.$meal['title'].' ('.$meal['kcal'].' کالری)', $plan['meals']);
-
-        return "برنامه امروز:\n".implode("\n", $lines);
     }
 
     private function alertSpecialist(string $user, string $kind): void
@@ -425,6 +412,27 @@ final class MySqlCoach implements CoachGateway
 
     private function message(object $row): array
     {
-        return ['id' => $row->id, 'seq' => (int) $row->seq, 'role' => $row->role, 'type' => $row->type, 'text' => $row->fallback_text, 'createdAt' => $row->created_at];
+        $payload = json_decode((string) ($row->payload ?? '{}'), true);
+        if (! is_array($payload)) {
+            $payload = [];
+        }
+        $text = is_string($row->fallback_text) ? $row->fallback_text : '';
+        if ($text !== '' && (! isset($payload['text']) || ! is_string($payload['text']) || trim($payload['text']) === '')) {
+            $payload['text'] = $text;
+        }
+        if ($row->type === 'day_brief' && $text !== '' && (! isset($payload['note']) || ! is_string($payload['note']) || trim($payload['note']) === '')) {
+            $payload['note'] = $text;
+        }
+
+        return [
+            'id' => $row->id,
+            'seq' => (int) $row->seq,
+            'role' => $row->role,
+            'type' => $row->type === 'safety' ? 'text' : $row->type,
+            'payload' => $payload,
+            'fallback_text' => $text,
+            'client_message_id' => $row->client_message_id,
+            'created_at' => $row->created_at,
+        ];
     }
 }
