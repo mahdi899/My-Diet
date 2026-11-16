@@ -25,6 +25,10 @@ class CoachTextBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     const radius = Radius.circular(22);
     const tail = Radius.circular(6);
+    
+    // Fix RTL for Persian text
+    final displayText = _fixPersianText(text);
+    
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: MediaQuery.sizeOf(context).width * (isUser ? .82 : .76),
@@ -32,57 +36,86 @@ class CoachTextBubble extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: isUser ? AppColors.emeraldDeep : AppColors.surface,
-          borderRadius: BorderRadiusDirectional.only(
-            topStart: radius,
-            topEnd: radius,
-            bottomStart: isUser ? radius : tail,
-            bottomEnd: isUser ? tail : radius,
+          borderRadius: BorderRadius.only(
+            topLeft: radius,
+            topRight: radius,
+            bottomLeft: isUser ? radius : tail,
+            bottomRight: isUser ? tail : radius,
           ),
           boxShadow: isUser ? const [] : AppShadows.soft,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Text.rich(
-            TextSpan(
-              children:
-                  !isUser && text.startsWith('سلام') && text.contains('\n')
-                  ? [
-                      TextSpan(
-                        text: text.substring(0, text.indexOf('\n') + 1),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Text.rich(
+              TextSpan(
+                children:
+                    !isUser && displayText.startsWith('سلام') && displayText.contains('\n')
+                    ? [
+                        TextSpan(
+                          text: displayText.substring(0, displayText.indexOf('\n') + 1),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      TextSpan(text: text.substring(text.indexOf('\n') + 1)),
-                    ]
-                  : [TextSpan(text: text)],
-            ),
-            style: TextStyle(
-              color: isUser ? Colors.white : AppColors.emeraldDark,
-              fontSize: 13,
-              height: 1.9,
-              fontWeight: isUser ? FontWeight.w600 : FontWeight.w500,
+                        TextSpan(text: displayText.substring(displayText.indexOf('\n') + 1)),
+                      ]
+                    : [TextSpan(text: displayText)],
+              ),
+              style: TextStyle(
+                color: isUser ? Colors.white : AppColors.emeraldDark,
+                fontSize: 13,
+                height: 1.9,
+                fontWeight: isUser ? FontWeight.w600 : FontWeight.w500,
+              ),
+              textAlign: TextAlign.right,
             ),
           ),
         ),
       ),
     );
     return Align(
-      alignment: isUser
-          ? AlignmentDirectional.centerEnd
-          : AlignmentDirectional.centerStart,
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: isUser
           ? bubble
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ExcludeSemantics(child: CoachCompanion(size: 32, mood: mood)),
-                const SizedBox(width: 7),
-                Flexible(child: bubble),
-              ],
+          : Directionality(
+              textDirection: TextDirection.ltr,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(child: CoachCompanion(size: 32, mood: mood)),
+                  const SizedBox(width: 7),
+                  bubble,
+                ],
+              ),
             ),
     );
+  }
+  
+  /// Fix Persian text direction and convert English food names to Persian
+  String _fixPersianText(String text) {
+    // Convert common English food names to Persian
+    final foodMap = {
+      'breakfast': 'صبحانه',
+      'lunch': 'ناهار',
+      'dinner': 'شام',
+      'snack': 'میان‌وعده',
+      'kcal': 'کالری',
+      'gram': 'گرم',
+      'protein': 'پروتئین',
+      'carbs': 'کربوهیدرات',
+      'fat': 'چربی',
+    };
+    
+    var result = text;
+    foodMap.forEach((en, fa) {
+      result = result.replaceAll(RegExp(en, caseSensitive: false), fa);
+    });
+    
+    return result;
   }
 }
 
@@ -100,7 +133,7 @@ class CoachPhotoBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: AlignmentDirectional.centerEnd,
+      alignment: Alignment.centerRight,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         child: SizedBox(
@@ -164,27 +197,31 @@ class TypingDots extends StatelessWidget {
     label: 'مربی در حال پاسخ‌دادن است',
     excludeSemantics: true,
     child: Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CoachCompanion(size: 44, mood: CompanionMood.thinking),
-          const SizedBox(width: 7),
-          Flexible(
-            child: Container(
+      alignment: Alignment.centerLeft,
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CoachCompanion(size: 44, mood: CompanionMood.thinking),
+            const SizedBox(width: 7),
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: AppShadows.soft,
               ),
-              child: const Text(
-                'دارم به حرفت فکر می‌کنم…',
-                style: TextStyle(fontSize: 12, color: AppColors.emeraldDark),
+              child: const Directionality(
+                textDirection: TextDirection.rtl,
+                child: Text(
+                  'دارم به حرفت فکر می‌کنم…',
+                  style: TextStyle(fontSize: 12, color: AppColors.emeraldDark),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );

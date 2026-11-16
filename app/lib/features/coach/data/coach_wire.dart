@@ -9,6 +9,7 @@ const kCoachServerActions = <String>{
   'log_as_planned',
   'log_water',
   'log_weight',
+  'mood',
   'show_ring',
 };
 

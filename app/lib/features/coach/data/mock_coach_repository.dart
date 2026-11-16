@@ -194,7 +194,10 @@ class MockCoachRepository implements CoachRepository {
     await _applyAction(action, data);
     switch (action) {
       case 'log_weight':
-        final value = asDouble(data['value'], store?.latestWeight ?? 0);
+        final value = asDouble(
+          data['kilograms'] ?? data['value'],
+          store?.latestWeight ?? 0,
+        );
         yield* _speak('وزن ${fa(value.toStringAsFixed(1))} ثبت شد.', const []);
       case 'log_water':
         yield* _speak('آب امروز به‌روز شد.', [_water()]);
@@ -215,7 +218,7 @@ class MockCoachRepository implements CoachRepository {
   Future<void> _applyAction(String action, Map<String, dynamic> data) async {
     switch (action) {
       case 'log_weight':
-        final value = asDouble(data['value']);
+        final value = asDouble(data['kilograms'] ?? data['value']);
         if (value > 0) store?.addWeight(value);
       case 'log_water':
         _glasses = (_glasses + asInt(data['glasses'], 1)).clamp(0, 20);

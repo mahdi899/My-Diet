@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../core/format/digits.dart';
+import '../../../../core/photos/photos.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../presentation/widgets/kit/kit.dart';
 import '../../presentation/coach_controller.dart';
@@ -415,6 +416,158 @@ class MilestoneView extends StatelessWidget {
               style: const TextStyle(color: AppColors.emeraldDark, height: 1.7),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class SwapOptionsView extends StatelessWidget {
+  const SwapOptionsView({
+    super.key,
+    required this.message,
+    required this.controller,
+  });
+
+  final CoachMessage message;
+  final CoachController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final payload = message.payload;
+    final options = asMapList(payload['options']);
+    final used = controller.answered.contains(message.id);
+    final mealId = asString(payload['mealId']);
+    final reason = asString(payload['reason'], 'variety');
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.88,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              child: Text(
+                asString(payload['text'], message.fallbackText),
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.6,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.emeraldDark,
+                ),
+              ),
+            ),
+            for (final option in options) ...[
+              _SwapOption(
+                option: option,
+                enabled: !used && mealId.isNotEmpty,
+                onPick: () => controller.sendAction(
+                  'confirm_swap',
+                  {
+                    'mealId': mealId,
+                    'foodSlug': asString(option['slug']),
+                    'reason': reason,
+                  },
+                  label: asString(option['name']),
+                  sourceId: message.id,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SwapOption extends StatelessWidget {
+  const _SwapOption({
+    required this.option,
+    required this.enabled,
+    required this.onPick,
+  });
+
+  final Map<String, dynamic> option;
+  final bool enabled;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = asString(option['name']);
+    final kcal = asInt(option['kcal']);
+    final protein = asInt(option['protein']);
+    final minutes = asInt(option['prepMinutes']);
+    final specs = <String>[
+      if (kcal > 0) '${fa(kcal)} کالری',
+      if (protein > 0) '${fa(protein)} پروتئین',
+      if (minutes > 0) '${fa(minutes)} دقیقه',
+    ];
+    return Material(
+      color: AppColors.surface,
+      elevation: 0,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: enabled && asString(option['slug']).isNotEmpty ? onPick : null,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.line),
+            boxShadow: AppShadows.soft,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                FoodImage(
+                  title: name,
+                  mealType: 'ناهار',
+                  thumb: true,
+                  width: 58,
+                  height: 58,
+                  borderRadius: BorderRadius.circular(14),
+                  semanticLabel: name,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          height: 1.45,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                      if (specs.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          specs.join('  ·  '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            height: 1.4,
+                            color: AppColors.muted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

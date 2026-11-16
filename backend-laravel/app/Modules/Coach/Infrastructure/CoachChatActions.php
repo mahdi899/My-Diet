@@ -55,7 +55,7 @@ final class CoachChatActions
         return strlen($food) >= 2 ? mb_substr($food, 0, 40, 'UTF-8') : null;
     }
 
-    public function swap(string $userId, string $text): ?string
+    public function swap(string $userId, string $text): string|array|null
     {
         $meal = $this->todayMeal($userId, $text);
         if ($meal === null) {
@@ -73,12 +73,29 @@ final class CoachChatActions
                 return 'ثبت شد. به‌جای «'.$meal['title'].'» حالا «'.$applied['newMeal']['title'].'» است.';
             }
         }
-        $lines = [];
-        foreach ($options as $index => $option) {
-            $lines[] = ($index + 1).'. '.$option['name'].' ('.$option['kcal'].' کالری)';
+        $cards = [];
+        foreach (array_slice($options, 0, 4) as $option) {
+            $cards[] = [
+                'slug' => $option['slug'],
+                'name' => $option['name'],
+                'kcal' => (int) $option['kcal'],
+                'protein' => (int) round((float) ($option['protein'] ?? 0)),
+                'prepMinutes' => (int) ($option['prepMinutes'] ?? 0),
+            ];
         }
+        $prompt = 'برای «'.$meal['title'].'» یکی را انتخاب کن.';
 
-        return "برای «{$meal['title']}» این‌ها سازگارند. اسم یکی را بفرست تا ثبت شود:\n".implode("\n", $lines);
+        return [
+            'type' => 'swap_options',
+            'text' => $prompt,
+            'payload' => [
+                'text' => $prompt,
+                'mealId' => $meal['id'],
+                'mealTitle' => $meal['title'],
+                'reason' => $reason,
+                'options' => $cards,
+            ],
+        ];
     }
 
     public function logMeal(string $userId, string $text): ?string

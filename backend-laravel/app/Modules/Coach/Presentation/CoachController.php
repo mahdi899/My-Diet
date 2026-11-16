@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class CoachController
 {
-    private const ACTIONS = ['confirm_meal', 'dismiss', 'confirm_swap', 'log_as_planned', 'log_water', 'log_weight', 'show_ring'];
+    private const ACTIONS = ['confirm_meal', 'dismiss', 'confirm_swap', 'log_as_planned', 'log_water', 'log_weight', 'mood', 'show_ring'];
 
     public function __construct(
         private CoachGateway $coach,
@@ -111,8 +111,22 @@ final class CoachController
         if (! in_array($action, self::ACTIONS, true)) {
             throw new Problem(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
         }
+        $args = [];
+        if (array_key_exists('args', $body) && $body['args'] !== null) {
+            $raw = $body['args'] instanceof \stdClass ? (array) $body['args'] : $body['args'];
+            if (! is_array($raw)) {
+                throw new Problem(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
+            }
+            $args = $raw;
+        }
 
-        return $this->coach->action($this->actor($request), Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $action);
+        return $this->coach->action(
+            $this->actor($request),
+            Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''),
+            $action,
+            $args,
+            Input::optional($body, 'label', 80),
+        );
     }
 
     public function media(Request $request, string $id): Response

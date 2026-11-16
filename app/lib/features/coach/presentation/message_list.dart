@@ -116,7 +116,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
     if (controller.canRetry) {
       rows.add(
         Align(
-          alignment: AlignmentDirectional.centerEnd,
+          alignment: Alignment.centerRight,
           child: ActionChip(
             label: const Text('تلاش دوباره'),
             onPressed: controller.busy
@@ -211,6 +211,10 @@ class _CoachMessageListState extends State<CoachMessageList> {
           message: message,
         ),
         onSwap: () => controller.sendText('یه پیشنهاد دیگه بده'),
+      ),
+      'swap_options' => SwapOptionsView(
+        message: message,
+        controller: controller,
       ),
       'plan_meal' => PlanMealView(
         message: message,

@@ -70,6 +70,7 @@ const kKnownCoachTypes = <String>{
   'quick_replies',
   'meal_card',
   'plan_meal',
+  'swap_options',
   'calorie_ring',
   'weigh_in',
   'water',
