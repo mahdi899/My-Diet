@@ -82,12 +82,23 @@ function ProviderDialog({ selection, preview, close, saved }: { selection: Provi
   </AiDialog>
 }
 
+function applyCatalogPrices(row: Row, setPriceIn: (value: string) => void, setPriceOut: (value: string) => void) {
+  setPriceIn(String(Number(row.priceInMicrosPerM ?? 0) / 1e6))
+  setPriceOut(String(Number(row.priceOutMicrosPerM ?? 0) / 1e6))
+}
+
 function MemberDialog({ providers, close, add, preview }: { providers: Row[]; close: () => void; add: (row: Row) => void; preview: boolean }) {
   const [providerId, setProviderId] = useState(str(providers[0]?.id))
   const [model, setModel] = useState('')
   const [priceIn, setPriceIn] = useState('0')
   const [priceOut, setPriceOut] = useState('0')
   const catalog = useMutation({ mutationFn: (provider: string) => aiApi('providers/' + id(provider) + '/models?limit=500') })
+  const models = itemRows(catalog.data)
+  const needle = model.trim().toLowerCase()
+  const visible = models.filter(row => {
+    const label = `${str(row.id)} ${str(row.name)}`.toLowerCase()
+    return needle === '' || label.includes(needle)
+  })
   return <AiDialog title="افزودن مدل به استخر" close={close}>
     <AiForm preview={false} close={close} label="افزودن مدل" submit={async data => {
       const name = model.trim()
@@ -95,18 +106,32 @@ function MemberDialog({ providers, close, add, preview }: { providers: Row[]; cl
       add({ providerId, providerName: providers.find(provider => provider.id === providerId)?.name, model: name, weight: Number(data.get('weight')),
         enabled: true, priceInMicrosPerM: Math.round(Number(priceIn) * 1e6), priceOutMicrosPerM: Math.round(Number(priceOut) * 1e6) })
     }}>
-      <label>سرویس<select value={providerId} onChange={event => { setProviderId(event.target.value); catalog.reset() }}>
+      <label>سرویس<select value={providerId} onChange={event => { setProviderId(event.target.value); setModel(''); catalog.reset() }}>
         {providers.map(provider => <option key={str(provider.id)} value={str(provider.id)}>{str(provider.name)}</option>)}
       </select></label>
-      <label>شناسهٔ مدل<input dir="ltr" list="ai-live-models" value={model} required onChange={event => {
+      <label>شناسهٔ مدل<input dir="ltr" value={model} required placeholder="جست‌وجو یا وارد کردن شناسه" onChange={event => {
         const value = event.target.value
         setModel(value)
-        const hit = itemRows(catalog.data).find(row => row.id === value)
-        if (hit) { setPriceIn(String(Number(hit.priceInMicrosPerM ?? 0) / 1e6)); setPriceOut(String(Number(hit.priceOutMicrosPerM ?? 0) / 1e6)) }
+        const hit = models.find(row => row.id === value)
+        if (hit) applyCatalogPrices(hit, setPriceIn, setPriceOut)
       }} /></label>
-      <datalist id="ai-live-models">{itemRows(catalog.data).map(row => <option key={str(row.id)} value={str(row.id)}>{str(row.name)}</option>)}</datalist>
       <button type="button" className="secondary" disabled={preview || catalog.isPending} onClick={() => catalog.mutate(providerId)}>{catalog.isPending ? 'در حال دریافت…' : 'دریافت فهرست زندهٔ مدل‌ها'}</button>
       {catalog.isError && <p role="alert">{errorText(catalog.error)}</p>}
+      {models.length > 0 && <div className="ai-model-picker" role="listbox" aria-label="فهرست مدل‌ها" style={{ height: Math.min(280, 46 + Math.max(visible.length, 1) * 84), minHeight: Math.min(280, 46 + Math.max(visible.length, 1) * 84) }}>
+        <p>{visible.length ? `${num(visible.length)} از ${num(models.length)} مدل. برای انتخاب، روی مدل بزنید.` : 'مدلی با این عبارت پیدا نشد. شناسه را دستی وارد کنید.'}</p>
+        {visible.map(row => {
+          const modelId = str(row.id)
+          const name = str(row.name)
+          return <button type="button" role="option" aria-selected={model === modelId} key={modelId} onClick={() => { setModel(modelId); applyCatalogPrices(row, setPriceIn, setPriceOut) }}>
+            <bdi>{modelId}</bdi>
+            <small>
+              {name && name !== modelId && <bdi>{name}</bdi>}
+              <span>ورودی <bdi>{usd(row.priceInMicrosPerM, 3)}</bdi></span>
+              <span>خروجی <bdi>{usd(row.priceOutMicrosPerM, 3)}</bdi></span>
+            </small>
+          </button>
+        })}
+      </div>}
       <label>قیمت ورودی (دلار برای هر میلیون توکن)<input type="number" min={0} step="any" value={priceIn} onChange={event => setPriceIn(event.target.value)} required /></label>
       <label>قیمت خروجی (دلار برای هر میلیون توکن)<input type="number" min={0} step="any" value={priceOut} onChange={event => setPriceOut(event.target.value)} required /></label>
       <label>وزن<input name="weight" type="number" min={1} max={100} defaultValue={1} required /></label>
