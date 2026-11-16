@@ -4,6 +4,7 @@ import { AdminIcon as Icon } from '../../../admin/components/AdminIcon'
 import { toEnglishDigits } from '@shared/utils'
 import { staff } from '../../session'
 import { doctorPreviewEnabled, loginToDoctorPreview } from '../../data/preview'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 
 export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [mode, setMode] = useState<'phone' | 'password' | 'code' | 'totp'>('phone')
@@ -63,6 +64,7 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   return (
     <section className="login-layout" aria-label="ورود به پنل پزشک">
       <div className="login-form-area"><div className="login-form-wrap">
+        <div style={{ marginBottom: 28 }}><BrandLogo size={52} /></div>
         <h1>متخصص گرامی خوش آمدید!</h1>
         <p className="form-error" role="alert">{error}</p>
         <form onSubmit={submit}>

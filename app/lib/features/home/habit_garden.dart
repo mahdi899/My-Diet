@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/motion/motion.dart';
@@ -114,11 +115,7 @@ class _HabitGardenState extends State<HabitGarden> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.spa_outlined,
-                color: AppColors.emeraldDeep,
-                size: 22,
-              ),
+              const DietIcon(DietIconKind.progress, size: 26),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(

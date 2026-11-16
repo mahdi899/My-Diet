@@ -36,7 +36,7 @@ for (const name of iranFonts) {
     console.warn('Missing demo font:', name);
   }
 }
-const logoFromSite = resolve(siteAssets, 'logo.png');
+const logoFromSite = resolve(root, 'frontend', 'public', 'brand', 'symbol.png');
 if (existsSync(logoFromSite)) {
   copyFileSync(logoFromSite, resolve(assetsDir, 'logo.png'));
 } else {
@@ -61,7 +61,7 @@ html = html.replace(
 
 html = html.replace(
   /<meta name="viewport"[^>]+>/,
-  '$&\n  <meta name="theme-color" content="#205638">',
+  '$&\n  <meta name="theme-color" content="#0B7A55">',
 );
 
 html = html.replace(

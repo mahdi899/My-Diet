@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
@@ -41,11 +42,7 @@ class PlanEmpty extends StatelessWidget {
       key: const ValueKey('plan-empty'),
       padding: const EdgeInsets.fromLTRB(20, 28, 20, shellBottomInset),
       children: [
-        const Icon(
-          Icons.calendar_month_rounded,
-          color: AppColors.emerald,
-          size: 42,
-        ),
+        const DietIcon(DietIconKind.plan, size: 48),
         const SizedBox(height: 12),
         Text(
           'هنوز برنامه‌ای نداری',
@@ -54,7 +51,11 @@ class PlanEmpty extends StatelessWidget {
         const SizedBox(height: 18),
         PillButton(
           label: 'دریافت برنامه',
-          icon: Icons.restaurant_rounded,
+          iconWidget: const DietIcon(
+            DietIconKind.meal,
+            color: Colors.white,
+            monochrome: true,
+          ),
           onPressed: () => openPlanServices(context),
         ),
       ],

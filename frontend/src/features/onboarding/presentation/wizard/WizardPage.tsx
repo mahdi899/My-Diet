@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { historyAction, pathFor, stepOf } from '../../domain/progress'
-import { assetUrl, faDigits, isAnswered, answerOf } from '../../domain/questionnaire'
+import { faDigits, isAnswered, answerOf } from '../../domain/questionnaire'
 import { audience, loadQuestionnaireCatalog, onboarding, questionnaireGoals, readProgress, writeProgress } from '../../composition'
 import { useWizard } from '../../application/wizard-store'
 import { CheckoutStage } from './stages/CheckoutStage'
@@ -149,8 +150,8 @@ export function WizardPage() {
       {wizard.stage !== 'plans' && wizard.stage !== 'verify' && wizard.stage !== 'checkout' && <header>
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <button id="appLogoHomeBtn" type="button" className="header-logo-btn" onClick={() => { wizard.setStage('intro'); navigate('/onboarding') }}>
-            <img className="app-logo-img" src={assetUrl('assets/logo.png')} alt="" width={40} height={40} />
-            <span>رژیم من</span>
+            <BrandLogo variant="symbol" className="app-logo-img" size={40} decorative />
+            <span><BrandLogo variant="wordmark" size={30} /></span>
           </button>
           <div id="headerQuizProgress" aria-label="پیشرفت پرسشنامه">
             <span id="headerQuestionChip">{wizard.stage === 'quiz' && wizard.questions.length ? `${faDigits(wizard.index + 1)} / ${faDigits(wizard.questions.length)}` : 'شروع'}</span>

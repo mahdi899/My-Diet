@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/motion/motion_kit.dart';
@@ -196,7 +197,11 @@ class _MealDetailPageState extends State<MealDetailPage> {
                               reduced: Motion.reduced(context),
                             ),
                           ),
-                          icon: const Icon(Icons.soup_kitchen_outlined),
+                          icon: const DietIcon(
+                            DietIconKind.meal,
+                            color: Colors.white,
+                            monochrome: true,
+                          ),
                           label: const Text('شروع آشپزی قدم‌به‌قدم'),
                         ),
                       ],
@@ -593,11 +598,7 @@ class _IngredientRow extends StatelessWidget {
                           color: AppColors.mint,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
-                          Icons.restaurant_rounded,
-                          color: AppColors.emeraldDeep,
-                          size: 22,
-                        ),
+                        child: const DietIcon(DietIconKind.meal, size: 24),
                       )
                     : FoodImage(
                         photo: photo,

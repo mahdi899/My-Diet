@@ -11,15 +11,17 @@ class PillButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.iconWidget,
     this.trailingIcon,
     this.variant = PillVariant.primary,
     this.loading = false,
     this.expanded = true,
     this.height = AppSpacing.controlHeight,
-  });
+  }) : assert(icon == null || iconWidget == null);
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon, trailingIcon;
+  final Widget? iconWidget;
   final PillVariant variant;
   final bool loading, expanded;
   final double height;
@@ -48,8 +50,8 @@ class PillButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20),
+              if (iconWidget != null || icon != null) ...[
+                if (iconWidget != null) iconWidget! else Icon(icon, size: 20),
                 const SizedBox(width: 8),
               ],
               Flexible(child: Text(label, textAlign: TextAlign.center)),

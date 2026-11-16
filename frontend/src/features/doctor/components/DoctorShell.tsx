@@ -5,6 +5,7 @@ import { doctorNav } from '../nav'
 import { loadProfile } from '../data/api'
 import { canLeaveDoctor } from '../data/labels'
 import { doctorPreviewEnabled } from '../data/preview'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 
 export function DoctorShell({ section, onNavigate, onLogout, children, onRefresh }: {
   section: string
@@ -41,7 +42,7 @@ export function DoctorShell({ section, onNavigate, onLogout, children, onRefresh
       <aside id="sidebar" aria-label="منوی اصلی">
         <div className="sidebar-brand">
           <Link to="/doctor/dashboard" onClick={(event) => { if (!canLeaveDoctor()) event.preventDefault() }}>
-            <div className="brand"><img className="brand-logo" src="/admin-assets/logo.png" alt="" width="40" height="40" /><div>رژیم من<small>پنل پزشک</small></div></div>
+            <div className="brand"><BrandLogo variant="symbol" tone="white" size={40} decorative /><div><BrandLogo variant="wordmark" tone="white" size={30} /><small>پنل پزشک</small></div></div>
           </Link>
           <button id="menu-close" className="icon-button" aria-label="بستن منو" onClick={() => setOpen(false)}><Icon name="close" /></button>
         </div>

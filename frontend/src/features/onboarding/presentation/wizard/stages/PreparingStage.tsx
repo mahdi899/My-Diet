@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { assetUrl, faDigits } from '../../../domain/questionnaire'
+import { faDigits } from '../../../domain/questionnaire'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 
 export function PreparingStage({ onDone }: { onDone: () => void }) {
   const [progress, setProgress] = useState(0)
@@ -29,7 +30,7 @@ export function PreparingStage({ onDone }: { onDone: () => void }) {
         <span className="analysis-spark analysis-spark--sm spark-inner">
           <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.2 13.7 8.8 21.6 12 13.7 15.2 12 22.8 10.3 15.2 2.4 12 10.3 8.8Z" /></svg>
         </span>
-        <span className="analysis-core"><img src={assetUrl('assets/logo.png')} alt="" width={58} height={58} /></span>
+        <span className="analysis-core"><BrandLogo variant="symbol" size={58} decorative /></span>
       </div>
       <h2 className="ai-prep-title">اطلاعات شما<br />در حال آنالیز است</h2>
       <p id="analysisPercent">{faDigits(progress)}٪</p>

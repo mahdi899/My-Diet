@@ -1,5 +1,6 @@
 import '../../data/day.dart';
 import '../../data/demo_store.dart';
+import '../../domain/common/number_format.dart';
 import '../../domain/onboarding/onboarding.dart';
 import '../../domain/plan/plan.dart';
 
@@ -31,13 +32,11 @@ void showServerPlan(
   if (profile != null) {
     store.questionnaire.age = fa(profile.age);
     store.questionnaire.height = fa(profile.heightCm.round());
-    store.questionnaire.weight = fa(profile.weightKg.round());
+    store.applyOnboardingWeight(profile.weightKg);
     final target = profile.targetWeightKg;
-    if (target != null) {
-      store.questionnaire.targetWeight = fa(
-        target == target.roundToDouble() ? target.round() : target,
-      );
-    }
+    store.questionnaire.targetWeight = target == null
+        ? ''
+        : persianNumber(target);
   }
   store.questionnaireComplete = true;
   store.entryStage = EntryStage.home;

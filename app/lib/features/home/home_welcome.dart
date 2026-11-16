@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -101,11 +102,7 @@ class HomeWelcome extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            const Icon(
-              Icons.calendar_today_outlined,
-              size: 16,
-              color: AppColors.emeraldDeep,
-            ),
+            const DietIcon(DietIconKind.plan, size: 20),
             const SizedBox(width: AppSpacing.sm),
             Flexible(
               child: Text(

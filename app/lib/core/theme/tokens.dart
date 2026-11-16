@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens of «رژیم من»: warm cream surfaces, emerald primary,
+/// Design tokens of «رژیم من»: white surfaces, emerald primary,
 /// lime/amber accents, big radii and soft shadows.
 abstract final class AppColors {
   // Surfaces
-  static const bg = Color(0xFFFBF7EE); // warm cream
-  static const bgDeep = Color(0xFFF4EEDF);
+  static const bg = Color(0xFFFFFFFF);
+  static const bgDeep = bg;
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceWarm = Color(0xFFFFFCF5);
+  static const surfaceWarm = surface;
   static const mint = Color(0xFFE6F4EA); // soft emerald tint
   static const line = Color(0xFFEBE4D3);
 
@@ -89,7 +89,7 @@ abstract final class AppGradients {
   static const warmBackground = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFFFFDF7), AppColors.bg],
+    colors: [AppColors.bg, AppColors.bg],
   );
 
   /// Dark scrim for text on photos.

@@ -1,3 +1,4 @@
+import '../../../core/icons/diet_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -178,7 +179,7 @@ class _CoachComposerState extends State<CoachComposer> {
                             const {'glasses': 1},
                             label: 'ثبت آب',
                           ),
-                          icon: const Icon(Icons.water_drop_outlined, size: 17),
+                          icon: const DietIcon(DietIconKind.water, size: 21),
                           label: const Text('ثبت آب'),
                         ),
                         const SizedBox(width: 8),
@@ -199,10 +200,7 @@ class _CoachComposerState extends State<CoachComposer> {
                           onPressed:
                               widget.onTodayPlan ??
                               () => controller.sendText('برنامهٔ امروز'),
-                          icon: const Icon(
-                            Icons.calendar_today_outlined,
-                            size: 17,
-                          ),
+                          icon: const DietIcon(DietIconKind.plan, size: 21),
                           label: const Text('برنامهٔ امروز'),
                         ),
                       ]

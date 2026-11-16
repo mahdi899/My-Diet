@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/motion/motion.dart';
+import '../../core/icons/diet_icon.dart';
 import '../../core/theme/tokens.dart';
 import '../../presentation/widgets/kit/kit.dart';
 
@@ -42,7 +43,7 @@ class ShellTabBar extends StatelessWidget {
                   Expanded(
                     child: _Tab(
                       key: const ValueKey('tab-home'),
-                      icon: Icons.home_rounded,
+                      icon: DietIconKind.home,
                       label: 'خانه',
                       selected: selected == 1,
                       onTap: onHome,
@@ -52,7 +53,7 @@ class ShellTabBar extends StatelessWidget {
                   Expanded(
                     child: _Tab(
                       key: const ValueKey('tab-plan'),
-                      icon: Icons.calendar_month_rounded,
+                      icon: DietIconKind.plan,
                       label: 'برنامه',
                       selected: selected == 2,
                       onTap: onPlan,
@@ -85,46 +86,41 @@ class _CoachOrb extends StatelessWidget {
       key: const ValueKey('tab-coach'),
       semanticLabel: 'مربی',
       onTap: onTap,
-      child: Container(
-        width: 74,
-        height: 74,
-        padding: const EdgeInsets.all(4),
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFFFFFFFF),
-          boxShadow: AppShadows.cta,
-        ),
-        child: const DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: AppGradients.cta,
-          ),
-          child: Center(child: _Sparkles()),
-        ),
-      ),
-    );
-  }
-}
-
-class _Sparkles extends StatelessWidget {
-  const _Sparkles();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 40,
-      height: 40,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Align(
-            alignment: Alignment(-0.2, -0.15),
-            child: Icon(Icons.auto_awesome, color: Color(0xFFFFFFFF), size: 30),
+          Container(
+            width: 74,
+            height: 74,
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFFFFFF),
+              boxShadow: AppShadows.cta,
+            ),
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppGradients.cta,
+              ),
+              child: Center(
+                child: DietIcon(
+                  DietIconKind.coach,
+                  size: 38,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
-          Align(
-            alignment: Alignment(0.72, 0.62),
-            child: Icon(Icons.auto_awesome, color: Color(0xF2FFFFFF), size: 14),
+          const SizedBox(height: 2),
+          const Text(
+            'مربی',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.4,
+              fontWeight: FontWeight.bold,
+              color: AppColors.emeraldDark,
+            ),
           ),
         ],
       ),
@@ -141,7 +137,7 @@ class _Tab extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final DietIconKind icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -149,34 +145,37 @@ class _Tab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.emeraldDark : AppColors.muted;
-    return PressableScale(
-      semanticLabel: label,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: Motion.of(context, Motion.quick),
-        curve: Motion.curve,
-        height: 52,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.mint : const Color(0x00000000),
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
+    return Semantics(
+      selected: selected,
+      child: PressableScale(
+        semanticLabel: label,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Motion.of(context, Motion.quick),
+          curve: Motion.curve,
+          height: 52,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.mint : const Color(0x00000000),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                DietIcon(icon, color: color, size: 26, selected: selected),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

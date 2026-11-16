@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Icon } from '../icons'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 import '../styles/site.css'
 
 type PageKey = 'home' | 'pricing' | 'about' | 'articles' | 'article' | 'contact' | 'terms' | 'refund'
@@ -82,7 +83,7 @@ export function SiteFrame({ children }: { children: ReactNode }) {
       <div className="site-shell" data-page={page}>
         <header className="header">
           <nav className="nav wrap" aria-label="منوی اصلی">
-            <Link className="brand" to="/"><Icon name="leaf" />رژیم من</Link>
+            <Link className="brand" to="/" aria-label="رژیم من، صفحهٔ اصلی"><BrandLogo size={48} /></Link>
             <div className={open ? 'navlinks open' : 'navlinks'} id="navlinks">
               {links.map((link) => (
                 <Link
@@ -116,7 +117,7 @@ export function SiteFrame({ children }: { children: ReactNode }) {
           <div className="wrap">
             <div className="footer-grid">
               <div className="footer-brand">
-                <Link className="brand" to="/"><Icon name="leaf" />رژیم من</Link>
+                <Link className="brand" to="/" aria-label="رژیم من، صفحهٔ اصلی"><BrandLogo size={48} tone="white" /></Link>
                 <p>غذای خوب، متناسب با زندگی تو.<br />ترکیب هوش مصنوعی و نگاه متخصص، برای یک مسیر شخصی‌تر در تغذیه.</p>
               </div>
               <div className="footer-links-block">

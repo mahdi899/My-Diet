@@ -1,5 +1,6 @@
 export '../domain/common/digits.dart';
 import '../domain/onboarding/questionnaire.dart';
+import '../domain/common/number_format.dart';
 export '../domain/onboarding/questionnaire.dart';
 import '../presentation/session/customer_scope.dart';
 import 'preferences_water_log.dart';
@@ -2280,6 +2281,23 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   Future<void> Function(String ingredientName, String? status)? reportShopping;
   @override
   double latestWeight = 72;
+  double? _onboardingWeight;
+
+  /// Seed real weight history once per onboarding weight. Refreshing the same
+  /// profile must preserve measurements recorded after onboarding.
+  void applyOnboardingWeight(double value) {
+    questionnaire.weight = persianNumber(value);
+    if (_onboardingWeight == value) return;
+    _onboardingWeight = value;
+    latestWeight = value;
+    weightEntries
+      ..clear()
+      ..add(value);
+    weightDates
+      ..clear()
+      ..add(DateTime(today.year, today.month, today.day));
+  }
+
   final List<DateTime> weightDates = [];
   List<DateTime> get weightEntryDates =>
       weightDates.length == weightEntries.length
@@ -2534,6 +2552,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
 
   void logout() {
     messaging.reset();
+    _onboardingWeight = null;
     role = null;
     selectedRole = null;
     _userAuthenticated = false;
