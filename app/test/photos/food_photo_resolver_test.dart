@@ -13,11 +13,14 @@ void main() {
   });
 
   test('manifest is complete and files exist', () {
-    expect(manifest.items.length, 177);
+    expect(manifest.items.length, 180);
     final ids = <String>{};
     for (final e in manifest.items) {
       expect(ids.add(e.id), isTrue, reason: 'duplicate ${e.id}');
-      expect(e.path, matches(RegExp(r'^assets/photo/[a-z]+/[a-z0-9_]+\.jpg$')));
+      expect(
+        e.path,
+        matches(RegExp(r'^assets/photo/[a-z]+/[a-z0-9_]+\.(jpg|png)$')),
+      );
       expect(File(e.path).existsSync(), isTrue, reason: e.path);
       expect(File(e.thumb).existsSync(), isTrue, reason: e.thumb);
     }
@@ -26,10 +29,27 @@ void main() {
     expect(counts['breakfast'], greaterThan(10));
   });
 
+  test('cooking ingredients resolve to their dedicated photos', () {
+    expect(
+      r.bestMatch(title: 'ماهی', mealType: 'ingredient')?.id,
+      'raw_fish_fillet',
+    );
+    expect(
+      r.bestMatch(title: 'آب‌لیمو', mealType: 'ingredient')?.id,
+      'fresh_lemon_halves',
+    );
+    expect(
+      r.bestMatch(title: 'زعفران', mealType: 'ingredient')?.id,
+      'saffron_threads_bowl',
+    );
+  });
+
   test('matches Persian dish names', () {
     expect(r.resolve(title: 'قورمه‌سبزی').id, contains('ghormeh'));
-    expect(r.resolve(title: 'خورش فسنجان', mealType: 'ناهار').id,
-        contains('fesenjan'));
+    expect(
+      r.resolve(title: 'خورش فسنجان', mealType: 'ناهار').id,
+      contains('fesenjan'),
+    );
     expect(r.resolve(title: 'زرشک پلو با مرغ').id, contains('zereshk'));
     expect(r.resolve(title: 'املت', mealType: 'صبحانه').category, 'breakfast');
     expect(r.resolve(title: 'Salad Shirazi').id, contains('shirazi'));

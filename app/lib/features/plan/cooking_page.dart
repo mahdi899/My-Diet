@@ -6,7 +6,7 @@ import '../../core/motion/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/common/digits.dart';
 import '../../domain/plan/meal.dart';
-import '../../presentation/widgets/kit/kit.dart';
+import 'cooking_parts.dart';
 import 'goal_math.dart';
 
 /// A recipe viewer, independent of meal logging. Timers use a deadline so
@@ -145,13 +145,79 @@ class _CookingPageState extends State<CookingPage> with WidgetsBindingObserver {
     });
   }
 
+  void _removeTimer() {
+    _ticker?.cancel();
+    setState(() {
+      _timerStep = null;
+      _deadline = null;
+      _remaining = Duration.zero;
+      _finished = false;
+    });
+  }
+
+  void _showIngredients() {
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bg,
+      builder: (_) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * .75,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          children: [
+            Text(
+              'مواد و مقدارهای این وعده',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'مقدارها برای کل وعده‌اند؛ طبق دستور استفاده کن.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.inkSoft,
+                height: 1.7,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (widget.meal.ingredients.isEmpty)
+              Text(
+                widget.meal.amount.isEmpty
+                    ? 'مقدار مواد هنوز ثبت نشده است.'
+                    : widget.meal.amount,
+              ),
+            for (final item in widget.meal.ingredients)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  ingredientLine(item),
+                  style: const TextStyle(fontSize: 17, height: 1.8),
+                ),
+              ),
+            if (widget.meal.quantityBasis.isNotEmpty)
+              Text(
+                widget.meal.quantityBasis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.inkSoft,
+                  height: 1.7,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final steps = _steps;
     final total = steps.length;
     final text = total == 0 ? '' : steps[_step];
-    // Only explicitly named ingredients are associated with a step. Quantities
-    // remain the approved whole-meal amounts, never inferred step quantities.
     String normalize(String s) => s
         .replaceAll('ي', 'ی')
         .replaceAll('ك', 'ک')
@@ -168,6 +234,7 @@ class _CookingPageState extends State<CookingPage> with WidgetsBindingObserver {
     final seconds = (_remaining.inMilliseconds / 1000).ceil();
     final time =
         '${fa((seconds ~/ 60).toString().padLeft(2, '0'))}:${fa((seconds % 60).toString().padLeft(2, '0'))}';
+    final ending = total == 0 || _step == total - 1;
     return PopScope<void>(
       canPop: _leaving,
       onPopInvokedWithResult: (didPop, _) {
@@ -175,231 +242,207 @@ class _CookingPageState extends State<CookingPage> with WidgetsBindingObserver {
       },
       child: Scaffold(
         backgroundColor: AppColors.bg,
-        appBar: AppBar(
-          leading: IconButton(
-            tooltip: 'خروج از حالت آشپزی',
-            onPressed: _exit,
-            icon: const Icon(Icons.close_rounded),
-          ),
-          title: const Text('حالت آشپزی'),
-        ),
-        body: ListView(
-          controller: _scroll,
-          padding: const EdgeInsets.all(20),
+        body: Stack(
           children: [
-            Text(
-              widget.meal.title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            if (total == 0)
-              const Text('دستور تهیهٔ این غذا هنوز درج نشده است.')
-            else ...[
-              Text(
-                'مرحلهٔ ${fa(_step + 1)} از ${fa(total)}',
-                key: const ValueKey('cooking-step-count'),
-                style: const TextStyle(
-                  color: AppColors.emeraldDeep,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: (_step + 1) / total,
-                minHeight: 5,
-                borderRadius: BorderRadius.circular(8),
-                backgroundColor: AppColors.line,
-                color: AppColors.emeraldDeep,
-              ),
-              const SizedBox(height: 20),
-              AppCard(
-                padding: const EdgeInsets.all(24),
-                child: AnimatedSwitcher(
-                  duration: Motion.of(context, Motion.quick),
-                  child: Semantics(
-                    key: ValueKey('cooking-step-$_step'),
-                    liveRegion: true,
-                    child: Text(
-                      text,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        height: 1.9,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (mentioned.isNotEmpty)
-                AppCard.tinted(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+            CustomScrollView(
+              controller: _scroll,
+              slivers: [
+                SliverToBoxAdapter(child: CookingHero(meal: widget.meal)),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                  sliver: SliverList.list(
                     children: [
-                      const Text(
-                        'مواد نام‌برده در این مرحله',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Text(
+                        widget.meal.title,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: AppColors.emeraldDark,
+                              fontWeight: FontWeight.w800,
+                              height: 1.5,
+                            ),
                       ),
-                      const SizedBox(height: 8),
-                      for (final item in mentioned)
-                        Text(
-                          ingredientLine(item),
-                          style: const TextStyle(fontSize: 16, height: 1.8),
-                        ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'مقدارها برای کل وعده‌اند؛ طبق دستور استفاده کن.',
-                        style: TextStyle(
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.meal.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.inkSoft,
                         ),
                       ),
-                    ],
-                  ),
-                )
-              else
-                const Text(
-                  'مواد این مرحله جداگانه مشخص نشده؛ فهرست کامل مواد را ببین.',
-                  style: TextStyle(color: AppColors.inkSoft, height: 1.7),
-                ),
-              ExpansionTile(
-                key: const ValueKey('cooking-all-ingredients'),
-                tilePadding: EdgeInsets.zero,
-                title: const Text('همهٔ مواد و مقدارها'),
-                children: [
-                  if (widget.meal.ingredients.isEmpty)
-                    Text(
-                      widget.meal.amount.isEmpty
-                          ? 'مقدار مواد هنوز ثبت نشده است.'
-                          : widget.meal.amount,
-                    ),
-                  for (final item in widget.meal.ingredients)
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Text(
-                          ingredientLine(item),
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (_timerStep == null)
-                OutlinedButton.icon(
-                  key: const ValueKey('cooking-add-timer'),
-                  onPressed: _chooseTimer,
-                  icon: const Icon(Icons.timer_outlined),
-                  label: const Text('تایمر اختیاری'),
-                )
-              else
-                AppCard(
-                  key: const ValueKey('cooking-timer'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'تایمر مرحلهٔ ${fa(_timerStep! + 1)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Semantics(
-                        liveRegion: _finished,
-                        label: _finished ? 'زمان تایمر تمام شد' : null,
-                        child: Text(
-                          _finished ? 'زمان تمام شد' : time,
-                          key: const ValueKey('cooking-countdown'),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ),
-                      if (_finished)
-                        const Text(
-                          'غذا را بررسی کن؛ پایان تایمر به معنی آماده‌بودن غذا نیست.',
-                          style: TextStyle(
-                            color: AppColors.inkSoft,
-                            height: 1.7,
-                          ),
-                        ),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        children: [
-                          if (!_finished)
-                            TextButton.icon(
-                              key: const ValueKey('cooking-pause'),
-                              onPressed: _pauseResume,
-                              icon: Icon(
-                                _deadline == null
-                                    ? Icons.play_arrow_rounded
-                                    : Icons.pause_rounded,
-                              ),
-                              label: Text(
-                                _deadline == null ? 'ادامهٔ تایمر' : 'مکث',
+                      const SizedBox(height: 16),
+                      if (total == 0)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Text('دستور تهیهٔ این غذا هنوز درج نشده است.'),
+                        )
+                      else ...[
+                        CookingStepTrack(step: _step, total: total),
+                        const SizedBox(height: 14),
+                        const Divider(color: AppColors.line, height: 1),
+                        const SizedBox(height: 16),
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.eco_outlined,
+                              size: 18,
+                              color: AppColors.emeraldDeep,
+                            ),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'قدم‌به‌قدم با دستور غذا',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.emeraldDeep,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          TextButton(
-                            onPressed: () {
-                              _ticker?.cancel();
-                              setState(() {
-                                _timerStep = null;
-                                _deadline = null;
-                                _remaining = Duration.zero;
-                                _finished = false;
-                              });
-                            },
-                            child: const Text('حذف تایمر'),
-                          ),
-                        ],
-                      ),
-                      const Text(
-                        'در پس‌زمینه زمان محاسبه می‌شود؛ اعلان بیرون از برنامه ندارد.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.inkSoft,
+                          ],
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        AnimatedSwitcher(
+                          duration: Motion.of(context, Motion.quick),
+                          child: Semantics(
+                            key: ValueKey('cooking-step-$_step'),
+                            liveRegion: true,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text(
+                                text,
+                                style: const TextStyle(
+                                  fontSize: 23,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.emeraldDark,
+                                  height: 1.8,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Divider(color: AppColors.line, height: 1),
+                        CookingIngredients(
+                          items: mentioned,
+                          onShowAll: _showIngredients,
+                        ),
+                        const SizedBox(height: 16),
+                        if (_timerStep == null)
+                          OutlinedButton.icon(
+                            key: const ValueKey('cooking-add-timer'),
+                            onPressed: _chooseTimer,
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: AppColors.mint,
+                              side: BorderSide.none,
+                              minimumSize: const Size.fromHeight(56),
+                            ),
+                            icon: const Icon(Icons.timer_outlined),
+                            label: const Text('تایمر اختیاری'),
+                          )
+                        else
+                          CookingTimerPanel(
+                            time: time,
+                            step: _timerStep!,
+                            paused: _deadline == null,
+                            finished: _finished,
+                            onPause: _pauseResume,
+                            onDelete: _removeTimer,
+                          ),
+                      ],
                     ],
-                  ),
-                ),
-            ],
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-            child: Row(
-              children: [
-                if (total > 0) ...[
-                  OutlinedButton(
-                    onPressed: _step == 0 ? null : () => _goStep(_step - 1),
-                    child: const Text('قبلی'),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: FilledButton(
-                    key: const ValueKey('cooking-next'),
-                    onPressed: total == 0 || _step == total - 1
-                        ? _exit
-                        : () => _goStep(_step + 1),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(54),
-                    ),
-                    child: Text(
-                      total == 0 || _step == total - 1
-                          ? 'پایان آشپزی'
-                          : 'مرحلهٔ بعد',
-                    ),
                   ),
                 ),
               ],
+            ),
+            PositionedDirectional(
+              top: 12,
+              end: 16,
+              child: SafeArea(
+                bottom: false,
+                child: Material(
+                  color: AppColors.surfaceWarm,
+                  shape: const CircleBorder(),
+                  elevation: 1,
+                  shadowColor: const Color(0x180A5C42),
+                  child: IconButton(
+                    tooltip: 'خروج از حالت آشپزی',
+                    onPressed: _exit,
+                    icon: const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppColors.emeraldDark,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AppColors.bg,
+            border: Border(top: BorderSide(color: AppColors.line)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              child: Row(
+                children: [
+                  if (total > 0) ...[
+                    OutlinedButton.icon(
+                      onPressed: _step == 0 ? null : () => _goStep(_step - 1),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 13),
+                        minimumSize: const Size(82, 52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                      label: const Text('قبلی', style: TextStyle(fontSize: 13)),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: FilledButton(
+                      key: const ValueKey('cooking-next'),
+                      onPressed: ending ? _exit : () => _goStep(_step + 1),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.emeraldDeep,
+                        minimumSize: const Size.fromHeight(52),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              ending ? 'پایان آشپزی' : 'مرحلهٔ بعد',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Icon(
+                            ending
+                                ? Icons.check_rounded
+                                : Icons.arrow_back_rounded,
+                            textDirection: TextDirection.ltr,
+                            size: 21,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

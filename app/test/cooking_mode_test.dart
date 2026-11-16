@@ -31,6 +31,13 @@ Widget cookingHost(Widget child, {double scale = 1}) => MaterialApp(
 );
 
 Future<void> tapCooking(WidgetTester t, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    await t.scrollUntilVisible(
+      finder,
+      140,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
   await t.ensureVisible(finder);
   await t.pumpAndSettle();
   await t.tap(finder);
@@ -49,19 +56,32 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(find.text('مرحلهٔ ۱ از ۳'), findsOneWidget);
-      expect(find.textContaining('هویج  ۱۰۰ گرم'), findsOneWidget);
-      expect(find.textContaining('مرغ  ۱۵۰ گرم'), findsNothing);
+      await t.scrollUntilVisible(
+        find.byKey(const ValueKey('cooking-ingredient-carrot')),
+        140,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('۱۰۰ گرم'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('cooking-ingredient-chicken')),
+        findsNothing,
+      );
       await t.tap(find.byKey(const ValueKey('cooking-next')));
       await t.pumpAndSettle();
       expect(find.text('مرحلهٔ ۲ از ۳'), findsOneWidget);
       await t.scrollUntilVisible(
-        find.textContaining('مرغ  ۱۵۰ گرم'),
+        find.byKey(const ValueKey('cooking-ingredient-chicken')),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.textContaining('مرغ  ۱۵۰ گرم'), findsOneWidget);
+      expect(find.text('۱۵۰ گرم'), findsOneWidget);
       await t.tap(find.byKey(const ValueKey('cooking-next')));
       await t.pumpAndSettle();
+      await t.scrollUntilVisible(
+        find.textContaining('مواد این مرحله جداگانه مشخص نشده'),
+        140,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(
         find.textContaining('مواد این مرحله جداگانه مشخص نشده'),
         findsOneWidget,

@@ -6,9 +6,9 @@ import '../../presentation/screens/wallet_flow.dart';
 import '../../presentation/session/live_session.dart';
 import '../../presentation/widgets/kit/kit.dart';
 import '../../presentation/widgets/ui.dart';
-import '../../presentation/widgets/operation_status.dart';
+import '../../presentation/widgets/journey_status_view.dart';
+import '../../presentation/screens/messaging.dart';
 import 'goal_math.dart';
-import '../coach/presentation/coach_companion.dart';
 import 'streak_chip.dart';
 
 class PlanSkeleton extends StatelessWidget {
@@ -116,22 +116,18 @@ class PlanWaiting extends StatelessWidget {
       key: const ValueKey('plan-waiting'),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, shellBottomInset),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'برنامه‌ات در راه است',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.emeraldDark,
-                ),
-              ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text(
+            'وضعیت برنامه',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: AppColors.ink,
             ),
-            const SizedBox(width: 12),
-            const CoachCompanion(mood: CompanionMood.thinking, size: 80),
-          ],
+          ),
         ),
-        const SizedBox(height: 16),
         const PlanProgressCard(),
         const PlanQuestions(),
         if (!store.serverAuthEnabled && request.canApproveInformation) ...[
@@ -196,7 +192,7 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
                       store.userRequest.infoAnswer.isEmpty) ||
                   store.userRequest.revisionAwaitingUser);
     final error = _error ?? widget.error ?? store.liveNotice;
-    final (title, message, icon, current) = published
+    final (title, message, _, current) = published
         ? (
             'برنامه‌ات آماده است',
             'برنامهٔ تأییدشده منتشر شده و وعده‌ها در دسترس‌اند.',
@@ -239,13 +235,13 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
               3,
             ),
             PlanStatus.reviewing => (
-              'در حال بررسی متخصص',
-              'متخصص تغذیه پیش‌نویس را بررسی می‌کند. پس از تأیید و انتشار، وعده‌ها در برنامه نمایش داده می‌شوند.',
+              'برنامه‌ات در دست متخصص است',
+              'پیش‌نویس آماده شده و متخصص تغذیه در حال بررسی آن است.',
               Icons.fact_check_outlined,
               2,
             ),
           };
-    return OperationStatus(
+    return JourneyStatusView(
       key: const ValueKey('plan-progress-card'),
       title: error == null ? title : 'وضعیت به‌روز نشد',
       message:
@@ -253,30 +249,29 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
           (store.planHoldReason?.trim().isNotEmpty == true
               ? store.planHoldReason!
               : message),
-      icon: error == null ? icon : Icons.cloud_off_rounded,
-      tone: error != null
-          ? OperationTone.error
+      badge: error != null
+          ? 'نیاز به بررسی دوباره'
           : published
-          ? OperationTone.success
-          : status == PlanStatus.needsInfo
-          ? OperationTone.attention
-          : OperationTone.waiting,
+          ? 'منتشر شده'
+          : status == PlanStatus.needsInfo && awaitingAnswer
+          ? 'منتظر پاسخ تو'
+          : status == PlanStatus.reviewing
+          ? 'در حال بررسی'
+          : 'در مسیر آماده‌سازی',
+      current: current,
+      error: error != null,
+      showPath: store.hasUserRequest,
       actionLabel: store.serverAuthEnabled
-          ? (error == null ? 'به‌روزرسانی وضعیت' : 'تلاش دوباره')
+          ? (error == null ? 'بررسی وضعیت' : 'تلاش دوباره')
           : null,
       onAction: _refresh,
       busy: _checking,
-      child: store.hasUserRequest
-          ? OperationPath(
-              labels: const [
-                'ثبت درخواست',
-                'آماده‌سازی پیش‌نویس',
-                'بررسی متخصص',
-                'انتشار برنامه',
-              ],
-              current: current,
-            )
-          : null,
+      onSupport: () => Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) =>
+              const MessagingScreen(threadId: 'support-main', support: true),
+        ),
+      ),
     );
   }
 }

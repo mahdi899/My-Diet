@@ -153,7 +153,7 @@ void main() {
       );
       for (final entry in {
         PlanStatus.generating: 'برنامه‌ات در حال آماده‌سازی است',
-        PlanStatus.reviewing: 'در حال بررسی متخصص',
+        PlanStatus.reviewing: 'برنامه‌ات در دست متخصص است',
         PlanStatus.needsInfo: 'متخصص منتظر پاسخ توست',
         PlanStatus.ready: 'در حال دریافت نسخهٔ منتشرشده',
       }.entries) {

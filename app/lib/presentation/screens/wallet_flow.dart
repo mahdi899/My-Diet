@@ -11,6 +11,8 @@ import '../session/live_session.dart';
 import '../widgets/operation_status.dart';
 import '../widgets/ui.dart';
 import 'weekly_feedback.dart';
+import 'payment_recovery_view.dart';
+import 'messaging.dart';
 
 const planServicesRoute = '/plans/subscription';
 
@@ -162,7 +164,7 @@ class PlanServicesScreen extends StatefulWidget {
 }
 
 class _PlanServicesScreenState extends State<PlanServicesScreen> {
-  bool processing = false, loading = false;
+  bool processing = false, loading = false, _viewCatalog = false;
   String? error;
   String errorKind = 'payment';
   final _scroll = ScrollController();
@@ -265,6 +267,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     }
     setState(() {
       processing = true;
+      _viewCatalog = false;
       error = null;
       errorKind = 'payment';
     });
@@ -371,174 +374,213 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     final covered = selected != null && included(store, selected);
     final eligible =
         selected == null || selected.id == 'new-plan' || store.hasUserRequest;
+    final recovering =
+        !_viewCatalog &&
+        !processing &&
+        !loading &&
+        selected != null &&
+        error != null &&
+        (errorKind == 'payment' || errorKind == 'pending');
+    final selectedPlan = store.subscriptionOffers
+        .where((p) => p.id == store.selectedSubscriptionPlanId)
+        .firstOrNull;
     return PopScope(
       canPop: !processing,
       child: Scaffold(
-        appBar: AppBar(title: const Text('پلن‌ها و اشتراک من')),
-        body: PageBody(
-          controller: _scroll,
-          children: [
-            if (loading)
-              const OperationStatus(
-                title: 'در حال دریافت پلن‌ها',
-                message: 'قیمت و جزئیات پلن‌ها از سرور دریافت می‌شود.',
-                icon: Icons.cloud_download_outlined,
-              ),
-            if (processing)
-              KeyedSubtree(
-                key: _waitingAnchor,
-                child: const OperationStatus(
-                  key: ValueKey('payment-processing'),
-                  title: 'منتظر نتیجهٔ پرداخت هستیم',
-                  message:
-                      'اگر درگاه را باز کرده‌ای، پرداخت را آنجا کامل کن. فعال‌سازی فقط پس از تأیید نتیجه انجام می‌شود.',
-                  icon: Icons.payments_outlined,
-                  child: OperationPath(
-                    labels: [
-                      'درخواست و انجام پرداخت',
-                      'تأیید نتیجه و فعال‌سازی',
-                    ],
-                    current: 0,
+        appBar: AppBar(
+          centerTitle: recovering,
+          title: Text(recovering ? 'پرداخت' : 'پلن‌ها و اشتراک من'),
+        ),
+        body: recovering
+            ? PaymentRecoveryView(
+                key: const ValueKey('payment-error'),
+                planTitle: selected.title,
+                days: selected.id == 'new-plan' ? selectedPlan?.days : null,
+                amount: formatToman(covered ? 0 : selected.priceToman),
+                message: error!,
+                pending: errorKind == 'pending',
+                onRetry: purchase,
+                onBack: () => setState(() {
+                  _viewCatalog = true;
+                  if (errorKind != 'pending') error = null;
+                }),
+                onSupport: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => const MessagingScreen(
+                      threadId: 'support-main',
+                      support: true,
+                    ),
                   ),
                 ),
+              )
+            : PageBody(
+                controller: _scroll,
+                children: [
+                  if (loading)
+                    const OperationStatus(
+                      title: 'در حال دریافت پلن‌ها',
+                      message: 'قیمت و جزئیات پلن‌ها از سرور دریافت می‌شود.',
+                      icon: Icons.cloud_download_outlined,
+                    ),
+                  if (processing)
+                    KeyedSubtree(
+                      key: _waitingAnchor,
+                      child: const OperationStatus(
+                        key: ValueKey('payment-processing'),
+                        title: 'منتظر نتیجهٔ پرداخت هستیم',
+                        message:
+                            'اگر درگاه را باز کرده‌ای، پرداخت را آنجا کامل کن. فعال‌سازی فقط پس از تأیید نتیجه انجام می‌شود.',
+                        icon: Icons.payments_outlined,
+                        child: OperationPath(
+                          labels: [
+                            'درخواست و انجام پرداخت',
+                            'تأیید نتیجه و فعال‌سازی',
+                          ],
+                          current: 0,
+                        ),
+                      ),
+                    ),
+                  const SubscriptionSummaryCard(),
+                  const Heading(
+                    'پلن‌ها و تعرفه‌ها',
+                    subtitle:
+                        'پلنت را انتخاب کن؛ برنامهٔ غذایی پس از بررسی و تأیید متخصص منتشر می‌شود.',
+                  ),
+                  for (final plan
+                      in catalogReady
+                          ? store.subscriptionOffers
+                          : <SubscriptionPlanOffer>[])
+                    _OfferCard(
+                      key: ValueKey('plan-${plan.id}'),
+                      title: 'پلن ${plan.title} · ${fa(plan.days)} روزه',
+                      subtitle:
+                          '${plan.description}${store.selectedPlanServiceId == 'new-plan' && store.selectedSubscriptionPlanId == plan.id ? '\n• ${plan.features.join('\n• ')}' : ''}',
+                      price: formatToman(plan.priceToman),
+                      icon: Icons.workspace_premium_outlined,
+                      selected:
+                          store.selectedPlanServiceId == 'new-plan' &&
+                          store.selectedSubscriptionPlanId == plan.id,
+                      onTap: selectionLocked
+                          ? null
+                          : () {
+                              store.selectedPlanServiceId = 'new-plan';
+                              store.selectedSubscriptionPlanId = plan.id;
+                              store.update();
+                            },
+                    ),
+                  if (store.hasUserRequest && store.userRequest.isPublished)
+                    const Heading('خدمات برنامهٔ فعلی'),
+                  for (final offer
+                      in catalogReady &&
+                              store.hasUserRequest &&
+                              store.userRequest.isPublished
+                          ? store.serviceOffers.where(
+                              (item) => item.id != 'new-plan',
+                            )
+                          : <PlanServiceOffer>[])
+                    _OfferCard(
+                      key: ValueKey('service-${offer.id}'),
+                      title: offer.title,
+                      subtitle: offer.subtitle,
+                      price: included(store, offer)
+                          ? 'شامل اشتراک فعال شما'
+                          : formatToman(offer.priceToman),
+                      icon: offer.icon,
+                      selected: selected?.id == offer.id,
+                      onTap: selectionLocked
+                          ? null
+                          : () {
+                              store.selectedPlanServiceId = offer.id;
+                              store.update();
+                            },
+                    ),
+                  if (!eligible)
+                    const Notice(
+                      'برای تغییر برنامه، ابتدا پلن برنامهٔ غذایی را فعال کن.',
+                    ),
+                  if (error != null)
+                    KeyedSubtree(
+                      key: _errorAnchor,
+                      child: OperationStatus(
+                        key: const ValueKey('payment-error'),
+                        title: errorKind == 'catalog'
+                            ? 'دریافت پلن‌ها کامل نشد'
+                            : errorKind == 'pending'
+                            ? 'نتیجهٔ پرداخت هنوز مشخص نیست'
+                            : errorKind == 'request'
+                            ? 'درخواستت در حال بررسی است'
+                            : 'پرداخت تکمیل نشد',
+                        message: error!,
+                        icon: errorKind == 'pending'
+                            ? Icons.hourglass_top_rounded
+                            : Icons.info_outline_rounded,
+                        tone: errorKind == 'pending' || errorKind == 'request'
+                            ? OperationTone.attention
+                            : OperationTone.error,
+                        actionLabel: errorKind == 'catalog'
+                            ? 'دریافت دوبارهٔ اطلاعات'
+                            : errorKind == 'pending'
+                            ? 'بررسی نتیجهٔ پرداخت'
+                            : errorKind == 'request'
+                            ? 'بازگشت به برنامه'
+                            : 'تلاش دوباره برای پرداخت',
+                        onAction: processing || loading
+                            ? null
+                            : errorKind == 'catalog'
+                            ? load
+                            : errorKind == 'request'
+                            ? () => Navigator.of(
+                                context,
+                              ).popUntil((route) => route.isFirst)
+                            : purchase,
+                      ),
+                    ),
+                  if (!store.serverAuthEnabled)
+                    const Notice(
+                      'نسخهٔ نمایشی؛ پرداخت واقعی انجام نمی‌شود.',
+                      icon: Icons.science_outlined,
+                    ),
+                ],
               ),
-            const SubscriptionSummaryCard(),
-            const Heading(
-              'پلن‌ها و تعرفه‌ها',
-              subtitle:
-                  'پلنت را انتخاب کن؛ برنامهٔ غذایی پس از بررسی و تأیید متخصص منتشر می‌شود.',
-            ),
-            for (final plan
-                in catalogReady
-                    ? store.subscriptionOffers
-                    : <SubscriptionPlanOffer>[])
-              _OfferCard(
-                key: ValueKey('plan-${plan.id}'),
-                title: 'پلن ${plan.title} · ${fa(plan.days)} روزه',
-                subtitle:
-                    '${plan.description}${store.selectedPlanServiceId == 'new-plan' && store.selectedSubscriptionPlanId == plan.id ? '\n• ${plan.features.join('\n• ')}' : ''}',
-                price: formatToman(plan.priceToman),
-                icon: Icons.workspace_premium_outlined,
-                selected:
-                    store.selectedPlanServiceId == 'new-plan' &&
-                    store.selectedSubscriptionPlanId == plan.id,
-                onTap: selectionLocked
-                    ? null
-                    : () {
-                        store.selectedPlanServiceId = 'new-plan';
-                        store.selectedSubscriptionPlanId = plan.id;
-                        store.update();
-                      },
-              ),
-            if (store.hasUserRequest && store.userRequest.isPublished)
-              const Heading('خدمات برنامهٔ فعلی'),
-            for (final offer
-                in catalogReady &&
-                        store.hasUserRequest &&
-                        store.userRequest.isPublished
-                    ? store.serviceOffers.where((item) => item.id != 'new-plan')
-                    : <PlanServiceOffer>[])
-              _OfferCard(
-                key: ValueKey('service-${offer.id}'),
-                title: offer.title,
-                subtitle: offer.subtitle,
-                price: included(store, offer)
-                    ? 'شامل اشتراک فعال شما'
-                    : formatToman(offer.priceToman),
-                icon: offer.icon,
-                selected: selected?.id == offer.id,
-                onTap: selectionLocked
-                    ? null
-                    : () {
-                        store.selectedPlanServiceId = offer.id;
-                        store.update();
-                      },
-              ),
-            if (!eligible)
-              const Notice(
-                'برای تغییر برنامه، ابتدا پلن برنامهٔ غذایی را فعال کن.',
-              ),
-            if (error != null)
-              KeyedSubtree(
-                key: _errorAnchor,
-                child: OperationStatus(
-                  key: const ValueKey('payment-error'),
-                  title: errorKind == 'catalog'
-                      ? 'دریافت پلن‌ها کامل نشد'
-                      : errorKind == 'pending'
-                      ? 'نتیجهٔ پرداخت هنوز مشخص نیست'
-                      : errorKind == 'request'
-                      ? 'درخواستت در حال بررسی است'
-                      : 'پرداخت تکمیل نشد',
-                  message: error!,
-                  icon: errorKind == 'pending'
-                      ? Icons.hourglass_top_rounded
-                      : Icons.info_outline_rounded,
-                  tone: errorKind == 'pending' || errorKind == 'request'
-                      ? OperationTone.attention
-                      : OperationTone.error,
-                  actionLabel: errorKind == 'catalog'
-                      ? 'دریافت دوبارهٔ اطلاعات'
-                      : errorKind == 'pending'
-                      ? 'بررسی نتیجهٔ پرداخت'
-                      : errorKind == 'request'
-                      ? 'بازگشت به برنامه'
-                      : 'تلاش دوباره برای پرداخت',
-                  onAction: processing || loading
-                      ? null
-                      : errorKind == 'catalog'
-                      ? load
-                      : errorKind == 'request'
-                      ? () => Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst)
-                      : purchase,
+        bottomNavigationBar: recovering
+            ? null
+            : _PaymentBottom(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      selected == null
+                          ? 'برای ادامه یک پلن انتخاب کن.'
+                          : 'مبلغ قابل پرداخت: ${formatToman(covered ? 0 : selected.priceToman)}',
+                      key: const ValueKey('payable-amount'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    PrimaryButton(
+                      processing
+                          ? 'در حال بررسی پرداخت…'
+                          : error != null && errorKind == 'pending'
+                          ? 'بررسی نتیجهٔ پرداخت'
+                          : covered
+                          ? 'استفاده از اشتراک'
+                          : 'پرداخت و فعال‌سازی پلن',
+                      onPressed:
+                          selected == null ||
+                              !eligible ||
+                              processing ||
+                              loading ||
+                              !catalogReady
+                          ? null
+                          : purchase,
+                      icon: Icons.payment_outlined,
+                    ),
+                  ],
                 ),
               ),
-            if (!store.serverAuthEnabled)
-              const Notice(
-                'نسخهٔ نمایشی؛ پرداخت واقعی انجام نمی‌شود.',
-                icon: Icons.science_outlined,
-              ),
-          ],
-        ),
-        bottomNavigationBar: _PaymentBottom(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                selected == null
-                    ? 'برای ادامه یک پلن انتخاب کن.'
-                    : 'مبلغ قابل پرداخت: ${formatToman(covered ? 0 : selected.priceToman)}',
-                key: const ValueKey('payable-amount'),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                processing
-                    ? 'در حال بررسی پرداخت…'
-                    : error != null && errorKind == 'pending'
-                    ? 'بررسی نتیجهٔ پرداخت'
-                    : covered
-                    ? 'استفاده از اشتراک'
-                    : 'پرداخت و فعال‌سازی پلن',
-                onPressed:
-                    selected == null ||
-                        !eligible ||
-                        processing ||
-                        loading ||
-                        !catalogReady
-                    ? null
-                    : purchase,
-                icon: Icons.payment_outlined,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

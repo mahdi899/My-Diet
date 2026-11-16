@@ -126,7 +126,7 @@ void main() {
     expect(find.text('پرداخت لغو شد؛ پلنی فعال نشد.'), findsOneWidget);
     await tapPlan(
       tester,
-      find.widgetWithText(PrimaryButton, 'پرداخت و فعال‌سازی پلن'),
+      find.widgetWithText(PrimaryButton, 'تلاش دوباره برای پرداخت'),
     );
     expect(find.byType(PlanPaymentScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
