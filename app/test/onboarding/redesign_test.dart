@@ -148,6 +148,13 @@ void main() {
     expect(done, 0);
     expect(find.text('ارتباط قطع شد'), findsOneWidget);
     expect(find.text('در حال ساخت برنامه شما'), findsNothing);
+    expect(find.text('تلاش دوباره برای ثبت'), findsOneWidget);
+    controller.back();
+    expect(controller.submitError, isNull);
+    controller.next();
+    await tester.pumpAndSettle();
+    expect(find.text('یادداشت'), findsOneWidget);
+    expect(find.text('ثبت پاسخ‌ها'), findsOneWidget);
 
     controller.dispose();
     await tester.pumpWidget(const SizedBox());

@@ -52,6 +52,9 @@ class _ProfileResultScreenState extends State<ProfileResultScreen> {
                   )
                 : PlanBuildTheater(
                     key: const ValueKey('w'),
+                    title: 'آماده‌سازی خلاصهٔ تو',
+                    message:
+                        'پاسخ‌ها ثبت شده‌اند؛ خلاصهٔ اطلاعات و هدف روزانه‌ات را ببین.',
                     onFinished: () {
                       Haptics.success();
                       if (mounted) setState(() => _done = true);

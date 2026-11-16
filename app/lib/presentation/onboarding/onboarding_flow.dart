@@ -11,6 +11,7 @@ import 'widgets/steps.dart';
 import '../../core/format/digits.dart';
 import 'widgets/profile_preview.dart';
 import '../../core/theme/tokens.dart';
+import '../widgets/operation_status.dart';
 
 /// The spec-driven questionnaire. It renders whatever the server's spec says, so adding or
 /// reordering a question never needs an app release.
@@ -121,7 +122,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         progress: c.progress,
         groupTitle: c.groupTitle,
         onBack: c.isFirst && widget.onExit == null ? null : _back,
-        primaryLabel: c.isLast
+        primaryLabel: c.submitError != null
+            ? 'تلاش دوباره برای ثبت'
+            : c.isLast
             ? 'ثبت پاسخ‌ها'
             : step is QuestionStep &&
                   !step.question.required &&
@@ -130,7 +133,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             : 'ادامه',
         onPrimary: !c.canAdvance ? null : _next,
         busy: c.submitting,
-        syncHint: c.submitError ?? c.syncError,
+        syncHint: c.submitError == null ? c.syncError : null,
+        secondary: c.submitError == null
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'پاسخ‌هایت حفظ شده؛ می‌توانی دوباره ثبت کنی یا برای ویرایش برگردی.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.inkSoft,
+                    height: 1.6,
+                  ),
+                ),
+              ),
         profilePreview: c.track == null
             ? null
             : OnboardingProfilePreview(
@@ -140,7 +156,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   c.revisit(id);
                 },
               ),
-        child: _content(step),
+        child: c.submitError == null
+            ? _content(step)
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: OperationStatus(
+                  title: 'ثبت پاسخ‌ها کامل نشد',
+                  message: c.submitError!,
+                  tone: OperationTone.error,
+                  icon: Icons.cloud_off_rounded,
+                ),
+              ),
       ),
     );
     if (!c.submitting) return flow;

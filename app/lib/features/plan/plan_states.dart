@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../core/motion/stagger.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/demo_store.dart';
 import '../../presentation/screens/wallet_flow.dart';
 import '../../presentation/session/live_session.dart';
 import '../../presentation/widgets/kit/kit.dart';
 import '../../presentation/widgets/ui.dart';
+import '../../presentation/widgets/operation_status.dart';
 import 'goal_math.dart';
+import '../coach/presentation/coach_companion.dart';
 import 'streak_chip.dart';
 
 class PlanSkeleton extends StatelessWidget {
@@ -71,13 +72,7 @@ class PlanProblem extends StatelessWidget {
     return ListView(
       key: const ValueKey('plan-error'),
       padding: const EdgeInsets.fromLTRB(20, 28, 20, shellBottomInset),
-      children: [
-        const Icon(Icons.cloud_off_rounded, color: AppColors.coral, size: 40),
-        const SizedBox(height: 12),
-        Text('ارتباط قطع شد', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Text(message, style: const TextStyle(color: AppColors.muted)),
-      ],
+      children: [PlanProgressCard(error: message)],
     );
   }
 }
@@ -121,17 +116,23 @@ class PlanWaiting extends StatelessWidget {
       key: const ValueKey('plan-waiting'),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, shellBottomInset),
       children: [
-        Text(
-          'برنامه‌ات در راه است',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ).rise(),
-        const SizedBox(height: 4),
-        Text(
-          store.planHoldReason ?? request.status.label,
-          style: const TextStyle(color: AppColors.muted, height: 1.7),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'برنامه‌ات در راه است',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.emeraldDark,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const CoachCompanion(mood: CompanionMood.thinking, size: 80),
+          ],
         ),
         const SizedBox(height: 16),
-        const _StatusPath().rise(index: 1),
+        const PlanProgressCard(),
         const PlanQuestions(),
         if (!store.serverAuthEnabled && request.canApproveInformation) ...[
           const SizedBox(height: 8),
@@ -148,54 +149,134 @@ class PlanWaiting extends StatelessWidget {
   }
 }
 
-class _StatusPath extends StatelessWidget {
-  const _StatusPath();
+/// Re-checks server state without claiming a generation/review ETA.
+class PlanProgressCard extends StatefulWidget {
+  const PlanProgressCard({super.key, this.error});
+  final String? error;
+  @override
+  State<PlanProgressCard> createState() => _PlanProgressCardState();
+}
 
-  static const _labels = ['ثبت', 'بررسی', 'پیش‌نویس', 'متخصص', 'آماده'];
-
-  int _active(PlanStatus status) => switch (status) {
-    PlanStatus.incomplete => 0,
-    PlanStatus.queued => 1,
-    PlanStatus.generating => 2,
-    PlanStatus.reviewing || PlanStatus.needsInfo => 3,
-    PlanStatus.ready => 5,
-  };
+class _PlanProgressCardState extends State<PlanProgressCard> {
+  bool _checking = false;
+  String? _error;
+  Future<void> _refresh() async {
+    if (_checking) return;
+    final store = DemoScope.of(context);
+    setState(() {
+      _checking = true;
+      _error = null;
+    });
+    try {
+      await refreshLive(store);
+      if (mounted) setState(() => _error = store.liveNotice);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error =
+              'وضعیت دریافت نشد؛ اتصال اینترنت را بررسی کن و دوباره تلاش کن.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final active = _active(DemoScope.of(context).userRequest.status);
-    return AppCard(
-      child: Column(
-        children: [
-          for (var i = 0; i < _labels.length; i++)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  Icon(
-                    i < active
-                        ? Icons.check_circle_rounded
-                        : i == active
-                        ? Icons.timelapse_rounded
-                        : Icons.circle_outlined,
-                    size: 18,
-                    color: i <= active ? AppColors.emerald : AppColors.faint,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    _labels[i],
-                    style: TextStyle(
-                      fontWeight: i == active
-                          ? FontWeight.bold
-                          : FontWeight.w500,
-                      color: i <= active ? AppColors.ink : AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
+    final store = DemoScope.of(context);
+    final status = store.hasUserRequest
+        ? store.userRequest.status
+        : PlanStatus.incomplete;
+    final published = store.hasUserRequest && store.userRequest.isPublished;
+    final awaitingAnswer = store.serverAuthEnabled
+        ? store.liveOpenQuestions.isNotEmpty
+        : store.hasUserRequest &&
+              ((store.userRequest.question.isNotEmpty &&
+                      store.userRequest.infoAnswer.isEmpty) ||
+                  store.userRequest.revisionAwaitingUser);
+    final error = _error ?? widget.error ?? store.liveNotice;
+    final (title, message, icon, current) = published
+        ? (
+            'برنامه‌ات آماده است',
+            'برنامهٔ تأییدشده منتشر شده و وعده‌ها در دسترس‌اند.',
+            Icons.task_alt_rounded,
+            4,
+          )
+        : switch (status) {
+            PlanStatus.incomplete => (
+              'اطلاعات برنامه را کامل کن',
+              'برای ادامه، اطلاعات درخواست را بررسی کن. اگر قبلاً ثبت کرده‌ای، وضعیت را دوباره دریافت کن.',
+              Icons.edit_note_rounded,
+              0,
             ),
-        ],
-      ),
+            PlanStatus.queued => (
+              'درخواستت ثبت شده',
+              'اطلاعاتت در صف آماده‌سازی برنامه است. فعلاً کاری لازم نیست؛ می‌توانی بعداً وضعیت را بررسی کنی.',
+              Icons.inbox_outlined,
+              1,
+            ),
+            PlanStatus.generating => (
+              'برنامه‌ات در حال آماده‌سازی است',
+              'پیش‌نویس برنامه در حال ساخته‌شدن است؛ پیش از انتشار، متخصص تغذیه آن را بررسی می‌کند.',
+              Icons.auto_awesome_outlined,
+              1,
+            ),
+            PlanStatus.needsInfo => (
+              awaitingAnswer
+                  ? 'متخصص منتظر پاسخ توست'
+                  : 'اطلاعات تکمیلی در حال بررسی است',
+              awaitingAnswer
+                  ? 'سؤال‌های پایین صفحه را پاسخ بده تا بررسی برنامه ادامه پیدا کند.'
+                  : 'اگر سؤال دیگری لازم باشد، همین‌جا نمایش داده می‌شود. می‌توانی بعداً وضعیت را بررسی کنی.',
+              Icons.question_answer_outlined,
+              2,
+            ),
+            PlanStatus.ready => (
+              'در حال دریافت نسخهٔ منتشرشده',
+              'تأیید برنامه ثبت شده؛ برای دریافت وعده‌ها وضعیت را به‌روز کن.',
+              Icons.cloud_download_outlined,
+              3,
+            ),
+            PlanStatus.reviewing => (
+              'در حال بررسی متخصص',
+              'متخصص تغذیه پیش‌نویس را بررسی می‌کند. پس از تأیید و انتشار، وعده‌ها در برنامه نمایش داده می‌شوند.',
+              Icons.fact_check_outlined,
+              2,
+            ),
+          };
+    return OperationStatus(
+      key: const ValueKey('plan-progress-card'),
+      title: error == null ? title : 'وضعیت به‌روز نشد',
+      message:
+          error ??
+          (store.planHoldReason?.trim().isNotEmpty == true
+              ? store.planHoldReason!
+              : message),
+      icon: error == null ? icon : Icons.cloud_off_rounded,
+      tone: error != null
+          ? OperationTone.error
+          : published
+          ? OperationTone.success
+          : status == PlanStatus.needsInfo
+          ? OperationTone.attention
+          : OperationTone.waiting,
+      actionLabel: store.serverAuthEnabled
+          ? (error == null ? 'به‌روزرسانی وضعیت' : 'تلاش دوباره')
+          : null,
+      onAction: _refresh,
+      busy: _checking,
+      child: store.hasUserRequest
+          ? OperationPath(
+              labels: const [
+                'ثبت درخواست',
+                'آماده‌سازی پیش‌نویس',
+                'بررسی متخصص',
+                'انتشار برنامه',
+              ],
+              current: current,
+            )
+          : null,
     );
   }
 }

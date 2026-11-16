@@ -7,6 +7,7 @@ import '../../data/demo_store.dart';
 import '../../presentation/widgets/kit/kit.dart';
 import '../coach/coach_launcher.dart';
 import 'consume_sheet.dart';
+import 'cooking_page.dart';
 import 'goal_math.dart';
 import 'meal_substitution_sheet.dart';
 
@@ -179,6 +180,24 @@ class _MealDetailPageState extends State<MealDetailPage> {
                         },
                       ),
                       const SizedBox(height: 14),
+                      if (_tab == 1 &&
+                          recipeSteps(meal.instructions).isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        FilledButton.icon(
+                          key: const ValueKey('meal-start-cooking'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                          ),
+                          onPressed: () => Navigator.of(context).push<void>(
+                            foodDetailRoute<void>(
+                              CookingPage(meal: meal),
+                              reduced: Motion.reduced(context),
+                            ),
+                          ),
+                          icon: const Icon(Icons.soup_kitchen_outlined),
+                          label: const Text('شروع آشپزی قدم‌به‌قدم'),
+                        ),
+                      ],
                       AnimatedSwitcher(
                         duration: Motion.of(context, Motion.quick),
                         switchInCurve: Curves.easeOut,

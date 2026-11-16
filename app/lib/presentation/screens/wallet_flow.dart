@@ -1,3 +1,5 @@
+import 'dart:async';
+import '../../core/motion/motion.dart';
 import 'package:flutter/material.dart';
 import '../../domain/common/failure.dart';
 import '../../data/day.dart';
@@ -6,6 +8,7 @@ import '../../data/wallet_catalog.dart';
 import '../../domain/commerce/commerce.dart';
 import '../../core/theme/theme.dart';
 import '../session/live_session.dart';
+import '../widgets/operation_status.dart';
 import '../widgets/ui.dart';
 import 'weekly_feedback.dart';
 
@@ -161,6 +164,31 @@ class PlanServicesScreen extends StatefulWidget {
 class _PlanServicesScreenState extends State<PlanServicesScreen> {
   bool processing = false, loading = false;
   String? error;
+  String errorKind = 'payment';
+  final _scroll = ScrollController();
+  final _errorAnchor = GlobalKey();
+  final _waitingAnchor = GlobalKey();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _reveal(GlobalKey key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = key.currentContext;
+      if (!mounted || target == null) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          target,
+          alignment: .1,
+          duration: Motion.of(context, Motion.quick),
+          curve: Curves.easeOut,
+        ),
+      );
+    });
+  }
 
   bool included(DemoStore store, PlanServiceOffer offer) =>
       store.serverAuthEnabled &&
@@ -185,13 +213,24 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     setState(() {
       loading = true;
       error = null;
+      errorKind = 'catalog';
     });
     try {
       await syncLiveCatalog(store);
     } on AppFailure catch (failure) {
       if (mounted) setState(() => error = failure.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => error =
+              'اطلاعات پلن‌ها دریافت نشد؛ اتصال را بررسی کن و دوباره تلاش کن.',
+        );
+      }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+        if (error != null) _reveal(_errorAnchor);
+      }
     }
   }
 
@@ -216,13 +255,20 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     if (store.hasUserRequest &&
         !store.userRequest.isPublished &&
         offer.id == 'new-plan') {
-      setState(() => error = 'درخواست برنامهٔ فعلی در حال بررسی است.');
+      setState(() {
+        errorKind = 'request';
+        error =
+            'درخواست برنامهٔ فعلی در حال بررسی است؛ وضعیت را در تب برنامه ببین.';
+      });
+      _reveal(_errorAnchor);
       return;
     }
     setState(() {
       processing = true;
       error = null;
+      errorKind = 'payment';
     });
+    _reveal(_waitingAnchor);
     try {
       if (offer.id == 'new-plan') {
         await store.restoreWeeklyFeedback();
@@ -245,6 +291,10 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
           store,
           offer.id,
           confirmSandbox: () => confirmPayment(offer),
+          onFailure: (failure) =>
+              errorKind = failure.code == 'payment_pending' || failure.offline
+              ? 'pending'
+              : 'payment',
           planId: offer.id == 'new-plan'
               ? store.selectedSubscriptionPlanId
               : null,
@@ -277,7 +327,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
             icon: const Icon(Icons.check_circle_rounded, color: pine, size: 44),
             title: const Text('پلن با موفقیت فعال شد'),
             content: Text(
-              '${offer.successLine}\nجزئیات اشتراکت در پروفایل در دسترس است.',
+              '${offer.successLine}\n${store.hasUserRequest && store.userRequest.isPublished ? 'برنامهٔ تأییدشده در تب برنامه در دسترس است.' : 'فعال‌شدن پلن به معنی تأیید برنامهٔ غذایی نیست؛ وضعیت بررسی و انتشار را در تب برنامه ببین.'}\n${store.liveNotice ?? 'جزئیات اشتراکت در پروفایل در دسترس است.'}',
               style: const TextStyle(height: 1.8),
             ),
             actions: [
@@ -292,8 +342,19 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
       if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } on AppFailure catch (failure) {
       if (mounted) setState(() => error = failure.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          errorKind = 'pending';
+          error =
+              'نتیجهٔ درخواست دریافت نشد. برای بررسی نتیجه دوباره ادامه بده.';
+        });
+      }
     } finally {
-      if (mounted) setState(() => processing = false);
+      if (mounted) {
+        setState(() => processing = false);
+        if (error != null) _reveal(_errorAnchor);
+      }
     }
   }
 
@@ -303,6 +364,10 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     final catalogReady =
         !store.serverAuthEnabled || store.liveServiceOffers != null;
     final selected = selectedOffer(store);
+    final selectionLocked =
+        processing ||
+        loading ||
+        (store.serverAuthEnabled && store.liveOrderKey != null);
     final covered = selected != null && included(store, selected);
     final eligible =
         selected == null || selected.id == 'new-plan' || store.hasUserRequest;
@@ -311,14 +376,37 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
       child: Scaffold(
         appBar: AppBar(title: const Text('پلن‌ها و اشتراک من')),
         body: PageBody(
+          controller: _scroll,
           children: [
             if (loading)
-              const LinearProgressIndicator(semanticsLabel: 'دریافت پلن‌ها'),
+              const OperationStatus(
+                title: 'در حال دریافت پلن‌ها',
+                message: 'قیمت و جزئیات پلن‌ها از سرور دریافت می‌شود.',
+                icon: Icons.cloud_download_outlined,
+              ),
+            if (processing)
+              KeyedSubtree(
+                key: _waitingAnchor,
+                child: const OperationStatus(
+                  key: ValueKey('payment-processing'),
+                  title: 'منتظر نتیجهٔ پرداخت هستیم',
+                  message:
+                      'اگر درگاه را باز کرده‌ای، پرداخت را آنجا کامل کن. فعال‌سازی فقط پس از تأیید نتیجه انجام می‌شود.',
+                  icon: Icons.payments_outlined,
+                  child: OperationPath(
+                    labels: [
+                      'درخواست و انجام پرداخت',
+                      'تأیید نتیجه و فعال‌سازی',
+                    ],
+                    current: 0,
+                  ),
+                ),
+              ),
             const SubscriptionSummaryCard(),
             const Heading(
               'پلن‌ها و تعرفه‌ها',
               subtitle:
-                  'پلنت را انتخاب کن؛ پس از تأیید پرداخت وارد برنامه می‌شوی.',
+                  'پلنت را انتخاب کن؛ برنامهٔ غذایی پس از بررسی و تأیید متخصص منتشر می‌شود.',
             ),
             for (final plan
                 in catalogReady
@@ -334,7 +422,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                 selected:
                     store.selectedPlanServiceId == 'new-plan' &&
                     store.selectedSubscriptionPlanId == plan.id,
-                onTap: processing || loading
+                onTap: selectionLocked
                     ? null
                     : () {
                         store.selectedPlanServiceId = 'new-plan';
@@ -359,7 +447,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                     : formatToman(offer.priceToman),
                 icon: offer.icon,
                 selected: selected?.id == offer.id,
-                onTap: processing || loading
+                onTap: selectionLocked
                     ? null
                     : () {
                         store.selectedPlanServiceId = offer.id;
@@ -370,14 +458,43 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
               const Notice(
                 'برای تغییر برنامه، ابتدا پلن برنامهٔ غذایی را فعال کن.',
               ),
-            if (error != null) ...[
-              Notice(error!, icon: Icons.info_outline),
-              if (store.serverAuthEnabled)
-                TextButton(
-                  onPressed: processing || loading ? null : load,
-                  child: const Text('دریافت دوبارهٔ اطلاعات'),
+            if (error != null)
+              KeyedSubtree(
+                key: _errorAnchor,
+                child: OperationStatus(
+                  key: const ValueKey('payment-error'),
+                  title: errorKind == 'catalog'
+                      ? 'دریافت پلن‌ها کامل نشد'
+                      : errorKind == 'pending'
+                      ? 'نتیجهٔ پرداخت هنوز مشخص نیست'
+                      : errorKind == 'request'
+                      ? 'درخواستت در حال بررسی است'
+                      : 'پرداخت تکمیل نشد',
+                  message: error!,
+                  icon: errorKind == 'pending'
+                      ? Icons.hourglass_top_rounded
+                      : Icons.info_outline_rounded,
+                  tone: errorKind == 'pending' || errorKind == 'request'
+                      ? OperationTone.attention
+                      : OperationTone.error,
+                  actionLabel: errorKind == 'catalog'
+                      ? 'دریافت دوبارهٔ اطلاعات'
+                      : errorKind == 'pending'
+                      ? 'بررسی نتیجهٔ پرداخت'
+                      : errorKind == 'request'
+                      ? 'بازگشت به برنامه'
+                      : 'تلاش دوباره برای پرداخت',
+                  onAction: processing || loading
+                      ? null
+                      : errorKind == 'catalog'
+                      ? load
+                      : errorKind == 'request'
+                      ? () => Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst)
+                      : purchase,
                 ),
-            ],
+              ),
             if (!store.serverAuthEnabled)
               const Notice(
                 'نسخهٔ نمایشی؛ پرداخت واقعی انجام نمی‌شود.',
@@ -404,6 +521,8 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
               PrimaryButton(
                 processing
                     ? 'در حال بررسی پرداخت…'
+                    : error != null && errorKind == 'pending'
+                    ? 'بررسی نتیجهٔ پرداخت'
                     : covered
                     ? 'استفاده از اشتراک'
                     : 'پرداخت و فعال‌سازی پلن',

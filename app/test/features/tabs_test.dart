@@ -6,6 +6,7 @@ import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/features/home/home_tab.dart';
 import 'package:sabzine_flutter/features/home/home_day_focus.dart';
 import 'package:sabzine_flutter/features/plan/plan_tab.dart';
+import 'package:sabzine_flutter/features/plan/plan_meals.dart';
 import 'package:sabzine_flutter/features/plan/consume_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -94,7 +95,8 @@ void main() {
     await settle(tester);
 
     expect(find.byKey(const ValueKey('plan-waiting')), findsOneWidget);
-    expect(find.text('برنامه‌ات در راه است'), findsOneWidget);
+    expect(find.byKey(const ValueKey('plan-progress-card')), findsOneWidget);
+    expect(find.text('بررسی متخصص'), findsOneWidget);
     expect(find.text('نمایش برنامه'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -167,8 +169,19 @@ void main() {
     await tester.pumpWidget(host(store, const PlanTab()));
     await settle(tester);
 
-    final done = find.text('انجام شد');
-    await tester.ensureVisible(done.first);
+    final firstMeal = find.byWidgetPredicate(
+      (widget) => widget is PlanMealCard && widget.index == 0,
+    );
+    await tester.scrollUntilVisible(
+      firstMeal,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final done = find.descendant(
+      of: firstMeal,
+      matching: find.text('انجام شد'),
+    );
+    await tester.ensureVisible(done);
     await tester.pump();
     await tester.tap(done.first);
     await tester.pump();
