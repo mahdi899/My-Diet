@@ -67,7 +67,7 @@ final class MySqlPlanQueries implements PlanQueryStore
 
     public function latest(string $user): ?array
     {
-        $row = $this->db->table('plan_requests as r')->join('users as u', 'u.id', '=', 'r.user_id')->where('r.user_id', $user)->select('r.*', 'u.display_name')->orderByDesc('r.created_at')->first();
+        $row = $this->db->table('plan_requests as r')->join('users as u', 'u.id', '=', 'r.user_id')->leftJoin('nutrition_profiles as p', 'p.user_id', '=', 'r.user_id')->where('r.user_id', $user)->select('r.*', 'u.display_name', 'p.safety_tier')->orderByDesc('r.created_at')->first();
 
         return $row === null ? null : (array) $row;
     }

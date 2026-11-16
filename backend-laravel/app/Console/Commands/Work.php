@@ -16,7 +16,8 @@ class Work extends Command
 {
     public function handle(WorkerStore $store, JobWorker $worker, MySqlIntegrations $push): int
     {
-        if (config('runtime.role') !== 'worker') {
+        $localOnce = app()->environment('local') && $this->option('once');
+        if (config('runtime.role') !== 'worker' && ! $localOnce) {
             $this->error('sabzine:work only starts when APP_ROLE=worker. The HTTP process stays APP_ROLE=api.');
 
             return 1;

@@ -205,4 +205,22 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             }
         }
     }
+
+    public function publishLocal(string $requestId): void
+    {
+        if (! app()->environment('local')) {
+            return;
+        }
+        $request = $this->db->table('plan_requests')->where('id', $requestId)->first();
+        $version = $this->db->table('plan_versions')->where('request_id', $requestId)->where('status', 'draft')->first();
+        if ($request === null || $version === null) {
+            return;
+        }
+        $today = \App\Modules\Plans\Domain\CivilDates::today();
+        $week = \App\Modules\Plans\Domain\CivilDates::saturday($today);
+        $actor = is_string($request->assigned_specialist_id) && $request->assigned_specialist_id !== ''
+            ? $request->assigned_specialist_id
+            : $request->user_id;
+        app(MySqlPlanEditor::class)->publish($requestId, $version->id, $request->user_id, $actor, $week, $today);
+    }
 }

@@ -132,7 +132,7 @@ final class MoneyService
             throw new Problem(404, 'not_found', 'درگاه پیدا نشد');
         }
 
-        return $this->store->transaction(function () use ($id, $gateway, $reference, $initial): array {
+        $result = $this->store->transaction(function () use ($id, $gateway, $reference, $initial): array {
             $this->store->wallet($initial['user_id'], true);
             $row = $this->store->checkout($id, true);
             if ($row['gateway'] !== $gateway) {
@@ -159,6 +159,21 @@ final class MoneyService
 
             return $this->checkoutResult([...$row, ...$changes]);
         });
+        $this->kickLocalPlan(is_string($result['requestId'] ?? null) ? $result['requestId'] : null);
+
+        return $result;
+    }
+
+    private function kickLocalPlan(?string $requestId): void
+    {
+        if ($requestId === null || $requestId === '' || ! app()->environment('local')) {
+            return;
+        }
+        $php = PHP_BINARY;
+        $artisan = base_path('artisan');
+        if (PHP_OS_FAMILY === 'Windows') {
+            pclose(popen('start /B "" "'.$php.'" "'.$artisan.'" sabzine:work --once', 'r'));
+        }
     }
 
     public function checkoutCallback(string $gateway, string $id, ?string $authority, ?string $status): string

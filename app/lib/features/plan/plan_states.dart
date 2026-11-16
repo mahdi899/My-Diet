@@ -127,8 +127,8 @@ class PlanWaiting extends StatelessWidget {
         ).rise(),
         const SizedBox(height: 4),
         Text(
-          request.status.label,
-          style: const TextStyle(color: AppColors.muted),
+          store.planHoldReason ?? request.status.label,
+          style: const TextStyle(color: AppColors.muted, height: 1.7),
         ),
         const SizedBox(height: 16),
         const _StatusPath().rise(index: 1),

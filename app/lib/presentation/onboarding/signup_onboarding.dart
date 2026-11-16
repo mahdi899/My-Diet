@@ -9,7 +9,9 @@ import '../../data/demo_store.dart' hide fa;
 import '../../data/network/customer_api_client.dart';
 import '../../data/onboarding/http_onboarding_repository.dart';
 import '../../data/onboarding/signup_progress.dart';
+import '../../domain/common/failure.dart';
 import '../../domain/onboarding/onboarding.dart';
+import '../session/live_session.dart';
 import '../../domain/onboarding/spec.dart';
 import '../../core/photos/food_image.dart';
 import '../widgets/kit/pill_button.dart';
@@ -290,9 +292,25 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
             return true;
           }
           final profile = await controller!.submit();
-          if (profile != null) await SignupProgressStore().clear();
-          if (profile != null && mounted) _close();
-          return profile != null;
+          if (profile == null) return false;
+          final planId = _local?.planId ?? 'monthly';
+          widget.store.selectedPlanServiceId = 'new-plan';
+          widget.store.selectedSubscriptionPlanId = planId;
+          try {
+            await syncLiveCatalog(widget.store);
+          } on AppFailure {
+            return false;
+          }
+          final paid = await checkoutLiveService(
+            widget.store,
+            'new-plan',
+            confirmSandbox: () async => true,
+            planId: planId,
+          );
+          if (!paid) return false;
+          await SignupProgressStore().clear();
+          if (mounted) _close();
+          return true;
         },
       );
     }

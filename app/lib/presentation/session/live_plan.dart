@@ -46,6 +46,7 @@ void showServerPlan(
   if (walletToman != null) store.walletBalance = walletToman;
 
   final id = plan?.requestId ?? request?.id;
+  store.planHoldReason = request?.holdReason;
   if (id == null) {
     store.userRequestId = null;
     store.liveReady = true;

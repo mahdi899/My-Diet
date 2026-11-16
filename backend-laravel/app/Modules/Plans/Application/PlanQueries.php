@@ -98,9 +98,13 @@ final class PlanQueries
                 array_values(array_filter($answers, fn ($answer) => $answer['question_id'] === $q['id'])))];
         }, $this->store->questions($request['id']));
 
+        $hold = ($request['safety_tier'] ?? null) === 'doctor_only' && $request['status'] !== 'published'
+            ? 'به‌خاطر گزینه‌ای که در سلامت انتخاب کردی (سابقهٔ اختلال خوردن)، برنامه تا تأیید متخصص در این صفحه فعال نمی‌شود.'
+            : null;
+
         return ['id' => $request['id'], 'status' => $request['status'], 'kind' => $request['kind'], 'priceToman' => Amount::safe($request['price_toman']),
             'weekStart' => $request['week_start'], 'effectiveFrom' => $request['effective_from'], 'displayName' => $request['display_name'],
-            'conversationId' => $this->store->conversation($request['id']), 'questions' => $questions, 'version' => null];
+            'conversationId' => $this->store->conversation($request['id']), 'questions' => $questions, 'version' => null, 'holdReason' => $hold];
     }
 
     public function requests(string $user): array

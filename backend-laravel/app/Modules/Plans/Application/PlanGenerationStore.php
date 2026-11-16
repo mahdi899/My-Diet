@@ -11,6 +11,9 @@ interface PlanGenerationStore
 
     public function finish(string $requestId, bool $regenerate, ?array $days, string $provider, ?string $reason): void;
 
+    /** Local sandbox has no specialist desk, so a valid draft becomes the visible plan. */
+    public function publishLocal(string $requestId): void;
+
     public function abandon(string $requestId): void;
 
     /** @return array{status: string} */

@@ -26,6 +26,9 @@ final class PlanGeneration
             }
         }
         $this->store->finish($requestId, $regenerate, $days, $this->provider->name(), $reason);
+        if ($days !== null && $reason === null && app()->environment('local')) {
+            $this->store->publishLocal($requestId);
+        }
     }
 
     public function regenerate(string $specialist, string $requestId, int $lock): array
