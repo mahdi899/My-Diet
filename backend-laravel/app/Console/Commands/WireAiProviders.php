@@ -19,6 +19,8 @@ class WireAiProviders extends Command
 {
     private const HAIKU_55 = 'anthropic/claude-haiku-5.5';
 
+    private const LUNA_6 = 'openai/gpt-6-luna';
+
     public function handle(ConnectionInterface $db, IdentitySettings $settings, ModelPools $pools): int
     {
         $closerKey = (string) env('CLOSEROUTER_API_KEY', '');
@@ -67,6 +69,20 @@ class WireAiProviders extends Command
                     continue;
                 }
                 $chosen[] = [$providerId, $haiku['id'], $haiku['priceIn'], $haiku['priceOut']];
+            }
+            $priority = [];
+            foreach ([
+                [$closer['id'], $this->priced($closerModels, self::LUNA_6, 8_640, 32_400)],
+                [$open['id'], $this->priced($openModels, self::LUNA_6, 100_000, 500_000)],
+            ] as [$providerId, $luna]) {
+                if ($luna === null) {
+                    continue;
+                }
+                $priority[] = [$providerId, $luna['id'], $luna['priceIn'], $luna['priceOut']];
+            }
+            if ($priority !== []) {
+                $chosen = array_values(array_filter($chosen, fn ($row) => ! array_any($priority, fn ($first) => $first[0] === $row[0] && $first[1] === $row[1])));
+                $chosen = [...$priority, ...$chosen];
             }
             foreach ($chosen as $position => [$providerId, $model, $priceIn, $priceOut]) {
                 $this->member($db, $poolId, $providerId, $model, $position, $priceIn, $priceOut);
