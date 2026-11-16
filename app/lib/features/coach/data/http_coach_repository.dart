@@ -145,7 +145,19 @@ class HttpCoachRepository implements CoachRepository {
 
   Stream<CoachEvent> _sse(Map<String, dynamic> body) async* {
     final response = await _openSse(body);
-    yield* parseSseStream(response.stream);
+    await for (final event in parseSseStream(response.stream)) {
+      // Older servers omit the client ID from the user echo. This stream
+      // acknowledges the request that opened it, so replace its pending bubble.
+      if (event is CoachUserMessage && event.message.clientMessageId == null) {
+        yield CoachUserMessage(
+          event.message.copyWith(
+            clientMessageId: body['clientMessageId'] as String,
+          ),
+        );
+      } else {
+        yield event;
+      }
+    }
   }
 
   Future<http.StreamedResponse> _openSse(Map<String, dynamic> body) async {

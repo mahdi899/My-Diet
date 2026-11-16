@@ -7,6 +7,7 @@ import { AiBadge, AiCard, AiDialog, AiForm, AiLoad, AiNote, aiApi, date, errorTe
 const kinds: Record<string, string> = { openrouter: 'OpenRouter', openai_compatible: 'سازگار با OpenAI' }
 const strategies = { priority: 'به ترتیب اولویت', cost_first: 'ارزان‌ترین اول', weighted: 'وزنی (پخش بار)' }
 const sampleModel = 'deepseek/deepseek-v4.1-flash-1017'
+const pinnedModels = ['anthropic/claude-haiku-5.5']
 const demoProvider = { id: 'preview-provider', name: 'OpenRouter آزمایشی', kind: 'openrouter', active: true, hasKey: true, keyHint: '…demo', baseUrl: 'https://openrouter.ai/api/v1' }
 const demoPools = Object.keys(poolTitles).map((code, index) => ({
   code, strategy: 'priority', temperature: [0.1, 0.5, 0.2, 0.3, 0.3][index], maxTokens: [700, 1200, 1200, 6000, 6000][index],
@@ -93,7 +94,14 @@ function MemberDialog({ providers, close, add, preview }: { providers: Row[]; cl
   const [priceIn, setPriceIn] = useState('0')
   const [priceOut, setPriceOut] = useState('0')
   const catalog = useMutation({ mutationFn: (provider: string) => aiApi('providers/' + id(provider) + '/models?limit=500') })
-  const models = itemRows(catalog.data)
+  const liveModels = itemRows(catalog.data)
+  const suggested = Array.isArray(catalog.data?.suggested)
+    ? catalog.data.suggested.filter((entry): entry is string => typeof entry === 'string')
+    : catalog.data ? pinnedModels : []
+  const models = [
+    ...suggested.filter(entry => !liveModels.some(row => row.id === entry)).map(entry => ({ id: entry, name: entry })),
+    ...liveModels,
+  ]
   const needle = model.trim().toLowerCase()
   const visible = models.filter(row => {
     const label = `${str(row.id)} ${str(row.name)}`.toLowerCase()
