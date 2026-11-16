@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'onboarding_icons.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/motion/motion.dart';
 
@@ -86,7 +87,7 @@ class _HoldToPromiseState extends State<HoldToPromise>
                 child: Center(
                   child: AnimatedSwitcher(
                     duration: Motion.base,
-                    child: Icon(
+                    child: OnboardingIcon(
                       done ? Icons.check_rounded : Icons.fingerprint,
                       key: ValueKey(done),
                       size: 52,

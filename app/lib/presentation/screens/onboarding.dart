@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../onboarding/widgets/onboarding_icons.dart';
 import '../../data/demo_store.dart';
 import '../../core/motion/motion_kit.dart';
 import '../../core/theme/theme.dart';
@@ -76,7 +77,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               IconButton(
                 tooltip: 'بازگشت به داشبورد',
                 onPressed: store.cancelUserEntry,
-                icon: const Icon(Icons.home_outlined),
+                icon: const OnboardingIcon(Icons.home_outlined),
               )
             else
               TextButton(
@@ -200,6 +201,7 @@ class _IntroPage extends StatelessWidget {
                     label: index == 1 ? 'پیاده‌روی' : 'متخصص تغذیه',
                     lifestyle: index == 1,
                     expert: index == 2,
+                    symbol: index == 1 ? DietIconKind.plan : DietIconKind.coach,
                     width: 180,
                     height: 180,
                     radius: 32,
@@ -280,7 +282,7 @@ class _StaffIntro extends StatelessWidget {
         Center(child: Tag('آشنایی با پنل')),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 28),
-          child: Icon(
+          child: OnboardingIcon(
             expert
                 ? Icons.health_and_safety_outlined
                 : Icons.admin_panel_settings_outlined,
@@ -323,7 +325,7 @@ class _JourneyItem extends StatelessWidget {
     children: [
       CircleAvatar(
         backgroundColor: sage,
-        child: Icon(icon, color: pine, size: 21),
+        child: OnboardingIcon(icon, color: pine, size: 21),
       ),
       const SizedBox(width: 12),
       Expanded(

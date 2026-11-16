@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../onboarding/widgets/onboarding_icons.dart';
 import '../../data/demo_store.dart';
 import '../../core/motion/motion_kit.dart';
 import '../../core/theme/theme.dart';
@@ -170,6 +171,11 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 subtitle: choices[i].$2,
                 photoKey: choices[i].$1,
                 icon: choices[i].$3,
+                symbol: id == 'activity'
+                    ? onboardingSymbol(id, choices[i].$1, label: choices[i].$1)
+                    : id == 'goal'
+                    ? onboardingSymbol(id, choices[i].$1)
+                    : DietIconKind.meal,
                 selected: selected == choices[i].$1,
                 onTap: () => setState(() => choose(choices[i].$1)),
               ),
@@ -455,6 +461,11 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                   child: PhotoOptionCard(
                     label: store.formConfiguration.choice('health', items[i]),
                     photoKey: items[i],
+                    symbol: items[i] == 'موردی ندارم'
+                        ? DietIconKind.shield
+                        : items[i] == 'دارو مصرف می‌کنم'
+                        ? DietIconKind.medicine
+                        : DietIconKind.heart,
                     compact: true,
                     multi: true,
                     selected: q.health.contains(items[i]),

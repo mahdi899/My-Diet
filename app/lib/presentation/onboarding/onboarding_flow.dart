@@ -8,6 +8,7 @@ import 'widgets/number_inputs.dart';
 import 'widgets/plan_theater.dart';
 import 'widgets/sleep_dial.dart';
 import 'widgets/steps.dart';
+import 'widgets/onboarding_icons.dart';
 import '../../core/format/digits.dart';
 import '../../core/theme/tokens.dart';
 import '../widgets/operation_status.dart';
@@ -155,6 +156,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   message: c.submitError!,
                   tone: OperationTone.error,
                   icon: Icons.cloud_off_rounded,
+                  iconWidget: const DietIcon(DietIconKind.offline, size: 26),
                 ),
               ),
       ),
@@ -358,30 +360,23 @@ class _QuestionView extends StatelessWidget {
           ),
         );
     }
-    final scrolls =
-        q.kind == QuestionKind.single ||
-        q.kind == QuestionKind.multi ||
-        q.kind == QuestionKind.dishPicker;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        QuestionHeader(title: _title),
-        Expanded(
-          child: KeyedSubtree(
-            key: ValueKey(q.key),
-            child: scrolls
-                ? body
-                : Center(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
-                      ),
-                      child: body,
-                    ),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        key: ValueKey(q.key),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                QuestionHeader(title: _title),
+                body,
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'onboarding_icons.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
@@ -198,7 +199,10 @@ class _CircleBack extends StatelessWidget {
           child: const SizedBox(
             width: 44,
             height: 44,
-            child: Icon(Icons.arrow_back_rounded, color: AppColors.ink),
+            child: OnboardingIcon(
+              Icons.arrow_back_rounded,
+              color: AppColors.ink,
+            ),
           ),
         ),
       ),

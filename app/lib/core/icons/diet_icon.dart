@@ -2,8 +2,54 @@ import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 
+part 'onboarding_illustrations.dart';
+
 /// The approved rounded, two-colour botanical icon family, drawn as vectors.
-enum DietIconKind { home, coach, plan, water, meal, progress }
+enum DietIconKind {
+  home,
+  coach,
+  plan,
+  water,
+  meal,
+  progress,
+  seated,
+  walking,
+  cycling,
+  running,
+  strength,
+  person,
+  female,
+  male,
+  leaf,
+  heart,
+  shield,
+  scale,
+  moon,
+  sun,
+  clock,
+  medicine,
+  pregnancy,
+  wallet,
+  mealOne,
+  mealTwo,
+  mealThree,
+  mealMore,
+  dairy,
+  nuts,
+  egg,
+  wheat,
+  foodAllergy,
+  check,
+  close,
+  back,
+  up,
+  down,
+  plus,
+  minus,
+  edit,
+  fingerprint,
+  offline,
+}
 
 class DietIcon extends StatelessWidget {
   const DietIcon(
@@ -47,6 +93,21 @@ class DietIcon extends StatelessWidget {
   }
 }
 
+/// Use the same vector symbols inside canvas-based controls such as the sleep dial.
+void paintDietIcon(Canvas canvas, Rect bounds, DietIconKind kind) {
+  canvas.save();
+  canvas.translate(bounds.left, bounds.top);
+  _DietIconPainter(
+    kind,
+    AppColors.emeraldDark,
+    AppColors.emerald,
+    AppColors.mint,
+    false,
+    bounds.shortestSide >= 40,
+  ).paint(canvas, bounds.size);
+  canvas.restore();
+}
+
 class _DietIconPainter extends CustomPainter {
   const _DietIconPainter(
     this.kind,
@@ -79,7 +140,6 @@ class _DietIconPainter extends CustomPainter {
     void segment(double x, double y, double dx, double dy) =>
         canvas.drawLine(Offset(x, y), Offset(dx, dy), line);
     void leaf(Path p) => canvas.drawPath(p, Paint()..color = accent);
-
     switch (kind) {
       case DietIconKind.home:
         shape(
@@ -330,6 +390,130 @@ class _DietIconPainter extends CustomPainter {
             ..cubicTo(25.5, 1, 29, .3, 31, 1)
             ..cubicTo(31, 4.3, 28.8, 5, 26, 4)
             ..close(),
+        );
+      case DietIconKind.seated:
+      case DietIconKind.walking:
+      case DietIconKind.cycling:
+      case DietIconKind.running:
+      case DietIconKind.strength:
+      case DietIconKind.person:
+      case DietIconKind.female:
+      case DietIconKind.male:
+      case DietIconKind.leaf:
+      case DietIconKind.heart:
+      case DietIconKind.shield:
+      case DietIconKind.scale:
+      case DietIconKind.moon:
+      case DietIconKind.sun:
+      case DietIconKind.clock:
+      case DietIconKind.medicine:
+      case DietIconKind.pregnancy:
+      case DietIconKind.wallet:
+      case DietIconKind.mealOne:
+      case DietIconKind.mealTwo:
+      case DietIconKind.mealThree:
+      case DietIconKind.mealMore:
+      case DietIconKind.dairy:
+      case DietIconKind.nuts:
+      case DietIconKind.egg:
+      case DietIconKind.wheat:
+      case DietIconKind.foodAllergy:
+        canvas.restore();
+        _OnboardingIllustration(canvas, ink, accent, tint).paint(kind, size);
+        return;
+      case DietIconKind.check:
+        canvas.drawPath(
+          Path()
+            ..moveTo(7, 16)
+            ..lineTo(13, 22)
+            ..lineTo(26, 9),
+          line,
+        );
+      case DietIconKind.close:
+        segment(8, 8, 24, 24);
+        segment(8, 24, 24, 8);
+      case DietIconKind.back:
+        canvas.drawPath(
+          Path()
+            ..moveTo(18, 7)
+            ..lineTo(9, 16)
+            ..lineTo(18, 25),
+          line,
+        );
+        segment(9, 16, 28, 16);
+      case DietIconKind.up:
+      case DietIconKind.down:
+        if (kind == DietIconKind.down) {
+          canvas.translate(32, 32);
+          canvas.rotate(3.141592653589793);
+        }
+        canvas.drawPath(
+          Path()
+            ..moveTo(7, 15)
+            ..lineTo(16, 6)
+            ..lineTo(25, 15),
+          line,
+        );
+        segment(16, 6, 16, 28);
+      case DietIconKind.plus:
+        segment(16, 6, 16, 26);
+        segment(6, 16, 26, 16);
+      case DietIconKind.minus:
+        segment(6, 16, 26, 16);
+      case DietIconKind.edit:
+        shape(
+          Path()
+            ..moveTo(6, 21)
+            ..lineTo(21, 6)
+            ..quadraticBezierTo(24, 3, 27, 6)
+            ..quadraticBezierTo(30, 9, 27, 12)
+            ..lineTo(12, 27)
+            ..lineTo(4, 29)
+            ..close(),
+        );
+        segment(20, 8, 25, 13);
+        canvas.drawLine(
+          const Offset(8, 23),
+          const Offset(12, 27),
+          line..color = accent,
+        );
+      case DietIconKind.fingerprint:
+        for (final inset in [0.0, 5.0, 10.0]) {
+          canvas.drawPath(
+            Path()
+              ..moveTo(4 + inset, 26 - inset / 3)
+              ..lineTo(4 + inset, 15)
+              ..cubicTo(
+                4 + inset,
+                1 + inset,
+                28 - inset,
+                1 + inset,
+                28 - inset,
+                15,
+              )
+              ..lineTo(28 - inset, 25 - inset / 3),
+            line,
+          );
+        }
+        canvas.drawPath(
+          Path()
+            ..moveTo(10, 28)
+            ..quadraticBezierTo(16, 24, 16, 16),
+          line..color = accent,
+        );
+      case DietIconKind.offline:
+        shape(
+          Path()
+            ..moveTo(7, 24)
+            ..cubicTo(-1, 24, 1, 13, 8, 14)
+            ..cubicTo(9, 3, 24, 4, 25, 14)
+            ..cubicTo(33, 14, 32, 24, 25, 24)
+            ..close(),
+        );
+        canvas.drawLine(
+          const Offset(5, 4),
+          const Offset(28, 29),
+          line..color = accent,
         );
     }
     canvas.restore();

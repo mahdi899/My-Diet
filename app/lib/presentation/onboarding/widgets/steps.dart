@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'onboarding_icons.dart';
 import '../../widgets/brand_scene.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
@@ -46,7 +47,11 @@ class InsightInterstitial extends StatelessWidget {
               color: sage,
               shape: BoxShape.circle,
             ),
-            child: Icon(insightIcon(insight.icon), size: 54, color: pine),
+            child: OnboardingIcon(
+              insightIcon(insight.icon),
+              size: 54,
+              color: pine,
+            ),
           ),
         ),
         const SizedBox(height: 28),
@@ -104,7 +109,7 @@ class HeroGoalScreen extends StatelessWidget {
                     IconButton(
                       tooltip: 'بازگشت',
                       onPressed: onBack,
-                      icon: const Icon(Icons.arrow_back_rounded),
+                      icon: const OnboardingIcon(Icons.arrow_back_rounded),
                     ),
                   Expanded(
                     child: ClipRRect(
@@ -237,7 +242,7 @@ class _TrackCard extends StatelessWidget {
               DecorPhoto(
                 label: track.title,
                 id: track.image.isNotEmpty ? track.image : track.id,
-                icon: trackIcon(track.id),
+                symbol: onboardingSymbol('goal', track.id),
                 width: 64,
                 height: 64,
                 radius: 18,
@@ -385,6 +390,9 @@ class DishPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final max = (question.max ?? 6).round();
     return ListView(
+      shrinkWrap: true,
+      primary: false,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       children: [
         Text(
@@ -454,6 +462,7 @@ class _DishChip extends StatelessWidget {
           children: [
             DecorPhoto(
               label: label,
+              symbol: DietIconKind.meal,
               width: 28,
               height: 28,
               radius: 14,
@@ -465,7 +474,11 @@ class _DishChip extends StatelessWidget {
               child: selected
                   ? const Padding(
                       padding: EdgeInsetsDirectional.only(end: 6),
-                      child: Icon(Icons.check, size: 16, color: Colors.white),
+                      child: OnboardingIcon(
+                        Icons.check,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     )
                   : const SizedBox.shrink(),
             ),

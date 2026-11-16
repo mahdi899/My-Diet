@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/onboarding_icons.dart';
 import '../../core/format/digits.dart';
 import '../../core/motion/motion.dart';
 import '../../core/theme/tokens.dart';
@@ -185,7 +186,7 @@ class _Result extends StatelessWidget {
                 const AppCard.tinted(
                   child: Row(
                     children: [
-                      Icon(
+                      OnboardingIcon(
                         Icons.medical_services_outlined,
                         color: AppColors.amber,
                       ),

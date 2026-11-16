@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'widgets/onboarding_icons.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/format/digits.dart';
@@ -1027,7 +1028,7 @@ class _OtpCellsState extends State<_OtpCells>
                         colors: [Color(0xFF347A52), Color(0xFF205638)],
                       ),
                     ),
-                    child: const Icon(Icons.check_rounded, color: Colors.white, size: 40),
+                    child: const OnboardingIcon(Icons.check_rounded, color: Colors.white, size: 40),
                   ),
                 ),
               ),
@@ -1238,7 +1239,7 @@ class _SpecialistCard extends StatelessWidget {
                     ),
                   ),
                   child: selected
-                      ? const Icon(Icons.check, size: 12, color: Colors.white)
+                      ? const OnboardingIcon(Icons.check, size: 12, color: Colors.white)
                       : null,
                 ),
               ),
@@ -1327,7 +1328,7 @@ class _WhiteContinue extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 8),
-                Icon(
+                OnboardingIcon(
                   Icons.arrow_back_rounded,
                   textDirection: TextDirection.ltr,
                   color: Color(0xFF143528),
@@ -1407,7 +1408,7 @@ class _PlanCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          OnboardingIcon(
                             open
                                 ? Icons.keyboard_arrow_up_rounded
                                 : Icons.keyboard_arrow_down_rounded,

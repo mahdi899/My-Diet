@@ -7,7 +7,7 @@ import { AiBadge, AiCard, AiDialog, AiForm, AiLoad, AiNote, aiApi, date, errorTe
 const kinds: Record<string, string> = { openrouter: 'OpenRouter', openai_compatible: 'سازگار با OpenAI' }
 const strategies = { priority: 'به ترتیب اولویت', cost_first: 'ارزان‌ترین اول', weighted: 'وزنی (پخش بار)' }
 const sampleModel = 'deepseek/deepseek-v4.1-flash-1017'
-const pinnedModels = ['anthropic/claude-haiku-5.5']
+const pinnedModels = ['openai/gpt-6-luna', 'anthropic/claude-haiku-5.5']
 const demoProvider = { id: 'preview-provider', name: 'OpenRouter آزمایشی', kind: 'openrouter', active: true, hasKey: true, keyHint: '…demo', baseUrl: 'https://openrouter.ai/api/v1' }
 const demoPools = Object.keys(poolTitles).map((code, index) => ({
   code, strategy: 'priority', temperature: [0.1, 0.5, 0.2, 0.3, 0.3][index], maxTokens: [700, 1200, 1200, 6000, 6000][index],
