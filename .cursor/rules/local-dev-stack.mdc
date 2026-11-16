@@ -1,0 +1,34 @@
+---
+description: Local API, MySQL 8.4, and XAMPP paths (Mahdi PC)
+alwaysApply: true
+---
+
+# Dev stack (this machine)
+
+**Source of truth:** `backend-laravel/.env` only.
+
+| Piece | Where |
+|--------|--------|
+| PHP | **8.4** → `C:\xampp\php\php.exe` (repo shortcut: `.tools/php84`) |
+| API | `backend-laravel/` → `http://127.0.0.1:8000` |
+| MySQL | **8.4.9** → `127.0.0.1:3306`, database `sabzine` (`DATABASE_URL` in `.env`) |
+| MySQL files | `C:\xampp\mysql84\` (`my.ini`, `data/`, binaries) |
+| Start DB | XAMPP Control Panel → **MySQL** (patched `C:\xampp\mysql_start.bat`) |
+
+**Ignore / do not use:** `D:\mysql84` (removed), MariaDB `C:\xampp\mysql\bin\mysqld.exe`, old Node `backend/`, Docker defaults unless you chose Docker.
+
+## Commands
+
+```powershell
+php -v                                    # must show 8.4.x
+php backend-laravel\artisan serve --host=127.0.0.1 --port=8000
+powershell -File tool/local-dev-stack.ps1 -Status
+```
+
+After empty database: `php artisan migrate --force`, `php artisan db:seed --class=FoodCatalogSeeder --force`, `php artisan db:seed --class=AiPromptsSeeder --force`, `php artisan sabzine:wire-ai`, `php tool/create-admin-once.php`.
+
+**Local admin:** username `admin`, password `Sabzine-Admin-2026` → `POST /v1/auth/admin/login`.
+
+## Health
+
+- `GET /health/ready` → `database: up`
