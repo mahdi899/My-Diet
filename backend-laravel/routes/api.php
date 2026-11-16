@@ -254,6 +254,8 @@ Route::prefix('v1/catalog')->middleware('session:specialist,admin')->controller(
     Route::post('compose', 'compose');
 });
 Route::get('v1/admin/ingredients', [IngredientController::class, 'listing'])->middleware('session:admin');
+Route::put('v1/admin/ingredients/{code}', [IngredientController::class, 'update'])->middleware('session:admin');
+Route::post('v1/admin/ingredients/{code}/delete', [IngredientController::class, 'delete'])->middleware('session:admin');
 Route::prefix('v1/admin/foods')->middleware('session:admin')->controller(FoodController::class)->group(function (): void {
     Route::get('', 'listing');
     Route::get('export.csv', 'exportCsv');

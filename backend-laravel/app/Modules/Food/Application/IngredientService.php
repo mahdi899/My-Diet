@@ -9,6 +9,23 @@ final class IngredientService
 {
     public function __construct(private IngredientStore $store) {}
 
+    public function update(string $code, array $input): array
+    {
+        if (array_diff(array_keys($input), ['nameFa', 'category', 'nutritionReference']) || ! is_string($input['nameFa'] ?? null) || mb_strlen(trim($input['nameFa'])) < 2 || mb_strlen($input['nameFa']) > 160 || ! in_array($input['category'] ?? null, IngredientCatalog::CATEGORIES, true) || (isset($input['nutritionReference']) && (! is_string($input['nutritionReference']) || mb_strlen($input['nutritionReference']) > 2000))) {
+            throw new Problem(400, 'validation', 'نام، دسته یا مرجع تغذیه معتبر نیست');
+        }
+        $this->store->update($code, ['name_fa' => trim($input['nameFa']), 'category' => $input['category'], 'nutrition_reference' => trim($input['nutritionReference'] ?? '') ?: null]);
+
+        return ['updated' => true];
+    }
+
+    public function delete(string $code): array
+    {
+        $this->store->delete($code);
+
+        return ['deleted' => true];
+    }
+
     /**
      * @param  array<string, mixed>  $filter
      * @return array{items: list<array{code: string, nameFa: string, category: string, nutritionReference: ?string, recipeCount: int}>, nextCursor: ?string}
