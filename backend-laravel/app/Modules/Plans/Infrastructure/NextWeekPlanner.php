@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Plans\Application;
+namespace App\Modules\Plans\Infrastructure;
 
-use App\Modules\Coach\Application\PreferenceService;
+use App\Modules\Coach\Infrastructure\PreferenceService;
 use App\Modules\Plans\Domain\CivilDates;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use Illuminate\Database\ConnectionInterface;

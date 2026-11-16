@@ -138,12 +138,14 @@ class OnboardingController extends ChangeNotifier {
 
   void setTrack(String id) {
     if (track == id) return;
+    submitError = null;
     track = id;
     _rebuild(keep: '_track');
     _schedule(trackChanged: true);
   }
 
   void setAnswer(String key, Object? value) {
+    submitError = null;
     if (value == null || (value is List && value.isEmpty)) {
       answers.remove(key);
       _pending[key] = null;
@@ -168,6 +170,7 @@ class OnboardingController extends ChangeNotifier {
 
   void next() {
     if (!canAdvance || isLast) return;
+    submitError = null;
     index += 1;
     _schedule(step: true);
     notifyListeners();
@@ -175,6 +178,7 @@ class OnboardingController extends ChangeNotifier {
 
   void back() {
     if (isFirst) return;
+    submitError = null;
     index -= 1;
     _schedule(step: true);
     notifyListeners();
@@ -189,6 +193,7 @@ class OnboardingController extends ChangeNotifier {
     if (step is QuestionStep && !spec.isAnswered(step.question, answers)) {
       return false;
     }
+    submitError = null;
     index = at;
     _schedule(step: true);
     notifyListeners();

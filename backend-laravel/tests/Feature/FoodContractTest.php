@@ -18,6 +18,10 @@ final class FoodContractTest extends MySqlTestCase
     public function test_catalog_crud_images_compose_permissions_and_search(): void
     {
         $admin = $this->actor('admin');
+        foreach (range(1, 3) as $index) {
+            $this->postJson('/v1/admin/foods', [...$this->food('pagination_'.$index), 'nameFa' => 'خوراک نمونه '.$index])->assertCreated();
+        }
+        $auditBefore = $this->db->table('audit_logs')->where('actor_id', $admin['id'])->count();
         $initial = $this->getJson('/v1/admin/foods?limit=2')->assertOk()->assertJsonCount(2, 'items')->json();
         self::assertNotNull($initial['nextCursor']);
         $this->getJson('/v1/admin/foods?category=invalid')->assertStatus(400);
@@ -32,7 +36,7 @@ final class FoodContractTest extends MySqlTestCase
         $this->postJson('/v1/catalog/compose', ['kind' => 'primary', 'items' => [['slug' => 'test_food', 'servings' => 1]]])->assertStatus(409)->assertJsonPath('code', 'food_inactive');
         $this->putJson('/v1/admin/foods/test_food', [...$this->food(), 'imageData' => null, 'image' => '/v1/public/food-images/test_food.jpg'])->assertOk()->assertJsonPath('image', null);
         $this->get('/v1/public/food-images/test_food.jpg')->assertNotFound();
-        self::assertSame(4, $this->db->table('audit_logs')->where('actor_id', $admin['id'])->count());
+        self::assertSame($auditBefore + 4, $this->db->table('audit_logs')->where('actor_id', $admin['id'])->count());
         $this->actor();
         $this->getJson('/v1/admin/foods')->assertForbidden();
         $this->getJson('/v1/catalog/foods')->assertForbidden();

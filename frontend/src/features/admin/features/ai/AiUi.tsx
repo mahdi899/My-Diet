@@ -24,6 +24,8 @@ export const poolTitles: Record<string, string> = {
   plan_critic: 'بازبینی فرهنگی و بالینی', plan_draft: 'پیش‌نویس برنامهٔ غذایی',
 }
 export const outcomes: Record<string, string> = {
+  connection_failed: 'ارتباط با سرویس برقرار نشد یا مهلت پاسخ تمام شد؛ دوباره تست کنید.',
+  empty_completion: 'مدل پاسخ متنی برنگرداند.',
   ok: 'موفق', rate_limited: 'محدودیت نرخ', auth_failed: 'خطای اعتبار', rejected: 'رد شد', timeout: 'مهلت تمام شد',
   invalid_json: 'JSON نامعتبر', invalid_plan: 'برنامهٔ نامعتبر', outcome_unknown: 'نامشخص', budget_blocked: 'سقف هزینه',
 }

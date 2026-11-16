@@ -302,6 +302,8 @@ final class MySqlAiAdmin
 
         return [
             'day' => $today->format('Y-m-d'), 'spentMicros' => $spent, 'dailyCapMicros' => $dailyCap, 'monthlyCapMicros' => $monthlyCap,
+            'confirmedTodayMicros' => (int) (clone $ledger)->where('created_at', '>=', $day)->where('cost_source', 'provider')->sum('cost_micros'),
+            'estimatedTodayMicros' => (int) (clone $ledger)->where('created_at', '>=', $day)->where('cost_source', 'estimate')->sum('cost_micros'),
             'killSwitch' => $controls['killSwitch'], 'todayMicros' => $spent, 'monthMicros' => array_sum(array_column($daily, 'costMicros')),
             'dailyShare' => $dailyShare, 'alert' => $alert, 'controls' => $controls, 'byModel' => $byModel, 'daily' => $daily,
         ];
@@ -386,6 +388,37 @@ final class MySqlAiAdmin
         }
 
         return ['items' => array_map(fn ($row) => $this->prompt($row), $query->get()->all())];
+    }
+
+    public function testPrompt(string $key): array
+    {
+        $codes = ['plan_draft' => 'plan_draft', 'plan_critic' => 'plan_critic', 'coach_system' => 'nutrition_coach', 'coach_vision' => 'nutrition_vision', 'coach_memory' => 'coach_memory'];
+        if (! isset($codes[$key])) {
+            throw new Problem(400, 'validation', 'پرامپت معتبر نیست');
+        }
+        $pools = app(ModelPools::class);
+        $values = ['input' => 'من قارچ دوست ندارم. یک میان وعده ساده پیشنهاد بده.', 'context' => 'کاربر آزمایشی بزرگسال؛ بدون اطلاعات پزشکی ثبت‌شده.', 'profile' => '{"allergens":[],"target_kcal":2000}', 'catalog' => '[{"slug":"apple","kcal":80},{"slug":"yogurt","kcal":100}]', 'days' => '[1]', 'plan' => '{"meals":[{"name":"سیب","kcal":80}]}', 'schema' => $key === 'plan_critic' ? '{"verdict":"ok|concerns","warnings":[],"summary":""}' : '{"days":[{"day":1,"meals":[{"mealType":"snack","primary":[{"slug":"apple","servings":1}],"alternative":[{"slug":"yogurt","servings":1}],"note":""}]}]}'];
+        if ($key === 'coach_vision') {
+            $values['input'] = 'تصویری ارسال نشده؛ آیا می‌توان غذا را تشخیص داد؟';
+        }
+        $result = $pools->run($codes[$key], $pools->promptMessages($key, $values), null, null, $key !== 'coach_system', function (string $text) use ($key) {
+            if ($key === 'coach_system') {
+                if (trim($text) === '') {
+                    throw new \InvalidArgumentException('پاسخ خالی است');
+                }
+
+                return $text;
+            }
+            $data = json_decode($text, true, 512, JSON_THROW_ON_ERROR);
+            $field = ['plan_draft' => 'days', 'plan_critic' => 'warnings', 'coach_vision' => 'foods', 'coach_memory' => 'preferences'][$key];
+            if (! is_array($data[$field] ?? null)) {
+                throw new \InvalidArgumentException('قالب پاسخ معتبر نیست');
+            }
+
+            return $data;
+        });
+
+        return ['ok' => true, 'answer' => $result['text'], 'model' => $result['model'], 'costMicros' => $result['costMicros']];
     }
 
     public function createPrompt(string $actor, string $key, array $body): array

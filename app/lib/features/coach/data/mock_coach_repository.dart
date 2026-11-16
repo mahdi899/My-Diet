@@ -462,7 +462,7 @@ class MockCoachRepository implements CoachRepository {
     String? fallback,
     Map<String, dynamic> payload = const {},
   }) => CoachMessage(
-    id: 'm${_seq++}',
+    id: 'm${_seq++}-${newCoachClientId()}',
     role: 'assistant',
     type: type,
     payload: {...payload, if (text.isNotEmpty) 'text': text},

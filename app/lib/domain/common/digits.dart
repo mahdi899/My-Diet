@@ -1,7 +1,9 @@
-String fa(Object value) => value.toString().replaceAllMapped(
-  RegExp(r'\d'),
-  (m) => '۰۱۲۳۴۵۶۷۸۹'[int.parse(m[0]!)],
-);
+String fa(Object? value) =>
+    value.toString().replaceAllMapped(RegExp('[0-9٠-٩]'), (m) {
+      final char = m[0]!;
+      final digit = '0123456789'.indexOf(char);
+      return '۰۱۲۳۴۵۶۷۸۹'[digit >= 0 ? digit : '٠١٢٣٤٥٦٧٨٩'.indexOf(char)];
+    });
 String latinDigits(String value) => value
     .replaceAllMapped(RegExp('[۰-۹٠-٩]'), (m) {
       final digit = '۰۱۲۳۴۵۶۷۸۹'.indexOf(m[0]!);

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/motion/motion_kit.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/theme/typography.dart';
 import '../../data/day.dart';
 import '../../presentation/session/customer_scope.dart';
 import '../../presentation/widgets/kit/kit.dart';
@@ -182,8 +183,8 @@ class _WaterCardState extends State<WaterCard> {
                           : '${fa(_glasses)} از ${fa(widget.goal)} لیوان',
                       key: const ValueKey('home-water'),
                       style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                         color: AppColors.ink,
                       ),
                     ),
@@ -236,7 +237,9 @@ class _WaterCardState extends State<WaterCard> {
                     (_glasses == 0
                         ? 'از اولین لیوان امروز شروع کنیم؟'
                         : 'هر ثبت کوچک، یک قدم مراقبت از خودت.'),
-                style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                style: AppTypography.supporting.copyWith(
+                  color: AppColors.inkSoft,
+                ),
               ),
             ),
           if (_undoValue != null)

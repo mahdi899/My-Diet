@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../core/motion/motion_kit.dart';
-import '../../data/day.dart';
 import '../../core/theme/tokens.dart';
 import '../../presentation/session/customer_scope.dart';
 import '../../presentation/widgets/kit/kit.dart';
@@ -14,6 +12,7 @@ import '../plan/meal_detail_page.dart';
 import '../plan/streak_chip.dart';
 import 'sparkline.dart';
 import 'home_day_focus.dart';
+import 'home_welcome.dart';
 import 'water_log.dart';
 import 'water_card.dart';
 export 'water_card.dart' show WaterCard;
@@ -87,142 +86,23 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
       key: const ValueKey('home-tab'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, shellBottomInset),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _hello(store.today),
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(name, style: Theme.of(context).textTheme.headlineMedium),
-                ],
-              ),
-            ),
-            PressableScale(
-              semanticLabel: 'پروفایل',
-              onTap: () => openProfileSheet(context),
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.mint,
-                foregroundImage: store.profilePhoto == null
-                    ? null
-                    : MemoryImage(base64Decode(store.profilePhoto!)),
-                child: Text(
-                  name.substring(0, 1),
-                  style: const TextStyle(
-                    color: AppColors.emeraldDark,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
-          ],
+        HomeWelcome(
+          name: name,
+          now: store.today,
+          profilePhoto: store.profilePhoto,
+          onProfile: () => openProfileSheet(context),
         ).rise(),
-        const SizedBox(height: 22),
-        Row(
-          children: [
-            const Icon(
-              Icons.wb_sunny_outlined,
-              size: 16,
-              color: AppColors.emeraldDeep,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                persianDate(store.today),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
-              ),
-            ),
-            if (focus.total > 0)
-              Text(
-                '${fa(focus.completed)} از ${fa(focus.total)} وعده',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.emeraldDeep,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        AnimatedSwitcher(
-          duration: Motion.of(context, Motion.base),
-          child: Column(
-            key: ValueKey('${focus.review}-${focus.completed}-${focus.total}'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                focus.title,
-                key: const ValueKey('home-day-title'),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  height: 1.6,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                focus.message,
-                style: const TextStyle(
-                  color: AppColors.inkSoft,
-                  fontSize: 13,
-                  height: 1.8,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        if (focus.review || next == null) ...[
-          AppCard.tinted(
-            key: const ValueKey('home-day-review'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(
-                  focus.total == 0
-                      ? Icons.spa_outlined
-                      : Icons.nights_stay_outlined,
-                  size: 32,
-                  color: AppColors.emeraldDeep,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  focus.total == 0
-                      ? 'مسیر تو، با ریتم تو'
-                      : 'همین قدم‌های کوچک دیده می‌شوند',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.emeraldDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                PillButton(
-                  label: focus.total == 0 && widget.onOpenPlan != null
-                      ? 'وضعیت برنامه'
-                      : 'مرور امروز با مربی',
-                  variant: PillVariant.soft,
-                  onPressed: focus.total == 0 && widget.onOpenPlan != null
-                      ? widget.onOpenPlan
-                      : () => openCoach(
-                          context,
-                          prefill: 'امروز را با هم مرور کنیم.',
-                        ),
-                ),
-              ],
-            ),
-          ).rise(index: 1),
-          const SizedBox(height: 16),
-        ],
+        const SizedBox(height: AppSpacing.xl),
+        HomeFocusCard(
+          focus: focus,
+          onReview: focus.total == 0 && widget.onOpenPlan != null
+              ? widget.onOpenPlan
+              : () => openCoach(context, prefill: 'امروز را با هم مرور کنیم.'),
+          reviewLabel: focus.total == 0 && widget.onOpenPlan != null
+              ? 'وضعیت برنامه'
+              : 'مرور امروز با مربی',
+        ).rise(index: 1),
+        const SizedBox(height: AppSpacing.section),
         if (next != null) ...[
           Row(
             children: [
@@ -230,8 +110,8 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
                 child: Text(
                   focus.review ? 'هنوز می‌توانی ثبت کنی' : 'وعدهٔ پیش روی تو',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -244,16 +124,16 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 8),
           _NextMeal(meal: next).rise(index: 1),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.xl),
         ],
         _TodaySummary(day: day, focus: focus).rise(index: 2),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.lg),
         WaterCard(
           key: _waterKey,
           log: widget.waterLog,
           goal: waterGoalFrom(store.questionnaire.water),
         ).rise(index: 3),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.lg),
         HabitGarden(
           today: store.today,
           log: widget.waterLog,
@@ -270,7 +150,7 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
         ).rise(index: 4),
         const SizedBox(height: 12),
         const StreakChip(),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.lg),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -317,7 +197,7 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
             ],
           ),
         ).rise(index: 5),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.xl),
         PillButton(
           label: _nudge(next),
           icon: Icons.chat_bubble_rounded,
@@ -340,7 +220,7 @@ class _TodaySummary extends StatelessWidget {
     final meals = store.mealsOn(store.today);
     return AppCard(
       key: const ValueKey('home-today-summary'),
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.card,
       shadows: const [],
       border: Border.all(color: AppColors.line),
       child: Column(
@@ -368,7 +248,7 @@ class _TodaySummary extends StatelessWidget {
                       'خلاصهٔ امروز',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -380,8 +260,8 @@ class _TodaySummary extends StatelessWidget {
                           child: Ticker(
                             value: day.eatenKcal,
                             style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
                               color: AppColors.ink,
                             ),
                           ),
@@ -401,7 +281,7 @@ class _TodaySummary extends StatelessWidget {
                           ? 'از ${fa(day.targetKcal)} کالری برنامه'
                           : 'مجموع ثبت‌های امروز',
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: AppColors.inkSoft,
                       ),
                     ),
@@ -409,7 +289,7 @@ class _TodaySummary extends StatelessWidget {
                       const Text(
                         'بعضی ثبت‌ها کالری مشخص ندارند.',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: AppColors.inkSoft,
                         ),
                       ),
@@ -419,7 +299,7 @@ class _TodaySummary extends StatelessWidget {
             ],
           ),
           if (meals.isNotEmpty) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.lg),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -452,7 +332,7 @@ class _TodaySummary extends StatelessWidget {
                     ),
                     label: Text(
                       meals[i].name,
-                      style: const TextStyle(fontSize: 11),
+                      style: const TextStyle(fontSize: 12),
                     ),
                     onPressed: canLogMeal(store, store.today)
                         ? () => showConsumeSheet(context, store.today, i)
@@ -463,7 +343,7 @@ class _TodaySummary extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               '${fa(focus.completed)} از ${fa(focus.total)} وعده ثبت شده · برای تغییر، روی وعده بزن',
-              style: const TextStyle(fontSize: 11, color: AppColors.inkSoft),
+              style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
             ),
           ],
         ],
@@ -516,14 +396,6 @@ class _NextMeal extends StatelessWidget {
       ],
     );
   }
-}
-
-String _hello(DateTime now) {
-  final hour = now.hour;
-  if (hour < 5 || hour >= 21) return 'شب بخیر';
-  if (hour < 12) return 'صبح بخیر';
-  if (hour < 17) return 'ظهر بخیر';
-  return 'عصر بخیر';
 }
 
 String _firstName(CustomerWorkspace store) {

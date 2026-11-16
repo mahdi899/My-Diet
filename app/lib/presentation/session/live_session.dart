@@ -98,6 +98,7 @@ Future<bool> checkoutLiveService(
   String serviceId, {
   required Future<bool> Function() confirmSandbox,
   String? planId,
+  void Function(AppFailure failure)? onFailure,
 }) async {
   final offer = planId == null
       ? store.serviceById(serviceId)
@@ -127,6 +128,7 @@ Future<bool> checkoutLiveService(
       store.liveOrderKey = null;
     }
     store.liveNotice = error.message;
+    onFailure?.call(error);
     if (error.expired) await store.signOutCustomer();
     return false;
   }
@@ -189,19 +191,25 @@ Future<void> refreshLive(DemoStore store, {ProfileSummary? profile}) async {
   }
   try {
     request = await services.plans.latestRequest();
-  } on ApiException catch (e) {
+  } on AppFailure catch (e) {
     if (e.expired) {
       await store.signOutCustomer();
       return;
     }
+    store.liveNotice = e.message;
+    store.update();
+    return;
   }
   try {
     plan = await services.plans.publishedPlan();
-  } on ApiException catch (e) {
+  } on AppFailure catch (e) {
     if (e.expired) {
       await store.signOutCustomer();
       return;
     }
+    store.liveNotice = e.message;
+    store.update();
+    return;
   }
   try {
     wallet = (await services.commerce.wallet()).total;
@@ -218,6 +226,7 @@ Future<void> refreshLive(DemoStore store, {ProfileSummary? profile}) async {
   } on AuthFailure {
     // The greeting keeps the name already on the profile.
   }
+  store.liveNotice = null;
   store.liveOpenQuestions = request?.openQuestions ?? const [];
   showServerPlan(
     store,

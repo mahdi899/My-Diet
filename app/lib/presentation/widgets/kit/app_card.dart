@@ -8,7 +8,7 @@ class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(18),
+    this.padding = AppSpacing.card,
     this.margin,
     this.radius = AppRadius.xl,
     this.color = AppColors.surface,
@@ -36,7 +36,7 @@ class AppCard extends StatelessWidget {
   const AppCard.tinted({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(18),
+    this.padding = AppSpacing.card,
     this.margin,
     this.radius = AppRadius.xl,
     this.color = AppColors.mint,

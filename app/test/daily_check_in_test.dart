@@ -283,13 +283,20 @@ void main() {
       );
       await t.pumpAndSettle();
       final chip = find.byKey(const ValueKey('home-log-meal-0'));
+      Future<void> tapMealChip() async {
+        // The focus card changes height after a record; center the action again.
+        await Scrollable.ensureVisible(t.element(chip), alignment: .5);
+        await t.pumpAndSettle();
+        await t.tap(chip);
+        await t.pumpAndSettle();
+      }
+
       await t.scrollUntilVisible(
         chip,
         220,
         scrollable: find.byType(Scrollable).first,
       );
-      await t.tap(chip);
-      await t.pumpAndSettle();
+      await tapMealChip();
       await t.tap(find.text('انجام شد'));
       await t.pumpAndSettle();
       expect(store.mealRecordOn(now, 0), isNotNull);
@@ -297,12 +304,10 @@ void main() {
       await t.pumpAndSettle();
       expect(store.mealRecordOn(now, 0), isNull);
       expect(store.consumedCalories(now), 0);
-      await t.tap(chip);
-      await t.pumpAndSettle();
+      await tapMealChip();
       await t.tap(find.text('انجام شد'));
       await t.pumpAndSettle();
-      await t.tap(chip);
-      await t.pumpAndSettle();
+      await tapMealChip();
       expect(find.byType(ConsumeSheet), findsOneWidget);
       await t.tap(find.byKey(const ValueKey('meal-undo-registration')));
       await t.pumpAndSettle();

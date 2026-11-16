@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import '../../core/motion/motion_kit.dart';
 import '../../core/photos/photos.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/theme/typography.dart';
+import '../../domain/common/number_format.dart';
 import '../../data/demo_store.dart';
 import '../../presentation/widgets/kit/kit.dart';
 import '../coach/coach_launcher.dart';
 import 'consume_sheet.dart';
+import 'cooking_page.dart';
 import 'goal_math.dart';
 import 'meal_substitution_sheet.dart';
 
@@ -179,6 +182,24 @@ class _MealDetailPageState extends State<MealDetailPage> {
                         },
                       ),
                       const SizedBox(height: 14),
+                      if (_tab == 1 &&
+                          recipeSteps(meal.instructions).isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        FilledButton.icon(
+                          key: const ValueKey('meal-start-cooking'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                          ),
+                          onPressed: () => Navigator.of(context).push<void>(
+                            foodDetailRoute<void>(
+                              CookingPage(meal: meal),
+                              reduced: Motion.reduced(context),
+                            ),
+                          ),
+                          icon: const Icon(Icons.soup_kitchen_outlined),
+                          label: const Text('شروع آشپزی قدم‌به‌قدم'),
+                        ),
+                      ],
                       AnimatedSwitcher(
                         duration: Motion.of(context, Motion.quick),
                         switchInCurve: Curves.easeOut,
@@ -257,84 +278,104 @@ class _MealDetailPageState extends State<MealDetailPage> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: SparkleBurst(
-                    trigger: _burst,
-                    child: FilledButton(
-                      key: const ValueKey('meal-record'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.emeraldDeep,
-                        minimumSize: const Size.fromHeight(52),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      onPressed: canLogMeal(store, widget.date)
-                          ? _precise
-                          : null,
-                      child: store.savingMeal
-                          ? const SizedBox.square(
-                              dimension: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.check_rounded, size: 22),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    recorded ? 'ثبت شد' : 'ثبت این وعده',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stacked =
+                    constraints.maxWidth < 330 &&
+                    MediaQuery.textScalerOf(context).scale(14) > 18;
+                final primaryWidth = stacked
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - 10) * .625;
+                final secondaryWidth = stacked
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - 10) * .375;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    SizedBox(
+                      width: primaryWidth,
+                      child: SparkleBurst(
+                        trigger: _burst,
+                        child: FilledButton(
+                          key: const ValueKey('meal-record'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.emeraldDeep,
+                            minimumSize: const Size.fromHeight(52),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
                             ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 3,
-                  child: OutlinedButton(
-                    key: const ValueKey('meal-alternatives'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.emeraldDeep,
-                      side: const BorderSide(
-                        color: AppColors.emeraldDeep,
-                        width: 1.2,
-                      ),
-                      minimumSize: const Size.fromHeight(52),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    onPressed: store.savingSubstitution ? null : _alternatives,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.swap_horiz_rounded, size: 22),
-                        const SizedBox(width: 6),
-                        const Flexible(
-                          child: Text('جایگزین', textAlign: TextAlign.center),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onPressed: canLogMeal(store, widget.date)
+                              ? _precise
+                              : null,
+                          child: store.savingMeal
+                              ? const SizedBox.square(
+                                  dimension: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_rounded, size: 22),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        recorded ? 'ثبت شد' : 'ثبت این وعده',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                    SizedBox(
+                      width: secondaryWidth,
+                      child: OutlinedButton(
+                        key: const ValueKey('meal-alternatives'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.emeraldDeep,
+                          side: const BorderSide(
+                            color: AppColors.emeraldDeep,
+                            width: 1.2,
+                          ),
+                          minimumSize: const Size.fromHeight(52),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        onPressed: store.savingSubstitution
+                            ? null
+                            : _alternatives,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.swap_horiz_rounded, size: 22),
+                            const SizedBox(width: 6),
+                            const Flexible(
+                              child: Text(
+                                'جایگزین',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -406,7 +447,7 @@ class _MealMeta extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             color: AppColors.emeraldDark,
             fontWeight: FontWeight.w600,
           ),
@@ -424,7 +465,7 @@ class _DetailTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: const Color(0xFFEDEEE6),
+      color: AppColors.bgDeep,
       borderRadius: BorderRadius.circular(18),
     ),
     child: Padding(
@@ -527,59 +568,75 @@ class _IngredientRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final quantity = item.quantity;
     final amount = quantity == null
-        ? (item.unit.trim().isEmpty ? 'مقدار درج نشده' : item.unit)
-        : '${fa(quantity == quantity.roundToDouble() ? quantity.toInt() : quantity)} ${item.unit}';
+        ? (item.unit.trim().isEmpty ? 'مقدار درج نشده' : fa(item.unit))
+        : persianQuantity(quantity, item.unit);
     final resolver = FoodPhotoResolver.instance;
     final cooked = ['پلو', 'پخته', 'سالاد'].any(item.name.contains);
     final photo =
         (cooked ? resolver?.bestMatch(title: item.name) : null) ??
         resolver?.bestMatch(title: item.name, mealType: 'ingredient');
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      child: Row(
-        children: [
-          ExcludeSemantics(
-            child: photo == null
-                ? Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.mint,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.restaurant_rounded,
-                      color: AppColors.emeraldDeep,
-                      size: 22,
-                    ),
-                  )
-                : FoodImage(
-                    photo: photo,
-                    thumb: true,
-                    width: 44,
-                    height: 44,
-                    borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked =
+              constraints.maxWidth < 300 &&
+              MediaQuery.textScalerOf(context).scale(14) > 17;
+          return Row(
+            children: [
+              ExcludeSemantics(
+                child: photo == null
+                    ? Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.mint,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.restaurant_rounded,
+                          color: AppColors.emeraldDeep,
+                          size: 22,
+                        ),
+                      )
+                    : FoodImage(
+                        photo: photo,
+                        thumb: true,
+                        width: 44,
+                        height: 44,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+              ),
+              const SizedBox(width: 10),
+              if (stacked)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.name, style: AppTypography.body),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(amount, style: AppTypography.quantity),
+                    ],
                   ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 3,
-            child: Text(
-              item.name,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            flex: 2,
-            fit: FlexFit.tight,
-            child: Text(
-              fa(amount),
-              textAlign: TextAlign.end,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
+                )
+              else ...[
+                Expanded(
+                  flex: 3,
+                  child: Text(item.name, style: AppTypography.body),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    amount,
+                    textAlign: TextAlign.end,
+                    style: AppTypography.quantity,
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -623,10 +680,7 @@ class _RecipeCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              steps[i],
-                              style: const TextStyle(height: 1.9),
-                            ),
+                            child: Text(steps[i], style: AppTypography.body),
                           ),
                         ],
                       ),
@@ -653,14 +707,14 @@ class _DetailCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: AppColors.surface,
       border: Border.all(color: AppColors.line),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           color: AppColors.mint,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -672,7 +726,7 @@ class _DetailCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 subtitle,
                 style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),

@@ -7,6 +7,7 @@ import 'package:sabzine_flutter/core/theme/theme.dart';
 import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/features/plan/consume_sheet.dart';
+import 'package:sabzine_flutter/features/plan/cooking_page.dart';
 import 'package:sabzine_flutter/features/plan/meal_detail_page.dart';
 import 'package:sabzine_flutter/features/plan/meal_substitution_sheet.dart';
 
@@ -48,6 +49,40 @@ void main() {
     await FoodPhotoResolver.load();
   });
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets(
+    'cooking opens from the real recipe and finishing never records consumption',
+    (t) async {
+      t.view.physicalSize = const Size(390, 844);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      final store = ready();
+      await t.pumpWidget(host(store));
+      await t.pumpAndSettle();
+      await tapVisible(t, find.byKey(const ValueKey('meal-tab-recipe')));
+      await tapVisible(t, find.byKey(const ValueKey('meal-start-cooking')));
+      expect(find.byType(CookingPage), findsOneWidget);
+      expect(store.mealRecordOn(day, 1), isNull);
+      for (
+        var i = 0;
+        i < 12 && find.text('پایان آشپزی').evaluate().isEmpty;
+        i++
+      ) {
+        await t.tap(find.byKey(const ValueKey('cooking-next')));
+        await t.pumpAndSettle();
+      }
+      expect(find.text('پایان آشپزی'), findsOneWidget);
+      await t.tap(find.text('پایان آشپزی'));
+      await t.pumpAndSettle();
+      expect(find.byType(CookingPage), findsNothing);
+      expect(find.byType(MealDetailPage), findsOneWidget);
+      expect(store.mealRecordOn(day, 1), isNull);
+      expect(store.mealEaten(day, 1), isFalse);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+      store.dispose();
+    },
+  );
 
   testWidgets(
     'recipe switch preserves portions; recording requires confirmation',

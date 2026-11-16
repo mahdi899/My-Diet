@@ -60,7 +60,7 @@ void main() {
     expect(find.byKey(const ValueKey('subscription-summary')), findsOneWidget);
     expect(find.textContaining('هنوز اشتراک فعالی نداری'), findsOneWidget);
     await tapPlan(tester, find.byKey(const ValueKey('plan-monthly')));
-    expect(find.text('مبلغ قابل پرداخت: ۱,۹۹۰,۰۰۰ تومان'), findsOneWidget);
+    expect(find.text('مبلغ قابل پرداخت: ۱٬۹۹۰٬۰۰۰ تومان'), findsOneWidget);
     expect(find.textContaining('کیف پول'), findsNothing);
     expect(find.textContaining('موجودی'), findsNothing);
     expect(primary(tester, 'پرداخت و فعال‌سازی پلن').onPressed, isNotNull);
@@ -126,7 +126,7 @@ void main() {
     expect(find.text('پرداخت لغو شد؛ پلنی فعال نشد.'), findsOneWidget);
     await tapPlan(
       tester,
-      find.widgetWithText(PrimaryButton, 'پرداخت و فعال‌سازی پلن'),
+      find.widgetWithText(PrimaryButton, 'تلاش دوباره برای پرداخت'),
     );
     expect(find.byType(PlanPaymentScreen), findsOneWidget);
     expect(tester.takeException(), isNull);

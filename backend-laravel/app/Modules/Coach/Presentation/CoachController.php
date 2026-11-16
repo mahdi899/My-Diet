@@ -3,6 +3,8 @@
 namespace App\Modules\Coach\Presentation;
 
 use App\Modules\Coach\Application\CoachGateway;
+use App\Modules\Coach\Infrastructure\CoachQuotaService;
+use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Shared\Domain\Problem;
 use App\Shared\Presentation\StrictInput as Input;
 use Illuminate\Http\Request;
@@ -15,7 +17,7 @@ final class CoachController
 
     public function __construct(
         private CoachGateway $coach,
-        private \App\Modules\Coach\Application\CoachQuotaService $quota
+        private CoachQuotaService $quota
     ) {}
 
     public function thread(Request $request): array
@@ -40,10 +42,10 @@ final class CoachController
     public function messages(Request $request): StreamedResponse
     {
         $userId = $this->actor($request);
-        
+
         // Check quota before processing
         $this->quota->requireChat($userId);
-        
+
         $body = Input::body($request, ['clientMessageId', 'kind', 'text', 'value', 'label', 'action', 'args', 'sourceMessageId', 'mediaId', 'caption', 'mealType']);
         $kind = Input::string($body, 'kind', 20);
         if (! in_array($kind, ['text', 'quick_reply', 'card_action', 'photo'], true)) {
@@ -55,7 +57,7 @@ final class CoachController
         $accepted = $this->coach->accept($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $text);
 
         // Consume quota after successful reply
-        if (!$accepted['replay'] && $accepted['blocked'] === null && count($accepted['replies']) > 0) {
+        if (! $accepted['replay'] && $accepted['blocked'] === null && count($accepted['replies']) > 0) {
             $this->quota->consumeChat($userId);
         }
 
@@ -65,10 +67,10 @@ final class CoachController
     public function photo(Request $request): array
     {
         $userId = $this->actor($request);
-        
+
         // Check vision quota
         $this->quota->requireVision($userId);
-        
+
         $body = Input::body($request, ['clientMessageId', 'image', 'mime', 'caption', 'mealType']);
         $image = Input::string($body, 'image', 2_800_000);
         $bytes = base64_decode($image, true);
@@ -78,10 +80,10 @@ final class CoachController
         $mime = Input::optional($body, 'mime', 80) ?? 'image/jpeg';
 
         $result = $this->coach->photo($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $bytes, $mime);
-        
+
         // Consume vision quota after successful analysis
         $this->quota->consumeVision($userId);
-        
+
         return $result;
     }
 
@@ -149,18 +151,19 @@ final class CoachController
     {
         $body = Input::body($request, ['mealId', 'reason', 'budgetOk', 'foodSlug']);
         $mealId = Input::uuid($body['mealId']);
-        
-        $swap = app(\App\Modules\Plans\Application\MealSwapService::class);
-        
+
+        $swap = app(MealSwapService::class);
+
         // If foodSlug provided, apply the swap; otherwise return alternatives
         if (isset($body['foodSlug']) && is_string($body['foodSlug'])) {
             $reason = Input::optional($body, 'reason', 32) ?? 'variety';
+
             return $swap->apply($this->actor($request), $mealId, $body['foodSlug'], $reason);
         }
-        
+
         $reason = Input::optional($body, 'reason', 32) ?? 'variety';
         $budgetOk = isset($body['budgetOk']) && $body['budgetOk'] === true;
-        
+
         return $swap->alternatives($this->actor($request), $mealId, $reason, $budgetOk);
     }
 

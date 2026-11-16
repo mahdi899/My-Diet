@@ -1,0 +1,12 @@
+.admin-reference .ingredient-catalog .users-table-card { overflow:visible; }
+.admin-reference .ingredient-catalog table { min-width:640px; }
+.admin-reference .ingredient-catalog td { height:76px; }
+.admin-reference .ingredient-catalog th:first-child { width:140px; }
+.admin-reference .ingredient-catalog th:last-child { width:140px; }
+.admin-reference .ingredient-filter { position:relative; }
+.admin-reference .ingredient-filter summary { display:grid; place-items:center; position:relative; width:44px; height:44px; border-radius:8px; cursor:pointer; color:var(--users-muted); list-style:none; }
+.admin-reference .ingredient-filter summary::-webkit-details-marker { display:none; }
+.admin-reference .ingredient-filter summary:hover,.admin-reference .ingredient-filter[open] summary { background:var(--users-soft); color:var(--users-accent); }
+.admin-reference .ingredient-filter summary:focus-visible { outline:2px solid var(--users-focus); outline-offset:2px; }
+.admin-reference .ingredient-filter .users-status-menu button[aria-pressed="true"] { background:var(--users-soft); color:var(--users-accent); }
+.admin-reference .ingredient-dialog .actions { margin-top:20px; }

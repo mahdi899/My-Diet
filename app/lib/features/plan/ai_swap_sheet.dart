@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import '../../domain/common/number_format.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/customer_auth.dart';
 import 'data/meal_swap_repository.dart';
@@ -20,7 +21,8 @@ class AiSwapAlternativesSheet extends StatefulWidget {
   final VoidCallback? onApplied;
 
   @override
-  State<AiSwapAlternativesSheet> createState() => _AiSwapAlternativesSheetState();
+  State<AiSwapAlternativesSheet> createState() =>
+      _AiSwapAlternativesSheetState();
 }
 
 class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
@@ -57,9 +59,19 @@ class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
         reason: _reason,
         budgetOk: _reason == 'budget',
       );
-      if (mounted) setState(() { _result = result; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _loading = false;
+        });
+      }
     } on MealSwapException catch (e) {
-      if (mounted) setState(() { _error = e.message; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -85,12 +97,16 @@ class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
     } on MealSwapException catch (e) {
       if (mounted) {
         setState(() => _applying = null);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (_) {
       if (mounted) {
         setState(() => _applying = null);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اعمال تعویض انجام نشد.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('اعمال تعویض انجام نشد.')));
       }
     }
   }
@@ -100,7 +116,9 @@ class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,17 +156,21 @@ class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: _reasons.entries.map((e) => Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: ChoiceChip(
-                      label: Text(e.value),
-                      selected: _reason == e.key,
-                      onSelected: (_) {
-                        setState(() => _reason = e.key);
-                        _load();
-                      },
-                    ),
-                  )).toList(),
+                  children: _reasons.entries
+                      .map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: ChoiceChip(
+                            label: Text(e.value),
+                            selected: _reason == e.key,
+                            onSelected: (_) {
+                              setState(() => _reason = e.key);
+                              _load();
+                            },
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),
@@ -160,11 +182,16 @@ class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
             else if (_error != null)
               Padding(
                 padding: const EdgeInsets.all(20),
-                child: Column(children: [
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-                  const SizedBox(height: 8),
-                  TextButton(onPressed: _load, child: const Text('تلاش مجدد')),
-                ]),
+                child: Column(
+                  children: [
+                    Text(_error!, style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _load,
+                      child: const Text('تلاش مجدد'),
+                    ),
+                  ],
+                ),
               )
             else if (_result != null) ...[
               if (_result!.tooFewResults)
@@ -189,19 +216,29 @@ class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
                   physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                   itemCount: _result!.alternatives.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
                   itemBuilder: (_, i) {
                     final alt = _result!.alternatives[i];
                     return Card(
                       margin: EdgeInsets.zero,
                       child: ListTile(
-                        title: Text(alt.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(
+                          alt.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         subtitle: Text(
-                          '${alt.kcal} کالری  •  پروتئین: ${alt.protein.toStringAsFixed(0)}g',
+                          '${persianNumber(alt.kcal, fractionDigits: 0)} کالری  •  پروتئین: ${persianQuantity(alt.protein, 'گرم')}',
                           style: const TextStyle(fontSize: 12),
                         ),
                         trailing: _applying == alt.slug
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : FilledButton(
                                 onPressed: () => _apply(alt),
                                 child: const Text('انتخاب'),
@@ -219,7 +256,8 @@ class _AiSwapAlternativesSheetState extends State<AiSwapAlternativesSheet> {
 }
 
 /// Open the AI swap sheet from anywhere.
-Future<bool?> openAiSwapSheet(BuildContext context, {
+Future<bool?> openAiSwapSheet(
+  BuildContext context, {
   required String mealId,
   required String mealTitle,
   required CustomerAuth auth,

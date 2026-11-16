@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Coach\Application;
+namespace App\Modules\Coach\Infrastructure;
 
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use Illuminate\Database\ConnectionInterface;
@@ -56,7 +56,7 @@ final class PreferenceService
     public function recordUserStatement(string $userId, string $key, string $value): void
     {
         $validKeys = ['food_dislike', 'food_like', 'pattern', 'followup_answered'];
-        if (!in_array($key, $validKeys, true)) {
+        if (! in_array($key, $validKeys, true)) {
             return;
         }
         $this->upsert($userId, $key, $value, 'user', 3);
@@ -113,7 +113,7 @@ final class PreferenceService
             $this->db->table('coach_preferences')
                 ->where('id', $existingSkip->id)
                 ->update([
-                    'strength'   => min(3, (int)$existingSkip->strength + 1),
+                    'strength' => min(3, (int) $existingSkip->strength + 1),
                     'updated_at' => $this->db->raw('current_timestamp(6)'),
                 ]);
         } else {
@@ -179,10 +179,11 @@ final class PreferenceService
             $this->db->table('coach_preferences')
                 ->where('id', $existing->id)
                 ->update([
-                    'strength'   => min(3, max((int)$existing->strength, $strength)),
-                    'active'     => true,
+                    'strength' => min(3, max((int) $existing->strength, $strength)),
+                    'active' => true,
                     'updated_at' => $this->db->raw('current_timestamp(6)'),
                 ]);
+
             return;
         }
 
@@ -208,13 +209,13 @@ final class PreferenceService
         }
 
         $this->db->table('coach_preferences')->insert([
-            'id'       => Crypto::uuid(),
-            'user_id'  => $userId,
+            'id' => Crypto::uuid(),
+            'user_id' => $userId,
             'pref_key' => $key,
-            'value'    => $value,
-            'source'   => $source,
+            'value' => $value,
+            'source' => $source,
             'strength' => $strength,
-            'active'   => true,
+            'active' => true,
         ]);
     }
 }

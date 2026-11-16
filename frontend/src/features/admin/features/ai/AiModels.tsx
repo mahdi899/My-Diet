@@ -16,23 +16,43 @@ const demoPools = Object.keys(poolTitles).map((code, index) => ({
     consecutiveFailures: index < 3 ? 0 : 1, lastErrorCode: index < 3 ? '' : 'empty_completion' }],
 }))
 
-type ProviderModal = { kind: 'edit' | 'test' | 'delete'; provider?: Row }
+type ProviderModal = { kind: 'edit' | 'delete'; provider?: Row }
+
+function ProviderRow({ provider, model, preview, edit }: { provider: Row; model: string; preview: boolean; edit: (kind: 'edit' | 'delete') => void }) {
+  const test = useMutation({ mutationFn: async (): Promise<Row & { elapsedMs: number }> => {
+    const started = performance.now()
+    const result = await aiApi('providers/' + id(provider.id) + '/test', 'POST', { model })
+    return { ...result, elapsedMs: Math.round(performance.now() - started) }
+  } })
+  const result = test.data
+  return <div className="ai-provider" aria-busy={test.isPending}>
+    <div className="ai-row">
+      <div className="ai-row-info"><strong>{str(provider.name)}</strong><small><bdi>{str(provider.baseUrl)}</bdi></small></div>
+      <div className="ai-inline-actions"><AiBadge tone={provider.active ? 'good' : 'neutral'}>{provider.active ? 'فعال' : 'غیرفعال'}</AiBadge>
+        <AiBadge tone="neutral">{kinds[str(provider.kind)] ?? str(provider.kind)}</AiBadge>
+        <AiBadge tone={provider.hasKey ? 'good' : 'bad'}>{provider.hasKey ? `کلید ${str(provider.keyHint)}` : 'بدون کلید'}</AiBadge>
+        <button type="button" className="secondary" disabled={preview || !provider.hasKey || test.isPending}
+          aria-label={`تست اتصال ${str(provider.name)}`} onClick={() => test.mutate()}><Icon name="send" />{test.isPending ? 'در حال تست…' : 'تست'}</button>
+        <button type="button" className="secondary" disabled={test.isPending} onClick={() => edit('edit')}><Icon name="sliders" />ویرایش</button>
+        <button type="button" className="secondary ai-danger" disabled={test.isPending} onClick={() => edit('delete')}><Icon name="trash" />حذف</button>
+      </div>
+    </div>
+    <div aria-live="polite" aria-atomic="true">
+      {test.isPending ? <p className="ai-test-result">در حال ارسال درخواست واقعی به مدل <bdi>{model}</bdi>…</p>
+        : test.isError ? <p className="ai-test-result" data-tone="bad" role="alert">تست انجام نشد: {errorText(test.error)}</p>
+        : result && <div className="ai-test-result" data-tone={result.ok ? 'good' : 'bad'}>
+          <strong>{result.ok ? 'اتصال برقرار است؛ پاسخ واقعی دریافت شد.' : 'اتصال ناموفق بود.'}</strong>
+          <small><bdi>{model}</bdi> · {num(result.elapsedMs)} میلی‌ثانیه</small>
+          {result.ok ? <p dir="auto">{str(result.answer)}</p>
+            : <p>{outcomes[str(result.outcome)] ?? 'سرویس پاسخ معتبر نداد.'} <bdi>{str(result.errorCode)}</bdi></p>}
+        </div>}
+    </div>
+  </div>
+}
 
 function ProviderDialog({ selection, preview, close, saved }: { selection: ProviderModal; preview: boolean; close: () => void; saved: (message: string) => void }) {
   const provider = selection.provider
-  const [result, setResult] = useState<Row | null>(null)
   const endpoint = provider ? 'providers/' + id(provider.id) : 'providers'
-  if (selection.kind === 'test') return <AiDialog title={`آزمایش اتصال «${str(provider?.name)}»`} close={close}>
-    <AiForm preview={preview} close={close} label="ارسال یک درخواست کوتاه" submit={async data => {
-      setResult(null)
-      setResult(await aiApi(endpoint + '/test', 'POST', { model: str(data.get('model')).trim() }))
-    }}>
-      <AiNote>یک درخواست کوتاه برای بررسی اتصال ارسال می‌شود. هزینه در دفتر مصرف ثبت می‌شود.</AiNote>
-      <label>شناسهٔ مدل<input name="model" dir="ltr" defaultValue={sampleModel} required /></label>
-      {result && <p role="status">{result.ok ? `اتصال برقرار است · ${str(result.answeredBy)} · ${num(result.latencyMs)} ms · ${usd(result.costMicros, 5)}` :
-        `ناموفق · ${outcomes[str(result.outcome)] ?? str(result.outcome)} · ${str(result.errorCode)}`}</p>}
-    </AiForm>
-  </AiDialog>
   if (selection.kind === 'delete') return <AiDialog title="حذف سرویس" close={close}>
     <AiForm preview={preview} close={close} label="حذف سرویس" submit={async () => { await aiApi(endpoint, 'DELETE'); saved('سرویس حذف شد.') }}>
       <AiNote>سرویس «{str(provider?.name)}» حذف می‌شود. حذف سرویسِ مورداستفاده در استخر توسط سرور رد می‌شود.</AiNote>
@@ -185,16 +205,12 @@ export function AiModels({ preview }: { preview: boolean }) {
     <AiCard title="سرویس‌ها و کلیدها" description="هر سرویس یک نشانی و یک کلید دارد؛ مدل‌ها را در استخرها به آن‌ها وصل می‌کنید."
       action={<button type="button" onClick={() => setModal({ kind: 'edit' })}><Icon name="plus" />افزودن سرویس</button>}>
       {!providers.length && <p className="ai-feedback">هنوز سرویسی ثبت نشده است.</p>}
-      {providers.map(provider => <div className="ai-row" key={str(provider.id)}>
-        <div className="ai-row-info"><strong>{str(provider.name)}</strong><small><bdi>{str(provider.baseUrl)}</bdi></small></div>
-        <div className="ai-inline-actions"><AiBadge tone={provider.active ? 'good' : 'neutral'}>{provider.active ? 'فعال' : 'غیرفعال'}</AiBadge>
-          <AiBadge tone="neutral">{kinds[str(provider.kind)] ?? str(provider.kind)}</AiBadge>
-          <AiBadge tone={provider.hasKey ? 'good' : 'bad'}>{provider.hasKey ? `کلید ${str(provider.keyHint)}` : 'بدون کلید'}</AiBadge>
-          <button type="button" className="secondary" onClick={() => setModal({ kind: 'test', provider })}><Icon name="send" />آزمایش</button>
-          <button type="button" className="secondary" onClick={() => setModal({ kind: 'edit', provider })}><Icon name="sliders" />ویرایش</button>
-          <button type="button" className="secondary ai-danger" onClick={() => setModal({ kind: 'delete', provider })}><Icon name="trash" />حذف</button>
-        </div>
-      </div>)}
+      <AiNote>تست، یک درخواست کوتاه واقعی به مدل ارسال می‌کند و هزینهٔ جزئی دارد.</AiNote>
+      {providers.map(provider => {
+        const member = pools.flatMap(pool => asRows(pool.members)).find(row => row.providerId === provider.id && row.enabled)
+        return <ProviderRow key={str(provider.id)} provider={provider} model={str(member?.model || sampleModel)} preview={preview}
+          edit={kind => setModal({ kind, provider })} />
+      })}
     </AiCard>
     {ordered.map(pool => <PoolCard key={str(pool.code)} pool={pool} providers={providers} preview={preview} refresh={refresh} notify={setNotice} />)}
     {modal && <ProviderDialog selection={modal} preview={preview} close={() => setModal(null)} saved={message => {

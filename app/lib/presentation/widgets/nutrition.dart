@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../../domain/common/number_format.dart';
 
 import 'meal_logging.dart';
 import 'meal_choices.dart';
@@ -9,9 +10,7 @@ import '../../core/theme/theme.dart';
 import '../screens/questionnaire.dart';
 import 'ui.dart';
 
-String decimalFa(double value) => fa(
-  value.toStringAsFixed(value == value.roundToDouble() ? 0 : 1),
-).replaceAll('.', '٫');
+String decimalFa(double value) => persianNumber(value);
 
 class EnergyCard extends StatelessWidget {
   const EnergyCard({super.key, required this.date});
@@ -444,10 +443,12 @@ class ScheduledMealTile extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         MealDislikeButton(date: date, index: index),
-                        const Spacer(),
                         MealLogCheckbox(date: date, index: index),
                       ],
                     ),

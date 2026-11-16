@@ -2,7 +2,7 @@
 
 namespace App\Modules\Coach\Presentation;
 
-use App\Modules\Coach\Application\CoachQuotaService;
+use App\Modules\Coach\Infrastructure\CoachQuotaService;
 use App\Shared\Domain\Problem;
 use Illuminate\Http\Request;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Coach\Application;
+namespace App\Modules\Coach\Infrastructure;
 
-use App\Modules\Plans\Application\MealSwapService;
+use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Modules\Tracking\Application\TrackingService;
 use Illuminate\Database\ConnectionInterface;
 

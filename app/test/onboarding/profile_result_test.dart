@@ -37,10 +37,10 @@ void main() {
         ),
       ),
     );
-    expect(find.text('در حال ساخت برنامه شما'), findsOneWidget);
+    expect(find.text('آماده‌سازی خلاصهٔ تو'), findsOneWidget);
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
-    expect(find.text('در حال ساخت برنامه شما'), findsNothing);
+    expect(find.text('آماده‌سازی خلاصهٔ تو'), findsNothing);
     final button = find.text('شروع کن');
     expect(button, findsOneWidget);
     await tester.ensureVisible(button);

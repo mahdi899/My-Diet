@@ -1,3 +1,4 @@
+import '../domain/common/number_format.dart';
 import 'package:flutter/material.dart';
 
 /// Mock catalog for monetary wallet UI (no backend).
@@ -81,20 +82,8 @@ WalletChargeOffer? walletChargeById(String? id) {
   return null;
 }
 
-String formatToman(int amount) {
-  final raw = amount.toString();
-  final out = <String>[];
-  for (var i = 0; i < raw.length; i++) {
-    if (i > 0 && (raw.length - i) % 3 == 0) out.add(',');
-    out.add(raw[i]);
-  }
-  return '${_faDigits(out.join())} تومان';
-}
-
-String _faDigits(String value) => value.replaceAllMapped(
-  RegExp(r'\d'),
-  (m) => '۰۱۲۳۴۵۶۷۸۹'[int.parse(m[0]!)],
-);
+String formatToman(int amount) =>
+    '${persianNumber(amount, fractionDigits: 0, grouped: true)} تومان';
 
 String formatMoneyNumber(int value) =>
     formatToman(value).replaceAll(' تومان', '');

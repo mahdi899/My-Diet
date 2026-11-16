@@ -297,6 +297,7 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
         ? const CustomerSignInPrompt()
         : WeeklyRewardGate(child: page);
     return Scaffold(
+      backgroundColor: selected == 1 ? AppColors.surface : null,
       body: SafeArea(
         bottom: false,
         child: GestureDetector(

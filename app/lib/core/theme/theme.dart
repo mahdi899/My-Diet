@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'tokens.dart';
+import 'typography.dart';
 
 export 'tokens.dart';
+export 'typography.dart';
 
 // Legacy names kept so existing screens keep compiling; they now map onto the
 // «رژیم من» palette (see tokens.dart for the full set).
-const pine = AppColors.emeraldDeep,
-    cream = AppColors.bg,
-    sage = AppColors.mint;
+const pine = AppColors.emeraldDeep, cream = AppColors.bg, sage = AppColors.mint;
 const ink = AppColors.ink, muted = AppColors.muted, amber = Color(0xFFB7791F);
 
-const _font = 'Vazirmatn';
+const _font = AppTypography.fontFamily;
 
 /// Light theme of «رژیم من».
 ThemeData appTheme() {
@@ -36,46 +36,7 @@ ThemeData appTheme() {
     fontFamily: _font,
     scaffoldBackgroundColor: AppColors.bg,
     colorScheme: scheme,
-    textTheme: const TextTheme(
-      displaySmall: TextStyle(
-        fontSize: 36,
-        fontWeight: FontWeight.bold,
-        color: ink,
-        height: 1.5,
-      ),
-      headlineLarge: TextStyle(
-        fontSize: 30,
-        fontWeight: FontWeight.bold,
-        color: ink,
-        height: 1.6,
-      ),
-      headlineMedium: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: ink,
-        height: 1.6,
-      ),
-      titleLarge: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: ink,
-        height: 1.7,
-      ),
-      titleMedium: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: ink,
-        height: 1.7,
-      ),
-      bodyLarge: TextStyle(fontSize: 15, color: ink, height: 1.8),
-      bodyMedium: TextStyle(fontSize: 13, color: ink, height: 1.8),
-      bodySmall: TextStyle(fontSize: 11, color: muted, height: 1.8),
-      labelLarge: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        height: 1.7,
-      ),
-    ),
+    textTheme: AppTypography.textTheme,
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.bg,
       foregroundColor: ink,
@@ -101,8 +62,13 @@ ThemeData appTheme() {
       style: FilledButton.styleFrom(
         backgroundColor: pine,
         foregroundColor: Colors.white,
-        minimumSize: const Size(0, 54),
-        shape: const StadiumBorder(),
+        minimumSize: const Size(0, AppSpacing.controlHeight),
+        disabledBackgroundColor: AppColors.disabled,
+        disabledForegroundColor: AppColors.onDisabled,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.control),
+        ),
         textStyle: const TextStyle(
           fontFamily: _font,
           fontSize: 14,
@@ -113,9 +79,12 @@ ThemeData appTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: pine,
-        minimumSize: const Size(0, 50),
+        minimumSize: const Size(0, AppSpacing.controlHeight),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         side: const BorderSide(color: Color(0xFFCFE3D6)),
-        shape: const StadiumBorder(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.control),
+        ),
         textStyle: const TextStyle(
           fontFamily: _font,
           fontWeight: FontWeight.bold,
@@ -125,7 +94,9 @@ ThemeData appTheme() {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: pine,
-        shape: const StadiumBorder(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.control),
+        ),
         textStyle: const TextStyle(
           fontFamily: _font,
           fontWeight: FontWeight.bold,
@@ -136,7 +107,9 @@ ThemeData appTheme() {
       backgroundColor: Colors.white,
       selectedColor: AppColors.mint,
       side: const BorderSide(color: AppColors.line),
-      shape: const StadiumBorder(),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
       labelStyle: const TextStyle(fontFamily: _font, fontSize: 12, color: ink),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -146,7 +119,14 @@ ThemeData appTheme() {
       border: border(AppColors.line),
       enabledBorder: border(AppColors.line),
       focusedBorder: border(AppColors.emerald, 1.6),
-      labelStyle: const TextStyle(color: muted, fontSize: 13),
+      labelStyle: AppTypography.body.copyWith(color: muted),
+      hintStyle: AppTypography.body.copyWith(color: muted),
+      helperStyle: AppTypography.supporting,
+      errorStyle: AppTypography.supporting.copyWith(color: AppColors.danger),
+      errorMaxLines: 3,
+      errorBorder: border(AppColors.danger),
+      focusedErrorBorder: border(AppColors.danger, 1.6),
+      disabledBorder: border(AppColors.disabled),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
@@ -180,7 +160,7 @@ ThemeData appTheme() {
       labelTextStyle: WidgetStateProperty.resolveWith(
         (s) => TextStyle(
           fontFamily: _font,
-          fontSize: 11,
+          fontSize: 12,
           color: s.contains(WidgetState.selected) ? pine : muted,
           fontWeight: s.contains(WidgetState.selected)
               ? FontWeight.bold

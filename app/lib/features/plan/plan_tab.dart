@@ -18,6 +18,7 @@ import 'plan_meals.dart';
 import 'plan_shopping_page.dart';
 import 'plan_states.dart';
 import 'streak_chip.dart';
+import '../../presentation/widgets/operation_status.dart';
 
 class PlanTab extends StatefulWidget {
   const PlanTab({super.key});
@@ -31,6 +32,7 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
   final _strip = ScrollController();
   int? _day;
   bool _anchored = false;
+  bool _showPublication = true;
   bool _anchorQueued = false;
 
   @override
@@ -77,11 +79,11 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final store = CustomerScope.of(context);
-    if (store.serverAuthEnabled && !store.liveReady) {
-      return const PlanSkeleton();
-    }
     if (store.liveNotice != null && !store.hasUserRequest) {
       return PlanProblem(message: store.liveNotice!);
+    }
+    if (store.serverAuthEnabled && !store.liveReady) {
+      return const PlanSkeleton();
     }
     if (!store.hasUserRequest) return const PlanEmpty();
     final request = store.planOverview;
@@ -114,6 +116,19 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
               shellBottomInset + (next == null ? 24 : 96),
             ),
             children: [
+              if (_showPublication) ...[
+                OperationStatus(
+                  key: const ValueKey('plan-published'),
+                  title: 'برنامه‌ات آماده است',
+                  message:
+                      'این نسخه تأیید و منتشر شده؛ مقدار مواد و دستور هر وعده را می‌توانی ببینی.',
+                  icon: Icons.task_alt_rounded,
+                  tone: OperationTone.success,
+                  actionLabel: 'وعده‌ها را ببین',
+                  onAction: () => setState(() => _showPublication = false),
+                ),
+                const SizedBox(height: 16),
+              ],
               const PlanQuestions(),
               GoalHero(goal: goal, nutrition: nutrition).rise(),
               const SizedBox(height: 16),

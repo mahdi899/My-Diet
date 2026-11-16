@@ -23,7 +23,7 @@ const reasons: Record<string, string> = {
   user_quota: 'سهمیهٔ روزانهٔ کاربر', invalid_draft: 'خروجی مدل قابل‌استفاده نبود', budget_blocked: 'سقف هزینهٔ درخواست',
 }
 const alerts: Record<string, string> = { ok: 'سالم', warning: 'نزدیک سقف', blocked: 'سقف پر شده', killed: 'کلید توقف روشن است' }
-const money = (value: unknown) => <bdi dir="ltr">{usd(value)}</bdi>
+const money = (value: unknown) => <bdi dir="ltr">{usd(value, 6)}</bdi>
 
 export function AiBudget({ preview }: { preview: boolean }) {
   const usage = useAiData('usage', demoUsage, preview)
@@ -34,12 +34,13 @@ export function AiBudget({ preview }: { preview: boolean }) {
   const controls = asRecord(data.controls) ?? {}
   return <>
     <AiMetrics icon="wallet" entries={[
-      ['مصرف امروز', money(data.todayMicros), controls.dailyCapMicros == null ? 'بدون سقف روزانه' : 'سقف ' + usd(controls.dailyCapMicros, 2), 'green'],
+      ['هزینه تأییدشده امروز', money(data.confirmedTodayMicros ?? data.todayMicros), 'طبق هزینه برگشتی سرویس', 'green'],
       ['مصرف ۳۰ روز اخیر', money(data.monthMicros), controls.monthlyCapMicros == null ? 'بدون سقف ماهانه' : 'سقف ' + usd(controls.monthlyCapMicros, 2), 'amber'],
       ['درصد سقف روزانه', data.dailyShare == null ? '—' : num(Math.round(Number(data.dailyShare) * 100)) + '٪', 'امروز، به وقت تهران', 'blue'],
       ['وضعیت', alerts[str(data.alert)] ?? '—', 'کلید توقف و سقف‌ها را پایین‌تر تنظیم کنید', 'rose'],
     ]} />
     {notice && <p className="info-note" role="status">{notice}</p>}
+    <AiNote>هزینه تأییدشده از پاسخ سرویس خوانده می‌شود؛ برآورد امروز: {money(data.estimatedTodayMicros)}. گزارش فقط مصرف ثبت‌شده این برنامه را پوشش می‌دهد، نه کل حساب CloseRouter یا تست‌های قدیمی ثبت‌نشده.</AiNote>
     <AiCard title="سقف‌ها و کلید توقف" description="مبلغ‌ها به دلار آمریکا. خالی‌گذاشتن یعنی بدون سقف."
       action={<span className="icon-tile tone-green"><Icon name="shield" /></span>}>
       <AiForm key={JSON.stringify(controls)} preview={preview} submit={async form => {
@@ -68,6 +69,7 @@ export function AiBudget({ preview }: { preview: boolean }) {
         ['زمان', row => date(row.createdAt)], ['مدل', row => <bdi>{str(row.model)}</bdi>], ['کار', row => <bdi>{str(row.task)}</bdi>],
         ['نتیجه', row => <AiBadge tone={row.outcome === 'ok' ? 'good' : 'bad'}>{outcomes[str(row.outcome)] ?? str(row.outcome)}</AiBadge>],
         ['توکن', row => num(Number(row.tokensIn ?? 0) + Number(row.tokensOut ?? 0))], ['هزینه', row => money(row.costMicros)], ['تأخیر', row => `${num(row.latencyMs)} ms`],
+        ['منبع هزینه', row => row.costSource === 'provider' ? 'تأیید سرویس' : row.costSource === 'estimate' ? 'برآورد' : 'نامشخص'],
       ]} /> : <AiLoad error={ledger.error} retry={() => void ledger.refetch()} />}
   </>
 }

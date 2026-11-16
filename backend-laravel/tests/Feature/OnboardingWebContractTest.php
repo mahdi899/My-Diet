@@ -53,7 +53,7 @@ final class OnboardingWebContractTest extends MySqlTestCase
         $id = $this->leadId();
         $this->postJson('/v1/onboarding/submissions', ['id' => $id, 'phone' => $phone, 'goal' => 'weight_loss', 'campaign' => 'spring-drive', 'answers' => [['key' => 'name', 'question' => 'نام', 'answer' => 'زهره']]])->assertCreated();
         self::assertSame('spring-drive', $this->db->table('demo_lead_submissions')->where('id', $id)->value('campaign_slug'));
-        $this->call('POST', '/v1/onboarding/submissions/'.$id.'/verify', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], '{}')->assertCreated();
+        $this->call('POST', '/v1/onboarding/submissions/'.$id.'/verify', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json', 'HTTP_AUTHORIZATION' => 'Bearer '.$owner['token']], '{}')->assertCreated();
         self::assertSame('spring-drive', $this->db->table('users')->where('id', $owner['id'])->value('signup_channel'));
         $this->actor('admin');
         $this->getJson('/v1/admin/users/'.$owner['id'])->assertOk()

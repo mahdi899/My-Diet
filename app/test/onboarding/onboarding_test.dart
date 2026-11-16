@@ -166,7 +166,7 @@ void main() {
     test('persian digits and grouping', () {
       expect(fa('a1'), 'a۱');
       expect(latin('۱۲۳٣'), '1233');
-      expect(money(1250000), '۱,۲۵۰,۰۰۰');
+      expect(money(1250000), '۱٬۲۵۰٬۰۰۰');
       expect(faNumber(68.5), '۶۸٫۵');
     });
   });

@@ -3,16 +3,15 @@
 namespace App\Providers;
 
 use App\Modules\Admin\Application\AdminQueries;
-use Illuminate\Support\Facades\Http;
 use App\Modules\Admin\Infrastructure\MySqlAdminQueries;
 use App\Modules\Ai\Application\AiCatalog;
 use App\Modules\Ai\Infrastructure\ConfiguredAiCatalog;
-use App\Modules\Coach\Application\CoachContextBuilder;
 use App\Modules\Coach\Application\CoachGateway;
 use App\Modules\Coach\Application\CoachIntentParser;
 use App\Modules\Coach\Application\CoachModel;
-use App\Modules\Coach\Application\CoachQuotaService;
 use App\Modules\Coach\Application\CoachQuotaStore;
+use App\Modules\Coach\Infrastructure\CoachContextBuilder;
+use App\Modules\Coach\Infrastructure\CoachQuotaService;
 use App\Modules\Coach\Infrastructure\ConfiguredCoachModel;
 use App\Modules\Coach\Infrastructure\MySqlCoach;
 use App\Modules\Coach\Infrastructure\MySqlCoachQuotas;
@@ -77,6 +76,7 @@ use App\Modules\Tracking\Infrastructure\MySqlTracking;
 use App\Modules\Worker\Application\WorkerStore;
 use App\Modules\Worker\Infrastructure\MySqlWorker;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
 

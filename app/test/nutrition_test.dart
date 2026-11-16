@@ -43,7 +43,8 @@ void main() {
       final log = LogMemory(),
           date = DateTime(2026, 10, 26),
           tomorrow = DateTime(2026, 10, 27);
-      final s = DemoStore(nutritionStorage: log, clock: () => date)
+      var now = date;
+      final s = DemoStore(nutritionStorage: log, clock: () => now)
         ..loginDemoUser();
       s.approveActiveUserRequest();
       final energy = s.mealsOn(date).first.calories;
@@ -57,6 +58,10 @@ void main() {
       expect(s.consumedCalories(tomorrow), 0);
       expect(s.mealEaten(tomorrow, 0), false);
       await s.setMealEaten(tomorrow, 0, true);
+      expect(s.mealEaten(tomorrow, 0), false);
+      now = tomorrow;
+      await s.setMealEaten(tomorrow, 0, true);
+      now = date;
       final restored = DemoStore(nutritionStorage: log, clock: () => date)
         ..loginDemoUser();
       restored.approveActiveUserRequest();
@@ -165,13 +170,18 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(done.first);
       await t.pumpAndSettle();
+      expect(s.consumedCalories(date), 0);
+      await t.tap(find.widgetWithText(PillButton, 'انجام شد').last);
+      await t.pumpAndSettle();
       expect(s.consumedCalories(date), s.mealsOn(date).first.calories);
       expect(s.mealEaten(date, 0), true);
       expect(find.widgetWithText(PillButton, 'ثبت شد'), findsWidgets);
       final vertical = find.byType(ListView).first;
       final position = t
           .state<ScrollableState>(
-            find.descendant(of: vertical, matching: find.byType(Scrollable)).first,
+            find
+                .descendant(of: vertical, matching: find.byType(Scrollable))
+                .first,
           )
           .position;
       final nextDay = find.byKey(const ValueKey('plan-day-3'));

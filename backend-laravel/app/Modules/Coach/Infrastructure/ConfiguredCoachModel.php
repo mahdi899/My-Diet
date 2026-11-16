@@ -2,10 +2,9 @@
 
 namespace App\Modules\Coach\Infrastructure;
 
-use App\Modules\Coach\Application\CoachModel;
-use App\Modules\Coach\Application\CoachContextBuilder;
-use App\Modules\Coach\Application\CoachIntentParser;
 use App\Modules\Ai\Infrastructure\ModelPools;
+use App\Modules\Coach\Application\CoachIntentParser;
+use App\Modules\Coach\Application\CoachModel;
 use App\Shared\Domain\Problem;
 
 /**
@@ -85,19 +84,16 @@ PROMPT;
     {
         // Build context based on message content
         $context = $this->contextBuilder->buildForChat($userId, $userMessage);
-        
+
         // Parse intent for potential action detection
         $intent = $this->intentParser->parse($userMessage);
-        
+
         // Inject context into system prompt
         $systemPrompt = $this->injectContext(self::SYSTEM_PROMPT, $context);
-        
+
         // Build messages array
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-            ['role' => 'user', 'content' => $userMessage],
-        ];
-        
+        $messages = $this->pools->promptMessages('coach_system', ['context' => json_encode($context, JSON_UNESCAPED_UNICODE), 'input' => $userMessage]);
+
         if ($intent['intent'] !== 'general_question') {
             $messages[] = ['role' => 'system', 'content' => 'نیت تشخیص‌داده‌شده: '.$intent['intent'].' '.json_encode($intent['params'], JSON_UNESCAPED_UNICODE)];
         }
@@ -120,15 +116,14 @@ PROMPT;
     /**
      * Analyze food photo and return detection results.
      *
-     * @param string $userId
-     * @param string $imageBase64 Base64 encoded image
-     * @param string $caption Optional user caption
+     * @param  string  $imageBase64  Base64 encoded image
+     * @param  string  $caption  Optional user caption
      * @return array{foods: array, confidence: float, questions: array, tokensIn: int, tokensOut: int, costMicros: int}
      */
     public function analyzePhoto(string $userId, string $imageBase64, string $caption = ''): array
     {
         $context = $this->contextBuilder->buildForVision($userId);
-        
+
         $systemPrompt = <<<'PROMPT'
 تو یک مربی تغذیه هستی که باید از روی عکس، غذا را تشخیص بدهی.
 
@@ -154,20 +149,21 @@ PROMPT;
 PROMPT;
 
         $systemPrompt = str_replace('{{TODAY_PLAN}}', $this->formatTodayPlan($context['todayPlan']), $systemPrompt);
-        
-        $userContent = $caption ? "عکس غذا: $caption" : "عکس غذا";
-        
+
+        $userContent = $caption ? "عکس غذا: $caption" : 'عکس غذا';
+
+        $configured = $this->pools->promptMessages('coach_vision', ['context' => json_encode($context, JSON_UNESCAPED_UNICODE), 'input' => $userContent]);
         $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
+            $configured[0],
             [
                 'role' => 'user',
                 'content' => [
-                    ['type' => 'text', 'text' => $userContent],
-                    ['type' => 'image_url', 'image_url' => ['url' => 'data:image/jpeg;base64,' . $imageBase64]],
+                    ['type' => 'text', 'text' => $configured[1]['content']],
+                    ['type' => 'image_url', 'image_url' => ['url' => 'data:image/jpeg;base64,'.$imageBase64]],
                 ],
             ],
         ];
-        
+
         $result = $this->pools->run('nutrition_vision', $messages, null, $userId, true);
         $parsed = $this->parseVisionResponse((string) ($result['text'] ?? ''));
         $foods = $parsed['foods'] ?? [];
@@ -196,7 +192,7 @@ PROMPT;
         $todayPlan = $this->formatTodayPlan($context['todayPlan']);
         $preferences = $this->formatPreferences($context['preferences']);
         $progress = $this->formatProgress($context['progress']);
-        
+
         return str_replace(
             ['{{PROFILE}}', '{{TODAY_PLAN}}', '{{PREFERENCES}}', '{{PROGRESS}}'],
             [$profile, $todayPlan, $preferences, $progress],
@@ -206,20 +202,20 @@ PROMPT;
 
     private function formatProfile(array $profile): string
     {
-        if (!isset($profile['hasProfile']) || !$profile['hasProfile']) {
+        if (! isset($profile['hasProfile']) || ! $profile['hasProfile']) {
             return "نام: {$profile['name']}\n(پروفایل تغذیه‌ای هنوز تکمیل نشده)";
         }
-        
+
         $goalMap = [
             'weight_loss' => 'کاهش وزن',
             'weight_gain' => 'افزایش وزن',
             'pregnancy' => 'بارداری/شیردهی',
             'detox' => 'سلامت عمومی',
         ];
-        
+
         $goal = $goalMap[$profile['goal']] ?? $profile['goal'];
         $allergens = empty($profile['allergens']) ? 'ندارد' : implode('، ', $profile['allergens']);
-        
+
         return <<<TEXT
 نام: {$profile['name']}
 هدف: {$goal}
@@ -233,15 +229,15 @@ TEXT;
 
     private function formatTodayPlan(?array $plan): string
     {
-        if (!$plan) {
+        if (! $plan) {
             return 'برنامه امروز هنوز آماده نیست.';
         }
-        
+
         $lines = ["تاریخ: {$plan['date']}"];
         foreach ($plan['meals'] as $meal) {
             $lines[] = "- {$meal['type']}: {$meal['title']} ({$meal['kcal']} کالری)";
         }
-        
+
         return implode("\n", $lines);
     }
 
@@ -250,39 +246,39 @@ TEXT;
         if (empty($prefs)) {
             return 'هنوز ترجیحی ثبت نشده.';
         }
-        
+
         $lines = [];
-        
+
         if (isset($prefs['food_dislike'])) {
             $dislikes = array_column($prefs['food_dislike'], 'value');
-            $lines[] = 'دوست نداره: ' . implode('، ', array_slice($dislikes, 0, 5));
+            $lines[] = 'دوست نداره: '.implode('، ', array_slice($dislikes, 0, 5));
         }
-        
+
         if (isset($prefs['food_like'])) {
             $likes = array_column($prefs['food_like'], 'value');
-            $lines[] = 'دوست داره: ' . implode('، ', array_slice($likes, 0, 5));
+            $lines[] = 'دوست داره: '.implode('، ', array_slice($likes, 0, 5));
         }
-        
+
         if (isset($prefs['pattern'])) {
             $patterns = array_column($prefs['pattern'], 'value');
-            $lines[] = 'الگوها: ' . implode('، ', array_slice($patterns, 0, 3));
+            $lines[] = 'الگوها: '.implode('، ', array_slice($patterns, 0, 3));
         }
-        
+
         return empty($lines) ? 'ترجیحات خاصی ثبت نشده.' : implode("\n", $lines);
     }
 
     private function formatProgress(?array $progress): string
     {
-        if (!$progress) {
+        if (! $progress) {
             return 'هنوز وزنی ثبت نشده.';
         }
-        
+
         $trend = [
             'decreasing' => 'در حال کاهش ✓',
             'increasing' => 'در حال افزایش',
             'stable' => 'ثابت',
         ][$progress['trend']] ?? '';
-        
+
         return <<<TEXT
 آخرین وزن: {$progress['latestWeight']} کیلو ({$progress['latestDate']})
 تغییر هفتگی: {$progress['weeklyChange']} کیلو ({$trend})
@@ -299,9 +295,10 @@ TEXT;
         } else {
             return ['foods' => [], 'questions' => ['پاسخ قابل تحلیل نبود'], 'needsConfirmation' => true];
         }
-        
+
         try {
             $parsed = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
             return $parsed;
         } catch (\JsonException $e) {
             return ['foods' => [], 'questions' => ['پاسخ قابل تحلیل نبود'], 'needsConfirmation' => true];

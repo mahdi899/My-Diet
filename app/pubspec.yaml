@@ -31,6 +31,8 @@ flutter:
     - assets/photo/lifestyle/
     - assets/photo/ingredient/
     - assets/images/analysis/scan_hologram.png
+    - assets/images/journey/
+    - assets/images/home/
   fonts:
     - family: Vazirmatn
       fonts:

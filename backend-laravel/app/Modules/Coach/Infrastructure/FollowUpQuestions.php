@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Coach\Application;
+namespace App\Modules\Coach\Infrastructure;
 
+use App\Modules\Plans\Domain\CivilDates;
 use Illuminate\Database\ConnectionInterface;
 
 /** At most two follow-up questions. Onboarding itself is not extended. */
@@ -28,7 +29,7 @@ final class FollowUpQuestions
             $questions[] = ['key' => 'safety', 'text' => 'اگر توصیه تازه پزشکی داری بنویس. تا تأیید متخصص، رژیم اجرایی فعال نمی‌شود.'];
         }
         $recentWeight = $this->db->table('weight_entries')->where('user_id', $userId)
-            ->where('civil_date', '>=', \App\Modules\Plans\Domain\CivilDates::add(\App\Modules\Plans\Domain\CivilDates::today(), -7))
+            ->where('civil_date', '>=', CivilDates::add(CivilDates::today(), -7))
             ->exists();
         if ($profile->goal === 'weight_loss' && ! $recentWeight && ! in_array('weight', $answered, true) && count($questions) < 2) {
             $questions[] = ['key' => 'weight', 'text' => 'وزن این هفته را هنوز ندارم. اگر خواستی عدد امروز را بنویس تا روند را حدس نزنم.'];

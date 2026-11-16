@@ -11,6 +11,20 @@ final class ModelPools
 {
     public function __construct(private ConnectionInterface $db, private ProviderClient $client) {}
 
+    public function promptMessages(string $key, array $values): array
+    {
+        $prompt = $this->db->table('ai_prompt_templates')->where(['key' => $key, 'status' => 'active'])->orderByDesc('version')->first();
+        if (! $prompt) {
+            throw new Problem(503, 'prompt_missing', 'پرامپت فعال پیدا نشد');
+        }
+        $replace = [];
+        foreach ($values as $name => $value) {
+            $replace['{{'.$name.'}}'] = is_string($value) ? $value : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        }
+
+        return [['role' => 'system', 'content' => strtr($prompt->system_prompt, $replace)], ['role' => 'user', 'content' => strtr($prompt->user_template, $replace)]];
+    }
+
     public function run(string $code, array $messages, ?string $request = null, ?string $user = null, bool $json = false, ?\Closure $validate = null): array
     {
         $pool = $this->db->table('ai_pools')->where('code', $code)->first();
