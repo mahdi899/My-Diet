@@ -13,6 +13,7 @@ final class CoachQuotaService
     public function __construct(
         private CoachQuotaStore $store,
         private \App\Modules\Money\Application\MoneyStore $money,
+        private \Illuminate\Database\ConnectionInterface $db,
     ) {}
 
     /**
@@ -68,7 +69,7 @@ final class CoachQuotaService
                 'dailyRemaining' => null,
                 'periodRemaining' => null,
                 'visionRemaining' => null,
-                'addonCredits' => 0,
+                'addonCredits' => $this->addonBalance($userId),
                 'addonPacks' => $this->store->addonPacks(),
             ];
         }
@@ -90,12 +91,52 @@ final class CoachQuotaService
     /**
      * Provision or refresh quota when a subscription is activated.
      */
+    private function addonBalance(string $userId): int
+    {
+        return (int) $this->db->table('coach_addon_credits')
+            ->where('user_id', $userId)
+            ->where('credits_remaining', '>', 0)
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->sum('credits_remaining');
+    }
+
     private function requireActiveSubscription(string $userId): void
     {
         $subscription = $this->money->subscription($userId);
         if ($subscription !== null && ($subscription['status'] ?? '') === 'expired') {
             throw new Problem(402, 'subscription_expired', 'اشتراک تمام شده است. تاریخچه و وزن می‌ماند؛ برای ادامه مربی اشتراک را تمدید کن.');
         }
+    }
+
+    public function purchaseAddon(string $userId, string $packCode): array
+    {
+        $pack = null;
+        foreach ($this->store->addonPacks() as $item) {
+            if ($item['code'] === $packCode) {
+                $pack = $item;
+            }
+        }
+        if ($pack === null) {
+            throw new Problem(404, 'unknown_pack', 'این بسته وجود ندارد');
+        }
+        $this->requireActiveSubscription($userId);
+        $this->db->table('services')->insertOrIgnore(['code' => 'coach_addon', 'title_fa' => 'بسته پیام مربی']);
+        $orderId = \App\Shared\Domain\LegacyCrypto::uuid();
+        $this->db->table('orders')->insert([
+            'id' => $orderId,
+            'user_id' => $userId,
+            'service_code' => 'coach_addon',
+            'price_toman' => $pack['price_toman'],
+            'cash_toman' => $pack['price_toman'],
+            'promo_toman' => 0,
+            'status' => 'paid',
+            'idempotency_key' => 'addon-'.$orderId,
+        ]);
+        $this->grantAddon($userId, $packCode, (int) $pack['credits'], $orderId);
+
+        return $this->state($userId);
     }
 
     public function provision(string $userId, string $planCode): void

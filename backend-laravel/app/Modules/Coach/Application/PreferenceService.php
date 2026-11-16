@@ -55,7 +55,7 @@ final class PreferenceService
      */
     public function recordUserStatement(string $userId, string $key, string $value): void
     {
-        $validKeys = ['food_dislike', 'food_like', 'pattern'];
+        $validKeys = ['food_dislike', 'food_like', 'pattern', 'followup_answered'];
         if (!in_array($key, $validKeys, true)) {
             return;
         }

@@ -37,8 +37,14 @@ final class MealSwapService
             throw new Problem(422, 'no_profile', 'پروفایل تغذیه‌ای کاربر یافت نشد');
         }
 
+        $dislikes = $this->db->table('coach_preferences')
+            ->where('user_id', $userId)->where('pref_key', 'food_dislike')->where('active', 1)
+            ->pluck('value')->map(fn ($name) => mb_strtolower((string) $name, 'UTF-8'))->all();
+        $notes = $this->db->table('coach_preferences')
+            ->where('user_id', $userId)->where('pref_key', 'specialist_note')->where('active', 1)
+            ->pluck('value')->all();
         $used = $this->weeklyTitles($userId);
-        $scored = $this->score($this->candidates($meal, $profile, $reason, $budgetOk), $meal, $reason, $used);
+        $scored = $this->score($this->candidates($meal, $profile, $reason, $budgetOk, $dislikes, $notes), $meal, $reason, $used);
 
         return [
             'meal' => ['id' => $meal['id'], 'type' => $meal['meal_type'], 'title' => $meal['title'], 'kcal' => $meal['kcal']],
@@ -57,8 +63,16 @@ final class MealSwapService
         if ($food === null || empty($food['active'])) {
             throw new Problem(404, 'food_not_found', 'غذای انتخاب‌شده در کاتالوگ نیست');
         }
-        if ($this->blockedByAllergen($food, $this->loadProfile($userId)['allergens'] ?? [])) {
+        $profile = $this->loadProfile($userId) ?? [];
+        if ($this->blockedByAllergen($food, $profile['allergens'] ?? [])) {
             throw new Problem(422, 'allergen_blocked', 'این غذا با حساسیت ثبت‌شده سازگار نیست');
+        }
+        $notes = $this->db->table('coach_preferences')
+            ->where('user_id', $userId)->where('pref_key', 'specialist_note')->where('active', 1)->pluck('value')->all();
+        $avoid = $this->db->table('coach_preferences')
+            ->where('user_id', $userId)->where('pref_key', 'food_dislike')->where('active', 1)->pluck('value')->all();
+        if (! (new CatalogConstraints())->allows($food, $profile, $avoid, $notes, false)) {
+            throw new Problem(422, 'food_blocked', 'این غذا با ترجیح، دستور متخصص یا وضعیت تأیید تغذیه سازگار نیست');
         }
 
         $this->db->transaction(function () use ($meal, $food, $userId, $reason, $foodSlug): void {
@@ -113,7 +127,7 @@ final class MealSwapService
     private function loadProfile(string $userId): ?array
     {
         $row = $this->db->selectOne(
-            'SELECT track, allergens, diet_style, budget FROM nutrition_profiles WHERE user_id = ?',
+            'SELECT track, allergens, diet_style, budget, safety_tier FROM nutrition_profiles WHERE user_id = ?',
             [$userId]
         );
         if ($row === null) {
@@ -125,6 +139,7 @@ final class MealSwapService
             'allergens' => json_decode($row->allergens ?? '[]', true) ?: [],
             'diet_style' => $row->diet_style ?? 'regular',
             'budget' => $row->budget ?? 'medium',
+            'safety_tier' => $row->safety_tier ?? 'ai_ok',
         ];
     }
 
@@ -141,14 +156,16 @@ final class MealSwapService
         return array_map(fn ($row) => mb_strtolower($row->title, 'UTF-8'), $rows);
     }
 
-    private function candidates(array $meal, array $profile, string $reason, bool $budgetOk): array
+    private function candidates(array $meal, array $profile, string $reason, bool $budgetOk, array $dislikes, array $notes): array
     {
         $budgetMap = ['low' => 1, 'medium' => 2, 'high' => 3];
         $budget = $budgetMap[$profile['budget']] ?? 2;
         $lo = $meal['kcal'] * (1 - self::MACRO_TOLERANCE);
         $hi = $meal['kcal'] * (1 + self::MACRO_TOLERANCE);
 
-        return array_values(array_filter($this->foods->all(), function (array $food) use ($meal, $profile, $reason, $budgetOk, $budget, $lo, $hi): bool {
+        $gate = new CatalogConstraints();
+
+        return array_values(array_filter($this->foods->all(), function (array $food) use ($meal, $profile, $reason, $budgetOk, $budget, $lo, $hi, $dislikes, $notes, $gate): bool {
             if (empty($food['active']) || (int) $food['kcal'] <= 0) {
                 return false;
             }
@@ -178,12 +195,27 @@ final class MealSwapService
             if ($reason === 'time' && (int) ($food['prepMinutes'] ?? 99) > 20) {
                 return false;
             }
+            if (! $gate->allows($food, $profile, $dislikes, $notes, false)) {
+                return false;
+            }
             if (mb_strtolower((string) $food['nameFa'], 'UTF-8') === mb_strtolower($meal['title'], 'UTF-8')) {
                 return false;
             }
 
             return true;
         }));
+    }
+
+    private function blockedByDislike(string $name, array $dislikes): bool
+    {
+        $name = mb_strtolower($name, 'UTF-8');
+        foreach ($dislikes as $dislike) {
+            if ($dislike !== '' && ($name === $dislike || str_contains($name, $dislike) || str_contains($dislike, $name))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function blockedByAllergen(array $food, array $allergens): bool
@@ -204,6 +236,9 @@ final class MealSwapService
             }
             if ($reason === 'time' && (int) ($food['prepMinutes'] ?? 99) <= 15) {
                 $score += 15;
+            }
+            if ((float) ($food['fiberG'] ?? 0) >= 5) {
+                $score += 5;
             }
             $ranked[] = [
                 'slug' => $food['slug'],

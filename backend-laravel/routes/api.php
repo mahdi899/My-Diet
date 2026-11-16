@@ -317,6 +317,7 @@ Route::middleware('session:user')->controller(CoachController::class)->group(fun
     Route::post('v1/me/coach/food-photos', 'photo');
     Route::post('v1/me/coach/food-entries/{id}/confirm', 'confirmPhoto');
     Route::get('v1/me/coach/follow-ups', 'followUps');
+    Route::post('v1/me/coach/addons', 'buyAddon');
     Route::patch('v1/me/coach/meals/{id}', 'patch');
     Route::get('v1/me/coach/today', 'today');
     Route::post('v1/me/coach/day-brief', 'dayBrief');

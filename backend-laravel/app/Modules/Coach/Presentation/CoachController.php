@@ -133,6 +133,13 @@ final class CoachController
         return ['questions' => $this->coach->followUps($this->actor($request))];
     }
 
+    public function buyAddon(Request $request): array
+    {
+        $body = Input::body($request, ['packCode']);
+
+        return $this->quota->purchaseAddon($this->actor($request), Input::string($body, 'packCode', 32));
+    }
+
     public function quotaStatus(Request $request): array
     {
         return $this->quota->state($this->actor($request));

@@ -6,6 +6,7 @@ use App\Modules\Ai\Infrastructure\ModelPools;
 use App\Modules\Food\Application\FoodStore;
 use App\Modules\Onboarding\Application\OnboardingStore;
 use App\Modules\Onboarding\Domain\EnergyEngine;
+use App\Modules\Plans\Application\CatalogConstraints;
 use App\Modules\Plans\Application\DraftProvider;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
@@ -33,12 +34,14 @@ final class ConfiguredDraftProvider implements DraftProvider
             throw new Problem(409, 'profile_requires_review', 'پرونده باید توسط متخصص بررسی شود');
         }
         $slots = EnergyEngine::slots((int) $profile['target_kcal'], $profile['meals_per_day']);
+        $learned = $this->learned($user);
+        $gate = new CatalogConstraints();
         $foods = array_filter($this->foods->all(), fn ($f) => $f['active'] && $f['kcal'] > 0 && $f['ingredients'] !== [] &&
             ! array_intersect($profile['allergens'], $f['allergens']) &&
             ($profile['diet_style'] !== 'vegan' || in_array('vegan', $f['tags'], true)) &&
             ($profile['diet_style'] !== 'vegetarian' || ! array_intersect(['meat', 'poultry', 'fish'], $f['tags'])) &&
             ($profile['track'] !== 'pregnancy' || ! in_array('raw', $f['tags'], true)) &&
-            $f['costTier'] <= ($profile['budget'] === 'low' ? 2 : 3));
+            $gate->allows($f, $profile, $learned['avoid'], $learned['specialistNotes'], true));
         $offered = [];
         foreach ($slots as $slot) {
             $list = array_values(array_filter($foods, fn ($f) => in_array($slot['mealType'], $f['mealTypes'], true)));
@@ -49,7 +52,7 @@ final class ConfiguredDraftProvider implements DraftProvider
             $offered[$slot['mealType']] = array_column(array_slice($list, 0, 40), null, 'slug');
         }
         $safe = array_intersect_key($profile, array_flip(['track', 'sex', 'age', 'allergens', 'conditions', 'diet_style', 'target_kcal', 'protein_g', 'carbs_g', 'fat_g']));
-        $safe['learned'] = $this->learned($user);
+        $safe['learned'] = $learned;
         $prompt = $this->db->table('ai_prompt_templates')->where(['key' => 'plan_draft', 'status' => 'active'])->orderByDesc('version')->first();
         $schema = '{"days":[{"day":1,"meals":[{"mealType":"breakfast","primary":[{"slug":"catalog_slug","servings":1}],"alternative":[{"slug":"different_slug","servings":1}],"note":""}]}]}';
         $values = ['profile' => json_encode($safe), 'catalog' => json_encode($offered, JSON_UNESCAPED_UNICODE), 'days' => '[1,2,3,4,5,6,7]', 'schema' => $schema, 'untrusted' => '', 'repair' => '', 'used' => ''];
@@ -63,7 +66,7 @@ final class ConfiguredDraftProvider implements DraftProvider
         ];
         $validate = function ($text) use ($slots, $offered, $profile) {
             try {
-                return $this->assemble($text, $slots, $offered, (int) $profile['target_kcal']);
+                return $this->assemble($text, $slots, $offered, $profile);
             } catch (\InvalidArgumentException $error) {
                 if (getenv('DRAFT_DEBUG') === '1') {
                     file_put_contents(storage_path('logs/draft-error.txt'), $error->getMessage());
@@ -124,19 +127,32 @@ final class ConfiguredDraftProvider implements DraftProvider
     {
         $prefs = $this->db->table('coach_preferences')
             ->where('user_id', $user)->where('active', 1)
-            ->whereIn('pref_key', ['food_dislike', 'food_like', 'pattern'])
+            ->whereIn('pref_key', ['food_dislike', 'food_like', 'pattern', 'specialist_note'])
             ->orderByDesc('strength')->limit(12)->get(['pref_key', 'value']);
         $swaps = $this->db->table('meal_swap_logs')->where('user_id', $user)->orderByDesc('created_at')->limit(8)->get(['old_title', 'reason']);
+
+        $weekStart = $this->db->table('plan_requests')->where('user_id', $user)->where('status', 'published')->orderByDesc('week_start')->value('week_start');
+        $logs = 0;
+        $weights = 0;
+        if (is_string($weekStart) && $weekStart !== '') {
+            $end = \App\Modules\Plans\Domain\CivilDates::add(substr($weekStart, 0, 10), 6);
+            $logs = $this->db->table('meal_logs')->where('user_id', $user)->whereBetween('scheduled_date', [substr($weekStart, 0, 10), $end])->count();
+            $weights = $this->db->table('weight_entries')->where('user_id', $user)->whereBetween('civil_date', [substr($weekStart, 0, 10), $end])->count();
+        }
 
         return [
             'avoid' => $prefs->where('pref_key', 'food_dislike')->pluck('value')->values()->all(),
             'prefer' => $prefs->where('pref_key', 'food_like')->pluck('value')->values()->all(),
             'patterns' => $prefs->where('pref_key', 'pattern')->pluck('value')->values()->all(),
+            'specialistNotes' => $prefs->where('pref_key', 'specialist_note')->pluck('value')->values()->all(),
             'recentSwapReasons' => $swaps->map(fn ($row) => $row->reason.':'.$row->old_title)->all(),
+            'intakeRecords' => $logs,
+            'weightRecords' => $weights,
+            'missingData' => array_values(array_filter([$logs === 0 ? 'intake' : null, $weights === 0 ? 'weight' : null])),
         ];
     }
 
-    private function assemble(string $text, array $slots, array $offered, int $target): array
+    private function assemble(string $text, array $slots, array $offered, array $profile): array
     {
         $value = json_decode(trim(preg_replace('/^\\s*```(?:json)?\\s*|\\s*```\\s*$/i', '', $text)), true);
         if (getenv('DRAFT_DEBUG') === '1') {
@@ -145,12 +161,23 @@ final class ConfiguredDraftProvider implements DraftProvider
         if (! is_array($value['days'] ?? null) || count($value['days']) !== 7) {
             throw new \InvalidArgumentException('seven_days_required');
         }
+        $target = (int) $profile['target_kcal'];
+        $gate = new CatalogConstraints();
+        $bestFiber = 0.0;
+        foreach ($slots as $slot) {
+            $top = 0.0;
+            foreach ($offered[$slot['mealType']] ?? [] as $food) {
+                $top = max($top, (float) ($food['fiberG'] ?? 0) * 2);
+            }
+            $bestFiber += $top;
+        }
         $days = [];
         foreach ($value['days'] as $index => $day) {
             if (($day['day'] ?? null) !== $index + 1 || count($day['meals'] ?? []) !== count($slots)) {
                 throw new \InvalidArgumentException('day_slots_invalid');
             }
             $meals = [];
+            $dayFiber = 0.0;
             foreach ($slots as $slot) {
                 $found = array_values(array_filter($day['meals'], fn ($m) => ($m['mealType'] ?? null) === $slot['mealType']));
                 if (count($found) !== 1) {
@@ -173,6 +200,9 @@ final class ConfiguredDraftProvider implements DraftProvider
                             throw new \InvalidArgumentException('unknown_food_or_portion');
                         }
                         $calories += $food['kcal'] * $servings;
+                        if ($key === 'primary') {
+                            $dayFiber += (float) ($food['fiberG'] ?? 0) * (float) $servings;
+                        }
                         $names[] = $food['nameFa'];
                         foreach ($food['ingredients'] as $i) {
                             $ingredients[] = ['name' => $i['name'], 'quantity' => round($i['quantity'] * $servings, 2), 'unit' => $i['unit'], 'basis' => 'raw', 'category' => $i['category'] ?? 'other'];
@@ -193,6 +223,9 @@ final class ConfiguredDraftProvider implements DraftProvider
             }
             if (abs(array_sum(array_column($meals, 'calories')) - $target) > $target * 0.15) {
                 throw new \InvalidArgumentException('daily_energy_invalid');
+            }
+            if ($gate->fiberShort((string) ($profile['track'] ?? ''), $dayFiber, $bestFiber)) {
+                throw new \InvalidArgumentException('micronutrient_short');
             }
             $days[] = ['meals' => $meals];
         }

@@ -208,12 +208,39 @@ final class MySqlMoney implements MoneyStore
         return Amount::safe((string) ($stored ?? SubscriptionPlans::ALL[$plan]['priceToman'] ?? 0));
     }
 
-    public function assignSpecialist(): ?string
+    public function assignSpecialist(?string $submissionId = null): ?string
     {
         $this->db->statement('insert into identity_mutexes(lock_key) values(?) as incoming on duplicate key update lock_key=incoming.lock_key', [hash('sha256', 'plans:assignment')]);
+        $track = $submissionId === null ? null : $this->db->table('nutrition_profiles')->where('submission_id', $submissionId)->value('track');
+        $hints = match ($track) {
+            'pregnancy' => ['بارداری', 'pregnancy'],
+            'weight_loss' => ['کاهش', 'weight_loss'],
+            'weight_gain' => ['افزایش', 'weight_gain'],
+            default => [],
+        };
+        $people = $this->db->table('specialist_profiles')->where('active', true)->orderBy('user_id')->lockForUpdate()->get();
+        $matched = $hints === [] ? $people : $people->filter(function ($specialist) use ($hints): bool {
+            $text = ($specialist->credential ?? '').' '.($specialist->bio ?? '').' '.($specialist->education ?? '');
+            foreach ($hints as $hint) {
+                if (mb_stripos($text, $hint) !== false) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+        if ($matched->isEmpty()) {
+            $matched = $people;
+        }
+
+        return $this->leastLoaded($matched);
+    }
+
+    private function leastLoaded(\Illuminate\Support\Collection $people): ?string
+    {
         $chosen = null;
         $least = INF;
-        foreach ($this->db->table('specialist_profiles')->where('active', true)->orderBy('user_id')->lockForUpdate()->get() as $specialist) {
+        foreach ($people as $specialist) {
             $count = $this->db->table('plan_requests')->select('id')->where('assigned_specialist_id', $specialist->user_id)->whereIn('status', ['queued', 'generating', 'in_review', 'awaiting_user', 'response_received'])->lockForUpdate()->get()->count();
             if ($count < $specialist->capacity && $count < $least) {
                 $least = $count;

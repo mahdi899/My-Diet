@@ -23,6 +23,22 @@ final class CoachQuotaTest extends MySqlTestCase
         self::assertSame(8, $state['visionRemaining']);
     }
 
+    public function test_monthly_and_quarterly_plans_use_their_own_limits(): void
+    {
+        ['id' => $monthly] = $this->actor();
+        ['id' => $quarterly] = $this->actor();
+        $service = app(CoachQuotaService::class);
+        $service->provision($monthly, 'monthly');
+        $service->provision($quarterly, 'quarterly');
+
+        self::assertSame(12, $service->state($monthly)['dailyLimit']);
+        self::assertSame(240, $service->state($monthly)['periodLimit']);
+        self::assertSame(20, $service->state($monthly)['visionLimit']);
+        self::assertSame(20, $service->state($quarterly)['dailyLimit']);
+        self::assertSame(450, $service->state($quarterly)['periodLimit']);
+        self::assertSame(40, $service->state($quarterly)['visionLimit']);
+    }
+
     public function test_consume_chat_decrements_daily_and_period(): void
     {
         ['id' => $userId] = $this->actor();

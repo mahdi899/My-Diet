@@ -56,7 +56,7 @@ interface MoneyStore
 
     public function planPrice(string $plan): int;
 
-    public function assignSpecialist(): ?string;
+    public function assignSpecialist(?string $submissionId = null): ?string;
 
     public function createOrder(array $order, array $request): void;
 

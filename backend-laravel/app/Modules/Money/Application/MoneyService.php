@@ -147,7 +147,7 @@ final class MoneyService
             $order = Crypto::uuid();
             $request = Crypto::uuid();
             $this->store->createOrder(['id' => $order, 'user_id' => $row['user_id'], 'service_code' => $row['service_code'], 'price_toman' => $row['amount_toman'], 'cash_toman' => $row['amount_toman'], 'promo_toman' => 0, 'status' => 'paid', 'idempotency_key' => 'checkout-'.$row['id']],
-                ['id' => $request, 'user_id' => $row['user_id'], 'order_id' => $order, 'kind' => $row['service_code'], 'status' => $row['service_code'] === 'specialist_revision' ? 'in_review' : 'queued', 'submission_id' => $row['submission_id'], 'assigned_specialist_id' => $this->store->assignSpecialist(), 'parent_request_id' => $row['parent_request_id'], 'price_toman' => $row['amount_toman']]);
+                ['id' => $request, 'user_id' => $row['user_id'], 'order_id' => $order, 'kind' => $row['service_code'], 'status' => $row['service_code'] === 'specialist_revision' ? 'in_review' : 'queued', 'submission_id' => $row['submission_id'], 'assigned_specialist_id' => $this->store->assignSpecialist($row['submission_id']), 'parent_request_id' => $row['parent_request_id'], 'price_toman' => $row['amount_toman']]);
             if ($row['service_code'] === 'specialist_revision') {
                 $this->store->copyPublishedDraft($row['parent_request_id'], $request);
             }
@@ -389,7 +389,7 @@ final class MoneyService
                     $this->store->appendLedger($user, $bucket, -$amount, 'order_debit', $order);
                 }
             }
-            $specialist = $this->store->assignSpecialist();
+            $specialist = $this->store->assignSpecialist($context['submission'] ?? null);
             $this->store->createOrder(['id' => $order, 'user_id' => $user, 'service_code' => $service, 'price_toman' => $price, 'cash_toman' => $cash, 'promo_toman' => $promo, 'status' => 'paid', 'idempotency_key' => $key],
                 ['id' => $request, 'user_id' => $user, 'order_id' => $order, 'kind' => $service, 'status' => $service === 'specialist_revision' ? 'in_review' : 'queued', 'submission_id' => $context['submission'], 'assigned_specialist_id' => $specialist, 'parent_request_id' => $parent, 'price_toman' => $price]);
             if ($service === 'specialist_revision' && $parent !== null) {

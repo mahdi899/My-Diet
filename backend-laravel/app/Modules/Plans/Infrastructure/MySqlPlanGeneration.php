@@ -59,7 +59,7 @@ final class MySqlPlanGeneration implements PlanGenerationStore
                 $this->writeDays($draft->id, $days);
                 $this->db->table('plan_versions')->where('id', $draft->id)->update(['lock_version' => $draft->lock_version + 1]);
                 $versionId = $draft->id;
-            } elseif (! $draft && $this->db->table('plan_versions')->where('request_id', $requestId)->doesntExist()) {
+            } elseif (! $draft && $this->db->table('plan_versions')->where('request_id', $requestId)->doesntExist() && $reason !== 'high_risk') {
                 $versionId = Crypto::uuid();
                 $this->db->table('plan_versions')->insert(['id' => $versionId, 'request_id' => $requestId, 'version_number' => 1, 'status' => 'draft']);
                 $submission = $this->db->table('questionnaire_submissions')->where('id', $request->submission_id)->first();
@@ -98,7 +98,8 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             $this->db->table('ai_execution_claims')->where('request_id', $requestId)->update(['status' => $status === 'failed' ? 'failed' : 'completed', 'finished_at' => $this->db->raw('current_timestamp(6)'), 'error_code' => $status === 'drafted' ? null : $reason]);
             $this->db->table('request_events')->insert(['id' => Crypto::uuid(), 'request_id' => $requestId, 'kind' => $status === 'drafted' ? 'ai_drafted' : 'ai_skipped', 'detail' => json_encode(['status' => $status], JSON_THROW_ON_ERROR)]);
             if (is_string($request->assigned_specialist_id) && $request->assigned_specialist_id !== '') {
-                $this->db->table('notifications')->insert(['id' => Crypto::uuid(), 'user_id' => $request->assigned_specialist_id, 'kind' => 'draft_ready', 'payload' => json_encode(['requestId' => $requestId], JSON_THROW_ON_ERROR)]);
+                $kind = $reason === 'high_risk' ? 'specialist_required' : 'draft_ready';
+                $this->db->table('notifications')->insert(['id' => Crypto::uuid(), 'user_id' => $request->assigned_specialist_id, 'kind' => $kind, 'payload' => json_encode(['requestId' => $requestId, 'reason' => $reason], JSON_THROW_ON_ERROR)]);
             }
         });
     }

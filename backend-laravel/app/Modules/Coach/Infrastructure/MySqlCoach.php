@@ -2,6 +2,7 @@
 
 namespace App\Modules\Coach\Infrastructure;
 
+use App\Modules\Coach\Application\CoachChatActions;
 use App\Modules\Coach\Application\CoachContextBuilder;
 use App\Modules\Coach\Application\CoachGateway;
 use App\Modules\Coach\Application\CoachIntentParser;
@@ -22,6 +23,7 @@ final class MySqlCoach implements CoachGateway
         private CoachIntentParser $intents,
         private CoachContextBuilder $context,
         private TrackingService $tracking,
+        private CoachChatActions $actions,
     ) {}
 
     public function thread(string $user, ?int $before, int $limit): array
@@ -49,6 +51,9 @@ final class MySqlCoach implements CoachGateway
             $id = Crypto::uuid();
             $this->db->table('coach_messages')->insert(['id' => $id, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $text, 'client_message_id' => $client, 'payload' => '{}']);
             $local = $blocked === null ? (CoachSafety::localReply($text) ?? $this->factual($user, $text)) : null;
+            if ($local !== null && preg_match('/اختلال خوردن|گرسنگی شدید|هیچ.?چیز نخورم/u', $text) === 1) {
+                $this->alertSpecialist($user, 'eating_risk');
+            }
             if ($blocked !== null || $local !== null) {
                 $replies = [];
                 if ($local !== null) {
@@ -95,13 +100,13 @@ final class MySqlCoach implements CoachGateway
             $text = $analysis['text']."\n".$text;
         }
         $entry = Crypto::uuid();
+        $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $text, 'reply_to' => $message, 'tokens_in' => $analysis['tokensIn'], 'tokens_out' => $analysis['tokensOut'], 'payload' => json_encode(['entryId' => $entry, 'foods' => $foods, 'confidence' => $analysis['confidence'], 'needsConfirmation' => true], JSON_UNESCAPED_UNICODE)]);
         $this->db->table('coach_food_entries')->insert([
             'id' => $entry, 'user_id' => $user, 'thread_id' => $thread->id, 'message_id' => $assistant, 'media_id' => $media,
             'civil_date' => CivilDates::today(), 'meal_type' => 'lunch', 'title' => $title, 'source' => 'photo',
             'items' => json_encode($foods, JSON_UNESCAPED_UNICODE), 'totals' => json_encode(['kcal' => $kcal]),
             'confidence' => max(0, min(1, (float) $analysis['confidence'])), 'status' => 'suggested',
         ]);
-        $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $text, 'reply_to' => $message, 'tokens_in' => $analysis['tokensIn'], 'tokens_out' => $analysis['tokensOut'], 'payload' => json_encode(['entryId' => $entry, 'foods' => $foods, 'confidence' => $analysis['confidence'], 'needsConfirmation' => true], JSON_UNESCAPED_UNICODE)]);
         $this->usage($user, $analysis['costMicros'], 0, 1);
 
         return ['mediaId' => $media, 'messageId' => $message, 'entryId' => $entry, 'status' => 'suggested', 'analysis' => $analysis];
@@ -249,6 +254,12 @@ final class MySqlCoach implements CoachGateway
                 'day'        => $today,
                 'dedupe_key' => $dedupeKey,
             ]);
+            $this->db->table('notifications')->insert([
+                'id' => Crypto::uuid(),
+                'user_id' => $user,
+                'kind' => 'coach_proactive',
+                'payload' => json_encode(['text' => $message['text'], 'proactiveKind' => $message['kind']], JSON_UNESCAPED_UNICODE),
+            ]);
             $sent++;
         }
 
@@ -314,15 +325,18 @@ final class MySqlCoach implements CoachGateway
     private function factual(string $user, string $text): ?string
     {
         $intent = $this->intents->parse($text);
+        $memory = $this->actions->remember($user, $text);
         if ($intent['confidence'] < 0.8) {
-            return null;
+            return $memory;
         }
 
         return match ($intent['intent']) {
             'show_plan' => $this->planText($user),
-            'log_weight' => $this->saveWeight($user, $intent['params']['weight'] ?? null),
+            'log_weight' => $this->saveWeight($user, $intent['params']['weight'] ?? null) ?? $memory,
             'log_water' => $this->saveWater($user),
-            default => null,
+            'swap_meal' => $this->actions->swap($user, $text) ?? $memory,
+            'log_consumption' => $this->actions->logMeal($user, $text) ?? $memory,
+            default => $memory,
         };
     }
 
@@ -335,6 +349,20 @@ final class MySqlCoach implements CoachGateway
         $lines = array_map(fn (array $meal) => $meal['type'].': '.$meal['title'].' ('.$meal['kcal'].' کالری)', $plan['meals']);
 
         return "برنامه امروز:\n".implode("\n", $lines);
+    }
+
+    private function alertSpecialist(string $user, string $kind): void
+    {
+        $specialist = $this->db->table('plan_requests')->where('user_id', $user)->whereNotNull('assigned_specialist_id')->orderByDesc('created_at')->value('assigned_specialist_id');
+        if (! is_string($specialist) || $specialist === '') {
+            return;
+        }
+        $this->db->table('notifications')->insert([
+            'id' => Crypto::uuid(),
+            'user_id' => $specialist,
+            'kind' => $kind,
+            'payload' => json_encode(['userId' => $user], JSON_THROW_ON_ERROR),
+        ]);
     }
 
     private function saveWeight(string $user, mixed $weight): ?string
