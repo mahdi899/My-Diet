@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../core/photos/food_image.dart';
+import '../../widgets/brand_scene.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
 import '../../../domain/onboarding/spec.dart';
 import 'blur_ink.dart';
 import 'blur_name_field.dart';
-import 'camera_progress.dart';
 import 'decor_photo.dart';
 
 IconData insightIcon(String name) => switch (name) {
@@ -73,7 +72,7 @@ class InsightInterstitial extends StatelessWidget {
   );
 }
 
-/// Opening screen: a full-bleed photograph, then the same goal choices.
+/// Opening scene and the same server-driven goal choices.
 class HeroGoalScreen extends StatelessWidget {
   const HeroGoalScreen({
     super.key,
@@ -92,92 +91,65 @@ class HeroGoalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.emeraldDark),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          fit: StackFit.expand,
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Column(
           children: [
-            const FoodImage(
-              photoId: 'emerald_sprout_rising_through_ring',
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.18, 0.48, 0.72, 1],
-                  colors: [
-                    Color(0x14000000),
-                    Color(0x660A5C42),
-                    Color(0xF20A5C42),
-                    AppColors.bg,
-                  ],
-                ),
-              ),
-            ),
-            CameraProgressRing(progress: progress),
-            SafeArea(
-              child: Column(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
                 children: [
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: onBack == null
-                          ? const SizedBox(height: 44)
-                          : Material(
-                              color: Colors.white.withValues(alpha: 0.92),
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: onBack,
-                                child: const SizedBox(
-                                  width: 44,
-                                  height: 44,
-                                  child: Icon(
-                                    Icons.arrow_back_rounded,
-                                    color: AppColors.ink,
-                                  ),
-                                ),
-                              ),
-                            ),
+                  if (onBack != null)
+                    IconButton(
+                      tooltip: 'بازگشت',
+                      onPressed: onBack,
+                      icon: const Icon(Icons.arrow_back_rounded),
                     ),
-                  ),
-                  const Spacer(),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 28),
-                    child: BlurSwap(
-                      text: 'برای چه هدفی اینجایی؟',
-                      style: TextStyle(
-                        fontFamily: 'Vazirmatn',
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        height: 1.45,
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress.clamp(0, 1),
+                        minHeight: 4,
+                        backgroundColor: AppColors.mint,
+                        semanticsLabel: 'پیشرفت تکمیل اطلاعات',
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(32, 8, 32, 16),
-                    child: Text(
-                      'برنامهٔ غذایی‌ات حول همین هدف ساخته می‌شود',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFFE7F6EE), height: 1.7),
-                    ),
-                  ),
-                  Flexible(
-                    flex: 5,
-                    child: TrackPicker(
-                      tracks: tracks,
-                      value: value,
-                      onChanged: onChanged,
-                    ),
-                  ),
                 ],
+              ),
+            ),
+            BrandScene(
+              kind: BrandSceneKind.welcome,
+              height: (MediaQuery.sizeOf(context).height * .22).clamp(110, 185),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 28),
+              child: BlurSwap(
+                text: 'برای چه هدفی اینجایی؟',
+                style: TextStyle(
+                  fontFamily: 'Vazirmatn',
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.emeraldDark,
+                  height: 1.45,
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(28, 8, 28, 20),
+              child: Text(
+                'برنامهٔ غذایی‌ات حول همین هدف ساخته می‌شود',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.inkSoft, height: 1.7),
+              ),
+            ),
+            Expanded(
+              child: TrackPicker(
+                tracks: tracks,
+                value: value,
+                onChanged: onChanged,
               ),
             ),
           ],

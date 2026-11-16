@@ -1,40 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
-
-enum JourneyArtKind { plan, payment }
-
-class JourneyArt extends StatelessWidget {
-  const JourneyArt({super.key, required this.kind, this.height = 190});
-  final JourneyArtKind kind;
-  final double height;
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: Image.asset(
-      kind == JourneyArtKind.plan
-          ? 'assets/images/journey/plan_review.png'
-          : 'assets/images/journey/payment_issue.png',
-      height: height,
-      width: double.infinity,
-      fit: BoxFit.contain,
-      cacheWidth:
-          (MediaQuery.sizeOf(context).width *
-                  MediaQuery.devicePixelRatioOf(context))
-              .ceil()
-              .clamp(300, 900),
-      errorBuilder: (_, _, _) => SizedBox(
-        height: height,
-        child: Icon(
-          kind == JourneyArtKind.plan
-              ? Icons.assignment_turned_in_outlined
-              : Icons.receipt_long_outlined,
-          size: 78,
-          color: AppColors.emeraldDeep,
-        ),
-      ),
-    ),
-  );
-}
+import 'brand_scene.dart';
 
 class JourneyStatusView extends StatelessWidget {
   const JourneyStatusView({
@@ -43,6 +10,7 @@ class JourneyStatusView extends StatelessWidget {
     required this.message,
     required this.badge,
     required this.current,
+    this.scene = BrandSceneKind.specialistReview,
     this.error = false,
     this.busy = false,
     this.showPath = true,
@@ -52,6 +20,7 @@ class JourneyStatusView extends StatelessWidget {
   });
   final String title, message, badge;
   final int current;
+  final BrandSceneKind scene;
   final bool error, busy, showPath;
   final String? actionLabel;
   final VoidCallback? onAction, onSupport;
@@ -93,8 +62,8 @@ class JourneyStatusView extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 12),
-      JourneyArt(
-        kind: JourneyArtKind.plan,
+      BrandScene(
+        kind: error ? BrandSceneKind.connectionProblem : scene,
         height: (MediaQuery.sizeOf(context).height * .24).clamp(150.0, 210.0),
       ),
       const SizedBox(height: 8),

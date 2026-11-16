@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/connection.dart';
 import '../../core/theme/theme.dart';
 import 'brand_mark.dart';
+import 'brand_scene.dart';
 
 class ConnectionGate extends StatelessWidget {
   const ConnectionGate({super.key, required this.link, required this.child});
@@ -47,7 +48,7 @@ class ConnectionScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(28),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -63,6 +64,11 @@ class ConnectionScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  if (link.fault != null && link.fault != LinkFault.expired)
+                    const BrandScene(
+                      kind: BrandSceneKind.connectionProblem,
+                      height: 150,
+                    ),
                   Text(
                     title,
                     textAlign: TextAlign.center,

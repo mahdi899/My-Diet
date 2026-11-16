@@ -6,6 +6,7 @@ import '../session/live_session.dart';
 import '../../data/share_text.dart';
 import '../../core/theme/theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/brand_scene.dart';
 
 String shoppingListText(DemoStore store, List<DateTime> dates) {
   final data = store.shoppingList(dates: dates);
@@ -56,6 +57,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       if (store.serverAuthEnabled) pullLiveShopping(store);
     });
   }
+
   bool sharing = false;
   String? error;
   List<DateTime> dates(DemoStore store) {
@@ -120,6 +122,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         appBar: AppBar(title: const Text('لیست خرید')),
         body: const PageBody(
           children: [
+            BrandScene(kind: BrandSceneKind.shopping, height: 160),
             EmptyPanel(
               'لیست خرید فعالی نداری',
               'پس از آماده‌شدن برنامهٔ تأییدشدهٔ همین هفته، مواد لازم اینجا نمایش داده می‌شوند.',

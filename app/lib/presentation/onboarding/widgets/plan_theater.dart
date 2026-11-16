@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/motion/motion.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../features/coach/presentation/coach_companion.dart';
+import '../../widgets/brand_scene.dart';
 
 /// A finite brand reaction while the caller owns the actual operation.
 /// onFinished is only used to reveal an already-computed profile summary.
@@ -60,7 +60,7 @@ class _PlanBuildTheaterState extends State<PlanBuildTheater> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CoachCompanion(mood: CompanionMood.thinking, size: 150),
+            const BrandScene(kind: BrandSceneKind.planBuilding, height: 200),
             const SizedBox(height: 28),
             Semantics(
               header: true,

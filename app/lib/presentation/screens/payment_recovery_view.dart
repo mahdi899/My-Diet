@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
 import '../../domain/common/digits.dart';
-import '../widgets/journey_status_view.dart';
+import '../widgets/brand_scene.dart';
 import '../widgets/ui.dart' show PrimaryButton;
 
 class PaymentRecoveryView extends StatelessWidget {
@@ -74,8 +74,10 @@ class PaymentRecoveryView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        JourneyArt(
-          kind: JourneyArtKind.payment,
+        BrandScene(
+          kind: pending
+              ? BrandSceneKind.paymentPending
+              : BrandSceneKind.paymentIssue,
           height: (MediaQuery.sizeOf(context).height * .2).clamp(135.0, 180.0),
         ),
         const SizedBox(height: 10),
