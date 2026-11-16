@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class CoachController
 {
-    private const ACTIONS = ['confirm_meal', 'dismiss', 'confirm_swap', 'log_as_planned', 'log_water', 'log_weight', 'mood', 'show_ring'];
+    private const ACTIONS = ['confirm_meal', 'dismiss', 'confirm_swap', 'log_as_planned', 'log_water', 'log_weight', 'mood', 'undo_meal', 'show_ring'];
 
     public function __construct(
         private CoachGateway $coach,
@@ -43,9 +43,6 @@ final class CoachController
     {
         $userId = $this->actor($request);
 
-        // Check quota before processing
-        $this->quota->requireChat($userId);
-
         $body = Input::body($request, ['clientMessageId', 'kind', 'text', 'value', 'label', 'action', 'args', 'sourceMessageId', 'mediaId', 'caption', 'mealType']);
         $kind = Input::string($body, 'kind', 20);
         if (! in_array($kind, ['text', 'quick_reply', 'card_action', 'photo'], true)) {
@@ -57,7 +54,7 @@ final class CoachController
         $accepted = $this->coach->accept($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $text);
 
         // Consume quota after successful reply
-        if (! $accepted['replay'] && $accepted['blocked'] === null && count($accepted['replies']) > 0) {
+        if (! $accepted['replay'] && ($accepted['metered'] ?? false) && $accepted['blocked'] === null && count($accepted['replies']) > 0) {
             $this->quota->consumeChat($userId);
         }
 

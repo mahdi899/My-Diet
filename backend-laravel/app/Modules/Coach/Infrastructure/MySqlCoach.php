@@ -43,7 +43,7 @@ final class MySqlCoach implements CoachGateway
             $thread = $this->ensure($user);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
-                return ['replay' => true, 'userMessage' => $this->message($prior), 'replies' => $this->replies($prior->id), 'blocked' => null];
+                return ['replay' => true, 'metered' => false, 'userMessage' => $this->message($prior), 'replies' => $this->replies($prior->id), 'blocked' => null];
             }
             $blocked = $this->blocked();
             $id = Crypto::uuid();
@@ -61,7 +61,15 @@ final class MySqlCoach implements CoachGateway
                     $replies[] = $this->message($this->db->table('coach_messages')->where('id', $assistant)->first());
                 }
 
-                return ['replay' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => $replies, 'blocked' => $blocked];
+                return ['replay' => false, 'metered' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => $replies, 'blocked' => $blocked];
+            }
+            try {
+                app(CoachQuotaService::class)->requireChat($user);
+            } catch (Problem $error) {
+                $assistant = Crypto::uuid();
+                $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $error->messageFa, 'reply_to' => $id, 'payload' => json_encode(['text' => $error->messageFa], JSON_UNESCAPED_UNICODE)]);
+
+                return ['replay' => false, 'metered' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
             }
             $reply = $this->model->reply($user, $text);
             $assistant = Crypto::uuid();
@@ -71,7 +79,7 @@ final class MySqlCoach implements CoachGateway
                 $this->db->table('coach_threads')->where('id', $thread->id)->update(['last_message_at' => $this->db->raw('current_timestamp(6)')]);
             });
 
-            return ['replay' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
+            return ['replay' => false, 'metered' => true, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
         });
     }
 
@@ -157,10 +165,19 @@ final class MySqlCoach implements CoachGateway
         }
         $follow = app(FollowUpQuestions::class)->forUser($user);
         $brief = 'خلاصهٔ امروز آماده است';
+        $options = [];
         if ($follow !== []) {
             $brief .= "\n".$follow[0]['text'];
+            if (($follow[0]['key'] ?? '') === 'kitchen') {
+                $options = [
+                    ['label' => 'وقت آشپزی دارم', 'value' => 'وقت آشپزی دارم'],
+                    ['label' => 'غذای سریع می‌خواهم', 'value' => 'غذای سریع می‌خواهم'],
+                ];
+            } elseif (($follow[0]['key'] ?? '') === 'weight') {
+                $options = [['label' => 'ثبت وزن', 'value' => 'می‌خواهم وزن امروز را ثبت کنم']];
+            }
         }
-        $this->db->table('coach_messages')->insert(['id' => Crypto::uuid(), 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'day_brief', 'fallback_text' => $brief, 'payload' => json_encode(['followUps' => $follow], JSON_UNESCAPED_UNICODE)]);
+        $this->db->table('coach_messages')->insert(['id' => Crypto::uuid(), 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'day_brief', 'fallback_text' => $brief, 'payload' => json_encode(['note' => $brief, 'followUps' => $follow, 'options' => $options], JSON_UNESCAPED_UNICODE)]);
         $this->db->table('coach_threads')->where('id', $thread->id)->update(['day_brief_date' => $today]);
 
         return ['date' => $today, 'created' => true];
@@ -179,6 +196,8 @@ final class MySqlCoach implements CoachGateway
                 'log_water' => $this->waterAction($user, $args),
                 'mood' => $this->moodAction($user, $args),
                 'confirm_swap' => $this->swapConfirm($user, $args),
+                'undo_meal' => ['text' => $this->actions->clearMeal($user, is_string($args['mealType'] ?? null) ? $args['mealType'] : null), 'userText' => 'اصلاح وعده'],
+                'dismiss' => ['text' => 'باشه، دست نمی‌زنم.', 'userText' => 'نه'],
                 default => null,
             };
             if ($local !== null) {
@@ -337,8 +356,14 @@ final class MySqlCoach implements CoachGateway
     {
         $intent = $this->intents->parse($text);
         $memory = $this->actions->remember($user, $text);
+        if ($intent['intent'] === 'remember') {
+            return $memory ?? ['type' => 'text', 'text' => 'کدام غذا را بگویم یادداشت کنم؟', 'payload' => ['text' => 'کدام غذا را بگویم یادداشت کنم؟']];
+        }
         if ($intent['confidence'] < 0.8) {
             return $memory;
+        }
+        if ($intent['intent'] === 'log_mood' && is_string($intent['params']['mood'] ?? null)) {
+            return $this->moodAction($user, ['mood' => $intent['params']['mood']])['text'];
         }
 
         return match ($intent['intent']) {
@@ -346,8 +371,7 @@ final class MySqlCoach implements CoachGateway
             'log_water' => $this->saveWater($user, (int) ($intent['params']['ml'] ?? 250)),
             'swap_meal' => $this->actions->swap($user, $text) ?? $memory,
             'log_consumption' => $this->actions->logMeal($user, $text) ?? $memory,
-            'show_plan' => $this->planReply($user, $text) ?? $memory,
-            default => $memory,
+            default => $this->actions->answer($user, $intent['intent'], $intent['params']) ?? $memory,
         };
     }
 
@@ -459,39 +483,6 @@ final class MySqlCoach implements CoachGateway
         ]);
 
         return ['text' => 'حال «'.$mood.'» امروزت را یادداشت کردم.', 'userText' => 'حال امروز: '.$mood];
-    }
-
-    private function planReply(string $user, string $text): ?string
-    {
-        $plan = app(CoachContextBuilder::class)->buildForChat($user, 'برنامه امروز غذا')['todayPlan'] ?? null;
-        $meals = is_array($plan) ? ($plan['meals'] ?? []) : [];
-        if ($meals === []) {
-            return 'برای امروز هنوز وعده‌ای در برنامه‌ات نیست.';
-        }
-        $wanted = str_contains($text, 'صبحانه') ? 'breakfast' : (str_contains($text, 'شام') ? 'dinner' : (str_contains($text, 'میان') ? 'snack' : (str_contains($text, 'ناهار') ? 'lunch' : null)));
-        $lines = [];
-        foreach ($meals as $meal) {
-            if (! is_array($meal) || ($wanted !== null && ($meal['type'] ?? '') !== $wanted)) {
-                continue;
-            }
-            $lines[] = $this->mealFa((string) ($meal['type'] ?? '')).': '.(string) ($meal['title'] ?? '').' ('.$this->faDigits((int) ($meal['kcal'] ?? 0)).' کالری)';
-        }
-        if ($lines === []) {
-            return 'این وعده برای امروز در برنامه‌ات نیست.';
-        }
-
-        return count($lines) === 1 ? $lines[0] : "برنامه امروز:\n".implode("\n", $lines);
-    }
-
-    private function mealFa(string $type): string
-    {
-        return match ($type) {
-            'breakfast' => 'صبحانه',
-            'lunch' => 'ناهار',
-            'dinner' => 'شام',
-            'snack' => 'میان‌وعده',
-            default => $type,
-        };
     }
 
     private function faDigits(int|float|string $value): string

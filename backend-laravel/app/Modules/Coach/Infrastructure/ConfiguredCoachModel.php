@@ -269,7 +269,8 @@ TEXT;
 
         $lines = ["تاریخ: {$plan['date']}"];
         foreach ($plan['meals'] as $meal) {
-            $lines[] = "- {$meal['type']}: {$meal['title']} ({$meal['kcal']} کالری)";
+            $label = $meal['typeFa'] ?? $meal['type'];
+            $lines[] = "- {$label}: {$meal['title']} ({$meal['kcal']} کالری)";
         }
 
         return implode("\n", $lines);

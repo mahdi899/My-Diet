@@ -226,7 +226,11 @@ class _CoachMessageListState extends State<CoachMessageList> {
       'calorie_ring' => CalorieRingView(message: message),
       'weigh_in' => WeighInView(message: message, controller: controller),
       'water' => WaterView(message: message, controller: controller),
-      'day_brief' => DayBriefView(message: message),
+      'fact_card' => FactCardView(message: message),
+      'day_brief' => DayBriefView(
+        message: message,
+        onPick: controller.sendText,
+      ),
       'weekly_review' => WeeklyReviewView(message: message),
       'milestone' => MilestoneView(message: message),
       _ => CoachTextBubble(

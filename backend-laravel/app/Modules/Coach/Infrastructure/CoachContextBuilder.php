@@ -93,9 +93,11 @@ final class CoachContextBuilder
         ];
     }
 
-    private function todayPlan(string $userId): ?array
+    /**
+     * @return array{date: string, meals: list<array{id: string, type: string, typeFa: string, title: string, kcal: int}>}|null
+     */
+    public function mealsOn(string $userId, string $date): ?array
     {
-        $today = CivilDates::today();
         $meals = $this->db->select(
             'SELECT m.id, m.meal_type, m.meal_uid, m.title, m.calories
              FROM active_plan_versions a
@@ -104,22 +106,57 @@ final class CoachContextBuilder
              JOIN plan_meals m ON m.plan_day_id = d.id
              WHERE a.user_id = ?
              ORDER BY m.position',
-            [$today, $userId]
+            [$date, $userId]
         );
-
-        if (empty($meals)) {
+        if ($meals === []) {
             return null;
         }
 
         return [
-            'date' => $today,
-            'meals' => array_map(fn ($m) => [
-                'id' => $m->id,
-                'type' => $m->meal_type,
-                'title' => $m->title,
-                'kcal' => (int) $m->calories,
+            'date' => $date,
+            'meals' => array_map(fn ($meal) => [
+                'id' => $meal->id,
+                'type' => $meal->meal_type,
+                'typeFa' => $this->mealFa($meal->meal_type),
+                'title' => $meal->title,
+                'kcal' => (int) $meal->calories,
             ], $meals),
         ];
+    }
+
+    /**
+     * @return list<array{date: string, meals: list<array{typeFa: string, title: string}>}>
+     */
+    public function weekPlan(string $userId): array
+    {
+        $start = CivilDates::saturday(CivilDates::today());
+        $days = [];
+        for ($offset = 0; $offset < 7; $offset++) {
+            $date = CivilDates::add($start, $offset);
+            $plan = $this->mealsOn($userId, $date);
+            $days[] = [
+                'date' => $date,
+                'meals' => array_map(fn (array $meal) => ['typeFa' => $meal['typeFa'], 'title' => $meal['title']], $plan['meals'] ?? []),
+            ];
+        }
+
+        return $days;
+    }
+
+    private function todayPlan(string $userId): ?array
+    {
+        return $this->mealsOn($userId, CivilDates::today());
+    }
+
+    private function mealFa(string $type): string
+    {
+        return match ($type) {
+            'breakfast' => 'صبحانه',
+            'lunch' => 'ناهار',
+            'dinner' => 'شام',
+            'snack' => 'میان‌وعده',
+            default => $type,
+        };
     }
 
     private function userPreferences(string $userId): array

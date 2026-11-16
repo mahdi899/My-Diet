@@ -311,13 +311,117 @@ class QuickRepliesView extends StatelessWidget {
   }
 }
 
-class DayBriefView extends StatelessWidget {
-  const DayBriefView({super.key, required this.message});
+class FactCardView extends StatelessWidget {
+  const FactCardView({super.key, required this.message});
   final CoachMessage message;
 
   @override
   Widget build(BuildContext context) {
+    final payload = message.payload;
+    final items = asMapList(payload['items']);
+    final kind = asString(payload['kind']);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.88,
+        ),
+        child: AppCard(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                asString(payload['title'], message.fallbackText),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: AppColors.emeraldDark,
+                ),
+              ),
+              if (asString(payload['body']).isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  asString(payload['body']),
+                  style: const TextStyle(height: 1.7, fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 6),
+              for (final item in items)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      if (kind == 'meals') ...[
+                        FoodImage(
+                          title: asString(item['title']),
+                          mealType: asString(item['meal']),
+                          thumb: true,
+                          width: 44,
+                          height: 44,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              asString(item['title']),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                height: 1.4,
+                              ),
+                            ),
+                            if (asString(item['subtitle']).isNotEmpty ||
+                                asString(item['meal']).isNotEmpty)
+                              Text(
+                                [
+                                  asString(item['meal']),
+                                  asString(item['subtitle']),
+                                ].where((part) => part.isNotEmpty).join(' · '),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.muted,
+                                  fontSize: 12,
+                                  height: 1.5,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (asInt(item['kcal']) > 0)
+                        Text(
+                          fa(asInt(item['kcal'])),
+                          style: const TextStyle(
+                            color: AppColors.emeraldDeep,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DayBriefView extends StatelessWidget {
+  const DayBriefView({super.key, required this.message, this.onPick});
+  final CoachMessage message;
+  final ValueChanged<String>? onPick;
+
+  @override
+  Widget build(BuildContext context) {
     final meals = asMapList(message.payload['meals']);
+    final options = asMapList(message.payload['options']);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,6 +454,24 @@ class DayBriefView extends StatelessWidget {
                 ],
               ),
             ),
+          if (options.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final option in options)
+                  ActionChip(
+                    label: Text(asString(option['label'], asString(option['value']))),
+                    onPressed: onPick == null
+                        ? null
+                        : () => onPick!(
+                            asString(option['label'], asString(option['value'])),
+                          ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
