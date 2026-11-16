@@ -37,6 +37,7 @@ class CoachMessage {
 
   CoachMessage copyWith({
     String? id,
+    String? clientMessageId,
     bool? pending,
     bool? failed,
     Map<String, dynamic>? payload,
@@ -46,7 +47,7 @@ class CoachMessage {
     type: type,
     payload: payload ?? this.payload,
     fallbackText: fallbackText,
-    clientMessageId: clientMessageId,
+    clientMessageId: clientMessageId ?? this.clientMessageId,
     createdAt: createdAt,
     pending: pending ?? this.pending,
     failed: failed ?? this.failed,

@@ -40,8 +40,9 @@ CoachMessage parseCoachMessage(Map<dynamic, dynamic> json) {
   final type = typeRaw is String && typeRaw.trim().isNotEmpty
       ? typeRaw.trim()
       : 'text';
-  final fallbackRaw = json['fallback_text'] ?? json['fallbackText'];
-  final fallback = fallbackRaw is String ? fallbackRaw : '';
+  final fallback = [json['fallback_text'], json['fallbackText'], json['text']]
+      .whereType<String>()
+      .firstWhere((value) => value.trim().isNotEmpty, orElse: () => '');
   final client = json['client_message_id'] ?? json['clientMessageId'];
   final createdRaw = json['created_at'] ?? json['createdAt'];
   final created = createdRaw is String
@@ -260,7 +261,8 @@ CoachMessage? parseOptionalMessage(Object? raw) {
   if (nested is Map) return parseCoachMessage(nested);
   if (raw['type'] != null ||
       raw['fallback_text'] != null ||
-      raw['fallbackText'] != null) {
+      raw['fallbackText'] != null ||
+      raw['text'] is String) {
     return parseCoachMessage(raw);
   }
   final data = raw['data'];
@@ -473,13 +475,14 @@ CoachEvent? coachEventFrom(String name, Map<String, dynamic> json) {
     case 'message':
       final message = parseOptionalMessage(json);
       if (message == null) return null;
+      if (message.isUser) return CoachUserMessage(message);
       return CoachMessageEvent(message);
     case 'done':
       final user = json['user_message'] ?? json['userMessage'];
       return CoachDone(
         userMessage: user is Map ? parseCoachMessage(user) : null,
         suggestions: parseSuggestions(json['suggestions']),
-        replayed: json['replayed'] == true,
+        replayed: json['replayed'] == true || json['replay'] == true,
         userMessageId: json['userMessageId'] is String
             ? json['userMessageId'] as String
             : json['user_message_id'] is String
