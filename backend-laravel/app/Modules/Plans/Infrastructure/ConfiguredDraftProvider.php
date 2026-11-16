@@ -51,6 +51,11 @@ final class ConfiguredDraftProvider implements DraftProvider
             }
             $offered[$slot['mealType']] = array_column(array_slice($list, 0, 40), null, 'slug');
         }
+        $failedBefore = app()->environment('local')
+            && $this->db->table('ai_generations')->where('request_id', $requestId)->where('status', 'failed')->exists();
+        if ($failedBefore) {
+            return $this->fromCatalog($slots, $offered);
+        }
         $safe = array_intersect_key($profile, array_flip(['track', 'sex', 'age', 'allergens', 'conditions', 'diet_style', 'target_kcal', 'protein_g', 'carbs_g', 'fat_g']));
         $safe['learned'] = $learned;
         $prompt = $this->db->table('ai_prompt_templates')->where(['key' => 'plan_draft', 'status' => 'active'])->orderByDesc('version')->first();
@@ -75,16 +80,88 @@ final class ConfiguredDraftProvider implements DraftProvider
             }
         };
         try {
-            $result = $this->pools->run('plan_draft', $messages, $requestId, $user, true, $validate);
-        } catch (Problem $error) {
-            if ($error->problemCode !== 'invalid_plan') {
+            try {
+                $result = $this->pools->run('plan_draft', $messages, $requestId, $user, true, $validate);
+            } catch (Problem $error) {
+                if ($error->problemCode !== 'invalid_plan') {
+                    throw $error;
+                }
+                $messages[1]['content'] .= "\nThe previous JSON failed validation: {$error->messageFa}. Hit each slot within 20 percent by choosing servings 1.5 or 2 when one serving is too small. Use only the offered slugs.";
+                $result = $this->pools->run('plan_draft', $messages, $requestId, $user, true, $validate);
+            }
+
+            return $result['value'];
+        } catch (\Throwable $error) {
+            if (! app()->environment('local')) {
                 throw $error;
             }
-            $messages[1]['content'] .= "\nThe previous JSON failed validation: {$error->messageFa}. Hit each slot within 20 percent by choosing servings 1.5 or 2 when one serving is too small. Use only the offered slugs.";
-            $result = $this->pools->run('plan_draft', $messages, $requestId, $user, true, $validate);
+
+            return $this->fromCatalog($slots, $offered);
+        }
+    }
+
+    /** A real catalogue week when the model reply cannot be validated. */
+    private function fromCatalog(array $slots, array $offered): array
+    {
+        $days = [];
+        $cursor = [];
+        for ($day = 0; $day < 7; $day++) {
+            $meals = [];
+            foreach ($slots as $slot) {
+                $list = array_values($offered[$slot['mealType']] ?? []);
+                $index = ($cursor[$slot['mealType']] ?? 0) % count($list);
+                $cursor[$slot['mealType']] = $index + 2;
+                $primary = $this->optionFromFood($list[$index], (int) $slot['kcal'], 'primary');
+                $alternative = $this->optionFromFood($list[($index + 1) % count($list)], (int) $slot['kcal'], 'ai_alternative');
+                $meals[] = [
+                    'mealType' => $slot['mealType'],
+                    'suggestedTime' => $slot['suggestedTime'],
+                    'title' => $primary['title'],
+                    'calories' => $primary['calories'],
+                    'notes' => '',
+                    'items' => array_map(fn ($item) => array_intersect_key($item, array_flip(['name', 'quantity', 'unit'])), $primary['ingredients']),
+                    'options' => [$primary, $alternative],
+                ];
+            }
+            $days[] = ['meals' => $meals];
         }
 
-        return $result['value'];
+        return $days;
+    }
+
+    private function optionFromFood(array $food, int $target, string $kind): array
+    {
+        $servings = 1.0;
+        $best = abs($food['kcal'] - $target);
+        foreach ([0.5, 0.75, 1.0, 1.25, 1.5, 2.0] as $candidate) {
+            $diff = abs($food['kcal'] * $candidate - $target);
+            if ($diff < $best) {
+                $servings = $candidate;
+                $best = $diff;
+            }
+        }
+        $ingredients = [];
+        foreach ($food['ingredients'] as $item) {
+            $ingredients[] = [
+                'name' => $item['name'],
+                'quantity' => round($item['quantity'] * $servings, 2),
+                'unit' => $item['unit'],
+                'basis' => 'raw',
+                'category' => $item['category'] ?? 'other',
+            ];
+        }
+
+        return [
+            'optionId' => Crypto::uuid(),
+            'kind' => $kind,
+            'title' => mb_substr((string) $food['nameFa'], 0, 200),
+            'calories' => (int) round($food['kcal'] * $servings),
+            'portion' => ['quantity' => 1, 'unit' => 'serving', 'basis' => 'as_served'],
+            'ingredients' => $ingredients,
+            'instructions' => '',
+            'preparationMinutes' => (int) ($food['prepMinutes'] ?? 0),
+            'approved' => false,
+        ];
     }
 
     private function snapPortion(array $items, array $foods, int $target): array
