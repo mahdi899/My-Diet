@@ -50,9 +50,17 @@
 .admin-reference .ai-empty .icon-tile { width: 58px; height: 58px; border-radius: 20px; margin-bottom: 9px; box-shadow: 0 0 0 8px #f4f7f2; }
 .admin-reference .ai-empty p { color: var(--muted); font-size: 12px; }
 .admin-reference .ai-admin :is(button, [role="region"]):focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
-.admin-reference .ai-dialog { margin: auto; width: min(620px, calc(100% - 24px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); background: white; }
+.admin-reference .ai-dialog { display: flex; flex-direction: column; margin: auto; width: min(620px, calc(100% - 24px)); max-height: min(760px, calc(100dvh - 32px)); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); background: white; }
 .admin-reference .ai-dialog::backdrop { background: #142f2a91; backdrop-filter: blur(4px); }
-.admin-reference .ai-dialog > header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; background: #f7f9f5; border-bottom: 1px solid var(--line); }
+.admin-reference .ai-dialog > header { display: flex; flex: none; justify-content: space-between; align-items: center; padding: 18px 24px; background: #f7f9f5; border-bottom: 1px solid var(--line); }
+.admin-reference .ai-dialog > .ai-form { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.admin-reference .ai-model-picker { display: block; max-height: min(280px, 42dvh); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 12px; background: #fbfcf9; }
+.admin-reference .ai-model-picker > p { margin: 0; padding: 10px 14px; color: var(--muted); font-size: 12px; position: sticky; top: 0; background: #f7f9f5; border-bottom: 1px solid var(--line); }
+.admin-reference .ai-model-picker button { display: grid; justify-content: stretch; justify-items: stretch; gap: 2px; width: 100%; height: auto; min-height: 52px; padding: 10px 14px; border: 0; border-radius: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font-weight: 600; white-space: normal; text-align: start; box-shadow: none; }
+.admin-reference .ai-model-picker button:hover:not(:disabled), .admin-reference .ai-model-picker button[aria-selected="true"] { background: #e8f1e2; box-shadow: none; }
+.admin-reference .ai-model-picker button bdi { display: block; overflow-wrap: anywhere; font-size: 13px; text-align: start; }
+.admin-reference .ai-model-picker button small { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 10px; width: 100%; color: var(--muted); font-size: 11px; font-weight: 400; }
+.admin-reference .ai-model-picker button small bdi { display: inline; font-size: inherit; }
 .admin-reference .ai-dialog h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; }
 .admin-reference .ai-dialog header button { width: 44px; height: 44px; }
 .admin-reference .ai-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: var(--soft); border-radius: 8px; }
