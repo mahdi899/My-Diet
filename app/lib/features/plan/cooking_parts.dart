@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -53,10 +54,11 @@ class CookingHero extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.soup_kitchen_outlined,
+                                DietIcon(
+                                  DietIconKind.meal,
                                   color: Colors.white,
-                                  size: 20,
+                                  monochrome: true,
+                                  size: 22,
                                 ),
                                 SizedBox(width: 8),
                                 Flexible(

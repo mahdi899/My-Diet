@@ -182,9 +182,9 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
     if (age != null) profile.age = age;
     final height = _figure(answers['height_cm']);
     if (height != null) profile.height = height;
-    final weight = _figure(answers['weight_kg'], round: true);
-    if (weight != null) profile.weight = weight;
-    final target = _figure(answers['target_weight_kg'], round: true);
+    final weight = answers['weight_kg'];
+    if (weight is num) widget.store.applyOnboardingWeight(weight.toDouble());
+    final target = _figure(answers['target_weight_kg']);
     if (target != null) profile.targetWeight = target;
     final sex = answers['sex'];
     if (sex == 'female') profile.sex = 'زن';
@@ -194,9 +194,9 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
     profile.consent = true;
   }
 
-  String? _figure(Object? value, {bool round = false}) {
+  String? _figure(Object? value) {
     if (value is! num) return null;
-    return fa(round ? value.round() : value);
+    return faNumber(value);
   }
 
   @override
@@ -242,7 +242,10 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
               children: [
                 Text(error ?? '', textAlign: TextAlign.center),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _load, child: const Text('تلاش دوباره')),
+                FilledButton(
+                  onPressed: _load,
+                  child: const Text('تلاش دوباره'),
+                ),
                 TextButton(onPressed: _close, child: const Text('بازگشت')),
               ],
             ),
@@ -256,7 +259,7 @@ class _SignupOnboardingPageState extends State<SignupOnboardingPage> {
         initialPhone: widget.initialPhone,
         age: _figure(controller!.answers['age']),
         height: _figure(controller!.answers['height_cm']),
-        weight: _figure(controller!.answers['weight_kg'], round: true),
+        weight: _figure(controller!.answers['weight_kg']),
         goal: controller!.spec.track(controller!.track)?.title,
         requestCode: (phone) => widget.store.customerAuth!.requestCode(phone),
         verifyCode: (phone, code) => widget.store.verifyLoginCode(phone, code),
@@ -541,7 +544,10 @@ class _SignupCodeSheetState extends State<_SignupCodeSheet> {
       error = null;
     });
     try {
-      await widget.store.verifyLoginCode(latinDigits(phone.text).trim(), digits);
+      await widget.store.verifyLoginCode(
+        latinDigits(phone.text).trim(),
+        digits,
+      );
       if (mounted) Navigator.pop(context, true);
     } on AuthFailure catch (failure) {
       if (mounted) setState(() => error = failure.message);

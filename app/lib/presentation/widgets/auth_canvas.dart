@@ -56,15 +56,7 @@ class AuthCanvas extends StatelessWidget {
                         children: [
                           const SabzineMark(size: 76),
                           const SizedBox(height: 10),
-                          const Text(
-                            'رژیم من',
-                            style: TextStyle(
-                              color: AppColors.emeraldDeep,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              height: 1.4,
-                            ),
-                          ),
+                          const BrandWordmark(width: 120),
                           const SizedBox(height: 28),
                           Text(
                             title,

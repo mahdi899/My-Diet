@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -7,7 +8,7 @@ import '../../core/theme/theme.dart';
 import '../../domain/common/day.dart';
 import '../../domain/common/digits.dart';
 import '../../presentation/widgets/kit/pressable_scale.dart';
-import '../coach/presentation/coach_companion.dart';
+import '../../presentation/widgets/brand_scene.dart';
 import 'home_day_focus.dart';
 
 /// Personal greeting and calendar, separate from the day's changing records.
@@ -101,11 +102,7 @@ class HomeWelcome extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            const Icon(
-              Icons.calendar_today_outlined,
-              size: 16,
-              color: AppColors.emeraldDeep,
-            ),
+            const DietIcon(DietIconKind.plan, size: 20),
             const SizedBox(width: AppSpacing.sm),
             Flexible(
               child: Text(
@@ -198,16 +195,10 @@ class HomeFocusCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  ExcludeSemantics(
-                    child: Image.asset(
-                      'assets/images/home/sprout_welcome.png',
-                      width: size,
-                      height: size,
-                      cacheWidth:
-                          (size * MediaQuery.devicePixelRatioOf(context))
-                              .ceil(),
-                      errorBuilder: (_, _, _) => CoachCompanion(size: size),
-                    ),
+                  BrandScene(
+                    kind: BrandSceneKind.companion,
+                    width: size,
+                    height: size,
                   ),
                 ],
               );

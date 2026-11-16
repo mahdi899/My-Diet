@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/motion/motion_kit.dart';
@@ -168,13 +169,21 @@ class _WaterCardState extends State<WaterCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'آب امروزت',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.emeraldDark,
-                      ),
+                    const Row(
+                      children: [
+                        DietIcon(DietIconKind.water, size: 22),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'آب امروزت',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.emeraldDark,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(

@@ -981,7 +981,7 @@ class _OtpCellsState extends State<_OtpCells>
                             0,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFEFA),
+                            color: AppColors.surface,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: i == active
@@ -1081,7 +1081,7 @@ class _LightShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(color: Color(0xFFF7F6F0)),
+      decoration: const BoxDecoration(color: AppColors.bg),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: true,
@@ -1259,7 +1259,7 @@ class _Portrait extends StatelessWidget {
     return Container(
       width: 96,
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F5E9),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0x30FFFFFF)),
         boxShadow: const [
@@ -1368,7 +1368,7 @@ class _PlanCard extends StatelessWidget {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              color: const Color(0xFFFFFEFB),
+              color: AppColors.surface,
               border: Border.all(
                 color: open ? accent : const Color(0xFFD4E3D4),
                 width: open ? 2.4 : 1,

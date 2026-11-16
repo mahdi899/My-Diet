@@ -9,6 +9,7 @@ import 'package:sabzine_flutter/domain/common/failure.dart';
 import 'package:sabzine_flutter/domain/plan/plan.dart';
 import 'package:sabzine_flutter/features/plan/plan_states.dart';
 import 'package:sabzine_flutter/features/plan/plan_tab.dart';
+import 'package:sabzine_flutter/presentation/widgets/brand_scene.dart';
 import 'package:sabzine_flutter/presentation/session/live_session.dart';
 import 'session/home_test.dart'
     show FakeCommerce, FakePlans, liveStore, requestWith;
@@ -162,6 +163,15 @@ void main() {
         await t.pumpAndSettle();
         await t.pump(const Duration(seconds: 6));
         expect(find.text(entry.value), findsOneWidget);
+        expect(
+          t.widget<BrandScene>(find.byType(BrandScene)).kind,
+          switch (entry.key) {
+            PlanStatus.generating ||
+            PlanStatus.ready => BrandSceneKind.planBuilding,
+            PlanStatus.reviewing => BrandSceneKind.specialistReview,
+            _ => BrandSceneKind.needsInformation,
+          },
+        );
         expect(find.text('برنامه‌ات آماده است'), findsNothing);
         expect(request.isPublished, isFalse);
       }
@@ -171,11 +181,19 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('اطلاعات تکمیلی در حال بررسی است'), findsOneWidget);
       expect(find.text('متخصص منتظر پاسخ توست'), findsNothing);
+      expect(
+        t.widget<BrandScene>(find.byType(BrandScene)).kind,
+        BrandSceneKind.specialistReview,
+      );
       request.infoAnswerReviewed = true;
       store.approveActiveUserRequest();
       await t.pumpAndSettle();
       expect(find.text('برنامه‌ات آماده است'), findsOneWidget);
       expect(request.isPublished, isTrue);
+      expect(
+        t.widget<BrandScene>(find.byType(BrandScene)).kind,
+        BrandSceneKind.planReady,
+      );
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
       store.dispose();

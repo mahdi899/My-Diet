@@ -1,3 +1,4 @@
 <resources>
-  <color name="sabzine_splash_background">#EAF1DC</color>
+  <color name="sabzine_splash_background">#FBF7EE</color>
+  <color name="brand_icon_background">#0B7A55</color>
 </resources>

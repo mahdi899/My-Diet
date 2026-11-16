@@ -142,17 +142,9 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Spacer(),
-                  const SabzineMark(size: 64),
+                  const SabzineMark(size: 64, color: Colors.white),
                   const SizedBox(height: 10),
-                  const Text(
-                    'رژیم من',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  const BrandWordmark(width: 120, color: Colors.white),
                   const SizedBox(height: 18),
                   const Text(
                     'ادامهٔ مسیر سلامتی تو',

@@ -4,6 +4,7 @@ import '../../core/motion/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/demo_store.dart';
 import '../../presentation/widgets/kit/app_card.dart';
+import '../../presentation/widgets/brand_scene.dart';
 
 class PlanShoppingPage extends StatefulWidget {
   const PlanShoppingPage({super.key});
@@ -50,6 +51,8 @@ class _PlanShoppingPageState extends State<PlanShoppingPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
+          const BrandScene(kind: BrandSceneKind.shopping, height: 140),
+          const SizedBox(height: 12),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),

@@ -1,3 +1,4 @@
+import '../../../core/icons/diet_icon.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/motion/motion.dart';
@@ -62,11 +63,7 @@ class CoachTodaySummary extends StatelessWidget {
                         strokeWidth: 4,
                         colors: const [AppColors.emeraldDeep],
                         trackColor: AppColors.surfaceWarm,
-                        child: const Icon(
-                          Icons.spa_outlined,
-                          size: 15,
-                          color: AppColors.emeraldDeep,
-                        ),
+                        child: const DietIcon(DietIconKind.meal, size: 22),
                       ),
                       const SizedBox(width: 11),
                       Expanded(

@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
@@ -7,6 +8,7 @@ import '../../presentation/session/live_session.dart';
 import '../../presentation/widgets/kit/kit.dart';
 import '../../presentation/widgets/ui.dart';
 import '../../presentation/widgets/journey_status_view.dart';
+import '../../presentation/widgets/brand_scene.dart';
 import '../../presentation/screens/messaging.dart';
 import 'goal_math.dart';
 import 'streak_chip.dart';
@@ -41,11 +43,7 @@ class PlanEmpty extends StatelessWidget {
       key: const ValueKey('plan-empty'),
       padding: const EdgeInsets.fromLTRB(20, 28, 20, shellBottomInset),
       children: [
-        const Icon(
-          Icons.calendar_month_rounded,
-          color: AppColors.emerald,
-          size: 42,
-        ),
+        const BrandScene(kind: BrandSceneKind.emptyPlan, height: 200),
         const SizedBox(height: 12),
         Text(
           'هنوز برنامه‌ای نداری',
@@ -54,7 +52,11 @@ class PlanEmpty extends StatelessWidget {
         const SizedBox(height: 18),
         PillButton(
           label: 'دریافت برنامه',
-          icon: Icons.restaurant_rounded,
+          iconWidget: const DietIcon(
+            DietIconKind.meal,
+            color: Colors.white,
+            monochrome: true,
+          ),
           onPressed: () => openPlanServices(context),
         ),
       ],
@@ -243,6 +245,18 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
           };
     return JourneyStatusView(
       key: const ValueKey('plan-progress-card'),
+      scene: published
+          ? BrandSceneKind.planReady
+          : switch (status) {
+              PlanStatus.incomplete => BrandSceneKind.needsInformation,
+              PlanStatus.queued ||
+              PlanStatus.generating ||
+              PlanStatus.ready => BrandSceneKind.planBuilding,
+              PlanStatus.needsInfo when awaitingAnswer =>
+                BrandSceneKind.needsInformation,
+              PlanStatus.needsInfo ||
+              PlanStatus.reviewing => BrandSceneKind.specialistReview,
+            },
       title: error == null ? title : 'وضعیت به‌روز نشد',
       message:
           error ??

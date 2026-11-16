@@ -2,9 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AdminIcon as Icon } from './AdminIcon'
 import { adminNav } from '../nav'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 
 export function AdminBrand() {
-  return <div className="brand"><img className="brand-logo" src="/admin-assets/logo.png" alt="" width="40" height="40" /><div>رژیم من<small>پنل مدیریت</small></div></div>
+  return <div className="brand"><BrandLogo variant="symbol" tone="white" size={40} decorative /><div><BrandLogo variant="wordmark" tone="white" size={30} /><small>پنل مدیریت</small></div></div>
 }
 
 export function AdminShell({ section, onLogout, children, actions, description }: { section: string; onLogout: () => void; children: ReactNode; actions?: ReactNode; description?: string }) {

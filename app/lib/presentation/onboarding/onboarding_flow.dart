@@ -9,7 +9,6 @@ import 'widgets/plan_theater.dart';
 import 'widgets/sleep_dial.dart';
 import 'widgets/steps.dart';
 import '../../core/format/digits.dart';
-import 'widgets/profile_preview.dart';
 import '../../core/theme/tokens.dart';
 import '../widgets/operation_status.dart';
 
@@ -146,15 +145,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     height: 1.6,
                   ),
                 ),
-              ),
-        profilePreview: c.track == null
-            ? null
-            : OnboardingProfilePreview(
-                controller: c,
-                onRevisit: (id) {
-                  forward = false;
-                  c.revisit(id);
-                },
               ),
         child: c.submitError == null
             ? _content(step)

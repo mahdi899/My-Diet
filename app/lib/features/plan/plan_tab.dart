@@ -19,6 +19,7 @@ import 'plan_shopping_page.dart';
 import 'plan_states.dart';
 import 'streak_chip.dart';
 import '../../presentation/widgets/operation_status.dart';
+import '../../presentation/widgets/brand_scene.dart';
 
 class PlanTab extends StatefulWidget {
   const PlanTab({super.key});
@@ -117,6 +118,7 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
             ),
             children: [
               if (_showPublication) ...[
+                const BrandScene(kind: BrandSceneKind.planReady, height: 110),
                 OperationStatus(
                   key: const ValueKey('plan-published'),
                   title: 'برنامه‌ات آماده است',

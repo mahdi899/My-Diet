@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -200,7 +201,7 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
         const SizedBox(height: AppSpacing.xl),
         PillButton(
           label: _nudge(next),
-          icon: Icons.chat_bubble_rounded,
+          iconWidget: const DietIcon(DietIconKind.coach, size: 22),
           variant: PillVariant.soft,
           onPressed: () => openCoach(context, prefill: _prefill(store, next)),
         ).rise(index: 6),
@@ -233,11 +234,7 @@ class _TodaySummary extends StatelessWidget {
                 value: day.calorieUnit,
                 size: 70,
                 strokeWidth: 6,
-                child: const Icon(
-                  Icons.restaurant_rounded,
-                  color: AppColors.emeraldDeep,
-                  size: 23,
-                ),
+                child: const DietIcon(DietIconKind.meal, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(

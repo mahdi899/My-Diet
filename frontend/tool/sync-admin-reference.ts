@@ -47,7 +47,8 @@ css.walkRules(rule => {
 })
 css.walkDecls(decl => { decl.value = decl.value.replaceAll('/admin/fonts/', '/admin-assets/fonts/') })
 writeFileSync(`${frontend}src/features/admin/styles/reference.css`, css.toString())
-for (const path of ['logo.png', 'fonts/Vazirmatn-Regular.ttf', 'fonts/Vazirmatn-Bold.ttf']) {
+// Branding is owned by the approved current assets, not this legacy revision.
+for (const path of ['fonts/Vazirmatn-Regular.ttf', 'fonts/Vazirmatn-Bold.ttf']) {
   mkdirSync(`${frontend}public/admin-assets/${path.includes('/') ? 'fonts' : ''}`, { recursive: true })
   writeFileSync(`${frontend}public/admin-assets/${path}`, read(`admin/${path}`))
 }

@@ -1,10 +1,9 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/motion/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../widgets/brand_mark.dart';
 
-/// Light splash: leaf mark, a soft glow, and the «رژیم من» wordmark.
+/// Light splash with the approved mark and Persian wordmark.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -14,25 +13,40 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _glow = AnimationController(
+  late final AnimationController _entrance = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1600),
+    duration: const Duration(milliseconds: 900),
   );
+  late final Animation<double> _markReveal = _entrance.drive(
+    CurveTween(curve: const Interval(0, 0.7, curve: Curves.easeOutCubic)),
+  );
+  late final Animation<double> _markScale = Tween<double>(
+    begin: 0.92,
+    end: 1,
+  ).animate(_markReveal);
+  late final Animation<double> _wordReveal = _entrance.drive(
+    CurveTween(curve: const Interval(0.3, 1, curve: Curves.easeOutCubic)),
+  );
+  late final Animation<Offset> _wordSlide = Tween<Offset>(
+    begin: const Offset(0, 0.12),
+    end: Offset.zero,
+  ).animate(_wordReveal);
+  bool _started = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (Motion.reduced(context)) {
-      _glow.stop();
-      _glow.value = 0.35;
-    } else if (!_glow.isAnimating) {
-      _glow.repeat();
+      _entrance.value = 1;
+    } else if (!_started) {
+      _entrance.forward();
     }
+    _started = true;
   }
 
   @override
   void dispose() {
-    _glow.dispose();
+    _entrance.dispose();
     super.dispose();
   }
 
@@ -43,52 +57,49 @@ class _SplashScreenState extends State<SplashScreen>
       body: DecoratedBox(
         decoration: const BoxDecoration(gradient: AppGradients.warmBackground),
         child: Center(
-          child: AnimatedBuilder(
-            animation: _glow,
-            builder: (context, child) {
-              final pulse = 0.5 + 0.5 * math.sin(_glow.value * math.pi * 2);
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.emerald.withValues(
-                            alpha: 0.22 + 0.28 * pulse,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FadeTransition(
+                opacity: _markReveal,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      width: 208,
+                      height: 208,
+                      child: RepaintBoundary(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: RadialGradient(
+                              colors: [
+                                AppColors.emerald.withValues(alpha: 0.055),
+                                AppColors.emerald.withValues(alpha: 0.02),
+                                AppColors.emerald.withValues(alpha: 0),
+                              ],
+                              stops: const [0, 0.45, 1],
+                            ),
                           ),
-                          blurRadius: 36 + 22 * pulse,
-                          spreadRadius: 2 + 6 * pulse,
                         ),
-                        BoxShadow(
-                          color: AppColors.lime.withValues(
-                            alpha: 0.18 + 0.2 * pulse,
-                          ),
-                          blurRadius: 18,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                      ),
                     ),
-                    child: Transform.scale(
-                      scale: 0.96 + 0.04 * pulse,
-                      child: child,
+                    ScaleTransition(
+                      scale: _markScale,
+                      child: const SabzineMark(size: 112),
                     ),
-                  ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'رژیم من',
-                    style: TextStyle(
-                      color: AppColors.emeraldDeep,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              );
-            },
-            child: const SabzineMark(size: 112),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              FadeTransition(
+                opacity: _wordReveal,
+                child: SlideTransition(
+                  position: _wordSlide,
+                  child: const BrandWordmark(width: 152),
+                ),
+              ),
+            ],
           ),
         ),
       ),

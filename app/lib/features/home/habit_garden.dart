@@ -1,3 +1,4 @@
+import '../../core/icons/diet_icon.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/motion/motion.dart';
@@ -5,6 +6,7 @@ import '../../core/theme/tokens.dart';
 import '../../data/day.dart';
 import '../../presentation/session/customer_scope.dart';
 import '../../presentation/widgets/kit/kit.dart';
+import '../../presentation/widgets/brand_scene.dart';
 import 'water_log.dart';
 
 class HabitGarden extends StatefulWidget {
@@ -114,11 +116,7 @@ class _HabitGardenState extends State<HabitGarden> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.spa_outlined,
-                color: AppColors.emeraldDeep,
-                size: 22,
-              ),
+              const DietIcon(DietIconKind.progress, size: 26),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -189,6 +187,8 @@ class _HabitGardenState extends State<HabitGarden> {
             },
           ),
           const SizedBox(height: 12),
+          if (!active && !_failed)
+            const BrandScene(kind: BrandSceneKind.habits, height: 110),
           DecoratedBox(
             decoration: BoxDecoration(
               color: active ? AppColors.mint : AppColors.surfaceWarm,
