@@ -29,6 +29,6 @@ void main() {
   });
 
   test('formatToman uses Persian digits and separators', () {
-    expect(formatToman(1000000), '۱,۰۰۰,۰۰۰ تومان');
+    expect(formatToman(1000000), '۱٬۰۰۰٬۰۰۰ تومان');
   });
 }

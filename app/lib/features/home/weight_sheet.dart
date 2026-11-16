@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/motion/motion.dart';
-import '../../core/theme/tokens.dart';
+import '../../core/theme/theme.dart';
+import '../../domain/common/number_format.dart';
+import '../../domain/common/day.dart';
 import '../../data/demo_store.dart';
 import '../../presentation/widgets/kit/pill_button.dart';
-import '../plan/goal_math.dart';
 
 Future<void> showWeightSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -32,9 +33,7 @@ class _WeightSheetState extends State<_WeightSheet> {
     super.didChangeDependencies();
     if (_weight != null) return;
     final current = DemoScope.of(context).latestWeight;
-    _weight = TextEditingController(
-      text: current.toStringAsFixed(fractionDigits(current)),
-    );
+    _weight = TextEditingController(text: persianNumber(current));
   }
 
   @override
@@ -64,37 +63,50 @@ class _WeightSheetState extends State<_WeightSheet> {
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final field = _weight;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 4, 20, bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('ثبت وزن', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          if (field != null)
-            TextField(
-              controller: field,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'کیلوگرم',
-                suffixText: 'کیلو',
-              ),
-              onSubmitted: (_) => _save(),
-            ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 4, 20, bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('ثبت وزن', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              _error!,
-              style: const TextStyle(color: AppColors.danger, fontSize: 12),
+              persianDate(DemoScope.of(context).today),
+              style: AppTypography.supporting,
             ),
+            const SizedBox(height: AppSpacing.xl),
+            if (field != null)
+              TextField(
+                controller: field,
+                autofocus: true,
+                textDirection: TextDirection.ltr,
+                textAlign: TextAlign.center,
+                style: AppTypography.number,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'وزن امروز',
+                  suffixText: 'کیلوگرم',
+                  suffixStyle: AppTypography.supporting,
+                  errorText: _error,
+                ),
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+                onSubmitted: (_) => _save(),
+              ),
+            const SizedBox(height: AppSpacing.md),
+            const Text(
+              'وزن را به کیلوگرم بنویس؛ مثلاً ۶۸٫۵',
+              style: AppTypography.supporting,
+            ),
+            const SizedBox(height: AppSpacing.section),
+            PillButton(label: 'ثبت', onPressed: field == null ? null : _save),
           ],
-          const SizedBox(height: 16),
-          PillButton(label: 'ثبت', onPressed: field == null ? null : _save),
-        ],
+        ),
       ),
     );
   }

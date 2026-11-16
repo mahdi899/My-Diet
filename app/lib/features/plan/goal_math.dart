@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../../domain/common/day.dart';
 import '../../domain/common/digits.dart';
+import '../../domain/common/number_format.dart';
 import '../../domain/plan/meal.dart';
 import '../../domain/plan/nutrition_source.dart';
 import '../../domain/onboarding/questionnaire.dart';
@@ -76,12 +77,7 @@ double unitRatio(num eaten, num planned) {
 int fractionDigits(double value) =>
     (value - value.roundToDouble()).abs() < 0.05 ? 0 : 1;
 
-String kilos(double value) {
-  final text = fractionDigits(value) == 0
-      ? value.round().toString()
-      : value.toStringAsFixed(1);
-  return fa(text.replaceAll('.', '٫'));
-}
+String kilos(double value) => persianNumber(value);
 
 String etaLabel(int? days) {
   if (days == null) return '';
@@ -237,11 +233,7 @@ List<String> recipeSteps(String instructions) {
 
 String ingredientLine(MealIngredient item) {
   if (item.quantity == null) return item.name;
-  final quantity = item.quantity!;
-  final text = quantity == quantity.roundToDouble()
-      ? quantity.toInt().toString()
-      : quantity.toString();
-  return '${item.name}  ${fa(text)} ${item.unit}';
+  return '${item.name}  ${persianQuantity(item.quantity!, item.unit)}';
 }
 
 DateTime weekDate(DateTime start, int index) =>

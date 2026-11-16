@@ -41,26 +41,8 @@ class Ticker extends StatelessWidget {
   final TextAlign? textAlign;
 
   /// Formats [v] like the ticker does (Persian digits, optional grouping).
-  static String format(
-    num v, {
-    int fractionDigits = 0,
-    bool grouped = false,
-  }) {
-    final fixed = v.toStringAsFixed(fractionDigits);
-    final neg = fixed.startsWith('-');
-    final body = neg ? fixed.substring(1) : fixed;
-    final parts = body.split('.');
-    var whole = parts[0];
-    if (grouped && whole.length > 3) {
-      final b = StringBuffer();
-      for (var i = 0; i < whole.length; i++) {
-        if (i > 0 && (whole.length - i) % 3 == 0) b.write('٬');
-        b.write(whole[i]);
-      }
-      whole = b.toString();
-    }
-    final out = parts.length > 1 ? '$whole٫${parts[1]}' : whole;
-    return fa('${neg ? '-' : ''}$out');
+  static String format(num v, {int fractionDigits = 0, bool grouped = false}) {
+    return persianNumber(v, fractionDigits: fractionDigits, grouped: grouped);
   }
 
   @override

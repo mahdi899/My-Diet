@@ -6,97 +6,6 @@ import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
 import 'blur_ink.dart';
 
-Future<void> _enterNumber(
-  BuildContext context, {
-  required double value,
-  required double min,
-  required double max,
-  required double step,
-  required String unit,
-  required ValueChanged<double> onChanged,
-}) async {
-  final result = await showDialog<double>(
-    context: context,
-    builder: (_) => _NumberEntryDialog(
-      value: value,
-      min: min,
-      max: max,
-      step: step,
-      unit: unit,
-    ),
-  );
-  if (context.mounted && result != null) onChanged(result);
-}
-
-class _NumberEntryDialog extends StatefulWidget {
-  const _NumberEntryDialog({
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.step,
-    required this.unit,
-  });
-  final double value, min, max, step;
-  final String unit;
-  @override
-  State<_NumberEntryDialog> createState() => _NumberEntryDialogState();
-}
-
-class _NumberEntryDialogState extends State<_NumberEntryDialog> {
-  late final _input = TextEditingController(text: faNumber(widget.value));
-  String? _error;
-  @override
-  void dispose() {
-    _input.dispose();
-    super.dispose();
-  }
-
-  void _confirm() {
-    final number = double.tryParse(
-      latin(_input.text.trim()).replaceAll('٫', '.'),
-    );
-    if (number == null ||
-        !number.isFinite ||
-        number < widget.min ||
-        number > widget.max) {
-      setState(
-        () => _error =
-            'عددی بین ${faNumber(widget.min)} تا ${faNumber(widget.max)} وارد کن',
-      );
-      return;
-    }
-    final normalized =
-        (widget.min +
-                ((number - widget.min) / widget.step).round() * widget.step)
-            .clamp(widget.min, widget.max)
-            .toDouble();
-    Navigator.pop(context, double.parse(normalized.toStringAsFixed(4)));
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('ورود دقیق مقدار'),
-    content: TextField(
-      controller: _input,
-      autofocus: true,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      onSubmitted: (_) => _confirm(),
-      decoration: InputDecoration(
-        labelText: widget.unit.isEmpty ? 'مقدار' : widget.unit,
-        helperText: 'بین ${faNumber(widget.min)} تا ${faNumber(widget.max)}',
-        errorText: _error,
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('انصراف'),
-      ),
-      FilledButton(onPressed: _confirm, child: const Text('تأیید مقدار')),
-    ],
-  );
-}
-
 /// A big number with round +/- buttons (press and hold to run) and a slider underneath.
 class BigNumberPicker extends StatefulWidget {
   const BigNumberPicker({
@@ -228,19 +137,6 @@ class _BigNumberPickerState extends State<BigNumberPicker> {
           ],
         ),
       ),
-      TextButton.icon(
-        onPressed: () => _enterNumber(
-          context,
-          value: widget.value,
-          min: widget.min,
-          max: widget.max,
-          step: widget.step,
-          unit: widget.unit,
-          onChanged: widget.onChanged,
-        ),
-        icon: const Icon(Icons.edit_outlined, size: 16),
-        label: const Text('خودم وارد می‌کنم'),
-      ),
     ],
   );
 }
@@ -315,20 +211,7 @@ class _RulerPickerState extends State<RulerPicker> {
       ),
       const SizedBox(height: 4),
       Text(widget.unit, style: const TextStyle(color: muted, fontSize: 16)),
-      TextButton.icon(
-        onPressed: () => _enterNumber(
-          context,
-          value: widget.value,
-          min: widget.min,
-          max: widget.max,
-          step: 1,
-          unit: widget.unit,
-          onChanged: widget.onChanged,
-        ),
-        icon: const Icon(Icons.edit_outlined, size: 16),
-        label: const Text('خودم وارد می‌کنم'),
-      ),
-      const SizedBox(height: 22),
+      const SizedBox(height: 28),
       Directionality(
         textDirection: TextDirection.ltr,
         child: SizedBox(
@@ -655,69 +538,49 @@ class _AgeWheelState extends State<AgeWheel> {
   @override
   // A wheel needs a bounded height; the onboarding page gives its body unbounded
   // height (it sits in a scroll view), so the wheel brings its own.
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      SizedBox(
-        height: 260,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              height: 62,
-              margin: const EdgeInsets.symmetric(horizontal: 60),
-              decoration: BoxDecoration(
-                color: sage,
-                borderRadius: BorderRadius.circular(18),
-              ),
-            ),
-            ListWheelScrollView.useDelegate(
-              controller: _controller,
-              itemExtent: 62,
-              diameterRatio: 2.2,
-              perspective: 0.004,
-              physics: const FixedExtentScrollPhysics(),
-              onSelectedItemChanged: (i) {
-                Haptics.tap();
-                widget.onChanged(widget.min + i);
-              },
-              childDelegate: ListWheelChildBuilderDelegate(
-                childCount: widget.max - widget.min + 1,
-                builder: (context, i) {
-                  final selected = widget.min + i == widget.value;
-                  return Center(
-                    child: AnimatedDefaultTextStyle(
-                      duration: Motion.of(context, Motion.quick),
-                      style: TextStyle(
-                        fontFamily: 'Vazirmatn',
-                        fontSize: selected ? 34 : 22,
-                        fontWeight: selected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: selected ? pine : muted,
-                      ),
-                      child: Text('${fa(widget.min + i)} سال'),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) => SizedBox(
+    height: 300,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          height: 62,
+          margin: const EdgeInsets.symmetric(horizontal: 60),
+          decoration: BoxDecoration(
+            color: sage,
+            borderRadius: BorderRadius.circular(18),
+          ),
         ),
-      ),
-      TextButton.icon(
-        onPressed: () => _enterNumber(
-          context,
-          value: widget.value.toDouble(),
-          min: widget.min.toDouble(),
-          max: widget.max.toDouble(),
-          step: 1,
-          unit: 'سال',
-          onChanged: (n) => widget.onChanged(n.round()),
+        ListWheelScrollView.useDelegate(
+          controller: _controller,
+          itemExtent: 62,
+          diameterRatio: 2.2,
+          perspective: 0.004,
+          physics: const FixedExtentScrollPhysics(),
+          onSelectedItemChanged: (i) {
+            Haptics.tap();
+            widget.onChanged(widget.min + i);
+          },
+          childDelegate: ListWheelChildBuilderDelegate(
+            childCount: widget.max - widget.min + 1,
+            builder: (context, i) {
+              final selected = widget.min + i == widget.value;
+              return Center(
+                child: AnimatedDefaultTextStyle(
+                  duration: Motion.of(context, Motion.quick),
+                  style: TextStyle(
+                    fontFamily: 'Vazirmatn',
+                    fontSize: selected ? 34 : 22,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected ? pine : muted,
+                  ),
+                  child: Text('${fa(widget.min + i)} سال'),
+                ),
+              );
+            },
+          ),
         ),
-        icon: const Icon(Icons.edit_outlined, size: 16),
-        label: const Text('خودم وارد می‌کنم'),
-      ),
-    ],
+      ],
+    ),
   );
 }

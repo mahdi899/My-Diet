@@ -12,7 +12,6 @@ import 'package:sabzine_flutter/features/home/home_tab.dart';
 import 'package:sabzine_flutter/features/plan/meal_detail_page.dart';
 import 'package:sabzine_flutter/presentation/onboarding/controller.dart';
 import 'package:sabzine_flutter/presentation/onboarding/onboarding_flow.dart';
-import 'package:sabzine_flutter/presentation/onboarding/widgets/number_inputs.dart';
 
 import 'onboarding/onboarding_test.dart' show FakeOnboarding, specJson;
 
@@ -91,40 +90,6 @@ void main() {
       expect(c.revisit('insulin'), isTrue);
       c.setAnswer('conditions', ['none']);
       expect(c.revisit('insulin'), isFalse);
-    },
-  );
-
-  testWidgets(
-    'manual numeric entry rejects invalid values and accepts Persian decimals',
-    (tester) async {
-      double value = 72;
-      await tester.pumpWidget(
-        host(
-          StatefulBuilder(
-            builder: (context, update) => BigNumberPicker(
-              value: value,
-              min: 40,
-              max: 160,
-              step: .5,
-              unit: 'کیلوگرم',
-              onChanged: (n) => update(() => value = n),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('خودم وارد می‌کنم'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '۲۰۰');
-      await tester.tap(find.text('تأیید مقدار'));
-      await tester.pumpAndSettle();
-      expect(value, 72);
-      expect(find.textContaining('عددی بین'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '۷۲٫۵');
-      await tester.tap(find.text('تأیید مقدار'));
-      await tester.pumpAndSettle();
-      expect(value, 72.5);
-      expect(find.byType(AlertDialog), findsNothing);
-      expect(tester.takeException(), isNull);
     },
   );
 

@@ -23,12 +23,18 @@ abstract final class AppColors {
   // Text
   static const ink = Color(0xFF1F2D26);
   static const inkSoft = Color(0xFF3E4F45);
-  static const muted = Color(0xFF7B8A7F);
+  static const muted = Color(0xFF64756A);
   static const faint = Color(0xFFB3BDB2);
 
   // Semantic
   static const danger = Color(0xFFD64545);
   static const success = emerald;
+  static const disabled = Color(0xFFE5E9E2);
+  static const onDisabled = Color(0xFF64756A);
+  static const dangerSurface = Color(0xFFFFEEEE);
+  static const warningSurface = Color(0xFFFFF3D8);
+  static const warningInk = Color(0xFF865714);
+  static const selectedLine = Color(0xFFBEDDCA);
 }
 
 abstract final class AppRadius {
@@ -38,6 +44,7 @@ abstract final class AppRadius {
   static const double xl = 28;
   static const double xxl = 32;
   static const double pill = 999;
+  static const double control = md;
 
   static BorderRadius circular(double r) => BorderRadius.circular(r);
   static const card = BorderRadius.all(Radius.circular(xl));
@@ -97,4 +104,8 @@ abstract final class AppGradients {
 abstract final class AppSpacing {
   static const double xs = 4, sm = 8, md = 12, lg = 16, xl = 20, xxl = 28;
   static const page = EdgeInsets.symmetric(horizontal: 20);
+  static const card = EdgeInsets.all(20);
+  static const double section = 24;
+  static const double controlHeight = 54;
+  static const double touchTarget = 48;
 }

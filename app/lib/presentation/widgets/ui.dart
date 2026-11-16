@@ -30,10 +30,10 @@ class PageBody extends StatelessWidget {
   const PageBody({
     super.key,
     required this.children,
-    this.padding = 20,
+    this.padding = AppSpacing.xl,
     this.controller,
     this.scrollable = true,
-    this.spacing = 18,
+    this.spacing = AppSpacing.lg,
   });
   final List<Widget> children;
   final double padding;
@@ -68,9 +68,9 @@ class Surface extends StatelessWidget {
     super.key,
     required this.child,
     this.color = Colors.white,
-    this.padding = 20,
+    this.padding = AppSpacing.xl,
     this.onTap,
-    this.radius = 22,
+    this.radius = AppRadius.xl,
   });
   final double radius;
   final Widget child;
@@ -106,7 +106,10 @@ class Heading extends StatelessWidget {
           children: [
             Text(title, style: Theme.of(context).textTheme.titleLarge),
             if (subtitle != null)
-              Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(subtitle!, style: AppTypography.supporting),
+              ),
           ],
         ),
       ),
@@ -124,7 +127,7 @@ class Tag extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
       color: warning
-          ? const Color(0xFFFFF3D8)
+          ? AppColors.warningSurface
           : gray
           ? const Color(0xFFF0F2EA)
           : sage,
@@ -133,7 +136,7 @@ class Tag extends StatelessWidget {
     child: Text(
       text,
       style: TextStyle(
-        fontSize: 11,
+        fontSize: 12,
         color: warning
             ? amber
             : gray
@@ -170,7 +173,7 @@ class Notice extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 14,
               color: warning ? amber : pine,
               height: 1.9,
             ),
@@ -234,12 +237,7 @@ class InfoRows extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    e.key,
-                    style: const TextStyle(color: muted, fontSize: 12),
-                  ),
-                ),
+                Expanded(child: Text(e.key, style: AppTypography.supporting)),
                 const SizedBox(width: 12),
                 Flexible(
                   child: Text(
@@ -356,7 +354,7 @@ class MenuRow extends StatelessWidget {
     title: Text(title, style: const TextStyle(fontSize: 14)),
     subtitle: subtitle == null
         ? null
-        : Text(subtitle!, style: const TextStyle(fontSize: 11, color: muted)),
+        : Text(subtitle!, style: const TextStyle(fontSize: 12, color: muted)),
     trailing:
         trailing ??
         const Icon(
@@ -388,8 +386,8 @@ class ChoiceCard extends StatelessWidget {
     child: Material(
       color: selected ? sage : Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: selected ? pine : const Color(0xFFE0E7D7)),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        side: BorderSide(color: selected ? pine : AppColors.line),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -637,7 +635,7 @@ class RequestTile extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 7),
-        Text(request.goal, style: const TextStyle(color: muted, fontSize: 12)),
+        Text(request.goal, style: AppTypography.supporting),
       ],
     ),
   );

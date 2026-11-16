@@ -186,7 +186,7 @@ class _WeighInViewState extends State<WeighInView> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Text(
-                  fa(_value.toStringAsFixed(1)),
+                  persianNumber(_value),
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -374,7 +374,7 @@ class WeeklyReviewView extends StatelessWidget {
           const SizedBox(height: 8),
           Text('پایبندی ${fa((adherence * 100).round())}٪'),
           Text(
-            'تغییر وزن ${fa(delta.toStringAsFixed(1))} کیلو',
+            'تغییر وزن ${persianNumber(delta)} کیلو',
             style: const TextStyle(height: 1.7),
           ),
           Text(

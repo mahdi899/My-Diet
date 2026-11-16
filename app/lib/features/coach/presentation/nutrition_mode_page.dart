@@ -1,3 +1,4 @@
+import '../../../domain/common/number_format.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/motion/motion.dart';
@@ -130,7 +131,9 @@ class _NutritionModePageState extends State<NutritionModePage> {
       if (!mounted) return;
       if (failure != null) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure)));
         return;
       }
       Navigator.of(context).pop();
@@ -207,10 +210,11 @@ class _NutritionModePageState extends State<NutritionModePage> {
                             height: 210,
                             width: double.infinity,
                             fit: BoxFit.cover,
-                            cacheWidth: (MediaQuery.sizeOf(context).width *
-                                    MediaQuery.devicePixelRatioOf(context))
-                                .ceil()
-                                .clamp(64, 900),
+                            cacheWidth:
+                                (MediaQuery.sizeOf(context).width *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .ceil()
+                                    .clamp(64, 900),
                             gaplessPlayback: true,
                           ),
                   ),
@@ -310,7 +314,7 @@ class _RowEditor extends StatelessWidget {
                 onChanged((row.quantity - row.step).clamp(row.step, 5000)),
             icon: const Icon(Icons.remove_rounded),
           ),
-          Text(fa(row.quantity.toStringAsFixed(row.quantity % 1 == 0 ? 0 : 1))),
+          Text(persianNumber(row.quantity)),
           Text(' $unit', style: const TextStyle(color: AppColors.muted)),
           IconButton(
             onPressed: () =>
