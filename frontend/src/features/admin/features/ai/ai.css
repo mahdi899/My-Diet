@@ -7,6 +7,12 @@
 .admin-reference .ai-card-heading > button, .admin-reference .ai-inline-actions button { min-height: 40px; padding: 7px 12px; font-size: 11px; }
 .admin-reference .ai-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; min-height: 80px; padding: 14px 24px; }
 .admin-reference .ai-row + .ai-row, .admin-reference .ai-member-row { border-top: 1px solid var(--line); }
+.admin-reference .ai-provider + .ai-provider { border-top: 1px solid var(--line); }
+.admin-reference .ai-provider .ai-inline-actions button { min-height: 44px; }
+.admin-reference .ai-test-result { display: grid; gap: 8px; margin: 0 24px 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--users-soft); font-size: 13px; overflow-wrap: anywhere; }
+.admin-reference .ai-test-result small { color: var(--muted); }
+.admin-reference .ai-test-result[data-tone="good"] { border-inline-start: 3px solid #365c38; }
+.admin-reference .ai-test-result[data-tone="bad"] { border-inline-start: 3px solid #9b322d; color: #9b322d; }
 .admin-reference .ai-row-info { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
 .admin-reference .ai-member-row > .ai-row-info:nth-child(2) { flex: 1 1 260px; }
 .admin-reference .ai-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

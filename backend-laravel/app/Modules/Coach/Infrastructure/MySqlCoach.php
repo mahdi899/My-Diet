@@ -7,6 +7,7 @@ use App\Modules\Coach\Application\CoachContextBuilder;
 use App\Modules\Coach\Application\CoachGateway;
 use App\Modules\Coach\Application\CoachIntentParser;
 use App\Modules\Coach\Application\CoachModel;
+use App\Modules\Coach\Application\FollowUpQuestions;
 use App\Modules\Coach\Domain\CoachSafety;
 use App\Modules\Messaging\Domain\MediaSignature;
 use App\Modules\Plans\Domain\CivilDates;
@@ -114,7 +115,7 @@ final class MySqlCoach implements CoachGateway
 
     public function followUps(string $user): array
     {
-        return app(\App\Modules\Coach\Application\FollowUpQuestions::class)->forUser($user);
+        return app(FollowUpQuestions::class)->forUser($user);
     }
 
     public function confirmPhoto(string $user, string $entryId): array
@@ -156,7 +157,7 @@ final class MySqlCoach implements CoachGateway
         if ($thread->day_brief_date === $today) {
             return ['date' => $today, 'created' => false];
         }
-        $follow = app(\App\Modules\Coach\Application\FollowUpQuestions::class)->forUser($user);
+        $follow = app(FollowUpQuestions::class)->forUser($user);
         $brief = 'خلاصهٔ امروز آماده است';
         if ($follow !== []) {
             $brief .= "\n".$follow[0]['text'];
@@ -239,19 +240,19 @@ final class MySqlCoach implements CoachGateway
             }
 
             $this->db->table('coach_messages')->insert([
-                'id'           => Crypto::uuid(),
-                'thread_id'    => $thread->id,
-                'user_id'      => $user,
-                'role'         => 'assistant',
-                'type'         => 'proactive',
-                'fallback_text'=> $message['text'],
-                'payload'      => json_encode(['proactive_kind' => $message['kind']]),
+                'id' => Crypto::uuid(),
+                'thread_id' => $thread->id,
+                'user_id' => $user,
+                'role' => 'assistant',
+                'type' => 'proactive',
+                'fallback_text' => $message['text'],
+                'payload' => json_encode(['proactive_kind' => $message['kind']]),
             ]);
             $this->db->table('coach_engagement')->insert([
-                'id'         => Crypto::uuid(),
-                'user_id'    => $user,
-                'kind'       => $message['kind'],
-                'day'        => $today,
+                'id' => Crypto::uuid(),
+                'user_id' => $user,
+                'kind' => $message['kind'],
+                'day' => $today,
                 'dedupe_key' => $dedupeKey,
             ]);
             $this->db->table('notifications')->insert([
@@ -281,20 +282,20 @@ final class MySqlCoach implements CoachGateway
                 ->where('m.meal_type', 'lunch')
                 ->where('l.eaten', 1)
                 ->exists();
-            if (!$lunchLogged) {
+            if (! $lunchLogged) {
                 return ['kind' => 'lunch_reminder', 'text' => 'هنوز ناهارت رو ثبت نکردی 🍽️ فرصت کردی غذا بخوری؟'];
             }
         }
 
         // 2. Evening weight reminder — if no weight entry this week (Sunday 21:00)
         if ($tehranHour === 21) {
-            $dayOfWeek = (int)(new \DateTimeImmutable($today))->format('w'); // 0=Sunday
+            $dayOfWeek = (int) (new \DateTimeImmutable($today))->format('w'); // 0=Sunday
             if ($dayOfWeek === 0) {
                 $hasWeight = $this->db->table('weight_entries')
                     ->where('user_id', $user)
                     ->where('civil_date', '>=', CivilDates::add($today, -7))
                     ->exists();
-                if (!$hasWeight) {
+                if (! $hasWeight) {
                     return ['kind' => 'weight_reminder', 'text' => 'این هفته وزنت رو ثبت نکردی ⚖️ می‌خوای روندت رو بررسی کنیم؟'];
                 }
             }
@@ -302,7 +303,7 @@ final class MySqlCoach implements CoachGateway
 
         // 3. Inactivity message — no interaction for 3+ days
         if ($lastMessageAt !== null) {
-            $daysSinceLastMessage = (int)((new \DateTimeImmutable($today))->diff(new \DateTimeImmutable(substr($lastMessageAt, 0, 10))))->days;
+            $daysSinceLastMessage = (int) ((new \DateTimeImmutable($today))->diff(new \DateTimeImmutable(substr($lastMessageAt, 0, 10))))->days;
             if ($daysSinceLastMessage >= 3 && $tehranHour === 10) {
                 return ['kind' => 'inactivity', 'text' => 'دلتنگت شدم! 😊 همه چیز خوبه؟ بیا ببینیم این هفته چطور پیش رفتی.'];
             }
@@ -310,7 +311,7 @@ final class MySqlCoach implements CoachGateway
 
         // 4. Week summary on Saturday morning
         if ($tehranHour === 9) {
-            $dayOfWeek = (int)(new \DateTimeImmutable($today))->format('w');
+            $dayOfWeek = (int) (new \DateTimeImmutable($today))->format('w');
             if ($dayOfWeek === 6) { // Saturday = start of Persian week
                 $hasPlan = $this->db->table('active_plan_versions')->where('user_id', $user)->exists();
                 if ($hasPlan) {
@@ -422,7 +423,7 @@ final class MySqlCoach implements CoachGateway
 
     private function usage(string $user, int $cost, int $turns, int $vision): void
     {
-        $this->db->statement('insert into coach_usage (user_id,day,chat_turns,vision_calls,cost_micros) values (?,?,?,?,?) as incoming on duplicate key update chat_turns=coach_usage.chat_turns+incoming.chat_turns, vision_calls=coach_usage.vision_calls+incoming.vision_calls, cost_micros=coach_usage.cost_micros+incoming.cost_micros', [$user, CivilDates::today(), $turns, $vision, $cost]);
+        $this->db->statement('insert into coach_usage (user_id,day,chat_turns,vision_calls,cost_micros) values (?,?,?,?,?) on duplicate key update chat_turns=coach_usage.chat_turns+VALUES(chat_turns), vision_calls=coach_usage.vision_calls+VALUES(vision_calls), cost_micros=coach_usage.cost_micros+VALUES(cost_micros)', [$user, CivilDates::today(), $turns, $vision, $cost]);
     }
 
     private function message(object $row): array

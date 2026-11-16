@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { AiBadge, AiCard, AiDialog, AiForm, AiLoad, AiNote, aiApi, date, id, itemRows, num, str, useAiData, versionTitles, type Row } from './AiUi'
 
@@ -8,6 +9,15 @@ const demo = { items: Object.keys(versionTitles).map(key => ({
   userTemplate: '{{profile}}',
 })) }
 type PromptModal = { kind: 'create' | 'view' | 'activate'; key: string; version?: Row }
+
+function PromptTest({ promptKey, preview }: { promptKey: string; preview: boolean }) {
+  const test = useMutation({ mutationFn: () => aiApi('prompts/' + id(promptKey) + '/test', 'POST') })
+  return <div className="ai-feedback" aria-live="polite">
+    <button type="button" className="secondary" disabled={preview || test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'در حال تست واقعی…' : 'تست پرامپت با داده آزمایشی'}</button>
+    {test.isError && <p role="alert">{test.error.message}</p>}
+    {test.data && <><p>پاسخ معتبر از <bdi>{str(test.data.model)}</bdi> دریافت شد.</p><p dir="auto">{str(test.data.answer)}</p></>}
+  </div>
+}
 
 export function AiPrompts({ preview }: { preview: boolean }) {
   const query = useAiData('prompts', demo, preview)
@@ -25,6 +35,7 @@ export function AiPrompts({ preview }: { preview: boolean }) {
       return <AiCard key={key} title={title} description={active ? `فعال: نسخهٔ ${num(active.version)}` : 'نسخهٔ فعالی وجود ندارد.'}
         action={<button type="button" onClick={() => setModal({ kind: 'create', key, version: active })}><Icon name="plus" />نسخهٔ جدید</button>}>
         {!versions.length && <p className="ai-feedback">هنوز نسخه‌ای ثبت نشده است.</p>}
+        {active && <PromptTest promptKey={key} preview={preview} />}
         {versions.map(version => <div className="ai-row" key={str(version.version)}>
           <div className="ai-row-info"><strong>نسخهٔ {num(version.version)}</strong><small>{date(version.createdAt)}{version.notes ? ' · ' + str(version.notes) : ''}</small></div>
           <div className="ai-inline-actions"><AiBadge tone={version.status === 'active' ? 'good' : 'neutral'}>{version.status === 'active' ? 'فعال' : version.status === 'draft' ? 'پیش‌نویس' : 'بازنشسته'}</AiBadge>
@@ -34,18 +45,15 @@ export function AiPrompts({ preview }: { preview: boolean }) {
         </div>)}
       </AiCard>
     })}
-    {modal?.kind === 'view' && <AiDialog title={`نسخهٔ ${num(modal.version?.version)} · ${versionTitles[modal.key]}`} close={close}>
-      <div className="ai-form"><h3>پرامپت سیستم</h3><pre>{str(modal.version?.systemPrompt)}</pre><h3>قالب پیام کاربر</h3><pre dir="ltr">{str(modal.version?.userTemplate)}</pre></div>
-    </AiDialog>}
-    {modal?.kind === 'create' && <AiDialog title={`نسخهٔ جدید · ${versionTitles[modal.key]}`} close={close}>
-      <AiForm preview={preview} close={close} label="ذخیره به‌عنوان پیش‌نویس" submit={async form => {
+    {(modal?.kind === 'create' || modal?.kind === 'view') && <AiDialog title={modal.kind === 'view' ? `ویرایش نسخهٔ ${num(modal.version?.version)} · ${versionTitles[modal.key]}` : `نسخهٔ جدید · ${versionTitles[modal.key]}`} close={close}>
+      <AiForm preview={preview} close={close} label="ذخیره به‌عنوان نسخهٔ جدید" submit={async form => {
         await aiApi('prompts/' + id(modal.key), 'POST', { systemPrompt: form.get('systemPrompt'), userTemplate: form.get('userTemplate'), notes: form.get('notes') })
         saved('نسخهٔ جدید ذخیره شد.')
       }}>
         <label>پرامپت سیستم<textarea name="systemPrompt" rows={10} defaultValue={str(modal.version?.systemPrompt)} required /></label>
         <label>قالب پیام کاربر<textarea name="userTemplate" rows={8} dir="ltr" defaultValue={str(modal.version?.userTemplate)} required />
           <small>جاگذارهایی مانند {'{{profile}}'} را حفظ کنید.</small></label>
-        <label>یادداشت تغییر<input name="notes" /></label>
+        <label>یادداشت تغییر<input name="notes" defaultValue={modal.kind === 'view' ? str(modal.version?.notes) : ''} /></label>
         <AiNote>نسخهٔ تازه تا زمان فعال‌سازی در تولید پیش‌نویس استفاده نمی‌شود.</AiNote>
       </AiForm>
     </AiDialog>}

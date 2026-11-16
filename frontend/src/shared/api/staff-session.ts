@@ -57,7 +57,8 @@ export function createStaffSession(role: StaffRole, onExpired: () => void = () =
 
   const request = async <T>(path: string, method = 'GET', body?: unknown, withAuth = true, headers?: Record<string, string>): Promise<T> => {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 15000)
+    const isAiTest = method === 'POST' && /^admin\/ai\/(?:providers|pools|prompts)\/[^/]+\/test$/.test(path)
+    const timer = setTimeout(() => controller.abort(), isAiTest ? 75000 : 15000)
     try {
       const response = await fetch('/v1/' + path, {
         method,

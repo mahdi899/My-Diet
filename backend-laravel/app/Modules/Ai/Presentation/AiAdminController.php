@@ -103,6 +103,11 @@ final class AiAdminController
         return $this->ai->prompts(is_string($key) && $key !== '' ? $key : null);
     }
 
+    public function testPrompt(string $key): array
+    {
+        return $this->ai->testPrompt($key);
+    }
+
     public function createPrompt(Request $request, string $key): JsonResponse
     {
         return response()->json($this->ai->createPrompt($this->actor($request), $key, $this->object($request)), 201);

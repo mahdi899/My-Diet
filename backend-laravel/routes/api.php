@@ -397,6 +397,7 @@ Route::prefix('v1/admin')->middleware('session:admin')->group(function (): void 
         Route::put('budget', 'setBudget');
         Route::get('generations', 'generations');
         Route::get('prompts', 'prompts');
+        Route::post('prompts/{key}/test', 'testPrompt');
         Route::post('prompts/{key}', 'createPrompt');
         Route::post('prompts/{key}/{version}/activate', 'activatePrompt');
     });

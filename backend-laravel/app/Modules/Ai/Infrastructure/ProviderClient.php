@@ -108,8 +108,8 @@ final class ProviderClient
 
         return array_map(fn ($model) => ['id' => $model['id'], 'name' => $model['name'] ?? $model['id'],
             'contextLength' => $model['context_length'] ?? null,
-            'priceInMicrosPerM' => (int) ceil((float) ($model['pricing']['prompt'] ?? 0) * 1_000_000_000_000),
-            'priceOutMicrosPerM' => (int) ceil((float) ($model['pricing']['completion'] ?? 0) * 1_000_000_000_000),
+            'priceInMicrosPerM' => (int) ceil((float) ($model['pricing']['prompt'] ?? 0) * (($model['pricing']['unit'] ?? '') === 'usd_per_million_tokens' ? 1_000_000 : 1_000_000_000_000)),
+            'priceOutMicrosPerM' => (int) ceil((float) ($model['pricing']['completion'] ?? 0) * (($model['pricing']['unit'] ?? '') === 'usd_per_million_tokens' ? 1_000_000 : 1_000_000_000_000)),
             'free' => isset($model['pricing']) && (float) ($model['pricing']['prompt'] ?? 0) === 0.0 && (float) ($model['pricing']['completion'] ?? 0) === 0.0],
             array_values(array_filter($response->json('data'), fn ($model) => is_string($model['id'] ?? null))));
     }
