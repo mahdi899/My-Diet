@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../core/motion/motion.dart';
 import '../../../domain/onboarding/spec.dart';
 import 'decor_photo.dart';
+import 'onboarding_icons.dart';
 
-/// A big tappable answer. The photo is decoration; [label] is the answer.
+/// A labeled answer using the same two-colour icon family as navigation.
 class OptionCard extends StatelessWidget {
   const OptionCard({
     super.key,
     required this.label,
     required this.selected,
     required this.onTap,
-    this.icon,
+    required this.symbol,
     this.multi = false,
     this.caption,
     this.photoKey,
@@ -19,7 +20,7 @@ class OptionCard extends StatelessWidget {
   final String? caption;
   final String? photoKey;
   final bool selected, multi;
-  final IconData? icon;
+  final DietIconKind symbol;
   final VoidCallback onTap;
 
   @override
@@ -29,7 +30,7 @@ class OptionCard extends StatelessWidget {
     photoKey: photoKey ?? label,
     selected: selected,
     onTap: onTap,
-    icon: icon,
+    symbol: symbol,
     multi: multi,
   );
 }
@@ -48,6 +49,9 @@ class SingleChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.separated(
+    shrinkWrap: true,
+    primary: false,
+    physics: const NeverScrollableScrollPhysics(),
     padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
     itemCount: question.options.length,
     separatorBuilder: (_, _) => const SizedBox(height: 10),
@@ -58,6 +62,7 @@ class SingleChoice extends StatelessWidget {
         child: OptionCard(
           label: o.label,
           photoKey: o.image ?? o.code,
+          symbol: onboardingSymbol(question.key, o.code, label: o.label),
           selected: value == o.code,
           onTap: () => onChanged(o.code),
         ),
@@ -102,6 +107,9 @@ class MultiChoice extends StatelessWidget {
     final follow = question.followUp;
     final showFollow = follow != null && value.any(follow.whenCodes.contains);
     return ListView(
+      shrinkWrap: true,
+      primary: false,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       children: [
         for (var i = 0; i < question.options.length; i++) ...[
@@ -110,6 +118,11 @@ class MultiChoice extends StatelessWidget {
             child: OptionCard(
               label: question.options[i].label,
               photoKey: question.options[i].image ?? question.options[i].code,
+              symbol: onboardingSymbol(
+                question.key,
+                question.options[i].code,
+                label: question.options[i].label,
+              ),
               multi: true,
               selected: value.contains(question.options[i].code),
               onTap: () => _toggle(question.options[i]),

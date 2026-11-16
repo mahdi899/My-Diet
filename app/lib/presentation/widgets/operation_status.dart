@@ -18,6 +18,7 @@ class OperationStatus extends StatelessWidget {
     this.onAction,
     this.busy = false,
     this.child,
+    this.iconWidget,
   });
   final String title, message;
   final IconData icon;
@@ -26,6 +27,7 @@ class OperationStatus extends StatelessWidget {
   final VoidCallback? onAction;
   final bool busy;
   final Widget? child;
+  final Widget? iconWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +54,9 @@ class OperationStatus extends StatelessWidget {
                       : AppColors.mint,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: color, size: 26),
+                child: Center(
+                  child: iconWidget ?? Icon(icon, color: color, size: 26),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(

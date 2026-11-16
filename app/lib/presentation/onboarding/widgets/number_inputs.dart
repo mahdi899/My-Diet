@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'onboarding_icons.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
@@ -70,7 +71,7 @@ class _BigNumberPickerState extends State<BigNumberPicker> {
           shape: BoxShape.circle,
           border: Border.all(color: const Color(0xFFB7C9A1)),
         ),
-        child: Icon(icon, color: pine),
+        child: OnboardingIcon(icon, color: pine),
       ),
     ),
   );
@@ -296,7 +297,7 @@ class _RulerPickerState extends State<RulerPicker> {
   );
 }
 
-/// Vertical hold-to-repeat dial for a body weight, in the question's own range.
+/// Weight dial with fine adjustments and direct entry for larger changes.
 class WeightDial extends StatelessWidget {
   const WeightDial({
     super.key,
@@ -319,6 +320,17 @@ class WeightDial extends StatelessWidget {
     if (next == value) return;
     Haptics.tap();
     onChanged(double.parse(next.toStringAsFixed(1)));
+  }
+
+  Future<void> _edit(BuildContext context) async {
+    final entered = await showDialog<double>(
+      context: context,
+      builder: (_) =>
+          _WeightEntryDialog(value: value, min: min, max: max, unit: unit),
+    );
+    if (context.mounted && entered != null && entered != value) {
+      onChanged(entered);
+    }
   }
 
   @override
@@ -344,7 +356,19 @@ class WeightDial extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(unit, style: const TextStyle(color: muted, fontSize: 18)),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          children: [
+            Text(unit, style: const TextStyle(color: muted, fontSize: 18)),
+            TextButton.icon(
+              onPressed: () => _edit(context),
+              icon: const OnboardingIcon(Icons.edit_outlined, size: 18),
+              label: const Text('وارد کردن وزن'),
+            ),
+          ],
+        ),
         if (hint != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -362,6 +386,93 @@ class WeightDial extends StatelessWidget {
       ],
     );
   }
+}
+
+class _WeightEntryDialog extends StatefulWidget {
+  const _WeightEntryDialog({
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.unit,
+  });
+
+  final double value, min, max;
+  final String unit;
+
+  @override
+  State<_WeightEntryDialog> createState() => _WeightEntryDialogState();
+}
+
+class _WeightEntryDialogState extends State<_WeightEntryDialog> {
+  final _form = GlobalKey<FormState>();
+  late final _input = TextEditingController(text: faNumber(widget.value))
+    ..selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: faNumber(widget.value).length,
+    );
+
+  String get _normalized =>
+      latin(_input.text).trim().replaceAll('/', '.').replaceAll(',', '.');
+
+  String? _validate(String? _) {
+    if (!RegExp(r'^\d+(?:\.\d)?$').hasMatch(_normalized)) {
+      return 'وزن را با حداکثر یک رقم اعشار بنویس؛ مثلاً ۷۳٫۵';
+    }
+    final value = double.tryParse(_normalized);
+    if (value == null ||
+        !value.isFinite ||
+        value < widget.min ||
+        value > widget.max) {
+      return 'وزن باید بین ${faNumber(widget.min)} و ${faNumber(widget.max)} باشد';
+    }
+    return null;
+  }
+
+  void _save() {
+    if (_form.currentState!.validate()) {
+      Navigator.of(context).pop(double.parse(_normalized));
+    }
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('وارد کردن وزن'),
+    content: Form(
+      key: _form,
+      child: TextFormField(
+        controller: _input,
+        autofocus: true,
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textInputAction: TextInputAction.done,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        decoration: InputDecoration(
+          labelText: 'وزن',
+          suffixText: widget.unit,
+          helperText:
+              'از ${faNumber(widget.min)} تا ${faNumber(widget.max)} ${widget.unit}',
+          helperMaxLines: 2,
+          errorMaxLines: 3,
+        ),
+        validator: _validate,
+        onFieldSubmitted: (_) => _save(),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('انصراف'),
+      ),
+      FilledButton(onPressed: _save, child: const Text('ثبت وزن')),
+    ],
+  );
 }
 
 class _HoldArrow extends StatefulWidget {
@@ -449,7 +560,7 @@ class _HoldArrowState extends State<_HoldArrow> {
               ),
             ],
           ),
-          child: Icon(
+          child: OnboardingIcon(
             widget.icon,
             size: 36,
             color: on ? Colors.white : AppColors.ink,

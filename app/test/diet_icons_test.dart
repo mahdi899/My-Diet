@@ -5,7 +5,7 @@ import 'package:sabzine_flutter/core/theme/theme.dart';
 import 'package:sabzine_flutter/features/shell/shell_bar.dart';
 
 void main() {
-  testWidgets('all six vector symbols render at small and large sizes in RTL', (
+  testWidgets('all vector symbols render at small and large sizes in RTL', (
     t,
   ) async {
     await t.pumpWidget(
@@ -35,7 +35,10 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    expect(find.byType(DietIcon), findsNWidgets(19));
+    expect(
+      find.byType(DietIcon),
+      findsNWidgets(DietIconKind.values.length * 3 + 1),
+    );
     expect(
       t.getSemantics(find.bySemanticsLabel('water 24.0')).label,
       'water 24.0',

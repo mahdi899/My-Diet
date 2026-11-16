@@ -3,6 +3,7 @@ import '../../../core/motion/motion.dart';
 import '../../../core/photos/photos.dart';
 import '../../../core/photos/topic_photos.dart';
 import '../../../core/theme/tokens.dart';
+import 'onboarding_icons.dart';
 
 /// Decorative photo for an option. Keyed by [id] or [label].
 /// Never required for meaning: a soft tile shows if the library is missing.
@@ -14,6 +15,8 @@ class DecorPhoto extends StatefulWidget {
     this.lifestyle = false,
     this.expert = false,
     this.icon,
+    this.symbol,
+    this.preferIcon = false,
     this.radius = 18,
     this.width,
     this.height,
@@ -28,6 +31,8 @@ class DecorPhoto extends StatefulWidget {
   /// Prefer a portrait from the expert set.
   final bool expert;
   final IconData? icon;
+  final DietIconKind? symbol;
+  final bool preferIcon;
   final double radius;
   final double? width, height;
 
@@ -41,6 +46,7 @@ class _DecorPhotoState extends State<DecorPhoto> {
   @override
   void initState() {
     super.initState();
+    if (widget.symbol != null) return;
     final ready = FoodPhotoResolver.instance;
     if (ready != null) {
       _photo = _pick(ready);
@@ -58,6 +64,8 @@ class _DecorPhotoState extends State<DecorPhoto> {
     if (oldWidget.label != widget.label ||
         oldWidget.id != widget.id ||
         oldWidget.lifestyle != widget.lifestyle ||
+        oldWidget.preferIcon != widget.preferIcon ||
+        oldWidget.symbol != widget.symbol ||
         oldWidget.expert != widget.expert) {
       final ready = FoodPhotoResolver.instance;
       _photo = ready == null ? null : _pick(ready);
@@ -65,6 +73,7 @@ class _DecorPhotoState extends State<DecorPhoto> {
   }
 
   PhotoEntry? _pick(FoodPhotoResolver resolver) {
+    if (widget.preferIcon || widget.symbol != null) return null;
     try {
       if (resolver.manifest.items.isEmpty) return null;
       final pinned = resolver.byId(
@@ -88,7 +97,7 @@ class _DecorPhotoState extends State<DecorPhoto> {
 
   @override
   Widget build(BuildContext context) {
-    final photo = _photo;
+    final photo = widget.symbol == null ? _photo : null;
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final logical = widget.width ?? widget.height ?? 96;
     final cache = (logical * dpr).ceil().clamp(48, 420);
@@ -114,18 +123,11 @@ class _DecorPhotoState extends State<DecorPhoto> {
   }
 
   Widget _fallback() => DecoratedBox(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topRight,
-        end: Alignment.bottomLeft,
-        colors: [AppColors.mint, Color(0xFFD7F0C8)],
-      ),
-    ),
+    decoration: const BoxDecoration(color: AppColors.mint),
     child: Center(
-      child: Icon(
-        widget.icon ?? Icons.spa_rounded,
-        color: AppColors.emeraldDeep,
-        size: (widget.width ?? 56) * 0.38,
+      child: DietIcon(
+        widget.symbol ?? onboardingControl(widget.icon),
+        size: (widget.width ?? widget.height ?? 56) * 0.86,
       ),
     ),
   );
@@ -189,6 +191,8 @@ class PhotoOptionCard extends StatelessWidget {
     this.subtitle,
     this.photoKey,
     this.icon,
+    this.symbol,
+    this.preferIcon = false,
     this.compact = false,
     this.multi = false,
   });
@@ -200,6 +204,8 @@ class PhotoOptionCard extends StatelessWidget {
   final bool compact;
   final bool multi;
   final IconData? icon;
+  final DietIconKind? symbol;
+  final bool preferIcon;
   final VoidCallback onTap;
 
   @override
@@ -241,6 +247,8 @@ class PhotoOptionCard extends StatelessWidget {
                 label: label,
                 id: photoKey,
                 icon: icon,
+                symbol: symbol,
+                preferIcon: preferIcon,
                 width: size,
                 height: size,
                 radius: 16,
@@ -287,10 +295,11 @@ class PhotoOptionCard extends StatelessWidget {
                     width: 1.6,
                   ),
                 ),
-                child: Icon(
-                  Icons.check_rounded,
+                child: DietIcon(
+                  DietIconKind.check,
                   size: 16,
                   color: selected ? Colors.white : Colors.transparent,
+                  monochrome: true,
                 ),
               ),
             ],

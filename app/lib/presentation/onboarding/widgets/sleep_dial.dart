@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'onboarding_icons.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/format/digits.dart';
 import '../../../core/motion/motion.dart';
@@ -156,12 +157,12 @@ class _HourStepper extends StatelessWidget {
             Haptics.tap();
             onChanged((hour + 1) % 24);
           },
-          icon: const Icon(Icons.keyboard_arrow_up_rounded),
+          icon: const OnboardingIcon(Icons.keyboard_arrow_up_rounded),
         ),
         Expanded(
           child: Column(
             children: [
-              Icon(icon, size: 18, color: amber),
+              OnboardingIcon(icon, size: 18),
               Text(
                 '${fa(hour.toString().padLeft(2, '0'))}:۰۰',
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -176,7 +177,7 @@ class _HourStepper extends StatelessWidget {
             Haptics.tap();
             onChanged((hour + 23) % 24);
           },
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          icon: const OnboardingIcon(Icons.keyboard_arrow_down_rounded),
         ),
       ],
     ),
@@ -212,16 +213,18 @@ class _DialPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 26
         ..strokeCap = StrokeCap.round
-        ..shader = const SweepGradient(
-          colors: [Color(0xFF3F5B8C), Color(0xFF7C9C58)],
-        ).createShader(rect),
+        ..color = AppColors.emerald,
     );
     final label = TextPainter(textDirection: TextDirection.rtl);
     for (final h in [0, 6, 12, 18]) {
       label
         ..text = TextSpan(
           text: fa(h),
-          style: const TextStyle(color: muted, fontSize: 11),
+          style: const TextStyle(
+            fontFamily: 'Vazirmatn',
+            color: muted,
+            fontSize: 11,
+          ),
         )
         ..layout();
       final p = c + Offset(math.cos(_a(h)), math.sin(_a(h))) * (r + 28);
@@ -231,17 +234,15 @@ class _DialPainter extends CustomPainter {
       canvas,
       c + Offset(math.cos(_a(sleep)), math.sin(_a(sleep))) * r,
       Icons.nightlight_round,
-      const Color(0xFF3F5B8C),
     );
     _knob(
       canvas,
       c + Offset(math.cos(_a(wake)), math.sin(_a(wake))) * r,
       Icons.wb_sunny_rounded,
-      amber,
     );
   }
 
-  void _knob(Canvas canvas, Offset at, IconData icon, Color color) {
+  void _knob(Canvas canvas, Offset at, IconData icon) {
     canvas.drawCircle(at, 17, Paint()..color = Colors.white);
     canvas.drawCircle(
       at,
@@ -249,20 +250,13 @@ class _DialPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
-        ..color = color,
+        ..color = AppColors.emeraldDark,
     );
-    final tp = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(
-          fontFamily: icon.fontFamily,
-          fontSize: 18,
-          color: color,
-        ),
-      ),
-      textDirection: TextDirection.rtl,
-    )..layout();
-    tp.paint(canvas, at - Offset(tp.width / 2, tp.height / 2));
+    paintDietIcon(
+      canvas,
+      Rect.fromCenter(center: at, width: 20, height: 20),
+      onboardingControl(icon),
+    );
   }
 
   @override
