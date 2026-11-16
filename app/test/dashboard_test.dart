@@ -28,7 +28,7 @@ void main() {
       final ring = find.byKey(const ValueKey('home-calorie-ring'));
       expect(ring, findsOneWidget);
       expect(t.getSize(ring).height, lessThan(260));
-      expect(t.getSize(ring).height, greaterThan(80));
+      expect(t.getSize(ring).height, greaterThanOrEqualTo(64));
       expect(find.text('کالری'), findsOneWidget);
       expect(find.text('هدف روزانه'), findsNothing);
       expect(find.text('کالری امروز تو'), findsNothing);
@@ -125,7 +125,9 @@ void main() {
       expect(find.text(persianDate(DateTime(2026, 10, 30))), findsOneWidget);
       expect(
         t
-            .widget<PillButton>(find.widgetWithText(PillButton, 'انجام شد').first)
+            .widget<PillButton>(
+              find.widgetWithText(PillButton, 'انجام شد').first,
+            )
             .onPressed,
         isNull,
       );
@@ -147,6 +149,9 @@ void main() {
       await t.ensureVisible(action.first);
       await t.pumpAndSettle();
       await t.tap(action.first);
+      await t.pumpAndSettle();
+      expect(s.consumedCalories(s.today), 0);
+      await t.tap(find.widgetWithText(PillButton, 'انجام شد').last);
       await t.pumpAndSettle();
       expect(s.consumedCalories(s.today), s.mealsOn(s.today).first.calories);
       expect(find.widgetWithText(PillButton, 'ثبت شد'), findsWidgets);

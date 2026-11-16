@@ -58,6 +58,23 @@ class _CoachMessageListState extends State<CoachMessageList> {
   Widget build(BuildContext context) {
     final controller = widget.controller;
     final rows = <Widget>[];
+    if (controller.hasMore) {
+      rows.add(
+        Center(
+          child: TextButton(
+            key: const ValueKey('coach-load-older'),
+            onPressed: controller.loadingMore || controller.busy
+                ? null
+                : controller.loadMore,
+            child: Text(
+              controller.loadingMore
+                  ? 'در حال دریافت پیام‌ها…'
+                  : 'پیام‌های قبلی',
+            ),
+          ),
+        ),
+      );
+    }
     DateTime? day;
     for (final message in controller.messages) {
       if (message.id == widget.pinnedBriefId) continue;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/presentation/screens/splash.dart';
 import 'package:sabzine_flutter/presentation/screens/entry.dart';
@@ -55,6 +56,19 @@ Future<void> choose(WidgetTester tester, String key, String value) async {
   await tester.ensureVisible(item);
   await tester.pumpAndSettle();
   await tester.tap(item);
+  await tester.pumpAndSettle();
+}
+
+Future<void> openPlanPrices(WidgetTester tester) async {
+  if (find.text('پلن‌ها و تعرفه‌ها').evaluate().isNotEmpty) return;
+  await tester.tap(find.byKey(const ValueKey('tab-coach')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('coach-avatar')));
+  await tester.pumpAndSettle();
+  final plans = find.text('پلن‌ها و اشتراک من');
+  await tester.ensureVisible(plans);
+  await tester.pumpAndSettle();
+  await tester.tap(plans);
   await tester.pumpAndSettle();
 }
 
@@ -203,13 +217,13 @@ void main() {
     expect(find.text('تعویض پنل نمایشی'), findsNothing);
     expect(find.text('ورود به عنوان متخصص'), findsNothing);
     expect(find.text('ورود به عنوان مدیر'), findsNothing);
-    expect(find.text('ورود به حساب'), findsOneWidget);
+    expect(find.text('ورود'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     store.dispose();
   });
 
   testWidgets(
-    'Saved answers skip questionnaire after acquisition login and go to pricing',
+    'Saved answers skip questionnaire and customer can open direct plan checkout',
     (tester) async {
       mobile(tester);
       final store = DemoStore(storage: MemoryStorage());
@@ -222,7 +236,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(OnboardingScreen), findsNothing);
-      expect(find.text('تعرفه برنامه‌ها'), findsOneWidget);
+      await openPlanPrices(tester);
+      expect(find.text('پلن‌ها و تعرفه‌ها'), findsOneWidget);
       expect(store.userSignedIn, true);
       expect(store.questionnaireComplete, isTrue);
       expect(store.requests.length, count);
@@ -232,7 +247,7 @@ void main() {
   );
 
   testWidgets(
-    'After acquisition login questionnaire requires consent then opens pricing',
+    'Questionnaire requires consent before the customer opens plan checkout',
     (tester) async {
       mobile(tester);
       final storage = MemoryStorage();
@@ -290,7 +305,8 @@ void main() {
       expect(store.role, AppRole.user);
       expect(store.userSignedIn, isTrue);
       expect(find.byType(LoginScreen), findsNothing);
-      expect(find.text('تعرفه برنامه‌ها'), findsOneWidget);
+      await openPlanPrices(tester);
+      expect(find.text('پلن‌ها و تعرفه‌ها'), findsOneWidget);
       expect(store.hasUserRequest, isFalse);
       expect(storage.value, isNotNull);
       expect(tester.takeException(), isNull);
@@ -303,6 +319,7 @@ void main() {
     'Profile edit starts with previous answers, saves and can be reopened',
     (tester) async {
       mobile(tester);
+      FlutterSecureStorage.setMockInitialValues({});
       final store = DemoStore(storage: MemoryStorage());
       store.questionnaireComplete = true;
       store.questionnaire.consent = true;
@@ -322,28 +339,26 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('اطلاعات فردی'));
       await tester.pumpAndSettle();
-      final age = find.byKey(const ValueKey('سن / سال'));
-      expect(tester.widget<TextFormField>(age).initialValue, '۲۸');
+      final age = find.widgetWithText(TextFormField, 'سن');
+      expect(tester.widget<TextFormField>(age).controller!.text, '۲۸');
       await tester.enterText(age, '۳۳');
       expect(store.questionnaire.age, '۲۸');
-      for (var i = 0; i < 5; i++) {
-        if (i == 2) {
-          await tester.tap(find.text('موردی ندارم'));
-          await tester.pumpAndSettle();
-        }
-        await next(tester);
-      }
-      await tester.tap(find.text('ذخیرهٔ تغییرات'));
+      await tester.ensureVisible(find.text('ذخیره تغییرات'));
+      await tester.tap(find.text('ذخیره تغییرات'));
       await tester.pumpAndSettle();
-      expect(store.questionnaire.age, '۳۳');
       expect(store.requests.length, count);
+      expect(store.questionnaire.healthDetails, 'توضیح قبلی حساسیت');
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('اطلاعات فردی'));
       await tester.pumpAndSettle();
-      expect(tester.widget<TextFormField>(age).initialValue, '۳۳');
+      expect(tester.widget<TextFormField>(age).controller!.text, '۳۳');
       await tester.enterText(age, '۴۰');
-      await tester.tap(find.byTooltip('بازگشت'));
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
-      expect(store.questionnaire.age, '۳۳');
+      await tester.tap(find.text('اطلاعات فردی'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextFormField>(age).controller!.text, '۳۳');
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       store.dispose();
@@ -381,7 +396,10 @@ void main() {
     'Home switches from status to published meals and reflects current weight',
     (tester) async {
       mobile(tester);
-      final store = DemoStore(storage: MemoryStorage());
+      final store = DemoStore(
+        storage: MemoryStorage(),
+        clock: () => DateTime(2026, 11, 16, 7),
+      );
       await store.saveQuestionnaire(
         validAnswers()..weight = '۸۱',
         onboarding: true,
@@ -389,6 +407,12 @@ void main() {
       store.loginDemoUser();
       await tester.pumpWidget(
         SabzineApp(store: store, splashDuration: Duration.zero),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('ثبت وزن'),
+        300,
+        scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
       expect(find.textContaining('۸۱ کیلو'), findsWidgets);
@@ -404,11 +428,23 @@ void main() {
       await tester.pumpAndSettle();
       store.addWeight(79.5);
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('ثبت وزن'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.textContaining('۷۹٫۵ کیلو'), findsWidgets);
       store.approveActiveUserRequest();
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('plan-waiting')), findsNothing);
       final original = store.mealsOn(store.today).first.title;
+      await tester.scrollUntilVisible(
+        find.text(original),
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text(original), findsWidgets);
       store.editMeal(
         store.userRequestId!,

@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Coach\Application\CoachQuotaService;
+use App\Modules\Coach\Infrastructure\CoachQuotaService;
+use App\Modules\Plans\Domain\CivilDates;
 use App\Shared\Domain\LegacyCrypto;
 use App\Shared\Domain\Problem;
 use Tests\MySqlTestCase;
@@ -54,7 +55,7 @@ final class CoachQuotaTest extends MySqlTestCase
     public function test_require_chat_throws_when_daily_and_period_are_full(): void
     {
         ['id' => $userId] = $this->actor();
-        $today = \App\Modules\Plans\Domain\CivilDates::today();
+        $today = CivilDates::today();
         $this->db->table('coach_quotas')->insert([
             'user_id' => $userId,
             'plan_code' => 'weekly',
@@ -80,7 +81,7 @@ final class CoachQuotaTest extends MySqlTestCase
     public function test_addon_credit_is_spent_after_plan_quota_is_full(): void
     {
         ['id' => $userId] = $this->actor();
-        $today = \App\Modules\Plans\Domain\CivilDates::today();
+        $today = CivilDates::today();
         $this->db->table('coach_quotas')->insert([
             'user_id' => $userId,
             'plan_code' => 'weekly',
@@ -111,7 +112,7 @@ final class CoachQuotaTest extends MySqlTestCase
     public function test_vision_quota_is_separate_from_chat(): void
     {
         ['id' => $userId] = $this->actor();
-        $today = \App\Modules\Plans\Domain\CivilDates::today();
+        $today = CivilDates::today();
         $this->db->table('coach_quotas')->insert([
             'user_id' => $userId,
             'plan_code' => 'weekly',

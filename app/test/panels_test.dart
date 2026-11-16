@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'legacy_staff_harness.dart';
-import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/form_config.dart';
 import 'package:sabzine_flutter/data/workspace_settings_storage.dart';
+import 'package:sabzine_flutter/presentation/screens/questionnaire.dart';
 import 'widget_test.dart' show MemoryStorage, validAnswers, mobile, next;
 
 class SettingsMemory implements WorkspaceSettingsStorage {
@@ -268,14 +268,12 @@ void main() {
       await t.pump();
       s.loginDemoUser();
       await t.pumpWidget(
-        SabzineApp(store: s, splashDuration: Duration.zero),
+        DemoScope(
+          store: s,
+          child: const MaterialApp(home: QuestionnaireScreen(editing: true)),
+        ),
       );
       await t.pumpAndSettle();
-      await t.tap(find.byKey(const ValueKey('tab-coach')));
-      await t.pumpAndSettle();
-      await t.tap(find.byKey(const ValueKey('coach-avatar')));
-      await t.pumpAndSettle();
-      await tapVisible(t, find.text('اطلاعات فردی'));
       expect(find.text('نام کامل شما'), findsOneWidget);
       await next(t);
       expect(find.text('کمی با هم آشنا بشیم'), findsOneWidget);

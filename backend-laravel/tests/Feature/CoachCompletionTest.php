@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Modules\Coach\Application\CoachChatActions;
-use App\Modules\Coach\Application\CoachQuotaService;
-use App\Modules\Plans\Application\NextWeekPlanner;
+use App\Modules\Coach\Infrastructure\CoachChatActions;
+use App\Modules\Coach\Infrastructure\CoachQuotaService;
 use App\Modules\Plans\Infrastructure\ConfiguredDraftProvider;
+use App\Modules\Plans\Infrastructure\MealSwapService;
+use App\Modules\Plans\Infrastructure\NextWeekPlanner;
+use App\Shared\Domain\LegacyCrypto;
 use App\Shared\Domain\Problem;
 use Tests\MySqlTestCase;
 
@@ -30,13 +32,13 @@ final class CoachCompletionTest extends MySqlTestCase
         $plan = $this->planFixture($userId);
         $this->profile($userId, $plan['submission']);
         $this->db->table('food_catalog')->insert([
-            'id' => \App\Shared\Domain\LegacyCrypto::uuid(), 'slug' => 'mushroom-soup', 'name_fa' => 'سوپ قارچ',
+            'id' => LegacyCrypto::uuid(), 'slug' => 'mushroom-soup', 'name_fa' => 'سوپ قارچ',
             'category' => 'main', 'meal_types' => '["lunch"]', 'serving_label' => 'کاسه', 'kcal' => 300,
             'allergens' => '[]', 'tags' => '[]', 'regions' => '[]', 'seasons' => '[]', 'ingredients' => '[]', 'active' => 1,
         ]);
         app(CoachChatActions::class)->remember($userId, 'دوست ندارم سوپ قارچ');
         $stored = $this->db->table('coach_preferences')->where('user_id', $userId)->where('pref_key', 'food_dislike')->pluck('value')->implode('|');
-        $names = array_column(app(\App\Modules\Plans\Application\MealSwapService::class)->alternatives($userId, $plan['meal'])['alternatives'], 'name');
+        $names = array_column(app(MealSwapService::class)->alternatives($userId, $plan['meal'])['alternatives'], 'name');
         self::assertNotContains('سوپ قارچ', $names, $stored);
     }
 

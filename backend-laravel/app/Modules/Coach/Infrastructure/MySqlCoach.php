@@ -2,12 +2,9 @@
 
 namespace App\Modules\Coach\Infrastructure;
 
-use App\Modules\Coach\Application\CoachChatActions;
-use App\Modules\Coach\Application\CoachContextBuilder;
 use App\Modules\Coach\Application\CoachGateway;
 use App\Modules\Coach\Application\CoachIntentParser;
 use App\Modules\Coach\Application\CoachModel;
-use App\Modules\Coach\Application\FollowUpQuestions;
 use App\Modules\Coach\Domain\CoachSafety;
 use App\Modules\Messaging\Domain\MediaSignature;
 use App\Modules\Plans\Domain\CivilDates;

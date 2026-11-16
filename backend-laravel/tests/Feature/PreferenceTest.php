@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Coach\Application\PreferenceService;
+use App\Modules\Coach\Infrastructure\PreferenceService;
+use Illuminate\Database\ConnectionInterface;
 use Tests\MySqlTestCase;
 
 final class PreferenceTest extends MySqlTestCase
@@ -47,7 +48,7 @@ final class PreferenceTest extends MySqlTestCase
         $service = app(PreferenceService::class);
         $service->recordSpecialistNote($this->userId, 'بیماری کلیوی دارد');
 
-        $row = app(\Illuminate\Database\ConnectionInterface::class)
+        $row = app(ConnectionInterface::class)
             ->table('coach_preferences')
             ->where('user_id', $this->userId)
             ->where('pref_key', 'specialist_note')
@@ -96,7 +97,7 @@ final class PreferenceTest extends MySqlTestCase
             $service->recordDislike($this->userId, "food_$i", 'dislike');
         }
 
-        $count = app(\Illuminate\Database\ConnectionInterface::class)
+        $count = app(ConnectionInterface::class)
             ->table('coach_preferences')
             ->where('user_id', $this->userId)
             ->where('pref_key', 'food_dislike')
@@ -113,7 +114,7 @@ final class PreferenceTest extends MySqlTestCase
         // Record weak signal first
         $service->recordDislike($this->userId, 'گوجه', 'unavailable');
 
-        $before = app(\Illuminate\Database\ConnectionInterface::class)
+        $before = app(ConnectionInterface::class)
             ->table('coach_preferences')
             ->where('user_id', $this->userId)
             ->where('value', 'گوجه')
@@ -122,7 +123,7 @@ final class PreferenceTest extends MySqlTestCase
         // Record stronger signal
         $service->recordUserStatement($this->userId, 'food_dislike', 'گوجه');
 
-        $after = app(\Illuminate\Database\ConnectionInterface::class)
+        $after = app(ConnectionInterface::class)
             ->table('coach_preferences')
             ->where('user_id', $this->userId)
             ->where('value', 'گوجه')

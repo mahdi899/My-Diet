@@ -27,6 +27,7 @@ class CoachSession {
   bool busy = false;
   bool historyFailed = false;
   bool hasMore = false;
+  bool loadingMore = false;
   String? cursor;
   String? error;
   String? budgetNote;
@@ -39,7 +40,8 @@ class CoachSession {
   final photos = <String, Uint8List>{};
 
   bool _disposed = false;
-  int _local = 0;
+  int _historyOperation = 0;
+  bool _historyLoaded = false;
   StreamSubscription<CoachEvent>? _sub;
   final _sent = <String, CoachSendRequest>{};
   final _bytes = <String, Uint8List>{};
@@ -64,6 +66,8 @@ class CoachSession {
   }
 
   Future<void> _load({String? cursor, bool older = false}) async {
+    final operation = ++_historyOperation;
+    final atStart = {for (final m in messages) m.id: m};
     if (!older) {
       loading = messages.isEmpty;
       historyFailed = false;
@@ -71,10 +75,9 @@ class CoachSession {
     }
     try {
       final page = await repository.loadThread(cursor: cursor);
-      if (_disposed) return;
-      messages = _dedupe(
-        older ? [...page.messages, ...messages] : page.messages,
-      );
+      if (_disposed || operation != _historyOperation) return;
+      messages = _mergeHistory(page.messages, older: older, atStart: atStart);
+      _historyLoaded = true;
       if (!older) {
         if (page.suggestions.isNotEmpty) {
           suggestions = page.suggestions;
@@ -89,12 +92,17 @@ class CoachSession {
       historyFailed = false;
       unawaited(_warmPhotos());
     } on CoachTransportException catch (error) {
-      if (_disposed) return;
+      if (_disposed || operation != _historyOperation) return;
       loading = false;
       historyFailed = messages.isEmpty;
-      _note(error.problem, error.message, retryable: false, clientId: null);
+      _note(
+        error.problem,
+        error.message,
+        retryable: canRetry,
+        clientId: retryClientId,
+      );
     } catch (_) {
-      if (_disposed) return;
+      if (_disposed || operation != _historyOperation) return;
       loading = false;
       historyFailed = messages.isEmpty;
       error = messages.isEmpty
@@ -120,8 +128,15 @@ class CoachSession {
   }
 
   Future<void> loadMore() async {
-    if (!hasMore || cursor == null || busy) return;
-    await _load(cursor: cursor, older: true);
+    if (!hasMore || cursor == null || busy || loading || loadingMore) return;
+    loadingMore = true;
+    _notify();
+    try {
+      await _load(cursor: cursor, older: true);
+    } finally {
+      loadingMore = false;
+      _notify();
+    }
   }
 
   Future<void> sendText(String text) {
@@ -229,7 +244,7 @@ class CoachSession {
       ];
     } else {
       final optimistic = CoachMessage(
-        id: 'local-${_local++}',
+        id: 'local-${request.clientMessageId}',
         role: 'user',
         type: request.kind == 'photo' ? 'user_photo' : 'text',
         payload: {
@@ -589,10 +604,37 @@ class CoachSession {
     }
   }
 
-  List<CoachMessage> _dedupe(List<CoachMessage> items) {
+  List<CoachMessage> _mergeHistory(
+    List<CoachMessage> incoming, {
+    required bool older,
+    required Map<String, CoachMessage> atStart,
+  }) {
+    final merged = [...messages];
+    var insertion = older || !_historyLoaded ? 0 : merged.length;
+    for (final message in incoming.reversed) {
+      final index = merged.indexWhere(
+        (m) =>
+            m.id == message.id ||
+            (m.isUser &&
+                message.isUser &&
+                message.clientMessageId != null &&
+                m.clientMessageId == message.clientMessageId),
+      );
+      if (index >= 0) {
+        final current = merged[index];
+        // A stream update received during this request is newer than its snapshot.
+        if (current.id != message.id ||
+            identical(current, atStart[message.id])) {
+          merged[index] = message;
+        }
+        insertion = index;
+      } else {
+        merged.insert(insertion, message);
+      }
+    }
     final seen = <String>{};
     final out = <CoachMessage>[];
-    for (final message in items) {
+    for (final message in merged) {
       if (seen.add(message.id)) out.add(message);
     }
     return out;

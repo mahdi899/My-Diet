@@ -3,7 +3,6 @@
 namespace App\Modules\Coach\Infrastructure;
 
 use App\Modules\Ai\Infrastructure\ModelPools;
-use App\Modules\Coach\Application\CoachContextBuilder;
 use App\Modules\Coach\Application\CoachIntentParser;
 use App\Modules\Coach\Application\CoachModel;
 use App\Shared\Domain\Problem;

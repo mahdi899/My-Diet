@@ -1,8 +1,12 @@
 <?php
 
-namespace App\Modules\Coach\Application;
+namespace App\Modules\Coach\Infrastructure;
 
+use App\Modules\Coach\Application\CoachQuotaStore;
+use App\Modules\Money\Application\MoneyStore;
+use App\Shared\Domain\LegacyCrypto;
 use App\Shared\Domain\Problem;
+use Illuminate\Database\ConnectionInterface;
 
 /**
  * Application service for coach quota enforcement.
@@ -12,8 +16,8 @@ final class CoachQuotaService
 {
     public function __construct(
         private CoachQuotaStore $store,
-        private \App\Modules\Money\Application\MoneyStore $money,
-        private \Illuminate\Database\ConnectionInterface $db,
+        private MoneyStore $money,
+        private ConnectionInterface $db,
     ) {}
 
     /**
@@ -24,7 +28,7 @@ final class CoachQuotaService
     public function requireChat(string $userId): void
     {
         $this->requireActiveSubscription($userId);
-        if (!$this->store->canChat($userId)) {
+        if (! $this->store->canChat($userId)) {
             throw new Problem(429, 'quota_exceeded', 'سقف پیام‌های امروز یا دوره پر شده است. می‌توانید یک بسته اضافی خریداری کنید.');
         }
     }
@@ -36,7 +40,7 @@ final class CoachQuotaService
     public function requireVision(string $userId): void
     {
         $this->requireActiveSubscription($userId);
-        if (!$this->store->canVision($userId)) {
+        if (! $this->store->canVision($userId)) {
             throw new Problem(429, 'vision_quota_exceeded', 'سقف تحلیل عکس غذا پر شده است. یک بسته اضافی دریافت کنید.');
         }
     }
@@ -123,7 +127,7 @@ final class CoachQuotaService
         }
         $this->requireActiveSubscription($userId);
         $this->db->table('services')->insertOrIgnore(['code' => 'coach_addon', 'title_fa' => 'بسته پیام مربی']);
-        $orderId = \App\Shared\Domain\LegacyCrypto::uuid();
+        $orderId = LegacyCrypto::uuid();
         $this->db->table('orders')->insert([
             'id' => $orderId,
             'user_id' => $userId,

@@ -444,10 +444,12 @@ class ScheduledMealTile extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         MealDislikeButton(date: date, index: index),
-                        const Spacer(),
                         MealLogCheckbox(date: date, index: index),
                       ],
                     ),

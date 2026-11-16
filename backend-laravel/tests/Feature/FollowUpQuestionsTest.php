@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Modules\Coach\Application\FollowUpQuestions;
+use App\Modules\Coach\Infrastructure\FollowUpQuestions;
+use App\Shared\Domain\LegacyCrypto;
 use Tests\MySqlTestCase;
 
 final class FollowUpQuestionsTest extends MySqlTestCase
@@ -20,7 +21,7 @@ final class FollowUpQuestionsTest extends MySqlTestCase
     public function test_profile_without_region_asks_about_city_food(): void
     {
         ['id' => $userId] = $this->actor();
-        $submission = \App\Shared\Domain\LegacyCrypto::uuid();
+        $submission = LegacyCrypto::uuid();
         $this->db->table('questionnaire_submissions')->insert([
             'id' => $submission, 'user_id' => $userId, 'schema_version' => 1, 'answers' => '{}', 'risk_flags' => '[]',
         ]);

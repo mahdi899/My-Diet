@@ -3,6 +3,7 @@
 namespace App\Modules\Food\Presentation;
 
 use App\Modules\Food\Application\FoodService;
+use App\Modules\Food\Infrastructure\NutritionReview;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -64,12 +65,12 @@ final class FoodController
 
     public function nutritionStatus(Request $request, string $slug): array
     {
-        return app(\App\Modules\Food\Application\NutritionReview::class)->setStatus($slug, (string) ($this->body($request)['status'] ?? ''));
+        return app(NutritionReview::class)->setStatus($slug, (string) ($this->body($request)['status'] ?? ''));
     }
 
     public function nutritionEstimate(string $slug): array
     {
-        return app(\App\Modules\Food\Application\NutritionReview::class)->estimate($slug);
+        return app(NutritionReview::class)->estimate($slug);
     }
 
     public function activate(Request $request, string $slug): JsonResponse

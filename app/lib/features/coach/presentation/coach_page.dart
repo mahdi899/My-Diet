@@ -173,7 +173,8 @@ class _CoachPageState extends State<CoachPage> {
                 QuotaIndicator(
                   dailyRemaining: (_quota!['dailyRemaining'] as num).toInt(),
                   dailyLimit: (_quota!['dailyLimit'] as num).toInt(),
-                  periodRemaining: (_quota!['periodRemaining'] as num?)?.toInt() ?? 0,
+                  periodRemaining:
+                      (_quota!['periodRemaining'] as num?)?.toInt() ?? 0,
                 ),
               if (!keyboardOpen &&
                   (mood == CompanionMood.greeting ||
@@ -221,7 +222,7 @@ class _CoachPageState extends State<CoachPage> {
                   ),
                 ),
               Expanded(
-                child: _controller.loading
+                child: _controller.loading && _controller.messages.isEmpty
                     ? const Center(child: Text('دارم گفتگو رو می‌آرم…'))
                     : failed
                     ? Center(

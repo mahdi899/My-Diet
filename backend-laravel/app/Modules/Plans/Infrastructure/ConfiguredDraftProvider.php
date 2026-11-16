@@ -8,6 +8,7 @@ use App\Modules\Onboarding\Application\OnboardingStore;
 use App\Modules\Onboarding\Domain\EnergyEngine;
 use App\Modules\Plans\Application\CatalogConstraints;
 use App\Modules\Plans\Application\DraftProvider;
+use App\Modules\Plans\Domain\CivilDates;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
@@ -35,7 +36,7 @@ final class ConfiguredDraftProvider implements DraftProvider
         }
         $slots = EnergyEngine::slots((int) $profile['target_kcal'], $profile['meals_per_day']);
         $learned = $this->learned($user);
-        $gate = new CatalogConstraints();
+        $gate = new CatalogConstraints;
         $foods = array_filter($this->foods->all(), fn ($f) => $f['active'] && $f['kcal'] > 0 && $f['ingredients'] !== [] &&
             ! array_intersect($profile['allergens'], $f['allergens']) &&
             ($profile['diet_style'] !== 'vegan' || in_array('vegan', $f['tags'], true)) &&
@@ -81,7 +82,14 @@ final class ConfiguredDraftProvider implements DraftProvider
                 throw $error;
             }
             $messages[1]['content'] .= "\nThe previous JSON failed validation: {$error->messageFa}. Hit each slot within 20 percent by choosing servings 1.5 or 2 when one serving is too small. Use only the offered slugs.";
-            $result = $this->pools->run('plan_draft', $messages, $requestId, $user, true, $validate);
+            try {
+                $result = $this->pools->run('plan_draft', $messages, $requestId, $user, true, $validate);
+            } catch (Problem $repairError) {
+                if ($repairError->problemCode === 'pool_empty') {
+                    throw $error;
+                }
+                throw $repairError;
+            }
         }
 
         return $result['value'];
@@ -135,7 +143,7 @@ final class ConfiguredDraftProvider implements DraftProvider
         $logs = 0;
         $weights = 0;
         if (is_string($weekStart) && $weekStart !== '') {
-            $end = \App\Modules\Plans\Domain\CivilDates::add(substr($weekStart, 0, 10), 6);
+            $end = CivilDates::add(substr($weekStart, 0, 10), 6);
             $logs = $this->db->table('meal_logs')->where('user_id', $user)->whereBetween('scheduled_date', [substr($weekStart, 0, 10), $end])->count();
             $weights = $this->db->table('weight_entries')->where('user_id', $user)->whereBetween('civil_date', [substr($weekStart, 0, 10), $end])->count();
         }
@@ -162,7 +170,7 @@ final class ConfiguredDraftProvider implements DraftProvider
             throw new \InvalidArgumentException('seven_days_required');
         }
         $target = (int) $profile['target_kcal'];
-        $gate = new CatalogConstraints();
+        $gate = new CatalogConstraints;
         $bestFiber = 0.0;
         foreach ($slots as $slot) {
             $top = 0.0;

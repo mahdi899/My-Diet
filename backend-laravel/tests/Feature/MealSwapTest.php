@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Plans\Application\MealSwapService;
+use App\Modules\Plans\Infrastructure\MealSwapService;
+use App\Modules\Plans\Infrastructure\MySqlPlanQueries;
 use App\Shared\Domain\LegacyCrypto;
 use App\Shared\Domain\Problem;
 use Tests\MySqlTestCase;
@@ -94,7 +95,7 @@ final class MealSwapTest extends MySqlTestCase
         app(MealSwapService::class)->apply($this->userId, $this->planIds['meal'], 'rice-200', 'dislike');
 
         self::assertSame('عدسی', $this->db->table('plan_meals')->where('id', $this->planIds['meal'])->value('title'));
-        $days = app(\App\Modules\Plans\Infrastructure\MySqlPlanQueries::class)->days($this->planIds['version']);
+        $days = app(MySqlPlanQueries::class)->days($this->planIds['version']);
         self::assertSame('برنج پخته', $days[0]['meals'][0]['title']);
         self::assertSame('عدسی', $days[0]['meals'][0]['plannedTitle']);
     }

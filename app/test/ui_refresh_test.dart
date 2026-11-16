@@ -9,8 +9,12 @@ import 'package:sabzine_flutter/presentation/widgets/kit/pill_button.dart';
 import 'widget_test.dart' show mobile;
 import 'panels_test.dart' show SettingsMemory;
 
-Future<void> completeProgram(DemoStore s) async {
+Future<void> completeProgram(
+  DemoStore s, {
+  void Function(DateTime)? onDay,
+}) async {
   for (final date in s.scheduledWeekDates) {
+    onDay?.call(date);
     for (var i = 0; i < s.mealsOn(date).length; i++) {
       await s.setMealEaten(date, i, true);
     }
@@ -43,7 +47,7 @@ void main() {
       expect(s.userRequest.specialist, s.experts.first.name);
       s.approveActiveUserRequest();
       now = DateTime(2026, 10, 30);
-      await completeProgram(s);
+      await completeProgram(s, onDay: (date) => now = date);
       expect(s.walletBalance, 220000);
       expect(s.claimWeeklyReward(), false);
       final week = dateKey(s.userRequest.programWeek!);
@@ -135,7 +139,8 @@ void main() {
       find.byKey(const ValueKey('plan-day-strip')),
     );
     expect(
-      (strip.childrenDelegate as SliverChildBuilderDelegate).estimatedChildCount,
+      (strip.childrenDelegate as SliverChildBuilderDelegate)
+          .estimatedChildCount,
       13,
     );
     expect(find.text(persianWeekDays[weekDayIndex(s.today)]), findsWidgets);
@@ -150,6 +155,9 @@ void main() {
     await t.ensureVisible(done.first);
     await t.pumpAndSettle();
     await t.tap(done.first);
+    await t.pumpAndSettle();
+    expect(s.mealEaten(s.today, 0), isFalse);
+    await t.tap(find.widgetWithText(PillButton, 'انجام شد').last);
     await t.pumpAndSettle();
     expect(s.mealEaten(s.today, 0), isTrue);
     expect(find.widgetWithText(PillButton, 'ثبت شد'), findsWidgets);
@@ -197,7 +205,11 @@ void main() {
     expect(find.text('حال امروزت چطوره؟'), findsNothing);
     expect(find.text('برنامه چطور پیش رفت؟'), findsNothing);
     final weight = find.text('ثبت وزن');
-    await t.ensureVisible(weight);
+    await t.scrollUntilVisible(
+      weight,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
     await t.tap(weight);

@@ -270,7 +270,7 @@ void main() {
     });
     expect(budget, isA<CoachErrorEvent>());
     expect((budget as CoachErrorEvent).problem, CoachProblem.budget);
-    expect(budget.message, 'سهم امروز مربی تمام شد');
+    expect(budget.message, 'سقف استفاده از هوش مصنوعی پر شده است.');
     expect(budget.retryable, isFalse);
   });
 
@@ -439,7 +439,7 @@ void main() {
       throwsA(
         isA<CoachTransportException>()
             .having((error) => error.problem, 'problem', CoachProblem.budget)
-            .having((error) => error.message, 'message', 'سهم امروز مربی تمام شد')
+            .having((error) => error.message, 'message', 'سقف پر شده')
             .having((error) => error.retryable, 'retryable', isFalse),
       ),
     );

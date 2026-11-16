@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Modules\Coach\Application\CoachChatActions;
-use App\Modules\Coach\Application\FollowUpQuestions;
+use App\Modules\Coach\Infrastructure\CoachChatActions;
+use App\Modules\Coach\Infrastructure\FollowUpQuestions;
 use App\Modules\Coach\Infrastructure\MySqlCoach;
 use App\Modules\Money\Application\MoneyStore;
 use App\Modules\Plans\Application\CatalogConstraints;
-use App\Modules\Plans\Application\MealSwapService;
+use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Shared\Domain\LegacyCrypto;
 use Tests\MySqlTestCase;
 
@@ -17,7 +17,7 @@ final class AuditGapsTest extends MySqlTestCase
 {
     public function test_hard_rules_reject_dislike_budget_specialist_lock_and_unverified_pregnancy_food(): void
     {
-        $gate = new CatalogConstraints();
+        $gate = new CatalogConstraints;
         $soup = ['nameFa' => 'سوپ قارچ', 'costTier' => 1, 'nutritionStatus' => 'verified'];
         $expensive = ['nameFa' => 'استیک', 'costTier' => 3, 'nutritionStatus' => 'verified'];
         $estimated = ['nameFa' => 'املت', 'costTier' => 1, 'nutritionStatus' => 'estimated'];

@@ -1,6 +1,9 @@
 <?php
 
-namespace App\Modules\Coach\Application;
+namespace App\Modules\Coach\Infrastructure;
+
+use App\Modules\Plans\Domain\CivilDates;
+use Illuminate\Database\ConnectionInterface;
 
 /**
  * Builds personalized context for the AI coach based on user's current state.
@@ -8,20 +11,19 @@ namespace App\Modules\Coach\Application;
  */
 final class CoachContextBuilder
 {
-    public function __construct(private \Illuminate\Database\ConnectionInterface $db) {}
+    public function __construct(private ConnectionInterface $db) {}
 
     /**
      * Build context for a chat message.
      * Dynamically includes: profile summary, today plan, preferences, progress.
      *
-     * @param string $userId
-     * @param string $messageText User message text for relevance detection
+     * @param  string  $messageText  User message text for relevance detection
      * @return array{profile: array, todayPlan: ?array, preferences: array, progress: ?array}
      */
     public function buildForChat(string $userId, string $messageText): array
     {
         $lower = mb_strtolower($messageText, 'UTF-8');
-        
+
         return [
             'profile' => $this->profileSummary($userId),
             'todayPlan' => $this->needsPlan($lower) ? $this->todayPlan($userId) : null,
@@ -68,7 +70,7 @@ final class CoachContextBuilder
             [$userId]
         );
 
-        if (!$profile) {
+        if (! $profile) {
             return ['name' => $name, 'hasProfile' => false];
         }
 
@@ -93,7 +95,7 @@ final class CoachContextBuilder
 
     private function todayPlan(string $userId): ?array
     {
-        $today = \App\Modules\Plans\Domain\CivilDates::today();
+        $today = CivilDates::today();
         $meals = $this->db->select(
             'SELECT m.id, m.meal_type, m.meal_uid, m.title, m.calories
              FROM active_plan_versions a
@@ -111,7 +113,7 @@ final class CoachContextBuilder
 
         return [
             'date' => $today,
-            'meals' => array_map(fn($m) => [
+            'meals' => array_map(fn ($m) => [
                 'id' => $m->id,
                 'type' => $m->meal_type,
                 'title' => $m->title,
@@ -192,7 +194,7 @@ final class CoachContextBuilder
             [$userId]
         );
 
-        return array_map(fn($m) => $m->title, $meals);
+        return array_map(fn ($m) => $m->title, $meals);
     }
 
     private function recentMealLogs(string $userId, int $limit): array
@@ -207,7 +209,7 @@ final class CoachContextBuilder
             [$userId, $limit]
         );
 
-        return array_map(fn($l) => [
+        return array_map(fn ($l) => [
             'date' => $l->scheduled_date,
             'type' => $l->meal_type,
             'food' => $l->title,
@@ -223,6 +225,7 @@ final class CoachContextBuilder
                 return true;
             }
         }
+
         return false;
     }
 
@@ -234,6 +237,7 @@ final class CoachContextBuilder
                 return true;
             }
         }
+
         return false;
     }
 
@@ -245,6 +249,7 @@ final class CoachContextBuilder
                 return true;
             }
         }
+
         return false;
     }
 }

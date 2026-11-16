@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Plans\Application;
+namespace App\Modules\Plans\Infrastructure;
 
-use App\Modules\Coach\Application\PreferenceService;
+use App\Modules\Coach\Infrastructure\PreferenceService;
 use App\Modules\Food\Application\FoodStore;
+use App\Modules\Plans\Application\CatalogConstraints;
 use App\Shared\Domain\LegacyCrypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
@@ -71,7 +72,7 @@ final class MealSwapService
             ->where('user_id', $userId)->where('pref_key', 'specialist_note')->where('active', 1)->pluck('value')->all();
         $avoid = $this->db->table('coach_preferences')
             ->where('user_id', $userId)->where('pref_key', 'food_dislike')->where('active', 1)->pluck('value')->all();
-        if (! (new CatalogConstraints())->allows($food, $profile, $avoid, $notes, false)) {
+        if (! (new CatalogConstraints)->allows($food, $profile, $avoid, $notes, false)) {
             throw new Problem(422, 'food_blocked', 'این غذا با ترجیح، دستور متخصص یا وضعیت تأیید تغذیه سازگار نیست');
         }
 
@@ -163,7 +164,7 @@ final class MealSwapService
         $lo = $meal['kcal'] * (1 - self::MACRO_TOLERANCE);
         $hi = $meal['kcal'] * (1 + self::MACRO_TOLERANCE);
 
-        $gate = new CatalogConstraints();
+        $gate = new CatalogConstraints;
 
         return array_values(array_filter($this->foods->all(), function (array $food) use ($meal, $profile, $reason, $budgetOk, $budget, $lo, $hi, $dislikes, $notes, $gate): bool {
             if (empty($food['active']) || (int) $food['kcal'] <= 0) {

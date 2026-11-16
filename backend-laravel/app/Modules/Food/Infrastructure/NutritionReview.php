@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Food\Application;
+namespace App\Modules\Food\Infrastructure;
 
 use App\Modules\Ai\Infrastructure\ModelPools;
 use App\Shared\Domain\Problem;
