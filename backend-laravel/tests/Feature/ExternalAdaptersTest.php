@@ -109,7 +109,7 @@ final class ExternalAdaptersTest extends MySqlTestCase
         $coach->action($user['id'], $command, 'log_water');
         $coach->action($user['id'], $command, 'log_water');
         self::assertSame(250, $coach->today($user['id'])['waterMl']);
-        Http::assertSentCount(1);
+        Http::assertNothingSent();
         Http::swap(new Factory);
         Http::preventStrayRequests();
         Http::fake(['*' => Http::response(['malformed' => 'paid upstream reply'], 200)]);

@@ -29,6 +29,7 @@ class FoodHeroCard extends StatelessWidget {
     this.heroTag,
     this.done = false,
     this.trailing,
+    this.note,
   });
 
   final String title;
@@ -52,6 +53,9 @@ class FoodHeroCard extends StatelessWidget {
 
   /// Extra widget at top-end (e.g. a swap button).
   final Widget? trailing;
+
+  /// Short status on the photo, such as «طبق برنامه».
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +138,30 @@ class FoodHeroCard extends StatelessWidget {
                                 height: 1.6,
                               ),
                             ),
+                          if (note != null && note!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.92),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  note!,
+                                  style: const TextStyle(
+                                    color: AppColors.emeraldDark,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

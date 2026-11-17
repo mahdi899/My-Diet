@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/motion/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
+import '../../../domain/common/day.dart';
+import '../../../domain/common/digits.dart';
 import '../../plan/meal_detail_page.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../presentation/coach_controller.dart';
@@ -85,11 +87,12 @@ class _CoachMessageListState extends State<CoachMessageList> {
       );
       if (day != stamp) {
         day = stamp;
-        rows.add(_DayHeader(stamp));
+        final label = _olderDateLabel(context, stamp);
+        if (label != null) rows.add(_DayHeader(label));
       }
       rows.add(
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 7),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Reveal(child: _tile(context, controller, message)),
         ),
       );
@@ -116,7 +119,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
     if (controller.canRetry) {
       rows.add(
         Align(
-          alignment: AlignmentDirectional.centerEnd,
+          alignment: Alignment.centerRight,
           child: ActionChip(
             label: const Text('تلاش دوباره'),
             onPressed: controller.busy
@@ -172,6 +175,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
       return CoachTextBubble(
         text: text.isEmpty ? '…' : text,
         isUser: message.isUser,
+        time: _clock(message.createdAt.toLocal()),
       );
     }
     return switch (message.type) {
@@ -212,6 +216,10 @@ class _CoachMessageListState extends State<CoachMessageList> {
         ),
         onSwap: () => controller.sendText('یه پیشنهاد دیگه بده'),
       ),
+      'swap_options' => SwapOptionsView(
+        message: message,
+        controller: controller,
+      ),
       'plan_meal' => PlanMealView(
         message: message,
         onOpen: () => _openPlanMeal(context, message),
@@ -222,7 +230,14 @@ class _CoachMessageListState extends State<CoachMessageList> {
       'calorie_ring' => CalorieRingView(message: message),
       'weigh_in' => WeighInView(message: message, controller: controller),
       'water' => WaterView(message: message, controller: controller),
-      'day_brief' => DayBriefView(message: message),
+      'fact_card' => FactCardView(
+        message: message,
+        onOpenMeal: (item) => _openFactMeal(context, message, item),
+      ),
+      'day_brief' => DayBriefView(
+        message: message,
+        onPick: controller.sendText,
+      ),
       'weekly_review' => WeeklyReviewView(message: message),
       'milestone' => MilestoneView(message: message),
       _ => CoachTextBubble(
@@ -230,8 +245,34 @@ class _CoachMessageListState extends State<CoachMessageList> {
         isUser: message.isUser,
         pending: message.pending,
         failed: message.failed,
+        time: _clock(message.createdAt.toLocal()),
       ),
     };
+  }
+
+  void _openFactMeal(
+    BuildContext context,
+    CoachMessage message,
+    Map<String, dynamic> item,
+  ) {
+    final store = DemoScope.of(context);
+    final raw = asString(message.payload['date']);
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return;
+    final day = DateTime(parsed.year, parsed.month, parsed.day);
+    final meals = store.mealsOn(day);
+    final title = asString(item['title']);
+    final hits = <int>[
+      for (var i = 0; i < meals.length; i++)
+        if (meals[i].title == title) i,
+    ];
+    if (hits.length != 1) return;
+    Navigator.of(context, rootNavigator: true).push(
+      foodDetailRoute<void>(
+        MealDetailPage(date: day, index: hits.single, heroes: false),
+        reduced: Motion.reduced(context),
+      ),
+    );
   }
 
   void _openPlanMeal(BuildContext context, CoachMessage message) {
@@ -252,9 +293,13 @@ class _CoachMessageListState extends State<CoachMessageList> {
       }
     }
     if (sameDay && matches.length == 1) {
-      Navigator.of(context).push(
+      Navigator.of(context, rootNavigator: true).push(
         foodDetailRoute<void>(
-          MealDetailPage(date: now, index: matches.single),
+          MealDetailPage(
+            date: now,
+            index: matches.single,
+            heroes: false,
+          ),
           reduced: Motion.reduced(context),
         ),
       );
@@ -268,19 +313,26 @@ class _CoachMessageListState extends State<CoachMessageList> {
   }
 }
 
+String? _olderDateLabel(BuildContext context, DateTime day) {
+  final now = DemoScope.of(context).today;
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  if (day == today || day == yesterday) return null;
+  return persianDate(day, year: day.year != today.year);
+}
+
+String _clock(DateTime time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return fa('$hour:$minute');
+}
+
 class _DayHeader extends StatelessWidget {
-  const _DayHeader(this.day);
-  final DateTime day;
+  const _DayHeader(this.label);
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final now = DemoScope.of(context).today;
-    final today = DateTime(now.year, now.month, now.day);
-    final label = day == today
-        ? 'امروز'
-        : day == today.subtract(const Duration(days: 1))
-        ? 'دیروز'
-        : fa('${day.year}/${day.month}/${day.day}');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(

@@ -16,17 +16,27 @@ import 'meal_substitution_sheet.dart';
 
 Route<T> foodDetailRoute<T>(Widget page, {bool reduced = false}) =>
     PageRouteBuilder<T>(
+      opaque: true,
       transitionDuration: reduced
           ? Duration.zero
-          : const Duration(milliseconds: 340),
+          : const Duration(milliseconds: 240),
       reverseTransitionDuration: reduced
           ? Duration.zero
-          : const Duration(milliseconds: 260),
-      pageBuilder: (_, _, _) => page,
-      transitionsBuilder: (_, animation, _, child) => FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
-      ),
+          : const Duration(milliseconds: 200),
+      pageBuilder: (_, _, _) => ColoredBox(color: AppColors.bg, child: page),
+      transitionsBuilder: (_, animation, _, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        );
+      },
     );
 
 class MealDetailPage extends StatefulWidget {
@@ -35,11 +45,13 @@ class MealDetailPage extends StatefulWidget {
     required this.date,
     required this.index,
     this.heroTag,
+    this.heroes = true,
   });
 
   final DateTime date;
   final int index;
   final Object? heroTag;
+  final bool heroes;
 
   @override
   State<MealDetailPage> createState() => _MealDetailPageState();
@@ -81,7 +93,11 @@ class _MealDetailPageState extends State<MealDetailPage> {
         : const <Meal>[];
     if (widget.index < 0 || widget.index >= meals.length) {
       return Scaffold(
-        appBar: AppBar(),
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          backgroundColor: AppColors.bg,
+          leading: const BackButton(color: AppColors.emeraldDark),
+        ),
         body: const Center(child: Text('این وعده در برنامه نیست')),
       );
     }
@@ -108,7 +124,7 @@ class _MealDetailPageState extends State<MealDetailPage> {
                     fit: StackFit.expand,
                     children: [
                       HeroMode(
-                        enabled: !Motion.reduced(context),
+                        enabled: widget.heroes && !Motion.reduced(context),
                         child: Hero(
                           tag: tag,
                           child: FoodImage(
@@ -165,7 +181,7 @@ class _MealDetailPageState extends State<MealDetailPage> {
                       const SizedBox(height: 5),
                       FoodTitleHero(
                         title: meal.title,
-                        tag: tag,
+                        tag: widget.heroes ? tag : null,
                         style: theme.headlineMedium!.copyWith(
                           color: AppColors.emeraldDark,
                           fontSize: 26,

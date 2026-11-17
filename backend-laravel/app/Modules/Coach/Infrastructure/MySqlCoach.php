@@ -8,6 +8,7 @@ use App\Modules\Coach\Application\CoachModel;
 use App\Modules\Coach\Domain\CoachSafety;
 use App\Modules\Messaging\Domain\MediaSignature;
 use App\Modules\Plans\Domain\CivilDates;
+use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Modules\Tracking\Application\TrackingService;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
@@ -42,24 +43,33 @@ final class MySqlCoach implements CoachGateway
             $thread = $this->ensure($user);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
-                return ['replay' => true, 'userMessage' => $this->message($prior), 'replies' => $this->replies($prior->id), 'blocked' => null];
+                return ['replay' => true, 'metered' => false, 'userMessage' => $this->message($prior), 'replies' => $this->replies($prior->id), 'blocked' => null];
             }
             $blocked = $this->blocked();
             $id = Crypto::uuid();
             $this->db->table('coach_messages')->insert(['id' => $id, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $text, 'client_message_id' => $client, 'payload' => '{}']);
             $local = $blocked === null ? (CoachSafety::localReply($text) ?? $this->factual($user, $text)) : null;
-            if ($local !== null && preg_match('/اختلال خوردن|گرسنگی شدید|هیچ.?چیز نخورم/u', $text) === 1) {
+            if (is_string($local) && preg_match('/اختلال خوردن|گرسنگی شدید|هیچ.?چیز نخورم/u', $text) === 1) {
                 $this->alertSpecialist($user, 'eating_risk');
             }
             if ($blocked !== null || $local !== null) {
                 $replies = [];
                 if ($local !== null) {
+                    $shaped = $this->shapeLocal($local);
                     $assistant = Crypto::uuid();
-                    $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'safety', 'fallback_text' => $local, 'reply_to' => $id, 'payload' => '{}']);
+                    $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => $shaped['type'], 'fallback_text' => $shaped['text'], 'reply_to' => $id, 'payload' => json_encode($shaped['payload'], JSON_UNESCAPED_UNICODE)]);
                     $replies[] = $this->message($this->db->table('coach_messages')->where('id', $assistant)->first());
                 }
 
-                return ['replay' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => $replies, 'blocked' => $blocked];
+                return ['replay' => false, 'metered' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => $replies, 'blocked' => $blocked];
+            }
+            try {
+                app(CoachQuotaService::class)->requireChat($user);
+            } catch (Problem $error) {
+                $assistant = Crypto::uuid();
+                $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $error->messageFa, 'reply_to' => $id, 'payload' => json_encode(['text' => $error->messageFa], JSON_UNESCAPED_UNICODE)]);
+
+                return ['replay' => false, 'metered' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
             }
             $reply = $this->model->reply($user, $text);
             $assistant = Crypto::uuid();
@@ -69,7 +79,7 @@ final class MySqlCoach implements CoachGateway
                 $this->db->table('coach_threads')->where('id', $thread->id)->update(['last_message_at' => $this->db->raw('current_timestamp(6)')]);
             });
 
-            return ['replay' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
+            return ['replay' => false, 'metered' => true, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
         });
     }
 
@@ -155,26 +165,49 @@ final class MySqlCoach implements CoachGateway
         }
         $follow = app(FollowUpQuestions::class)->forUser($user);
         $brief = 'خلاصهٔ امروز آماده است';
+        $options = [];
         if ($follow !== []) {
             $brief .= "\n".$follow[0]['text'];
+            if (($follow[0]['key'] ?? '') === 'kitchen') {
+                $options = [
+                    ['label' => 'وقت آشپزی دارم', 'value' => 'وقت آشپزی دارم'],
+                    ['label' => 'غذای سریع می‌خواهم', 'value' => 'غذای سریع می‌خواهم'],
+                ];
+            } elseif (($follow[0]['key'] ?? '') === 'weight') {
+                $options = [['label' => 'ثبت وزن', 'value' => 'می‌خواهم وزن امروز را ثبت کنم']];
+            }
         }
-        $this->db->table('coach_messages')->insert(['id' => Crypto::uuid(), 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'day_brief', 'fallback_text' => $brief, 'payload' => json_encode(['followUps' => $follow], JSON_UNESCAPED_UNICODE)]);
+        $this->db->table('coach_messages')->insert(['id' => Crypto::uuid(), 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'day_brief', 'fallback_text' => $brief, 'payload' => json_encode(['note' => $brief, 'followUps' => $follow, 'options' => $options], JSON_UNESCAPED_UNICODE)]);
         $this->db->table('coach_threads')->where('id', $thread->id)->update(['day_brief_date' => $today]);
 
         return ['date' => $today, 'created' => true];
     }
 
-    public function action(string $user, string $client, string $action): array
+    public function action(string $user, string $client, string $action, array $args = [], ?string $label = null): array
     {
-        return $this->serial($user, function () use ($user, $client, $action): array {
+        return $this->serial($user, function () use ($user, $client, $action, $args, $label): array {
             $thread = $this->ensure($user);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
                 return ['userMessage' => $this->message($prior), 'messages' => $this->replies($prior->id), 'today' => $this->today($user)];
             }
-            if ($action === 'log_water') {
-                $day = CivilDates::today();
-                $this->db->statement('insert into coach_water (user_id,civil_date,ml) values (?,?,250) as incoming on duplicate key update ml=coach_water.ml+250, updated_at=current_timestamp(6)', [$user, $day]);
+            $local = match ($action) {
+                'log_weight' => $this->weightAction($user, $args),
+                'log_water' => $this->waterAction($user, $args),
+                'mood' => $this->moodAction($user, $args),
+                'confirm_swap' => $this->swapConfirm($user, $args),
+                'undo_meal' => ['text' => $this->actions->clearMeal($user, is_string($args['mealType'] ?? null) ? $args['mealType'] : null), 'userText' => 'اصلاح وعده'],
+                'dismiss' => ['text' => 'باشه، دست نمی‌زنم.', 'userText' => 'نه'],
+                default => null,
+            };
+            if ($local !== null) {
+                $userText = is_string($label) && $label !== '' && $label !== $action ? $label : $local['userText'];
+                $userMessage = Crypto::uuid();
+                $assistant = Crypto::uuid();
+                $this->db->table('coach_messages')->insert(['id' => $userMessage, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $userText, 'client_message_id' => $client, 'payload' => '{}']);
+                $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $local['text'], 'reply_to' => $userMessage, 'payload' => '{}']);
+
+                return ['userMessage' => $this->message($this->db->table('coach_messages')->where('id', $userMessage)->first()), 'messages' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'today' => $this->today($user)];
             }
             $accepted = $this->accept($user, $client, $action);
 
@@ -319,20 +352,29 @@ final class MySqlCoach implements CoachGateway
         return null;
     }
 
-    private function factual(string $user, string $text): ?string
+    private function factual(string $user, string $text): string|array|null
     {
         $intent = $this->intents->parse($text);
         $memory = $this->actions->remember($user, $text);
+        if ($intent['intent'] === 'check_progress') {
+            return null;
+        }
+        if ($intent['intent'] === 'remember') {
+            return $memory ?? ['type' => 'text', 'text' => 'کدام غذا را بگویم یادداشت کنم؟', 'payload' => ['text' => 'کدام غذا را بگویم یادداشت کنم؟']];
+        }
         if ($intent['confidence'] < 0.8) {
             return $memory;
+        }
+        if ($intent['intent'] === 'log_mood' && is_string($intent['params']['mood'] ?? null)) {
+            return $this->moodAction($user, ['mood' => $intent['params']['mood']])['text'];
         }
 
         return match ($intent['intent']) {
             'log_weight' => $this->saveWeight($user, $intent['params']['weight'] ?? null) ?? $memory,
-            'log_water' => $this->saveWater($user),
+            'log_water' => $this->saveWater($user, (int) ($intent['params']['ml'] ?? 250)),
             'swap_meal' => $this->actions->swap($user, $text) ?? $memory,
             'log_consumption' => $this->actions->logMeal($user, $text) ?? $memory,
-            default => $memory,
+            default => $this->actions->answer($user, $intent['intent'], $intent['params']) ?? $memory,
         };
     }
 
@@ -350,23 +392,129 @@ final class MySqlCoach implements CoachGateway
         ]);
     }
 
-    private function saveWeight(string $user, mixed $weight): ?string
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array{text: string, userText: string}
+     */
+    /**
+     * @return array{type: string, text: string, payload: array<string, mixed>}
+     */
+    private function shapeLocal(string|array $local): array
     {
-        if (! is_numeric($weight)) {
-            return null;
+        if (is_string($local)) {
+            return ['type' => 'safety', 'text' => $local, 'payload' => ['text' => $local]];
         }
-        $saved = $this->tracking->setWeight($user, (float) $weight);
+        $text = (string) ($local['text'] ?? '');
+        $payload = is_array($local['payload'] ?? null) ? $local['payload'] : [];
+        if (! isset($payload['text']) || ! is_string($payload['text']) || trim($payload['text']) === '') {
+            $payload['text'] = $text;
+        }
 
-        return 'وزن '.$saved['kilograms'].' کیلو برای '.$saved['date'].' ثبت شد.';
+        return ['type' => (string) ($local['type'] ?? 'text'), 'text' => $text, 'payload' => $payload];
     }
 
-    private function saveWater(string $user): string
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array{text: string, userText: string}
+     */
+    private function swapConfirm(string $user, array $args): array
     {
-        $day = CivilDates::today();
-        $this->db->statement('insert into coach_water (user_id,civil_date,ml) values (?,?,250) as incoming on duplicate key update ml=coach_water.ml+250, updated_at=current_timestamp(6)', [$user, $day]);
-        $ml = (int) $this->db->table('coach_water')->where(['user_id' => $user, 'civil_date' => $day])->value('ml');
+        $mealId = is_string($args['mealId'] ?? null) ? $args['mealId'] : '';
+        $slug = is_string($args['foodSlug'] ?? null) ? $args['foodSlug'] : '';
+        $reason = is_string($args['reason'] ?? null) ? $args['reason'] : 'variety';
+        if (! in_array($reason, ['budget', 'dislike', 'time', 'unavailable', 'variety'], true)) {
+            $reason = 'variety';
+        }
+        if ($mealId === '' || $slug === '') {
+            return ['text' => 'این جایگزین دیگر در دسترس نیست.', 'userText' => 'تعویض وعده'];
+        }
+        try {
+            $applied = app(MealSwapService::class)->apply($user, $mealId, $slug, $reason);
+        } catch (Problem $error) {
+            return ['text' => $error->messageFa, 'userText' => 'تعویض وعده'];
+        }
+        $title = (string) ($applied['newMeal']['title'] ?? 'وعده جدید');
 
-        return '۲۵۰ میلی‌لیتر آب ثبت شد. مجموع امروز '.$ml.' میلی‌لیتر است.';
+        return ['text' => 'ثبت شد. حالا «'.$title.'» است.', 'userText' => $title];
+    }
+
+    private function weightAction(string $user, array $args): array
+    {
+        $weight = $args['kilograms'] ?? $args['value'] ?? null;
+        $saved = $this->saveWeight($user, $weight);
+        if ($saved === null) {
+            return ['text' => 'وزن را به کیلوگرم بفرست؛ مثلاً ۷۵.', 'userText' => 'ثبت وزن'];
+        }
+
+        return ['text' => $saved, 'userText' => 'ثبت وزن'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array{text: string, userText: string}
+     */
+    private function waterAction(string $user, array $args): array
+    {
+        $ml = $args['ml'] ?? 250;
+        if (! is_numeric($ml)) {
+            $ml = 250;
+        }
+
+        return ['text' => $this->saveWater($user, (int) $ml), 'userText' => 'ثبت آب'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array{text: string, userText: string}
+     */
+    private function moodAction(string $user, array $args): array
+    {
+        $mood = is_string($args['mood'] ?? null) ? trim($args['mood']) : '';
+        $allowed = ['عالی', 'خوب', 'معمولی', 'خسته'];
+        if (! in_array($mood, $allowed, true)) {
+            return ['text' => 'حال امروزت را از بین عالی، خوب، معمولی یا خسته بگو.', 'userText' => 'حال امروز'];
+        }
+        $this->db->table('coach_preferences')->where(['user_id' => $user, 'pref_key' => 'mood'])->update(['active' => false]);
+        $this->db->table('coach_preferences')->insert([
+            'id' => Crypto::uuid(),
+            'user_id' => $user,
+            'pref_key' => 'mood',
+            'value' => CivilDates::today().' '.$mood,
+            'source' => 'user',
+            'strength' => 2,
+            'active' => true,
+        ]);
+
+        return ['text' => 'حال «'.$mood.'» امروزت را یادداشت کردم.', 'userText' => 'حال امروز: '.$mood];
+    }
+
+    private function faDigits(int|float|string $value): string
+    {
+        return strtr((string) $value, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹', '.' => '٫']);
+    }
+
+    private function saveWeight(string $user, mixed $weight): ?string
+    {
+        if (! is_numeric($weight) || (float) $weight <= 0) {
+            return null;
+        }
+        try {
+            $saved = $this->tracking->setWeight($user, (float) $weight);
+        } catch (Problem $error) {
+            return $error->messageFa;
+        }
+
+        return 'وزن '.$this->faDigits($saved['kilograms']).' کیلوگرم برای امروز ثبت شد.';
+    }
+
+    private function saveWater(string $user, int $ml = 250): string
+    {
+        $ml = max(50, min(1500, $ml));
+        $day = CivilDates::today();
+        $this->db->statement('insert into coach_water (user_id,civil_date,ml) values (?,?,?) as incoming on duplicate key update ml=coach_water.ml+incoming.ml, updated_at=current_timestamp(6)', [$user, $day, $ml]);
+        $total = (int) $this->db->table('coach_water')->where(['user_id' => $user, 'civil_date' => $day])->value('ml');
+
+        return $this->faDigits($ml).' میلی‌لیتر آب ثبت شد. مجموع امروز '.$this->faDigits($total).' میلی‌لیتر است.';
     }
 
     private function ensure(string $user): object

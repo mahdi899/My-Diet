@@ -10,6 +10,7 @@ import '../../domain/common/digits.dart';
 import '../../presentation/widgets/kit/pressable_scale.dart';
 import '../../presentation/widgets/brand_scene.dart';
 import 'home_day_focus.dart';
+import 'home_focus_sparkles.dart';
 
 /// Personal greeting and calendar, separate from the day's changing records.
 class HomeWelcome extends StatelessWidget {
@@ -143,12 +144,24 @@ class HomeFocusCard extends StatelessWidget {
         : focus.message;
     return Container(
       key: const ValueKey('home-focus-card'),
-      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.mint,
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [Color(0xFFF7FCF8), AppColors.mint],
+        ),
         borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: const Color(0xFFFFFFFF)),
+        boxShadow: AppShadows.soft,
       ),
-      child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        child: Stack(
+          children: [
+            const Positioned.fill(child: HomeFocusSparkles()),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           LayoutBuilder(
@@ -220,6 +233,10 @@ class HomeFocusCard extends StatelessWidget {
             ),
           ],
         ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

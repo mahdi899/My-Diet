@@ -20,7 +20,7 @@ interface CoachGateway
 
     public function dayBrief(string $user): array;
 
-    public function action(string $user, string $client, string $action): array;
+    public function action(string $user, string $client, string $action, array $args = [], ?string $label = null): array;
 
     public function patch(string $user, string $entry, string $title): array;
 

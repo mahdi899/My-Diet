@@ -273,7 +273,10 @@ class CoachSession {
     var succeeded = false;
     var refresh = _logsToday(request.action);
     var reloadPlan =
-        request.action == 'confirm_meal' || request.action == 'log_as_planned';
+        request.action == 'confirm_meal' ||
+        request.action == 'log_as_planned' ||
+        request.action == 'confirm_swap' ||
+        request.action == 'undo_meal';
     var replayed = false;
     CoachTransportException? failure;
     final done = Completer<void>();
@@ -516,6 +519,8 @@ class CoachSession {
       action == 'log_as_planned' ||
       action == 'log_water' ||
       action == 'log_weight' ||
+      action == 'confirm_swap' ||
+      action == 'undo_meal' ||
       action == 'show_ring';
 
   void _replacePending(CoachMessage incoming) {

@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../core/format/digits.dart';
+import '../../../../core/photos/photos.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../presentation/widgets/kit/kit.dart';
 import '../../presentation/coach_controller.dart';
+import '../coach_companion.dart';
 import '../../data/coach_parse.dart';
 import '../../domain/coach_message.dart';
 import 'coach_food_card.dart';
@@ -310,13 +312,294 @@ class QuickRepliesView extends StatelessWidget {
   }
 }
 
-class DayBriefView extends StatelessWidget {
-  const DayBriefView({super.key, required this.message});
+String _mealLead(String title, List<Map<String, dynamic>> items) {
+  String? day;
+  if (title.contains('فردا')) {
+    day = 'فردا';
+  } else if (title.contains('دیروز')) {
+    day = 'دیروز';
+  } else if (title.contains('امروز')) {
+    day = 'امروز';
+  }
+  final meal = items.length == 1 ? asString(items.first['meal']) : '';
+  if (day == null || meal.isEmpty) return title;
+  return '$meal $dayت اینه';
+}
+
+String _stamp(DateTime time) {
+  final local = time.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return fa('$hour:$minute');
+}
+
+class FactCardView extends StatelessWidget {
+  const FactCardView({super.key, required this.message, this.onOpenMeal});
   final CoachMessage message;
+  final void Function(Map<String, dynamic> item)? onOpenMeal;
+
+  @override
+  Widget build(BuildContext context) {
+    final payload = message.payload;
+    final items = asMapList(payload['items']);
+    final kind = asString(payload['kind']);
+    final meals = kind == 'meals';
+    if (meals) {
+      return _ChatMealCard(
+        message: message,
+        items: items,
+        onOpenMeal: onOpenMeal,
+      );
+    }
+    return Align(
+      widthFactor: 1,
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.86,
+        ),
+        child: AppCard(
+          padding: EdgeInsets.fromLTRB(10, meals ? 8 : 12, 10, meals ? 8 : 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!meals)
+                Text(
+                  asString(payload['title'], message.fallbackText),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: AppColors.emeraldDark,
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 2, 4, 6),
+                  child: Text(
+                    asString(payload['title']),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ),
+              if (asString(payload['body']).isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  asString(payload['body']),
+                  style: const TextStyle(height: 1.7, fontSize: 13),
+                ),
+              ],
+              for (final item in items)
+                _FactRow(item: item, kind: kind, onOpen: onOpenMeal),
+              Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 2, bottom: 2),
+                  child: Text(
+                    _stamp(message.createdAt),
+                    style: const TextStyle(
+                      color: AppColors.faint,
+                      fontSize: 10,
+                      height: 1,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatMealCard extends StatelessWidget {
+  const _ChatMealCard({
+    required this.message,
+    required this.items,
+    this.onOpenMeal,
+  });
+
+  final CoachMessage message;
+  final List<Map<String, dynamic>> items;
+  final void Function(Map<String, dynamic> item)? onOpenMeal;
+
+  @override
+  Widget build(BuildContext context) {
+    final lead = _mealLead(
+      asString(message.payload['title'], message.fallbackText),
+      items,
+    );
+    final bubbleWidth = (MediaQuery.sizeOf(context).width * 0.62).clamp(
+      210.0,
+      280.0,
+    );
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ExcludeSemantics(
+              child: CoachCompanion(size: 32, mood: CompanionMood.calm),
+            ),
+            const SizedBox(width: 7),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: bubbleWidth),
+              child: AppCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                  child: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        lead,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: AppColors.emeraldDark,
+                          fontSize: 13,
+                          height: 1.9,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      for (final item in items)
+                        _FactRow(
+                          item: item,
+                          kind: 'meals',
+                          onOpen: onOpenMeal,
+                        ),
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            _stamp(message.createdAt),
+                            style: const TextStyle(
+                              color: AppColors.faint,
+                              fontSize: 10,
+                              height: 1,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            ],
+          ),
+        ),
+      );
+  }
+}
+
+class _FactRow extends StatelessWidget {
+  const _FactRow({required this.item, required this.kind, this.onOpen});
+  final Map<String, dynamic> item;
+  final String kind;
+  final void Function(Map<String, dynamic> item)? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final kcal = asInt(item['kcal']);
+    final meal = kind == 'meals';
+    final meta = [
+      if (asString(item['meal']).isNotEmpty) asString(item['meal']),
+      if (asString(item['subtitle']).isNotEmpty) asString(item['subtitle']),
+      if (kcal > 0) '${fa(kcal)} کالری',
+    ].join(' · ');
+    final row = Row(
+      children: [
+        if (meal) ...[
+          FoodImage(
+            title: asString(item['title']),
+            mealType: asString(item['meal']),
+            thumb: true,
+            width: 56,
+            height: 56,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          const SizedBox(width: 10),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                asString(item['title']),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  height: 1.45,
+                  color: AppColors.ink,
+                ),
+              ),
+              if (meta.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  meta,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: meal ? AppColors.emeraldDeep : AppColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (meal)
+          const Icon(
+            Icons.chevron_left_rounded,
+            color: AppColors.faint,
+            size: 22,
+          ),
+      ],
+    );
+    if (!meal || onOpen == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: row,
+      );
+    }
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onOpen!(item),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: row,
+        ),
+      ),
+    );
+  }
+}
+
+class DayBriefView extends StatelessWidget {
+  const DayBriefView({super.key, required this.message, this.onPick});
+  final CoachMessage message;
+  final ValueChanged<String>? onPick;
 
   @override
   Widget build(BuildContext context) {
     final meals = asMapList(message.payload['meals']);
+    final options = asMapList(message.payload['options']);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,6 +632,24 @@ class DayBriefView extends StatelessWidget {
                 ],
               ),
             ),
+          if (options.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final option in options)
+                  ActionChip(
+                    label: Text(asString(option['label'], asString(option['value']))),
+                    onPressed: onPick == null
+                        ? null
+                        : () => onPick!(
+                            asString(option['label'], asString(option['value'])),
+                          ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -415,6 +716,156 @@ class MilestoneView extends StatelessWidget {
               style: const TextStyle(color: AppColors.emeraldDark, height: 1.7),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class SwapOptionsView extends StatelessWidget {
+  const SwapOptionsView({
+    super.key,
+    required this.message,
+    required this.controller,
+  });
+
+  final CoachMessage message;
+  final CoachController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final payload = message.payload;
+    final options = asMapList(payload['options']);
+    final used = controller.answered.contains(message.id);
+    final mealId = asString(payload['mealId']);
+    final reason = asString(payload['reason'], 'variety');
+    final bubbleWidth = (MediaQuery.sizeOf(context).width * 0.62).clamp(
+      210.0,
+      280.0,
+    );
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ExcludeSemantics(
+              child: CoachCompanion(size: 32, mood: CompanionMood.calm),
+            ),
+            const SizedBox(width: 7),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: bubbleWidth),
+              child: AppCard(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        asString(payload['text'], message.fallbackText),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: AppColors.emeraldDark,
+                          fontSize: 13,
+                          height: 1.9,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      for (final option in options)
+                        _SwapOption(
+                          option: option,
+                          enabled: !used && mealId.isNotEmpty,
+                          onPick: () => controller.sendAction(
+                            'confirm_swap',
+                            {
+                              'mealId': mealId,
+                              'foodSlug': asString(option['slug']),
+                              'reason': reason,
+                            },
+                            label: asString(option['name']),
+                            sourceId: message.id,
+                          ),
+                        ),
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            _stamp(message.createdAt),
+                            style: const TextStyle(
+                              color: AppColors.faint,
+                              fontSize: 10,
+                              height: 1,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SwapOption extends StatelessWidget {
+  const _SwapOption({
+    required this.option,
+    required this.enabled,
+    required this.onPick,
+  });
+
+  final Map<String, dynamic> option;
+  final bool enabled;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = asString(option['name']);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled && asString(option['slug']).isNotEmpty ? onPick : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              FoodImage(
+                title: name,
+                mealType: 'ناهار',
+                thumb: true,
+                width: 52,
+                height: 52,
+                borderRadius: BorderRadius.circular(12),
+                semanticLabel: name,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
