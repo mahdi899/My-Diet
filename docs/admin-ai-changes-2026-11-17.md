@@ -418,7 +418,9 @@ Route::delete('providers/{id}/models/{modelId}', 'removeModel');
 
 Also reflected in `contracts/mysql-schema.json`, Postgres contract, `ReplacementContractTest` create closerouter provider.
 
-### §5.2 Migration `2026_11_17_130000_create_ai_provider_models.php`
+### §5.2 `ai_provider_models` (migration removed)
+
+The create and drop migrations were deleted so a fresh database never builds this table. Prices are read from the provider API, not stored.
 
 **Table `ai_provider_models`:**
 
@@ -568,7 +570,7 @@ Regex for catalog: `^admin\/ai\/providers\/[^/]+\/models(?:\?.*)?$` — query st
 | `backend-laravel/routes/api.php` | POST/DELETE provider models |
 | `backend-laravel/.../ProviderClient.php` | CloseRouter `/providers`; `fetchModels` 90s; `Cache::remember` 600s; `modelView`/`pricing`/`micros` |
 | `database/migrations/2026_11_17_120000_*.php` | `closerouter` kind |
-| `database/migrations/2026_11_17_130000_*.php` | `ai_provider_models` table |
+| `database/migrations/2026_11_17_130000_*.php` | Removed. Do not recreate `ai_provider_models`. |
 | `contracts/mysql-schema.json` | Schema contract sync |
 
 **Not modified for Android:** `app/` Flutter — no `sync_android_studio.ps1` required.

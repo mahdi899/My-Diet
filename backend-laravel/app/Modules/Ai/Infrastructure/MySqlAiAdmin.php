@@ -28,12 +28,7 @@ final class MySqlAiAdmin
 
     public function providers(): array
     {
-        $saved = [];
-        foreach ($this->db->table('ai_provider_models')->orderBy('created_at')->get() as $model) {
-            $saved[$model->provider_id][] = $this->modelView($model);
-        }
-
-        return ['items' => array_map(fn ($row) => $this->providerView($row, $saved[$row->id] ?? []), $this->db->table('ai_providers')->orderBy('created_at')->get()->all())];
+        return ['items' => array_map($this->providerView(...), $this->db->table('ai_providers')->orderBy('created_at')->get()->all())];
     }
 
     public function createProvider(string $actor, array $body): array
@@ -140,54 +135,13 @@ final class MySqlAiAdmin
         return ['fetchedAt' => CivilDates::now()->format('Y-m-d\TH:i:s.v\Z'), 'total' => count($models), 'suggested' => FixedAiCatalog::SUGGESTED, 'items' => array_slice($models, 0, $limit)];
     }
 
-    public function addModel(string $actor, string $id, array $body): array
-    {
-        if ($this->db->table('ai_providers')->where('id', $id)->doesntExist()) {
-            throw new Problem(404, 'not_found', 'سرویس پیدا نشد');
-        }
-        $model = $this->text($body['model'] ?? null, 'مدل', 255);
-        $saved = Crypto::uuid();
-        try {
-            $this->db->transaction(function () use ($actor, $id, $body, $model, $saved): void {
-                $this->db->table('ai_provider_models')->insert([
-                    'id' => $saved, 'provider_id' => $id, 'model' => $model,
-                    'name' => $this->optional($body, 'name', 255),
-                    'price_in_micros_per_m' => array_key_exists('priceInMicrosPerM', $body) ? $this->micros($body['priceInMicrosPerM']) : 0,
-                    'price_out_micros_per_m' => array_key_exists('priceOutMicrosPerM', $body) ? $this->micros($body['priceOutMicrosPerM']) : 0,
-                ]);
-                $this->audit($actor, 'ai_provider_model_added', 'ai_provider', $id, ['model' => $model]);
-            });
-        } catch (QueryException $error) {
-            if ((int) ($error->errorInfo[1] ?? 0) === 1062) {
-                throw new Problem(409, 'conflict', 'این مدل قبلاً به سرویس اضافه شده است');
-            }
-            throw $error;
-        }
-
-        return $this->provider($id);
-    }
-
-    public function removeModel(string $actor, string $id, string $modelId): array
-    {
-        return $this->db->transaction(function () use ($actor, $id, $modelId): array {
-            $row = $this->db->table('ai_provider_models')->where('provider_id', $id)->where('id', $modelId)->first();
-            if ($row === null) {
-                throw new Problem(404, 'not_found', 'مدل پیدا نشد');
-            }
-            $this->db->table('ai_provider_models')->where('id', $modelId)->delete();
-            $this->audit($actor, 'ai_provider_model_removed', 'ai_provider', $id, ['model' => $row->model]);
-
-            return $this->provider($id);
-        });
-    }
-
     public function pools(): array
     {
         $pools = $this->db->table('ai_pools')->orderBy('code')->get();
-        $members = $this->db->select('select m.id, m.pool_id as poolId, m.provider_id as providerId, p.name as providerName, m.model, m.position, m.weight, m.enabled, m.price_in_micros_per_m as priceInMicrosPerM, m.price_out_micros_per_m as priceOutMicrosPerM, h.consecutive_failures as consecutiveFailures, h.cooldown_until as cooldownUntil, h.last_error_code as lastErrorCode, h.last_ok_at as lastOkAt, h.last_fail_at as lastFailAt, coalesce(h.total_ok,0) as totalOk, coalesce(h.total_fail,0) as totalFail from ai_pool_members m join ai_providers p on p.id=m.provider_id left join ai_pool_health h on h.member_id=m.id order by m.position');
+        $members = $this->db->select('select m.id, m.pool_id as poolId, m.provider_id as providerId, p.name as providerName, m.model, m.position, m.weight, m.enabled, h.consecutive_failures as consecutiveFailures, h.cooldown_until as cooldownUntil, h.last_error_code as lastErrorCode, h.last_ok_at as lastOkAt, h.last_fail_at as lastFailAt, coalesce(h.total_ok,0) as totalOk, coalesce(h.total_fail,0) as totalFail from ai_pool_members m join ai_providers p on p.id=m.provider_id left join ai_pool_health h on h.member_id=m.id order by m.position');
 
         return ['items' => array_map(function ($pool) use ($members): array {
-            return ['id' => $pool->id, 'code' => $pool->code, 'title' => $pool->title, 'strategy' => $pool->strategy, 'temperature' => (float) $pool->temperature, 'maxTokens' => (int) $pool->max_tokens, 'timeoutMs' => (int) $pool->timeout_ms, 'maxAttempts' => (int) $pool->max_attempts, 'enabled' => (bool) (int) $pool->enabled, 'members' => array_values(array_map(fn ($member) => ['id' => $member->id, 'providerId' => $member->providerId, 'providerName' => $member->providerName, 'model' => $member->model, 'position' => (int) $member->position, 'weight' => (int) $member->weight, 'enabled' => (bool) (int) $member->enabled, 'priceInMicrosPerM' => (int) $member->priceInMicrosPerM, 'priceOutMicrosPerM' => (int) $member->priceOutMicrosPerM, 'consecutiveFailures' => (int) ($member->consecutiveFailures ?? 0), 'cooldownUntil' => $member->cooldownUntil, 'lastErrorCode' => $member->lastErrorCode, 'lastOkAt' => $member->lastOkAt, 'lastFailAt' => $member->lastFailAt, 'totalOk' => (int) $member->totalOk, 'totalFail' => (int) $member->totalFail], array_filter($members, fn ($member) => $member->poolId === $pool->id)))];
+            return ['id' => $pool->id, 'code' => $pool->code, 'title' => $pool->title, 'strategy' => $pool->strategy, 'temperature' => (float) $pool->temperature, 'maxTokens' => (int) $pool->max_tokens, 'timeoutMs' => (int) $pool->timeout_ms, 'maxAttempts' => (int) $pool->max_attempts, 'enabled' => (bool) (int) $pool->enabled, 'members' => array_values(array_map(fn ($member) => ['id' => $member->id, 'providerId' => $member->providerId, 'providerName' => $member->providerName, 'model' => $member->model, 'position' => (int) $member->position, 'weight' => (int) $member->weight, 'enabled' => (bool) (int) $member->enabled, 'consecutiveFailures' => (int) ($member->consecutiveFailures ?? 0), 'cooldownUntil' => $member->cooldownUntil, 'lastErrorCode' => $member->lastErrorCode, 'lastOkAt' => $member->lastOkAt, 'lastFailAt' => $member->lastFailAt, 'totalOk' => (int) $member->totalOk, 'totalFail' => (int) $member->totalFail], array_filter($members, fn ($member) => $member->poolId === $pool->id)))];
         }, $pools->all())];
     }
 
@@ -257,7 +211,7 @@ final class MySqlAiAdmin
             if (! is_int($weight) || $weight < 1 || $weight > 100) {
                 throw new Problem(400, 'validation', 'وزن معتبر نیست');
             }
-            $members[] = ['providerId' => $provider, 'model' => $model, 'position' => $index, 'weight' => $weight, 'enabled' => ($entry['enabled'] ?? true) !== false, 'priceIn' => $this->micros($entry['priceInMicrosPerM'] ?? 0), 'priceOut' => $this->micros($entry['priceOutMicrosPerM'] ?? 0)];
+            $members[] = ['providerId' => $provider, 'model' => $model, 'position' => $index, 'weight' => $weight, 'enabled' => ($entry['enabled'] ?? true) !== false];
         }
         $this->db->transaction(function () use ($actor, $code, $pool, $members): void {
             $ids = array_values(array_unique(array_column($members, 'providerId')));
@@ -273,7 +227,7 @@ final class MySqlAiAdmin
                 }
             }
             foreach ($members as $member) {
-                $this->db->statement('insert into ai_pool_members (id, pool_id, provider_id, model, position, weight, enabled, price_in_micros_per_m, price_out_micros_per_m) values (?,?,?,?,?,?,?,?,?) as incoming on duplicate key update position=incoming.position, weight=incoming.weight, enabled=incoming.enabled, price_in_micros_per_m=incoming.price_in_micros_per_m, price_out_micros_per_m=incoming.price_out_micros_per_m', [Crypto::uuid(), $pool->id, $member['providerId'], $member['model'], $member['position'], $member['weight'], $member['enabled'], $member['priceIn'], $member['priceOut']]);
+                $this->db->statement('insert into ai_pool_members (id, pool_id, provider_id, model, position, weight, enabled) values (?,?,?,?,?,?,?) as incoming on duplicate key update position=incoming.position, weight=incoming.weight, enabled=incoming.enabled', [Crypto::uuid(), $pool->id, $member['providerId'], $member['model'], $member['position'], $member['weight'], $member['enabled']]);
             }
             $this->audit($actor, 'ai_pool_members_set', 'ai_pool', $pool->id, ['code' => $code, 'count' => count($members)]);
         });
@@ -519,19 +473,12 @@ final class MySqlAiAdmin
             throw new Problem(404, 'not_found', 'سرویس پیدا نشد');
         }
 
-        $models = array_map($this->modelView(...), $this->db->table('ai_provider_models')->where('provider_id', $id)->orderBy('created_at')->get()->all());
-
-        return $this->providerView($row, $models);
+        return $this->providerView($row);
     }
 
-    private function providerView(object $row, array $models): array
+    private function providerView(object $row): array
     {
-        return ['id' => $row->id, 'name' => $row->name, 'kind' => $row->kind, 'baseUrl' => $row->base_url, 'httpReferer' => $row->http_referer, 'appTitle' => $row->app_title, 'active' => (bool) (int) $row->active, 'hasKey' => $row->api_key_encrypted !== null, 'keyHint' => $this->hint($row->api_key_encrypted), 'models' => $models, 'createdAt' => Crypto::iso($row->created_at), 'updatedAt' => Crypto::iso($row->updated_at)];
-    }
-
-    private function modelView(object $row): array
-    {
-        return ['id' => $row->id, 'model' => $row->model, 'name' => $row->name, 'priceInMicrosPerM' => (int) $row->price_in_micros_per_m, 'priceOutMicrosPerM' => (int) $row->price_out_micros_per_m];
+        return ['id' => $row->id, 'name' => $row->name, 'kind' => $row->kind, 'baseUrl' => $row->base_url, 'httpReferer' => $row->http_referer, 'appTitle' => $row->app_title, 'active' => (bool) (int) $row->active, 'hasKey' => $row->api_key_encrypted !== null, 'keyHint' => $this->hint($row->api_key_encrypted), 'createdAt' => Crypto::iso($row->created_at), 'updatedAt' => Crypto::iso($row->updated_at)];
     }
 
     private function prompt(object $row): array

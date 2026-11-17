@@ -19,6 +19,9 @@ const demoPools = Object.keys(poolTitles).map((code, index) => ({
 
 type ProviderModal = { kind: 'edit' | 'delete'; provider?: Row }
 
+type Quote = { inn: number; out: number; free: boolean }
+type QuoteBook = { quotes: Record<string, Quote>; state: Record<string, 'loading' | 'ready' | 'error'> }
+
 function modelCostLabel(model: Row) {
   const inn = Number(model.priceInMicrosPerM ?? 0)
   const out = Number(model.priceOutMicrosPerM ?? 0)
@@ -26,105 +29,54 @@ function modelCostLabel(model: Row) {
   return `ورودی ${usd(inn, 3)}/M · خروجی ${usd(out, 3)}/M`
 }
 
-function ProviderRow({ provider, preview, edit, refresh, notify }: { provider: Row; preview: boolean; edit: (kind: 'edit' | 'delete') => void; refresh: () => Promise<unknown>; notify: (message: string) => void }) {
-  const [adding, setAdding] = useState(false)
-  const saved = asRows(provider.models)
-  const remove = useMutation({
-    mutationFn: (modelId: string) => aiApi('providers/' + id(provider.id) + '/models/' + id(modelId), 'DELETE'),
-    onSuccess: async () => { notify('مدل از سرویس حذف شد.'); await refresh() },
-  })
-  return <div className="ai-provider" aria-busy={remove.isPending}>
+function useCatalogQuotes(providers: Row[], preview: boolean): QuoteBook {
+  const [quotes, setQuotes] = useState<Record<string, Quote>>({})
+  const [state, setState] = useState<Record<string, 'loading' | 'ready' | 'error'>>({})
+  const key = providers.map(provider => str(provider.id)).join('|')
+  useEffect(() => {
+    if (preview || key === '') return
+    let cancel = false
+    for (const provider of providers) {
+      const providerId = str(provider.id)
+      setState(prev => ({ ...prev, [providerId]: 'loading' }))
+      aiApi('providers/' + id(providerId) + '/models?limit=2000')
+        .then(data => {
+          if (cancel) return
+          const next: Record<string, Quote> = {}
+          for (const row of itemRows(data)) {
+            next[providerId + '\n' + str(row.id)] = { inn: Number(row.priceInMicrosPerM ?? 0), out: Number(row.priceOutMicrosPerM ?? 0), free: row.free === true }
+          }
+          setQuotes(prev => ({ ...prev, ...next }))
+          setState(prev => ({ ...prev, [providerId]: 'ready' }))
+        })
+        .catch(() => { if (!cancel) setState(prev => ({ ...prev, [providerId]: 'error' })) })
+    }
+    return () => { cancel = true }
+  }, [preview, key])
+  return { quotes, state }
+}
+
+function livePrice(book: QuoteBook, providerId: string, model: string, preview: boolean, stored?: Row) {
+  if (preview && stored) return modelCostLabel(stored)
+  const status = book.state[providerId]
+  if (status !== 'ready' && status !== 'error') return 'در حال دریافت قیمت از سرویس…'
+  const quote = book.quotes[providerId + '\n' + model]
+  if (!quote) return status === 'error' ? 'قیمت از سرویس دریافت نشد' : 'این مدل در فهرست فعلی سرویس نیست'
+  return modelCostLabel({ priceInMicrosPerM: quote.inn, priceOutMicrosPerM: quote.out, free: quote.free })
+}
+
+function ProviderRow({ provider, edit }: { provider: Row; edit: (kind: 'edit' | 'delete') => void }) {
+  return <div className="ai-provider">
     <div className="ai-row">
       <div className="ai-row-info"><strong>{str(provider.name)}</strong><small><bdi>{str(provider.baseUrl)}</bdi></small></div>
       <div className="ai-inline-actions"><AiBadge tone={provider.active ? 'good' : 'neutral'}>{provider.active ? 'فعال' : 'غیرفعال'}</AiBadge>
         <AiBadge tone="neutral">{kinds[str(provider.kind)] ?? str(provider.kind)}</AiBadge>
         <AiBadge tone={provider.hasKey ? 'good' : 'bad'}>{provider.hasKey ? `کلید ${str(provider.keyHint)}` : 'بدون کلید'}</AiBadge>
-        <button type="button" disabled={preview} aria-label={`افزودن مدل به ${str(provider.name)}`} onClick={() => setAdding(true)}><Icon name="plus" />افزودن</button>
         <button type="button" className="secondary" onClick={() => edit('edit')}><Icon name="sliders" />ویرایش</button>
         <button type="button" className="secondary ai-danger" onClick={() => edit('delete')}><Icon name="trash" />حذف</button>
       </div>
     </div>
-    {saved.length ? <ul className="ai-saved-models">
-      {saved.map(model => <li key={str(model.id)}>
-        <div className="ai-row-info"><strong><bdi>{str(model.model)}</bdi></strong>{str(model.name) && str(model.name) !== str(model.model) && <small>{str(model.name)}</small>}</div>
-        <button type="button" className="secondary ai-danger" disabled={preview || remove.isPending} aria-label={`حذف ${str(model.model)}`} onClick={() => remove.mutate(str(model.id))}><Icon name="trash" />حذف</button>
-      </li>)}
-    </ul> : <p className="ai-saved-empty">هنوز مدلی به این سرویس اضافه نشده است.</p>}
-    {remove.isError && <p className="ai-feedback" role="alert">{errorText(remove.error)}</p>}
-    {adding && <AddModelDialog provider={provider} preview={preview} close={() => setAdding(false)} added={async message => { setAdding(false); notify(message); await refresh() }} />}
   </div>
-}
-
-function AddModelDialog({ provider, preview, close, added }: { provider: Row; preview: boolean; close: () => void; added: (message: string) => Promise<unknown> }) {
-  const [query, setQuery] = useState('')
-  const [items, setItems] = useState<Row[]>([])
-  const [loading, setLoading] = useState(true)
-  const [failure, setFailure] = useState('')
-  const [busy, setBusy] = useState('')
-  const [catalogTotal, setCatalogTotal] = useState(0)
-  const owned = new Set(asRows(provider.models).map(model => str(model.model)))
-  const term = query.trim().toLowerCase()
-  const shown = items.filter(model => !term || (str(model.id) + ' ' + str(model.name)).toLowerCase().includes(term))
-  const totalCount = catalogTotal || items.length
-  const countLabel = term
-    ? `${num(shown.length)} از ${num(totalCount)} مدل`
-    : `${num(totalCount)} مدل`
-  useEffect(() => {
-    let cancelled = false
-    aiApi('providers/' + id(provider.id) + '/models?limit=2000')
-      .then(data => {
-        if (!cancelled) {
-          const rows = itemRows(data)
-          setItems(rows)
-          setCatalogTotal(Number.isFinite(Number(data.total)) ? Number(data.total) : rows.length)
-          setFailure('')
-        }
-      })
-      .catch(error => { if (!cancelled) setFailure(errorText(error)) })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [provider.id])
-  async function choose(model: Row) {
-    const key = str(model.id)
-    setBusy(key)
-    setFailure('')
-    try {
-      const price = (value: unknown) => Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0
-      await aiApi('providers/' + id(provider.id) + '/models', 'POST', {
-        model: key, name: str(model.name || key),
-        priceInMicrosPerM: price(model.priceInMicrosPerM), priceOutMicrosPerM: price(model.priceOutMicrosPerM),
-      })
-      await added('مدل به سرویس اضافه شد.')
-    } catch (error) {
-      setFailure(errorText(error))
-    } finally {
-      setBusy('')
-    }
-  }
-  return <AiDialog title={`افزودن مدل به ${str(provider.name)}`} close={close}>
-    <div className="ai-form ai-catalog">
-      <div className="ai-catalog-search">
-        <label className="users-search"><Icon name="search" /><span className="sr-only">جست‌وجوی مدل</span>
-          <input type="search" placeholder="جست‌وجوی نام یا شناسهٔ مدل…" value={query} onChange={event => setQuery(event.target.value)} aria-describedby="ai-catalog-count" />
-          {!loading && !failure && <span id="ai-catalog-count" className="ai-catalog-count">{countLabel}</span>}</label>
-      </div>
-      <div className="ai-model-picker" role="listbox" aria-label="مدل‌های موجود در سرویس">
-        {loading && <p>در حال دریافت مدل‌ها از سرویس… (برای OpenRouter ممکن است تا یک دقیقه طول بکشد)</p>}
-        {!loading && failure && <p role="alert">{failure}</p>}
-        {!loading && !failure && !shown.length && <p>مدلی با این عبارت پیدا نشد.</p>}
-        {shown.map(model => {
-          const key = str(model.id)
-          const taken = owned.has(key)
-          const name = str(model.name)
-          return <button type="button" role="option" key={key} aria-selected={taken} disabled={preview || taken || busy !== ''} onClick={() => void choose(model)}>
-            <bdi>{key}</bdi>
-            <small>{name && name !== key ? name : 'شناسهٔ مدل'}{taken ? ' · اضافه شده' : busy === key ? ' · در حال افزودن…' : ''}</small>
-            <small className="ai-model-cost"><bdi dir="ltr">{modelCostLabel(model)}</bdi></small>
-          </button>
-        })}
-      </div>
-    </div>
-  </AiDialog>
 }
 
 function ProviderDialog({ selection, preview, close, saved }: { selection: ProviderModal; preview: boolean; close: () => void; saved: (message: string) => void }) {
@@ -176,37 +128,48 @@ const poolFields = [
 
 function MemberDialog({ providers, preview, close, add }: { providers: Row[]; preview: boolean; close: () => void; add: (member: Row) => void }) {
   const [providerId, setProviderId] = useState(str(providers[0]?.id))
-  const [modelId, setModelId] = useState('')
+  const [query, setQuery] = useState('')
+  const [items, setItems] = useState<Row[]>(preview ? [{ id: sampleModel, name: sampleModel, priceInMicrosPerM: 6000, priceOutMicrosPerM: 500000 }] : [])
+  const [loading, setLoading] = useState(!preview)
+  const [failure, setFailure] = useState('')
   const source = providers.find(provider => str(provider.id) === providerId)
-  const models = asRows(source?.models)
+  const term = query.trim().toLowerCase()
+  const shown = items.filter(model => !term || (str(model.id) + ' ' + str(model.name)).toLowerCase().includes(term))
+  useEffect(() => {
+    if (preview || !providerId) return
+    let cancel = false
+    setLoading(true)
+    aiApi('providers/' + id(providerId) + '/models?limit=2000')
+      .then(data => { if (!cancel) { setItems(itemRows(data)); setFailure('') } })
+      .catch(error => { if (!cancel) { setItems([]); setFailure(errorText(error)) } })
+      .finally(() => { if (!cancel) setLoading(false) })
+    return () => { cancel = true }
+  }, [preview, providerId])
   return <AiDialog title="افزودن مدل به استخر" close={close}>
-    <AiForm preview={preview} close={close} label="افزودن به صف" submit={async data => {
-      const model = models.find(row => str(row.model) === modelId)
-      if (!providerId || !model) throw new Error('سرویس و مدل را انتخاب کنید.')
-      add({
-        providerId, providerName: source?.name, model: model.model, enabled: true,
-        weight: Number(data.get('weight')), priceInMicrosPerM: model.priceInMicrosPerM, priceOutMicrosPerM: model.priceOutMicrosPerM,
-      })
-    }}>
-      <label>سرویس<select value={providerId} onChange={event => { setProviderId(event.target.value); setModelId('') }}>
+    <div className="ai-form ai-catalog">
+      <label>سرویس<select value={providerId} onChange={event => { setProviderId(event.target.value); setQuery('') }}>
         {providers.map(provider => <option key={str(provider.id)} value={str(provider.id)}>{str(provider.name)}</option>)}
       </select></label>
-      {!models.length && <AiNote>این سرویس هنوز مدلی ندارد. اول از دکمهٔ افزودن در ردیف همان سرویس، مدل را از فهرست سایت انتخاب کنید.</AiNote>}
-      {!!models.length && <div className="ai-model-picker" role="listbox" aria-label="مدل‌های ذخیره‌شدهٔ سرویس">
-        {models.map(model => {
-          const key = str(model.model)
-          return <button type="button" role="option" key={str(model.id)} aria-selected={modelId === key} onClick={() => setModelId(key)}>
+      <label className="users-search"><Icon name="search" /><span className="sr-only">جست‌وجوی مدل</span>
+        <input type="search" placeholder="جست‌وجوی نام یا شناسهٔ مدل…" value={query} onChange={event => setQuery(event.target.value)} /></label>
+      <div className="ai-model-picker" role="listbox" aria-label="فهرست زندهٔ مدل‌ها">
+        {loading && <p>در حال دریافت مدل‌ها و قیمت از سرویس…</p>}
+        {!loading && failure && <p role="alert">{failure}</p>}
+        {!loading && !failure && !shown.length && <p>مدلی با این عبارت پیدا نشد.</p>}
+        {shown.map(model => {
+          const key = str(model.id)
+          return <button type="button" role="option" key={key} disabled={preview} onClick={() => add({ providerId, providerName: source?.name, model: key, enabled: true, weight: 1 })}>
             <bdi>{key}</bdi>
             <small className="ai-model-cost"><bdi dir="ltr">{modelCostLabel(model)}</bdi></small>
           </button>
         })}
-      </div>}
-      <label>وزن<input name="weight" type="number" min={1} max={100} defaultValue={1} required /></label>
-    </AiForm>
+      </div>
+      <button type="button" className="secondary" onClick={close}>انصراف</button>
+    </div>
   </AiDialog>
 }
 
-function PoolCard({ pool, providers, preview, refresh, notify }: { pool: Row; providers: Row[]; preview: boolean; refresh: () => Promise<unknown>; notify: (message: string) => void }) {
+function PoolCard({ pool, providers, preview, refresh, notify, quotes }: { pool: Row; providers: Row[]; preview: boolean; refresh: () => Promise<unknown>; notify: (message: string) => void; quotes: QuoteBook }) {
   const [draft, setDraft] = useState<Row[] | null>(null)
   const [adding, setAdding] = useState(false)
   const members = draft ?? asRows(pool.members)
@@ -217,7 +180,6 @@ function PoolCard({ pool, providers, preview, refresh, notify }: { pool: Row; pr
       if (task.kind === 'reset') await aiApi('members/' + id(task.member?.id) + '/reset-health', 'POST')
       else await aiApi(endpoint + '/members', 'PUT', { members: members.map(member => ({
         providerId: member.providerId, model: member.model, enabled: member.enabled, weight: member.weight,
-        priceInMicrosPerM: member.priceInMicrosPerM, priceOutMicrosPerM: member.priceOutMicrosPerM,
       })) })
       await refresh()
       if (task.kind === 'save') setDraft(null)
@@ -251,7 +213,7 @@ function PoolCard({ pool, providers, preview, refresh, notify }: { pool: Row; pr
       const failures = Number(member.consecutiveFailures ?? 0)
       return <div className="ai-row ai-member-row" key={str(member.id || `${member.providerId}/${member.model}`)}>
         <span className="users-current">{num(index + 1)}</span>
-        <div className="ai-row-info"><strong><bdi>{str(member.model)}</bdi></strong><small>{str(member.providerName)} · ورودی {usd(member.priceInMicrosPerM, 3)} · خروجی {usd(member.priceOutMicrosPerM, 3)} در هر میلیون توکن</small></div>
+        <div className="ai-row-info"><strong><bdi>{str(member.model)}</bdi></strong><small>{str(member.providerName)} · <bdi dir="ltr">{livePrice(quotes, str(member.providerId), str(member.model), preview, member)}</bdi></small></div>
         <div className="ai-row-info"><AiBadge tone={cooldown ? 'bad' : failures ? 'warn' : 'good'}>{cooldown ? `در استراحت تا ${date(member.cooldownUntil)}` : failures ? `${num(failures)} خطای پیاپی` : 'سالم'}</AiBadge>
           <small>موفق {num(member.totalOk)} · ناموفق {num(member.totalFail)}{member.lastErrorCode ? ' · ' + str(member.lastErrorCode) : ''}</small></div>
         <div className="ai-inline-actions">
@@ -283,19 +245,19 @@ export function AiModels({ preview }: { preview: boolean }) {
   const [modal, setModal] = useState<ProviderModal | null>(null)
   const [notice, setNotice] = useState('')
   const refresh = () => Promise.all([providerQuery.refetch(), poolQuery.refetch()])
-  if (!providerQuery.data || !poolQuery.data) return <AiLoad error={providerQuery.error || poolQuery.error} retry={() => void refresh()} />
   const providers = itemRows(providerQuery.data)
+  const quotes = useCatalogQuotes(providers, preview || !providerQuery.data)
+  if (!providerQuery.data || !poolQuery.data) return <AiLoad error={providerQuery.error || poolQuery.error} retry={() => void refresh()} />
   const pools = itemRows(poolQuery.data)
   const ordered = [...pools].sort((a, b) => Object.keys(poolTitles).indexOf(str(a.code)) - Object.keys(poolTitles).indexOf(str(b.code)))
   return <>
     {notice && <p className="info-note" role="status">{notice}</p>}
-    <AiCard title="سرویس‌ها و کلیدها" description="هر سرویس یک نشانی و یک کلید دارد. با افزودن، مدل‌های همان سایت را جست‌وجو و به سرویس وصل می‌کنید."
+    <AiCard title="سرویس‌ها و کلیدها" description="هر سرویس یک نشانی و یک کلید دارد. مدل و قیمت لحظه‌ای را داخل استخر، از فهرست همان سایت انتخاب می‌کنید."
       action={<button type="button" onClick={() => setModal({ kind: 'edit' })}><Icon name="plus" />افزودن سرویس</button>}>
       {!providers.length && <p className="ai-feedback">هنوز سرویسی ثبت نشده است.</p>}
-      {providers.map(provider => <ProviderRow key={str(provider.id)} provider={provider} preview={preview} refresh={refresh} notify={setNotice}
-        edit={kind => setModal({ kind, provider })} />)}
+      {providers.map(provider => <ProviderRow key={str(provider.id)} provider={provider} edit={kind => setModal({ kind, provider })} />)}
     </AiCard>
-    {ordered.map(pool => <PoolCard key={str(pool.code)} pool={pool} providers={providers} preview={preview} refresh={refresh} notify={setNotice} />)}
+    {ordered.map(pool => <PoolCard key={str(pool.code)} pool={pool} providers={providers} preview={preview} refresh={refresh} notify={setNotice} quotes={quotes} />)}
     {modal && <ProviderDialog selection={modal} preview={preview} close={() => setModal(null)} saved={message => {
       setModal(null); setNotice(message); void refresh()
     }} />}

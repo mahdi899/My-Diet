@@ -32,6 +32,7 @@ final class ModelPools
             throw new Problem(503, 'pool_unavailable', 'استخر مدل فعال نیست');
         }
         $members = $this->db->select('select m.*,p.name as provider_name,p.kind,p.base_url,p.api_key_encrypted,p.http_referer,p.app_title,h.cooldown_until from ai_pool_members m join ai_providers p on p.id=m.provider_id left join ai_pool_health h on h.member_id=m.id where m.pool_id=? and m.enabled=1 and p.active=1 and (h.cooldown_until is null or h.cooldown_until<=current_timestamp(6)) order by m.position,m.id', [$pool->id]);
+        $this->applyLivePrices($members);
         if ($pool->strategy === 'cost_first') {
             usort($members, fn ($a, $b) => ($a->price_in_micros_per_m + $a->price_out_micros_per_m) <=> ($b->price_in_micros_per_m + $b->price_out_micros_per_m));
         } elseif ($pool->strategy === 'weighted') {
@@ -72,6 +73,37 @@ final class ModelPools
             }
         }
         throw new Problem(503, $last ?? 'pool_empty', $detail ?? 'هیچ مدل آماده‌ای پاسخ معتبر نداد');
+    }
+
+    /** @param  list<object>  $members */
+    private function applyLivePrices(array $members): void
+    {
+        $grouped = [];
+        foreach ($members as $member) {
+            $member->price_in_micros_per_m = 0;
+            $member->price_out_micros_per_m = 0;
+            $grouped[$member->provider_id][] = $member;
+        }
+        foreach ($grouped as $rows) {
+            $sample = $rows[0];
+            try {
+                $catalog = $this->client->models([
+                    'id' => $sample->provider_id, 'kind' => $sample->kind, 'base_url' => $sample->base_url,
+                    'api_key_encrypted' => $sample->api_key_encrypted, 'http_referer' => $sample->http_referer, 'app_title' => $sample->app_title,
+                ]);
+            } catch (\Throwable) {
+                continue;
+            }
+            $prices = [];
+            foreach ($catalog as $row) {
+                if (is_array($row) && is_string($row['id'] ?? null)) {
+                    $prices[$row['id']] = [(int) ($row['priceInMicrosPerM'] ?? 0), (int) ($row['priceOutMicrosPerM'] ?? 0)];
+                }
+            }
+            foreach ($rows as $member) {
+                [$member->price_in_micros_per_m, $member->price_out_micros_per_m] = $prices[$member->model] ?? [0, 0];
+            }
+        }
     }
 
     private function reserve(int $estimate, ?string $request, ?string $user): string

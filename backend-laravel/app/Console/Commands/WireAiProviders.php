@@ -84,8 +84,8 @@ class WireAiProviders extends Command
                 $chosen = array_values(array_filter($chosen, fn ($row) => ! array_any($priority, fn ($first) => $first[0] === $row[0] && $first[1] === $row[1])));
                 $chosen = [...$priority, ...$chosen];
             }
-            foreach ($chosen as $position => [$providerId, $model, $priceIn, $priceOut]) {
-                $this->member($db, $poolId, $providerId, $model, $position, $priceIn, $priceOut);
+            foreach ($chosen as $position => [$providerId, $model]) {
+                $this->member($db, $poolId, $providerId, $model, $position);
                 $this->line($code.' #'.$position.' '.$model);
             }
         }
@@ -133,7 +133,7 @@ class WireAiProviders extends Command
         return ['id' => $id, 'base' => $base];
     }
 
-    private function member(ConnectionInterface $db, string $poolId, string $providerId, string $model, int $position, int $priceIn, int $priceOut): void
+    private function member(ConnectionInterface $db, string $poolId, string $providerId, string $model, int $position): void
     {
         $db->table('ai_pool_members')->insert([
             'id' => Crypto::uuid(),
@@ -143,8 +143,6 @@ class WireAiProviders extends Command
             'position' => $position,
             'weight' => 1,
             'enabled' => 1,
-            'price_in_micros_per_m' => $priceIn,
-            'price_out_micros_per_m' => $priceOut,
         ]);
     }
 
