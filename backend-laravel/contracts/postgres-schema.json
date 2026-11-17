@@ -1464,7 +1464,7 @@
         {
           "name": "ai_providers_kind_check",
           "type": "c",
-          "definition": "CHECK ((kind = ANY (ARRAY['openrouter'::text, 'openai_compatible'::text])))"
+          "definition": "CHECK ((kind = ANY (ARRAY['openrouter'::text, 'closerouter'::text, 'openai_compatible'::text])))"
         },
         {
           "name": "ai_providers_active_not_null",

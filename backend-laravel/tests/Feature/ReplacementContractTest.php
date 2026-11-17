@@ -33,6 +33,7 @@ final class ReplacementContractTest extends MySqlTestCase
         $this->postJson('/v1/admin/maintenance')->assertCreated()->assertJsonStructure(['expiredPayments', 'ledgerMismatches']);
         $this->getJson('/v1/admin/users/'.$user['id'])->assertOk()->assertJsonPath('phone', $this->db->table('users')->where('id', $user['id'])->value('phone_e164'));
         $provider = $this->postJson('/v1/admin/ai/providers', ['name' => 'آزمایش', 'kind' => 'openai_compatible', 'baseUrl' => 'https://example.com/v1', 'apiKey' => 'secret-key'])->assertCreated()->json();
+        $this->postJson('/v1/admin/ai/providers', ['name' => 'کلوزروتر', 'kind' => 'closerouter', 'baseUrl' => 'https://api.closerouter.dev/v1', 'apiKey' => 'secret-key'])->assertCreated()->assertJsonPath('kind', 'closerouter');
         self::assertTrue($provider['hasKey']);
         self::assertFalse(app(FixedAiCatalog::class)->callsExternalNetwork());
         $this->postJson('/v1/admin/ai/providers/'.$provider['id'].'/test', ['model' => 'test'])->assertCreated()->assertJsonPath('ok', true)->assertJsonPath('answer', 'ok');

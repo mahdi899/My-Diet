@@ -1,14 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { asRows } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { AiBadge, AiCard, AiDialog, AiForm, AiLoad, AiNote, aiApi, date, errorText, id, itemRows, num, outcomes, poolTitles, str, usd, useAiData, type Row } from './AiUi'
 
-const kinds: Record<string, string> = { openrouter: 'OpenRouter', openai_compatible: 'سازگار با OpenAI' }
+const kinds: Record<string, string> = { openrouter: 'OpenRouter', closerouter: 'CloseRouter', openai_compatible: 'سازگار با OpenAI' }
+const baseUrls: Record<string, string> = { openrouter: 'https://openrouter.ai/api/v1', closerouter: 'https://api.closerouter.dev/v1', openai_compatible: '' }
 const strategies = { priority: 'به ترتیب اولویت', cost_first: 'ارزان‌ترین اول', weighted: 'وزنی (پخش بار)' }
 const sampleModel = 'deepseek/deepseek-v4.1-flash-1017'
-const pinnedModels = ['openai/gpt-6-luna', 'anthropic/claude-haiku-5.5']
-const demoProvider = { id: 'preview-provider', name: 'OpenRouter آزمایشی', kind: 'openrouter', active: true, hasKey: true, keyHint: '…demo', baseUrl: 'https://openrouter.ai/api/v1' }
+const demoProvider = { id: 'preview-provider', name: 'OpenRouter آزمایشی', kind: 'openrouter', active: true, hasKey: true, keyHint: '…demo', baseUrl: 'https://openrouter.ai/api/v1', models: [{ id: 'preview-model', model: sampleModel, name: sampleModel, priceInMicrosPerM: 6000, priceOutMicrosPerM: 500000 }] }
 const demoPools = Object.keys(poolTitles).map((code, index) => ({
   code, strategy: 'priority', temperature: [0.1, 0.5, 0.2, 0.3, 0.3][index], maxTokens: [700, 1200, 1200, 6000, 6000][index],
   timeoutMs: [30000, 60000, 60000, 90000, 90000][index], maxAttempts: [2, 3, 3, 4, 4][index], enabled: true,
@@ -19,41 +19,121 @@ const demoPools = Object.keys(poolTitles).map((code, index) => ({
 
 type ProviderModal = { kind: 'edit' | 'delete'; provider?: Row }
 
-function ProviderRow({ provider, model, preview, edit }: { provider: Row; model: string; preview: boolean; edit: (kind: 'edit' | 'delete') => void }) {
-  const test = useMutation({ mutationFn: async (): Promise<Row & { elapsedMs: number }> => {
-    const started = performance.now()
-    const result = await aiApi('providers/' + id(provider.id) + '/test', 'POST', { model })
-    return { ...result, elapsedMs: Math.round(performance.now() - started) }
-  } })
-  const result = test.data
-  return <div className="ai-provider" aria-busy={test.isPending}>
+function modelCostLabel(model: Row) {
+  const inn = Number(model.priceInMicrosPerM ?? 0)
+  const out = Number(model.priceOutMicrosPerM ?? 0)
+  if (model.free === true || (inn === 0 && out === 0)) return 'رایگان'
+  return `ورودی ${usd(inn, 3)}/M · خروجی ${usd(out, 3)}/M`
+}
+
+function ProviderRow({ provider, preview, edit, refresh, notify }: { provider: Row; preview: boolean; edit: (kind: 'edit' | 'delete') => void; refresh: () => Promise<unknown>; notify: (message: string) => void }) {
+  const [adding, setAdding] = useState(false)
+  const saved = asRows(provider.models)
+  const remove = useMutation({
+    mutationFn: (modelId: string) => aiApi('providers/' + id(provider.id) + '/models/' + id(modelId), 'DELETE'),
+    onSuccess: async () => { notify('مدل از سرویس حذف شد.'); await refresh() },
+  })
+  return <div className="ai-provider" aria-busy={remove.isPending}>
     <div className="ai-row">
       <div className="ai-row-info"><strong>{str(provider.name)}</strong><small><bdi>{str(provider.baseUrl)}</bdi></small></div>
       <div className="ai-inline-actions"><AiBadge tone={provider.active ? 'good' : 'neutral'}>{provider.active ? 'فعال' : 'غیرفعال'}</AiBadge>
         <AiBadge tone="neutral">{kinds[str(provider.kind)] ?? str(provider.kind)}</AiBadge>
         <AiBadge tone={provider.hasKey ? 'good' : 'bad'}>{provider.hasKey ? `کلید ${str(provider.keyHint)}` : 'بدون کلید'}</AiBadge>
-        <button type="button" className="secondary" disabled={preview || !provider.hasKey || test.isPending}
-          aria-label={`تست اتصال ${str(provider.name)}`} onClick={() => test.mutate()}><Icon name="send" />{test.isPending ? 'در حال تست…' : 'تست'}</button>
-        <button type="button" className="secondary" disabled={test.isPending} onClick={() => edit('edit')}><Icon name="sliders" />ویرایش</button>
-        <button type="button" className="secondary ai-danger" disabled={test.isPending} onClick={() => edit('delete')}><Icon name="trash" />حذف</button>
+        <button type="button" disabled={preview} aria-label={`افزودن مدل به ${str(provider.name)}`} onClick={() => setAdding(true)}><Icon name="plus" />افزودن</button>
+        <button type="button" className="secondary" onClick={() => edit('edit')}><Icon name="sliders" />ویرایش</button>
+        <button type="button" className="secondary ai-danger" onClick={() => edit('delete')}><Icon name="trash" />حذف</button>
       </div>
     </div>
-    <div aria-live="polite" aria-atomic="true">
-      {test.isPending ? <p className="ai-test-result">در حال ارسال درخواست واقعی به مدل <bdi>{model}</bdi>…</p>
-        : test.isError ? <p className="ai-test-result" data-tone="bad" role="alert">تست انجام نشد: {errorText(test.error)}</p>
-        : result && <div className="ai-test-result" data-tone={result.ok ? 'good' : 'bad'}>
-          <strong>{result.ok ? 'اتصال برقرار است؛ پاسخ واقعی دریافت شد.' : 'اتصال ناموفق بود.'}</strong>
-          <small><bdi>{model}</bdi> · {num(result.elapsedMs)} میلی‌ثانیه</small>
-          {result.ok ? <p dir="auto">{str(result.answer)}</p>
-            : <p>{outcomes[str(result.outcome)] ?? 'سرویس پاسخ معتبر نداد.'} <bdi>{str(result.errorCode)}</bdi></p>}
-        </div>}
-    </div>
+    {saved.length ? <ul className="ai-saved-models">
+      {saved.map(model => <li key={str(model.id)}>
+        <div className="ai-row-info"><strong><bdi>{str(model.model)}</bdi></strong>{str(model.name) && str(model.name) !== str(model.model) && <small>{str(model.name)}</small>}</div>
+        <button type="button" className="secondary ai-danger" disabled={preview || remove.isPending} aria-label={`حذف ${str(model.model)}`} onClick={() => remove.mutate(str(model.id))}><Icon name="trash" />حذف</button>
+      </li>)}
+    </ul> : <p className="ai-saved-empty">هنوز مدلی به این سرویس اضافه نشده است.</p>}
+    {remove.isError && <p className="ai-feedback" role="alert">{errorText(remove.error)}</p>}
+    {adding && <AddModelDialog provider={provider} preview={preview} close={() => setAdding(false)} added={async message => { setAdding(false); notify(message); await refresh() }} />}
   </div>
+}
+
+function AddModelDialog({ provider, preview, close, added }: { provider: Row; preview: boolean; close: () => void; added: (message: string) => Promise<unknown> }) {
+  const [query, setQuery] = useState('')
+  const [items, setItems] = useState<Row[]>([])
+  const [loading, setLoading] = useState(true)
+  const [failure, setFailure] = useState('')
+  const [busy, setBusy] = useState('')
+  const [catalogTotal, setCatalogTotal] = useState(0)
+  const owned = new Set(asRows(provider.models).map(model => str(model.model)))
+  const term = query.trim().toLowerCase()
+  const shown = items.filter(model => !term || (str(model.id) + ' ' + str(model.name)).toLowerCase().includes(term))
+  const totalCount = catalogTotal || items.length
+  const countLabel = term
+    ? `${num(shown.length)} از ${num(totalCount)} مدل`
+    : `${num(totalCount)} مدل`
+  useEffect(() => {
+    let cancelled = false
+    aiApi('providers/' + id(provider.id) + '/models?limit=2000')
+      .then(data => {
+        if (!cancelled) {
+          const rows = itemRows(data)
+          setItems(rows)
+          setCatalogTotal(Number.isFinite(Number(data.total)) ? Number(data.total) : rows.length)
+          setFailure('')
+        }
+      })
+      .catch(error => { if (!cancelled) setFailure(errorText(error)) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [provider.id])
+  async function choose(model: Row) {
+    const key = str(model.id)
+    setBusy(key)
+    setFailure('')
+    try {
+      const price = (value: unknown) => Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0
+      await aiApi('providers/' + id(provider.id) + '/models', 'POST', {
+        model: key, name: str(model.name || key),
+        priceInMicrosPerM: price(model.priceInMicrosPerM), priceOutMicrosPerM: price(model.priceOutMicrosPerM),
+      })
+      await added('مدل به سرویس اضافه شد.')
+    } catch (error) {
+      setFailure(errorText(error))
+    } finally {
+      setBusy('')
+    }
+  }
+  return <AiDialog title={`افزودن مدل به ${str(provider.name)}`} close={close}>
+    <div className="ai-form ai-catalog">
+      <div className="ai-catalog-search">
+        <label className="users-search"><Icon name="search" /><span className="sr-only">جست‌وجوی مدل</span>
+          <input type="search" placeholder="جست‌وجوی نام یا شناسهٔ مدل…" value={query} onChange={event => setQuery(event.target.value)} aria-describedby="ai-catalog-count" />
+          {!loading && !failure && <span id="ai-catalog-count" className="ai-catalog-count">{countLabel}</span>}</label>
+      </div>
+      <div className="ai-model-picker" role="listbox" aria-label="مدل‌های موجود در سرویس">
+        {loading && <p>در حال دریافت مدل‌ها از سرویس… (برای OpenRouter ممکن است تا یک دقیقه طول بکشد)</p>}
+        {!loading && failure && <p role="alert">{failure}</p>}
+        {!loading && !failure && !shown.length && <p>مدلی با این عبارت پیدا نشد.</p>}
+        {shown.map(model => {
+          const key = str(model.id)
+          const taken = owned.has(key)
+          const name = str(model.name)
+          return <button type="button" role="option" key={key} aria-selected={taken} disabled={preview || taken || busy !== ''} onClick={() => void choose(model)}>
+            <bdi>{key}</bdi>
+            <small>{name && name !== key ? name : 'شناسهٔ مدل'}{taken ? ' · اضافه شده' : busy === key ? ' · در حال افزودن…' : ''}</small>
+            <small className="ai-model-cost"><bdi dir="ltr">{modelCostLabel(model)}</bdi></small>
+          </button>
+        })}
+      </div>
+    </div>
+  </AiDialog>
 }
 
 function ProviderDialog({ selection, preview, close, saved }: { selection: ProviderModal; preview: boolean; close: () => void; saved: (message: string) => void }) {
   const provider = selection.provider
   const endpoint = provider ? 'providers/' + id(provider.id) : 'providers'
+  const [selectedKind, setSelectedKind] = useState(str(provider?.kind || 'openrouter'))
+  const [baseUrl, setBaseUrl] = useState(str(provider?.baseUrl || baseUrls.openrouter))
+  const [showKey, setShowKey] = useState(false)
+  
   if (selection.kind === 'delete') return <AiDialog title="حذف سرویس" close={close}>
     <AiForm preview={preview} close={close} label="حذف سرویس" submit={async () => { await aiApi(endpoint, 'DELETE'); saved('سرویس حذف شد.') }}>
       <AiNote>سرویس «{str(provider?.name)}» حذف می‌شود. حذف سرویسِ مورداستفاده در استخر توسط سرور رد می‌شود.</AiNote>
@@ -70,11 +150,17 @@ function ProviderDialog({ selection, preview, close, saved }: { selection: Provi
       })
       saved('سرویس ذخیره شد.')
     }}>
-      <label>نوع سرویس<select name="kind" defaultValue={str(provider?.kind || 'openrouter')} disabled={!!provider}>
+      {preview && <AiNote>ذخیره در حالت پیش‌نمایش غیرفعال است. از بالای صفحه «بازگشت به داده‌های واقعی» را بزنید.</AiNote>}
+      <label>نوع سرویس<select name="kind" value={selectedKind} disabled={!!provider} onChange={(event) => {
+        const kind = event.target.value
+        setSelectedKind(kind)
+        setBaseUrl(baseUrls[kind] || '')
+      }}>
         {Object.entries(kinds).map(([key, value]) => <option key={key} value={key}>{value}</option>)}</select></label>
       <label>نام نمایشی<input name="name" defaultValue={str(provider?.name)} required /></label>
-      <label>نشانی API<input name="baseUrl" type="url" dir="ltr" defaultValue={str(provider?.baseUrl)} placeholder="https://openrouter.ai/api/v1" /></label>
-      <label>{provider ? 'کلید API جدید (اختیاری)' : 'کلید API'}<input name="apiKey" type="password" dir="ltr" autoComplete="new-password" />
+      <label>نشانی API<input name="baseUrl" type="url" dir="ltr" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://openrouter.ai/api/v1" /></label>
+      <label>{provider ? 'کلید API جدید (اختیاری)' : 'کلید API'}
+        <div className="password-field"><input name="apiKey" type={showKey ? 'text' : 'password'} dir="ltr" autoComplete="new-password" /><button type="button" className="icon-button" aria-label={showKey ? 'پنهان کردن کلید' : 'نمایش کلید'} aria-pressed={showKey} onClick={() => setShowKey(value => !value)}><Icon name="eye" className="icon" /></button></div>
         <small>کلید بعد از ذخیره نمایش داده نمی‌شود.</small></label>
       <label>نشانی سایت (اختیاری)<input name="httpReferer" dir="ltr" defaultValue={str(provider?.httpReferer)} /></label>
       <label>نام برنامه (اختیاری)<input name="appTitle" defaultValue={str(provider?.appTitle ?? 'سبزینه')} /></label>
@@ -83,74 +169,42 @@ function ProviderDialog({ selection, preview, close, saved }: { selection: Provi
   </AiDialog>
 }
 
-function applyCatalogPrices(row: Row, setPriceIn: (value: string) => void, setPriceOut: (value: string) => void) {
-  setPriceIn(String(Number(row.priceInMicrosPerM ?? 0) / 1e6))
-  setPriceOut(String(Number(row.priceOutMicrosPerM ?? 0) / 1e6))
-}
-
-function MemberDialog({ providers, close, add, preview }: { providers: Row[]; close: () => void; add: (row: Row) => void; preview: boolean }) {
-  const [providerId, setProviderId] = useState(str(providers[0]?.id))
-  const [model, setModel] = useState('')
-  const [priceIn, setPriceIn] = useState('0')
-  const [priceOut, setPriceOut] = useState('0')
-  const catalog = useMutation({ mutationFn: (provider: string) => aiApi('providers/' + id(provider) + '/models?limit=500') })
-  const liveModels = itemRows(catalog.data)
-  const suggested = Array.isArray(catalog.data?.suggested)
-    ? catalog.data.suggested.filter((entry): entry is string => typeof entry === 'string')
-    : catalog.data ? pinnedModels : []
-  const models = [
-    ...suggested.filter(entry => !liveModels.some(row => row.id === entry)).map(entry => ({ id: entry, name: entry })),
-    ...liveModels,
-  ]
-  const needle = model.trim().toLowerCase()
-  const visible = models.filter(row => {
-    const label = `${str(row.id)} ${str(row.name)}`.toLowerCase()
-    return needle === '' || label.includes(needle)
-  })
-  return <AiDialog title="افزودن مدل به استخر" close={close}>
-    <AiForm preview={false} close={close} label="افزودن مدل" submit={async data => {
-      const name = model.trim()
-      if (!name || !providerId) throw new Error('سرویس و شناسهٔ مدل را وارد کنید.')
-      add({ providerId, providerName: providers.find(provider => provider.id === providerId)?.name, model: name, weight: Number(data.get('weight')),
-        enabled: true, priceInMicrosPerM: Math.round(Number(priceIn) * 1e6), priceOutMicrosPerM: Math.round(Number(priceOut) * 1e6) })
-    }}>
-      <label>سرویس<select value={providerId} onChange={event => { setProviderId(event.target.value); setModel(''); catalog.reset() }}>
-        {providers.map(provider => <option key={str(provider.id)} value={str(provider.id)}>{str(provider.name)}</option>)}
-      </select></label>
-      <label>شناسهٔ مدل<input dir="ltr" value={model} required placeholder="جست‌وجو یا وارد کردن شناسه" onChange={event => {
-        const value = event.target.value
-        setModel(value)
-        const hit = models.find(row => row.id === value)
-        if (hit) applyCatalogPrices(hit, setPriceIn, setPriceOut)
-      }} /></label>
-      <button type="button" className="secondary" disabled={preview || catalog.isPending} onClick={() => catalog.mutate(providerId)}>{catalog.isPending ? 'در حال دریافت…' : 'دریافت فهرست زندهٔ مدل‌ها'}</button>
-      {catalog.isError && <p role="alert">{errorText(catalog.error)}</p>}
-      {models.length > 0 && <div className="ai-model-picker" role="listbox" aria-label="فهرست مدل‌ها" style={{ height: Math.min(280, 46 + Math.max(visible.length, 1) * 84), minHeight: Math.min(280, 46 + Math.max(visible.length, 1) * 84) }}>
-        <p>{visible.length ? `${num(visible.length)} از ${num(models.length)} مدل. برای انتخاب، روی مدل بزنید.` : 'مدلی با این عبارت پیدا نشد. شناسه را دستی وارد کنید.'}</p>
-        {visible.map(row => {
-          const modelId = str(row.id)
-          const name = str(row.name)
-          return <button type="button" role="option" aria-selected={model === modelId} key={modelId} onClick={() => { setModel(modelId); applyCatalogPrices(row, setPriceIn, setPriceOut) }}>
-            <bdi>{modelId}</bdi>
-            <small>
-              {name && name !== modelId && <bdi>{name}</bdi>}
-              <span>ورودی <bdi>{usd(row.priceInMicrosPerM, 3)}</bdi></span>
-              <span>خروجی <bdi>{usd(row.priceOutMicrosPerM, 3)}</bdi></span>
-            </small>
-          </button>
-        })}
-      </div>}
-      <label>قیمت ورودی (دلار برای هر میلیون توکن)<input type="number" min={0} step="any" value={priceIn} onChange={event => setPriceIn(event.target.value)} required /></label>
-      <label>قیمت خروجی (دلار برای هر میلیون توکن)<input type="number" min={0} step="any" value={priceOut} onChange={event => setPriceOut(event.target.value)} required /></label>
-      <label>وزن<input name="weight" type="number" min={1} max={100} defaultValue={1} required /></label>
-    </AiForm>
-  </AiDialog>
-}
-
 const poolFields = [
   ['temperature', 'دما', 0, 2, 0.05], ['maxTokens', 'سقف توکن خروجی', 200, 32000, 1],
   ['timeoutS', 'مهلت هر تلاش (ثانیه)', 5, 300, 1], ['maxAttempts', 'حداکثر تلاش', 1, 10, 1],
 ] as const
+
+function MemberDialog({ providers, preview, close, add }: { providers: Row[]; preview: boolean; close: () => void; add: (member: Row) => void }) {
+  const [providerId, setProviderId] = useState(str(providers[0]?.id))
+  const [modelId, setModelId] = useState('')
+  const source = providers.find(provider => str(provider.id) === providerId)
+  const models = asRows(source?.models)
+  return <AiDialog title="افزودن مدل به استخر" close={close}>
+    <AiForm preview={preview} close={close} label="افزودن به صف" submit={async data => {
+      const model = models.find(row => str(row.model) === modelId)
+      if (!providerId || !model) throw new Error('سرویس و مدل را انتخاب کنید.')
+      add({
+        providerId, providerName: source?.name, model: model.model, enabled: true,
+        weight: Number(data.get('weight')), priceInMicrosPerM: model.priceInMicrosPerM, priceOutMicrosPerM: model.priceOutMicrosPerM,
+      })
+    }}>
+      <label>سرویس<select value={providerId} onChange={event => { setProviderId(event.target.value); setModelId('') }}>
+        {providers.map(provider => <option key={str(provider.id)} value={str(provider.id)}>{str(provider.name)}</option>)}
+      </select></label>
+      {!models.length && <AiNote>این سرویس هنوز مدلی ندارد. اول از دکمهٔ افزودن در ردیف همان سرویس، مدل را از فهرست سایت انتخاب کنید.</AiNote>}
+      {!!models.length && <div className="ai-model-picker" role="listbox" aria-label="مدل‌های ذخیره‌شدهٔ سرویس">
+        {models.map(model => {
+          const key = str(model.model)
+          return <button type="button" role="option" key={str(model.id)} aria-selected={modelId === key} onClick={() => setModelId(key)}>
+            <bdi>{key}</bdi>
+            <small className="ai-model-cost"><bdi dir="ltr">{modelCostLabel(model)}</bdi></small>
+          </button>
+        })}
+      </div>}
+      <label>وزن<input name="weight" type="number" min={1} max={100} defaultValue={1} required /></label>
+    </AiForm>
+  </AiDialog>
+}
 
 function PoolCard({ pool, providers, preview, refresh, notify }: { pool: Row; providers: Row[]; preview: boolean; refresh: () => Promise<unknown>; notify: (message: string) => void }) {
   const [draft, setDraft] = useState<Row[] | null>(null)
@@ -235,15 +289,11 @@ export function AiModels({ preview }: { preview: boolean }) {
   const ordered = [...pools].sort((a, b) => Object.keys(poolTitles).indexOf(str(a.code)) - Object.keys(poolTitles).indexOf(str(b.code)))
   return <>
     {notice && <p className="info-note" role="status">{notice}</p>}
-    <AiCard title="سرویس‌ها و کلیدها" description="هر سرویس یک نشانی و یک کلید دارد؛ مدل‌ها را در استخرها به آن‌ها وصل می‌کنید."
+    <AiCard title="سرویس‌ها و کلیدها" description="هر سرویس یک نشانی و یک کلید دارد. با افزودن، مدل‌های همان سایت را جست‌وجو و به سرویس وصل می‌کنید."
       action={<button type="button" onClick={() => setModal({ kind: 'edit' })}><Icon name="plus" />افزودن سرویس</button>}>
       {!providers.length && <p className="ai-feedback">هنوز سرویسی ثبت نشده است.</p>}
-      <AiNote>تست، یک درخواست کوتاه واقعی به مدل ارسال می‌کند و هزینهٔ جزئی دارد.</AiNote>
-      {providers.map(provider => {
-        const member = pools.flatMap(pool => asRows(pool.members)).find(row => row.providerId === provider.id && row.enabled)
-        return <ProviderRow key={str(provider.id)} provider={provider} model={str(member?.model || sampleModel)} preview={preview}
-          edit={kind => setModal({ kind, provider })} />
-      })}
+      {providers.map(provider => <ProviderRow key={str(provider.id)} provider={provider} preview={preview} refresh={refresh} notify={setNotice}
+        edit={kind => setModal({ kind, provider })} />)}
     </AiCard>
     {ordered.map(pool => <PoolCard key={str(pool.code)} pool={pool} providers={providers} preview={preview} refresh={refresh} notify={setNotice} />)}
     {modal && <ProviderDialog selection={modal} preview={preview} close={() => setModal(null)} saved={message => {

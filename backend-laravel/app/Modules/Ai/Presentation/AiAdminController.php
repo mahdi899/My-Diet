@@ -41,7 +41,17 @@ final class AiAdminController
 
     public function models(Request $request, string $id): array
     {
-        return $this->ai->models(Input::uuid($id), is_string($request->query('q')) ? $request->query('q') : '', $this->limit($request, 60, 500));
+        return $this->ai->models(Input::uuid($id), is_string($request->query('q')) ? $request->query('q') : '', $this->limit($request, 60, 2000));
+    }
+
+    public function addModel(Request $request, string $id): JsonResponse
+    {
+        return response()->json($this->ai->addModel($this->actor($request), Input::uuid($id), $this->object($request)), 201);
+    }
+
+    public function removeModel(Request $request, string $id, string $modelId): array
+    {
+        return $this->ai->removeModel($this->actor($request), Input::uuid($id), Input::uuid($modelId));
     }
 
     public function pools(): array

@@ -3,7 +3,7 @@
 CREATE TABLE ai_providers (
   id uuid PRIMARY KEY,
   name text NOT NULL UNIQUE,
-  kind text NOT NULL CHECK (kind IN ('openrouter', 'openai_compatible')),
+  kind text NOT NULL CHECK (kind IN ('openrouter', 'closerouter', 'openai_compatible')),
   base_url text NOT NULL,
   api_key_encrypted text,
   http_referer text,

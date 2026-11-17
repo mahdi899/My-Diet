@@ -12,7 +12,7 @@ use Illuminate\Database\QueryException;
 
 final class MySqlAiAdmin
 {
-    private const KINDS = ['openrouter', 'openai_compatible'];
+    private const KINDS = ['openrouter', 'closerouter', 'openai_compatible'];
 
     private const STRATEGIES = ['priority', 'cost_first', 'weighted'];
 
@@ -28,7 +28,12 @@ final class MySqlAiAdmin
 
     public function providers(): array
     {
-        return ['items' => array_map($this->providerView(...), $this->db->table('ai_providers')->orderBy('created_at')->get()->all())];
+        $saved = [];
+        foreach ($this->db->table('ai_provider_models')->orderBy('created_at')->get() as $model) {
+            $saved[$model->provider_id][] = $this->modelView($model);
+        }
+
+        return ['items' => array_map(fn ($row) => $this->providerView($row, $saved[$row->id] ?? []), $this->db->table('ai_providers')->orderBy('created_at')->get()->all())];
     }
 
     public function createProvider(string $actor, array $body): array
@@ -133,6 +138,47 @@ final class MySqlAiAdmin
         $models = array_values(array_filter($this->catalog->models((array) $provider), fn ($model) => $needle === '' || str_contains(mb_strtolower($model['id'].' '.$model['name']), $needle)));
 
         return ['fetchedAt' => CivilDates::now()->format('Y-m-d\TH:i:s.v\Z'), 'total' => count($models), 'suggested' => FixedAiCatalog::SUGGESTED, 'items' => array_slice($models, 0, $limit)];
+    }
+
+    public function addModel(string $actor, string $id, array $body): array
+    {
+        if ($this->db->table('ai_providers')->where('id', $id)->doesntExist()) {
+            throw new Problem(404, 'not_found', 'سرویس پیدا نشد');
+        }
+        $model = $this->text($body['model'] ?? null, 'مدل', 255);
+        $saved = Crypto::uuid();
+        try {
+            $this->db->transaction(function () use ($actor, $id, $body, $model, $saved): void {
+                $this->db->table('ai_provider_models')->insert([
+                    'id' => $saved, 'provider_id' => $id, 'model' => $model,
+                    'name' => $this->optional($body, 'name', 255),
+                    'price_in_micros_per_m' => array_key_exists('priceInMicrosPerM', $body) ? $this->micros($body['priceInMicrosPerM']) : 0,
+                    'price_out_micros_per_m' => array_key_exists('priceOutMicrosPerM', $body) ? $this->micros($body['priceOutMicrosPerM']) : 0,
+                ]);
+                $this->audit($actor, 'ai_provider_model_added', 'ai_provider', $id, ['model' => $model]);
+            });
+        } catch (QueryException $error) {
+            if ((int) ($error->errorInfo[1] ?? 0) === 1062) {
+                throw new Problem(409, 'conflict', 'این مدل قبلاً به سرویس اضافه شده است');
+            }
+            throw $error;
+        }
+
+        return $this->provider($id);
+    }
+
+    public function removeModel(string $actor, string $id, string $modelId): array
+    {
+        return $this->db->transaction(function () use ($actor, $id, $modelId): array {
+            $row = $this->db->table('ai_provider_models')->where('provider_id', $id)->where('id', $modelId)->first();
+            if ($row === null) {
+                throw new Problem(404, 'not_found', 'مدل پیدا نشد');
+            }
+            $this->db->table('ai_provider_models')->where('id', $modelId)->delete();
+            $this->audit($actor, 'ai_provider_model_removed', 'ai_provider', $id, ['model' => $row->model]);
+
+            return $this->provider($id);
+        });
     }
 
     public function pools(): array
@@ -473,12 +519,19 @@ final class MySqlAiAdmin
             throw new Problem(404, 'not_found', 'سرویس پیدا نشد');
         }
 
-        return $this->providerView($row);
+        $models = array_map($this->modelView(...), $this->db->table('ai_provider_models')->where('provider_id', $id)->orderBy('created_at')->get()->all());
+
+        return $this->providerView($row, $models);
     }
 
-    private function providerView(object $row): array
+    private function providerView(object $row, array $models): array
     {
-        return ['id' => $row->id, 'name' => $row->name, 'kind' => $row->kind, 'baseUrl' => $row->base_url, 'httpReferer' => $row->http_referer, 'appTitle' => $row->app_title, 'active' => (bool) (int) $row->active, 'hasKey' => $row->api_key_encrypted !== null, 'keyHint' => $this->hint($row->api_key_encrypted), 'createdAt' => Crypto::iso($row->created_at), 'updatedAt' => Crypto::iso($row->updated_at)];
+        return ['id' => $row->id, 'name' => $row->name, 'kind' => $row->kind, 'baseUrl' => $row->base_url, 'httpReferer' => $row->http_referer, 'appTitle' => $row->app_title, 'active' => (bool) (int) $row->active, 'hasKey' => $row->api_key_encrypted !== null, 'keyHint' => $this->hint($row->api_key_encrypted), 'models' => $models, 'createdAt' => Crypto::iso($row->created_at), 'updatedAt' => Crypto::iso($row->updated_at)];
+    }
+
+    private function modelView(object $row): array
+    {
+        return ['id' => $row->id, 'model' => $row->model, 'name' => $row->name, 'priceInMicrosPerM' => (int) $row->price_in_micros_per_m, 'priceOutMicrosPerM' => (int) $row->price_out_micros_per_m];
     }
 
     private function prompt(object $row): array
