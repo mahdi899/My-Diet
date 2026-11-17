@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/core/theme/theme.dart';
@@ -9,9 +11,9 @@ void main() {
   test('shared answer codes resolve in the context of their question', () {
     expect(onboardingSymbol('activity', 'low'), DietIconKind.walking);
     expect(onboardingSymbol('budget', 'low'), DietIconKind.wallet);
-    expect(onboardingSymbol('appetite', 'low'), DietIconKind.meal);
+    expect(onboardingSymbol('appetite', 'low'), DietIconKind.mealTwo);
     expect(onboardingSymbol('job_activity', 'mixed'), DietIconKind.walking);
-    expect(onboardingSymbol('feeding_mode', 'mixed'), DietIconKind.pregnancy);
+    expect(onboardingSymbol('feeding_mode', 'mixed'), DietIconKind.babyBottle);
     expect(onboardingSymbol('sport_type', 'strength'), DietIconKind.strength);
     expect(onboardingSymbol('conditions', 'none'), DietIconKind.shield);
     expect(onboardingSymbol('water', 'under_4'), DietIconKind.water);
@@ -25,6 +27,29 @@ void main() {
     expect(onboardingSymbol('meals_per_day', '2'), DietIconKind.mealTwo);
     expect(onboardingSymbol('meals_per_day', '3'), DietIconKind.mealThree);
     expect(onboardingSymbol('meals_per_day', '4_plus'), DietIconKind.mealMore);
+  });
+
+  test('every shipped question option has explicit topic artwork', () {
+    final json =
+        jsonDecode(
+              File(
+                '../references/flutter-app-review/2026-11-15/onboarding-spec.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final spec = OnboardingSpec.fromJson(json);
+    var covered = 0;
+    for (final question in spec.questions) {
+      for (final option in question.options) {
+        expect(
+          hasOnboardingSymbol(question.key, option.code),
+          isTrue,
+          reason: 'Missing artwork for ${question.key}/${option.code}',
+        );
+        covered++;
+      }
+    }
+    expect(covered, greaterThanOrEqualTo(200));
   });
 
   testWidgets(

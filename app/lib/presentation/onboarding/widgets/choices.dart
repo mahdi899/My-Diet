@@ -12,6 +12,7 @@ class OptionCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.symbol,
+    this.symbolVariant = 0,
     this.multi = false,
     this.caption,
     this.photoKey,
@@ -21,6 +22,7 @@ class OptionCard extends StatelessWidget {
   final String? photoKey;
   final bool selected, multi;
   final DietIconKind symbol;
+  final int symbolVariant;
   final VoidCallback onTap;
 
   @override
@@ -31,6 +33,7 @@ class OptionCard extends StatelessWidget {
     selected: selected,
     onTap: onTap,
     symbol: symbol,
+    symbolVariant: symbolVariant,
     multi: multi,
   );
 }
@@ -63,6 +66,7 @@ class SingleChoice extends StatelessWidget {
           label: o.label,
           photoKey: o.image ?? o.code,
           symbol: onboardingSymbol(question.key, o.code, label: o.label),
+          symbolVariant: onboardingVariant(question.key, o.code),
           selected: value == o.code,
           onTap: () => onChanged(o.code),
         ),
@@ -122,6 +126,10 @@ class MultiChoice extends StatelessWidget {
                 question.key,
                 question.options[i].code,
                 label: question.options[i].label,
+              ),
+              symbolVariant: onboardingVariant(
+                question.key,
+                question.options[i].code,
               ),
               multi: true,
               selected: value.contains(question.options[i].code),

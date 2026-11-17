@@ -3,10 +3,17 @@ part of 'diet_icon.dart';
 /// Small illustrations on a 64-unit artboard. Rounded emerald contours, filled
 /// clothing and secondary mint planes keep the figures legible at card size.
 class _OnboardingIllustration {
-  _OnboardingIllustration(this.canvas, this.ink, this.accent, this.tint);
+  _OnboardingIllustration(
+    this.canvas,
+    this.ink,
+    this.accent,
+    this.tint,
+    this.variant,
+  );
 
   final Canvas canvas;
   final Color ink, accent, tint;
+  final int variant;
   bool get mono => tint == Colors.transparent;
   Color get paper => mono ? Colors.transparent : const Color(0xFFF8FCF9);
   Color get soft =>
@@ -151,7 +158,7 @@ class _OnboardingIllustration {
       case DietIconKind.foodAllergy:
         foodAllergy();
       default:
-        break;
+        questionnaireTopic(kind);
     }
     canvas.restore();
   }
@@ -1157,6 +1164,7 @@ class _OnboardingIllustration {
       circle(x + 2, 36, 1.4, fill: soft, color: soft, width: 1);
     }
     line(17, 54, 47, 54, color: soft, width: 1.4);
+    if (variant > 0) badge(variant);
   }
 
   void moon() {
@@ -1228,9 +1236,19 @@ class _OnboardingIllustration {
     line(32, 45, 32, 48, width: 1.8);
     line(17, 33, 20, 33, width: 1.8);
     line(44, 33, 47, 33, width: 1.8);
+    final angle = (variant == 0 ? 0 : variant) / 60 * math.pi * 2 - math.pi / 2;
+    if (variant > 0) {
+      canvas.drawArc(
+        const Rect.fromLTWH(14, 15, 36, 36),
+        -math.pi / 2,
+        variant.clamp(1, 60) / 60 * math.pi * 2,
+        false,
+        stroke(soft, 3),
+      );
+    }
     curve(
       Path()
-        ..moveTo(32, 24)
+        ..moveTo(32 + math.cos(angle) * 11, 33 + math.sin(angle) * 11)
         ..lineTo(32, 33)
         ..lineTo(41, 38),
       color: accent,
@@ -1320,6 +1338,30 @@ class _OnboardingIllustration {
   }
 
   void wallet() {
+    if (variant > 1) {
+      shape(
+        Path()
+          ..moveTo(13, 18)
+          ..lineTo(42, 3)
+          ..lineTo(47, 18)
+          ..close(),
+        fill: paper,
+        color: accent,
+        width: 1.6,
+      );
+    }
+    if (variant > 2) {
+      shape(
+        Path()
+          ..moveTo(13, 18)
+          ..lineTo(30, 2)
+          ..lineTo(42, 15)
+          ..close(),
+        fill: soft,
+        color: accent,
+        width: 1.6,
+      );
+    }
     shape(
       Path()
         ..moveTo(11, 22)
@@ -1345,5 +1387,6 @@ class _OnboardingIllustration {
     rect(39, 34, 20, 12, radius: 4, fill: soft, width: 2.2);
     circle(46, 40, 2, fill: ink, color: ink, width: 1);
     line(13, 51, 29, 51, color: soft, width: 1.5);
+    if (variant > 0) badge(variant);
   }
 }

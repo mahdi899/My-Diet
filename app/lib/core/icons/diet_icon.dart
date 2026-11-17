@@ -1,8 +1,10 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 
 part 'onboarding_illustrations.dart';
+part 'questionnaire_illustrations.dart';
 
 /// The approved rounded, two-colour botanical icon family, drawn as vectors.
 enum DietIconKind {
@@ -39,6 +41,44 @@ enum DietIconKind {
   egg,
   wheat,
   foodAllergy,
+  balancedMeal,
+  vegetarianMeal,
+  veganMeal,
+  bloodSugar,
+  bloodPressure,
+  kidneys,
+  thyroid,
+  stomach,
+  bloodDrop,
+  medicalNotes,
+  cookingPot,
+  calendar,
+  standing,
+  workout,
+  slowPace,
+  steadyPace,
+  snack,
+  sweets,
+  stress,
+  irregularMeals,
+  sunrise,
+  sunset,
+  fastFood,
+  firstPlan,
+  goalReached,
+  weightReturn,
+  pausedPlan,
+  question,
+  baby,
+  babyBottle,
+  breastfeeding,
+  vitamin,
+  nausea,
+  heartburn,
+  intestines,
+  bed,
+  fruitBasket,
+  homeCooking,
   check,
   close,
   back,
@@ -60,8 +100,12 @@ class DietIcon extends StatelessWidget {
     this.selected = false,
     this.monochrome = false,
     this.semanticLabel,
+    this.variant = 0,
   });
   final DietIconKind kind;
+
+  /// Topic-specific amount: e.g. calendar days, water level or clock minutes.
+  final int variant;
   final double size;
   final Color? color;
   final bool selected, monochrome;
@@ -84,6 +128,7 @@ class DietIcon extends StatelessWidget {
               : color?.withValues(alpha: selected ? .22 : .1) ?? AppColors.mint,
           selected,
           size >= 40,
+          variant,
         ),
       ),
     );
@@ -104,6 +149,7 @@ void paintDietIcon(Canvas canvas, Rect bounds, DietIconKind kind) {
     AppColors.mint,
     false,
     bounds.shortestSide >= 40,
+    0,
   ).paint(canvas, bounds.size);
   canvas.restore();
 }
@@ -116,10 +162,12 @@ class _DietIconPainter extends CustomPainter {
     this.tint,
     this.selected,
     this.detailed,
+    this.variant,
   );
   final DietIconKind kind;
   final Color ink, accent, tint;
   final bool selected, detailed;
+  final int variant;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -262,6 +310,7 @@ class _DietIconPainter extends CustomPainter {
           line..color = accent,
         );
       case DietIconKind.water:
+        final waterY = variant == 0 ? 20.0 : 27.0 - variant.clamp(1, 4) * 4.0;
         final glass = Path()
           ..moveTo(5, 7)
           ..lineTo(8.1, 26)
@@ -274,8 +323,8 @@ class _DietIconPainter extends CustomPainter {
         canvas.clipPath(glass);
         canvas.drawPath(
           Path()
-            ..moveTo(4, 20)
-            ..cubicTo(11, 14, 18, 24, 28, 18)
+            ..moveTo(4, waterY)
+            ..cubicTo(11, waterY - 6, 18, waterY + 4, 28, waterY - 2)
             ..lineTo(28, 31)
             ..lineTo(4, 31)
             ..close(),
@@ -418,8 +467,52 @@ class _DietIconPainter extends CustomPainter {
       case DietIconKind.egg:
       case DietIconKind.wheat:
       case DietIconKind.foodAllergy:
+      case DietIconKind.balancedMeal:
+      case DietIconKind.vegetarianMeal:
+      case DietIconKind.veganMeal:
+      case DietIconKind.bloodSugar:
+      case DietIconKind.bloodPressure:
+      case DietIconKind.kidneys:
+      case DietIconKind.thyroid:
+      case DietIconKind.stomach:
+      case DietIconKind.bloodDrop:
+      case DietIconKind.medicalNotes:
+      case DietIconKind.cookingPot:
+      case DietIconKind.calendar:
+      case DietIconKind.standing:
+      case DietIconKind.workout:
+      case DietIconKind.slowPace:
+      case DietIconKind.steadyPace:
+      case DietIconKind.snack:
+      case DietIconKind.sweets:
+      case DietIconKind.stress:
+      case DietIconKind.irregularMeals:
+      case DietIconKind.sunrise:
+      case DietIconKind.sunset:
+      case DietIconKind.fastFood:
+      case DietIconKind.firstPlan:
+      case DietIconKind.goalReached:
+      case DietIconKind.weightReturn:
+      case DietIconKind.pausedPlan:
+      case DietIconKind.question:
+      case DietIconKind.baby:
+      case DietIconKind.babyBottle:
+      case DietIconKind.breastfeeding:
+      case DietIconKind.vitamin:
+      case DietIconKind.nausea:
+      case DietIconKind.heartburn:
+      case DietIconKind.intestines:
+      case DietIconKind.bed:
+      case DietIconKind.fruitBasket:
+      case DietIconKind.homeCooking:
         canvas.restore();
-        _OnboardingIllustration(canvas, ink, accent, tint).paint(kind, size);
+        _OnboardingIllustration(
+          canvas,
+          ink,
+          accent,
+          tint,
+          variant,
+        ).paint(kind, size);
         return;
       case DietIconKind.check:
         canvas.drawPath(
@@ -526,5 +619,6 @@ class _DietIconPainter extends CustomPainter {
       old.accent != accent ||
       old.tint != tint ||
       old.selected != selected ||
-      old.detailed != detailed;
+      old.detailed != detailed ||
+      old.variant != variant;
 }

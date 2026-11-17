@@ -16,6 +16,7 @@ class DecorPhoto extends StatefulWidget {
     this.expert = false,
     this.icon,
     this.symbol,
+    this.symbolVariant = 0,
     this.preferIcon = false,
     this.radius = 18,
     this.width,
@@ -32,6 +33,7 @@ class DecorPhoto extends StatefulWidget {
   final bool expert;
   final IconData? icon;
   final DietIconKind? symbol;
+  final int symbolVariant;
   final bool preferIcon;
   final double radius;
   final double? width, height;
@@ -127,6 +129,7 @@ class _DecorPhotoState extends State<DecorPhoto> {
     child: Center(
       child: DietIcon(
         widget.symbol ?? onboardingControl(widget.icon),
+        variant: widget.symbolVariant,
         size: (widget.width ?? widget.height ?? 56) * 0.86,
       ),
     ),
@@ -192,6 +195,7 @@ class PhotoOptionCard extends StatelessWidget {
     this.photoKey,
     this.icon,
     this.symbol,
+    this.symbolVariant = 0,
     this.preferIcon = false,
     this.compact = false,
     this.multi = false,
@@ -205,6 +209,7 @@ class PhotoOptionCard extends StatelessWidget {
   final bool multi;
   final IconData? icon;
   final DietIconKind? symbol;
+  final int symbolVariant;
   final bool preferIcon;
   final VoidCallback onTap;
 
@@ -248,6 +253,7 @@ class PhotoOptionCard extends StatelessWidget {
                 id: photoKey,
                 icon: icon,
                 symbol: symbol,
+                symbolVariant: symbolVariant,
                 preferIcon: preferIcon,
                 width: size,
                 height: size,
