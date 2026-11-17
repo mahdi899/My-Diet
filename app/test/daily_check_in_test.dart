@@ -7,6 +7,8 @@ import 'package:sabzine_flutter/data/day.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/features/home/habit_garden.dart';
 import 'package:sabzine_flutter/features/home/home_tab.dart';
+import 'package:sabzine_flutter/features/home/water_card.dart'
+    show WaterGlassPainter;
 import 'package:sabzine_flutter/features/home/water_log.dart';
 import 'package:sabzine_flutter/features/plan/consume_sheet.dart';
 import 'nutrition_test.dart' show LogMemory;
@@ -166,16 +168,51 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(find.text('۲ از ۶ لیوان'), findsOneWidget);
+      double level(int index) =>
+          (t
+                      .widget<CustomPaint>(
+                        find.byKey(ValueKey('water-glass-$index')),
+                      )
+                      .painter!
+                  as WaterGlassPainter)
+              .level;
+      expect(level(0), 1);
+      expect(level(1), 1);
+      expect(level(2), 0);
       await t.tap(find.byKey(const ValueKey('water-add')));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 120));
+      expect(level(2), greaterThan(0));
+      expect(level(2), lessThan(1));
+      expect(level(1), 1);
+      expect(level(3), 0);
       await t.pumpAndSettle();
+      expect(level(2), 1);
       expect(await log.read(now), 3);
       expect(store.waterGlassesOn(now), 3);
       expect(find.text('یک لیوان به آب امروزت اضافه شد.'), findsOneWidget);
       expect(t.binding.transientCallbackCount, 0);
       await t.tap(find.byKey(const ValueKey('water-undo')));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 120));
+      expect(level(2), greaterThan(0));
+      expect(level(2), lessThan(1));
       await t.pumpAndSettle();
+      expect(level(2), 0);
       expect(await log.read(now), 2);
       expect(find.text('۲ از ۶ لیوان'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('water-remove')));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 120));
+      expect(level(1), greaterThan(0));
+      expect(level(1), lessThan(1));
+      await t.pumpAndSettle();
+      expect(await log.read(now), 1);
+      expect(level(1), 0);
+      await t.tap(find.byKey(const ValueKey('water-undo')));
+      await t.pumpAndSettle();
+      expect(await log.read(now), 2);
+      expect(level(1), 1);
       preferences.fail = true;
       await t.tap(find.byKey(const ValueKey('water-add')));
       await t.pumpAndSettle();

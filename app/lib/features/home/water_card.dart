@@ -1,5 +1,4 @@
 import '../../core/icons/diet_icon.dart';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/motion/motion_kit.dart';
 import '../../core/theme/tokens.dart';
@@ -140,133 +139,225 @@ class _WaterCardState extends State<WaterCard> {
   @override
   Widget build(BuildContext context) {
     final disabled = _busy || _loading || _loadFailed;
+    final count = Semantics(
+      liveRegion: true,
+      child: Text(
+        _loading
+            ? 'در حال خواندن ثبت‌ها…'
+            : '${fa(_glasses)} از ${fa(widget.goal)} لیوان',
+        key: const ValueKey('home-water'),
+        style: const TextStyle(
+          fontSize: 18,
+          height: 1.3,
+          fontWeight: FontWeight.bold,
+          color: AppColors.ink,
+        ),
+      ),
+    );
+    final controls = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton.filledTonal(
+          key: const ValueKey('water-add'),
+          tooltip: 'ثبت یک لیوان آب',
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.mint,
+            foregroundColor: AppColors.emeraldDeep,
+            minimumSize: const Size.square(44),
+          ),
+          onPressed: disabled || _glasses >= 20
+              ? null
+              : () => _save(_glasses + 1),
+          icon: _busy
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.add_rounded, size: 22),
+        ),
+        const SizedBox(width: 4),
+        IconButton.outlined(
+          key: const ValueKey('water-remove'),
+          tooltip: 'کم‌کردن یک لیوان از ثبت آب',
+          style: IconButton.styleFrom(
+            minimumSize: const Size.square(44),
+            foregroundColor: AppColors.inkSoft,
+            side: const BorderSide(color: AppColors.faint),
+          ),
+          onPressed: disabled || _glasses == 0
+              ? null
+              : () => _save(_glasses - 1),
+          icon: const Icon(Icons.remove_rounded, size: 22),
+        ),
+      ],
+    );
+    final glasses = _WaterGlasses(
+      key: ValueKey('water-glasses-$_day'),
+      count: _glasses,
+      goal: widget.goal,
+    );
     return AppCard(
       key: const ValueKey('daily-water-card'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      radius: 22,
       shadows: const [],
-      border: Border.all(color: const Color(0xFFDCEBF0)),
+      border: Border.all(color: AppColors.line),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          const Row(
             children: [
-              ExcludeSemantics(
-                child: TweenAnimationBuilder<double>(
-                  duration: Motion.of(context, Motion.slow),
-                  curve: Curves.easeOutCubic,
-                  tween: Tween(
-                    begin: 0,
-                    end: (_glasses / math.max(1, widget.goal)).clamp(0, 1),
-                  ),
-                  builder: (_, level, _) => SizedBox(
-                    width: 76,
-                    height: 102,
-                    child: CustomPaint(painter: WaterGlassPainter(level)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
+              ExcludeSemantics(child: DietIcon(DietIconKind.water, size: 20)),
+              SizedBox(width: 6),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        DietIcon(DietIconKind.water, size: 22),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'آب امروزت',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.emeraldDark,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _loading
-                          ? 'در حال خواندن ثبت‌ها…'
-                          : '${fa(_glasses)} از ${fa(widget.goal)} لیوان',
-                      key: const ValueKey('home-water'),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        IconButton.filledTonal(
-                          key: const ValueKey('water-add'),
-                          tooltip: 'ثبت یک لیوان آب',
-                          onPressed: disabled || _glasses >= 20
-                              ? null
-                              : () => _save(_glasses + 1),
-                          icon: const Icon(Icons.add_rounded),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton.outlined(
-                          key: const ValueKey('water-remove'),
-                          tooltip: 'کم‌کردن یک لیوان از ثبت آب',
-                          onPressed: disabled || _glasses == 0
-                              ? null
-                              : () => _save(_glasses - 1),
-                          icon: const Icon(Icons.remove_rounded),
-                        ),
-                        if (_busy)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 8),
-                            child: SizedBox.square(
-                              dimension: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  'آب امروز',
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.emeraldDark,
+                  ),
                 ),
               ),
+              Text('هدف روزانه', style: AppTypography.supporting),
             ],
           ),
-          const SizedBox(height: 10),
+          const Divider(height: 14, color: AppColors.line),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final largeText = MediaQuery.textScalerOf(context).scale(18) > 21;
+              // Keep the reference's horizontal layout on ordinary phones;
+              // allow a second row for larger goals and accessibility text.
+              if (constraints.maxWidth < 310 || largeText || widget.goal > 8) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: count),
+                        const SizedBox(width: 8),
+                        controls,
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 300),
+                        child: glasses,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FittedBox(fit: BoxFit.scaleDown, child: count),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 5, child: glasses),
+                  const SizedBox(width: 8),
+                  Container(width: 1, height: 28, color: AppColors.line),
+                  const SizedBox(width: 8),
+                  controls,
+                ],
+              );
+            },
+          ),
+          const Divider(height: 12, color: AppColors.line),
           if (_loadFailed)
             TextButton(
               onPressed: _load,
               child: const Text('ثبت‌های آب خوانده نشد؛ تلاش دوباره'),
             )
           else
-            Semantics(
-              liveRegion: _notice != null,
-              child: Text(
-                _notice ??
-                    (_glasses == 0
-                        ? 'از اولین لیوان امروز شروع کنیم؟'
-                        : 'هر ثبت کوچک، یک قدم مراقبت از خودت.'),
-                style: AppTypography.supporting.copyWith(
-                  color: AppColors.inkSoft,
+            Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    liveRegion: _notice != null,
+                    child: Text(
+                      _notice ??
+                          (_glasses == 0
+                              ? 'از اولین لیوان امروز شروع کنیم؟'
+                              : 'هر لیوان، یک قدم مراقبت از خودت.'),
+                      style: AppTypography.supporting.copyWith(
+                        fontSize: 11,
+                        height: 1.5,
+                        color: AppColors.inkSoft,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          if (_undoValue != null)
-            Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: TextButton.icon(
-                key: const ValueKey('water-undo'),
-                onPressed: disabled
-                    ? null
-                    : () => _save(_undoValue!, undo: true),
-                icon: const Icon(Icons.undo_rounded, size: 18),
-                label: const Text('برگرداندن'),
-              ),
+                if (_undoValue != null) ...[
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    key: const ValueKey('water-undo'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      minimumSize: const Size(0, 40),
+                      textStyle: const TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: disabled
+                        ? null
+                        : () => _save(_undoValue!, undo: true),
+                    icon: const Icon(Icons.undo_rounded, size: 16),
+                    label: const Text('برگرداندن'),
+                  ),
+                ],
+              ],
             ),
         ],
       ),
     );
   }
+}
+
+/// Animate the saved count so glasses fill in reading order on initial load,
+/// then only the changed glass fills or empties on add, remove, and Undo.
+class _WaterGlasses extends StatelessWidget {
+  const _WaterGlasses({super.key, required this.count, required this.goal});
+
+  final int count;
+  final int goal;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: RepaintBoundary(
+      child: TweenAnimationBuilder<double>(
+        duration: Motion.of(context, Motion.slow),
+        curve: Curves.easeOutCubic,
+        tween: Tween(begin: 0, end: count.toDouble()),
+        builder: (context, filled, _) => Row(
+          children: [
+            for (var i = 0; i < goal.clamp(1, 20); i++)
+              Expanded(
+                child: Align(
+                  child: SizedBox(
+                    width: 24,
+                    height: 38,
+                    child: CustomPaint(
+                      key: ValueKey('water-glass-$i'),
+                      painter: WaterGlassPainter((filled - i).clamp(0, 1)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// A finite rise of the liquid, with no continuously running wave animation.

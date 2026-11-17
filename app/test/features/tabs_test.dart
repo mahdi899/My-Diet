@@ -132,7 +132,7 @@ void main() {
     expect(find.byType(HomeTab), findsOneWidget);
     expect(find.text('صبح بخیر'), findsOneWidget);
     expect(find.text('سلام سارا جان'), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-calorie-ring')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-calorie-progress')), findsOneWidget);
     expect(find.text('کالری'), findsOneWidget);
     expect(find.byKey(const ValueKey('home-next-meal')), findsOneWidget);
     expect(

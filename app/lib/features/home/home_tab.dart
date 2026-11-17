@@ -18,7 +18,7 @@ import 'water_log.dart';
 import 'water_card.dart';
 export 'water_card.dart' show WaterCard;
 import 'habit_garden.dart';
-import '../plan/consume_sheet.dart';
+import 'today_summary.dart';
 import 'weight_sheet.dart';
 
 class HomeTab extends StatefulWidget {
@@ -127,7 +127,7 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
           _NextMeal(meal: next).rise(index: 1),
           const SizedBox(height: AppSpacing.xl),
         ],
-        _TodaySummary(day: day, focus: focus).rise(index: 2),
+        TodaySummary(day: day, focus: focus).rise(index: 2),
         const SizedBox(height: AppSpacing.lg),
         WaterCard(
           key: _waterKey,
@@ -206,145 +206,6 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
           onPressed: () => openCoach(context, prefill: _prefill(store, next)),
         ).rise(index: 6),
       ],
-    );
-  }
-}
-
-class _TodaySummary extends StatelessWidget {
-  const _TodaySummary({required this.day, required this.focus});
-  final DayNutrition day;
-  final HomeDayFocus focus;
-
-  @override
-  Widget build(BuildContext context) {
-    final store = CustomerScope.of(context);
-    final meals = store.mealsOn(store.today);
-    return AppCard(
-      key: const ValueKey('home-today-summary'),
-      padding: AppSpacing.card,
-      shadows: const [],
-      border: Border.all(color: AppColors.line),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Ring(
-                key: const ValueKey('home-calorie-ring'),
-                value: day.calorieUnit,
-                size: 70,
-                strokeWidth: 6,
-                child: const DietIcon(DietIconKind.meal, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'خلاصهٔ امروز',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Flexible(
-                          child: Ticker(
-                            value: day.eatenKcal,
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.ink,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'کالری',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      day.targetKcal > 0
-                          ? 'از ${fa(day.targetKcal)} کالری برنامه'
-                          : 'مجموع ثبت‌های امروز',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.inkSoft,
-                      ),
-                    ),
-                    if (day.unknown)
-                      const Text(
-                        'بعضی ثبت‌ها کالری مشخص ندارند.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.inkSoft,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (meals.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (var i = 0; i < meals.length; i++)
-                  ActionChip(
-                    key: ValueKey('home-log-meal-$i'),
-                    tooltip: '${meals[i].name}؛ ثبت، ویرایش یا برگرداندن',
-                    backgroundColor:
-                        store.consumedMealOn(store.today, i) != null ||
-                            store.mealEaten(store.today, i)
-                        ? AppColors.mint
-                        : AppColors.surface,
-                    avatar: AnimatedSwitcher(
-                      duration: Motion.of(context, Motion.quick),
-                      transitionBuilder: (child, animation) =>
-                          ScaleTransition(scale: animation, child: child),
-                      child: Icon(
-                        store.consumedMealOn(store.today, i) != null ||
-                                store.mealEaten(store.today, i)
-                            ? Icons.check_circle_rounded
-                            : Icons.circle_outlined,
-                        key: ValueKey(
-                          store.consumedMealOn(store.today, i) != null ||
-                              store.mealEaten(store.today, i),
-                        ),
-                        size: 18,
-                        color: AppColors.emeraldDeep,
-                      ),
-                    ),
-                    label: Text(
-                      meals[i].name,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    onPressed: canLogMeal(store, store.today)
-                        ? () => showConsumeSheet(context, store.today, i)
-                        : null,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${fa(focus.completed)} از ${fa(focus.total)} وعده ثبت شده · برای تغییر، روی وعده بزن',
-              style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

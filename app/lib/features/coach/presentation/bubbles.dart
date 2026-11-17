@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../core/theme/tokens.dart';
 import 'coach_companion.dart';
@@ -264,7 +265,7 @@ class CoachSystemNote extends StatelessWidget {
   }
 }
 
-/// A finite sprout reaction replaces the perpetual typing-dot loop.
+/// Three animated dots while the coach prepares a reply.
 class TypingDots extends StatelessWidget {
   const TypingDots({super.key});
 
@@ -283,17 +284,21 @@ class TypingDots extends StatelessWidget {
             const CoachCompanion(size: 44, mood: CompanionMood.thinking),
             const SizedBox(width: 7),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: AppShadows.soft,
               ),
-              child: const Directionality(
-                textDirection: TextDirection.rtl,
-                child: Text(
-                  'دارم به حرفت فکر می‌کنم…',
-                  style: TextStyle(fontSize: 12, color: AppColors.emeraldDark),
+              child: RepaintBoundary(
+                child: Lottie.asset(
+                  'assets/animations/coach_thinking.json',
+                  width: 56,
+                  height: 24,
+                  fit: BoxFit.contain,
+                  animate:
+                      !MediaQuery.disableAnimationsOf(context) &&
+                      TickerMode.valuesOf(context).enabled,
                 ),
               ),
             ),
