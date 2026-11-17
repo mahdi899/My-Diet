@@ -1338,6 +1338,14 @@ class _OnboardingIllustration {
   }
 
   void wallet() {
+    if (variant == 1) {
+      economyCoins();
+      return;
+    }
+    if (variant >= 3) {
+      unlimitedBudget();
+      return;
+    }
     if (variant > 1) {
       shape(
         Path()

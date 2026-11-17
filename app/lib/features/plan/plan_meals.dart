@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/motion/motion_kit.dart';
-import '../../core/theme/tokens.dart';
 import '../../data/demo_store.dart';
 import '../../presentation/widgets/kit/kit.dart';
 import '../coach/coach_launcher.dart';

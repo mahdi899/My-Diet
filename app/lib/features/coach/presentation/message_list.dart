@@ -4,7 +4,6 @@ import '../../../core/motion/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
 import '../../../domain/common/day.dart';
-import '../../../domain/common/digits.dart';
 import '../../plan/meal_detail_page.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../presentation/coach_controller.dart';

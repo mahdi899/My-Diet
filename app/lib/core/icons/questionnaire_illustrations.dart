@@ -421,6 +421,18 @@ extension _QuestionnaireIllustrations on _OnboardingIllustration {
   }
 
   void cookingPot() {
+    if (variant == 15) {
+      quickPrep();
+      return;
+    }
+    if (variant == 30) {
+      fryingPan();
+      return;
+    }
+    if (variant >= 60) {
+      slowCooking();
+      return;
+    }
     shape(
       Path()
         ..moveTo(9, 27)
@@ -457,6 +469,233 @@ extension _QuestionnaireIllustrations on _OnboardingIllustration {
       color: soft,
       width: 1.7,
     );
+  }
+
+  void quickPrep() {
+    // A chopping board and fresh vegetables: preparation without long cooking.
+    shape(
+      Path()
+        ..moveTo(24, 12)
+        ..lineTo(24, 7)
+        ..quadraticBezierTo(24, 3, 28, 3)
+        ..lineTo(36, 3)
+        ..quadraticBezierTo(40, 3, 40, 7)
+        ..lineTo(40, 12)
+        ..lineTo(49, 12)
+        ..quadraticBezierTo(55, 12, 55, 18)
+        ..lineTo(55, 54)
+        ..quadraticBezierTo(55, 59, 49, 59)
+        ..lineTo(13, 59)
+        ..quadraticBezierTo(8, 59, 8, 54)
+        ..lineTo(8, 18)
+        ..quadraticBezierTo(8, 12, 13, 12)
+        ..close(),
+      fill: tint,
+      width: 2.7,
+    );
+    line(29, 8, 35, 8, color: accent, width: 2);
+    line(13, 52, 36, 52, color: soft, width: 1.5);
+    // A recognizable knife, with a filled handle and a broad light blade.
+    canvas.save();
+    canvas.translate(43, 35);
+    canvas.rotate(-.25);
+    shape(
+      Path()
+        ..moveTo(-3, -17)
+        ..quadraticBezierTo(7, -13, 4, 4)
+        ..lineTo(-3, 4)
+        ..close(),
+      fill: paper,
+      width: 2,
+    );
+    rect(-3, 4, 7, 14, fill: accent, radius: 2, width: 1.8);
+    circle(.5, 10, 1, fill: paper, color: paper, width: .8);
+    canvas.restore();
+    for (final p in [(19.0, 39.0), (27.0, 30.0)]) {
+      circle(p.$1, p.$2, 7, fill: soft, color: accent, width: 1.8);
+      circle(p.$1, p.$2, 3.8, fill: paper, color: paper, width: 1);
+      line(p.$1 - 1, p.$2 - 2, p.$1 + 1, p.$2 + 2, color: soft, width: 1.2);
+    }
+    shape(
+      Path()
+        ..moveTo(16, 25)
+        ..quadraticBezierTo(11, 16, 22, 17)
+        ..quadraticBezierTo(26, 25, 16, 25)
+        ..close(),
+      fill: accent,
+      color: accent,
+      width: 1.4,
+    );
+    line(16, 25, 21, 20, color: paper, width: 1);
+  }
+
+  void fryingPan() {
+    // A diagonal handle gives this option a different silhouette from both pots.
+    shape(
+      Path()
+        ..moveTo(35, 22)
+        ..lineTo(51, 5)
+        ..quadraticBezierTo(54, 2, 58, 6)
+        ..quadraticBezierTo(61, 9, 58, 12)
+        ..lineTo(42, 29)
+        ..close(),
+      fill: soft,
+      width: 2.6,
+    );
+    line(52, 9, 55, 9, color: paper, width: 1.8);
+    circle(26, 37, 23, fill: tint, width: 2.8);
+    circle(26, 37, 17, fill: paper, color: accent, width: 1.7);
+    shape(
+      Path()
+        ..moveTo(17, 28)
+        ..cubicTo(9, 28, 11, 41, 17, 43)
+        ..cubicTo(22, 50, 32, 41, 27, 34)
+        ..quadraticBezierTo(28, 25, 17, 28)
+        ..close(),
+      fill: tint,
+      color: soft,
+      width: 1.7,
+    );
+    circle(20, 36, 5, fill: soft, color: accent, width: 1.5);
+    shape(
+      Path()
+        ..moveTo(30, 44)
+        ..quadraticBezierTo(27, 32, 39, 31)
+        ..quadraticBezierTo(42, 41, 30, 44)
+        ..close(),
+      fill: accent,
+      color: accent,
+      width: 1.5,
+    );
+    line(31, 42, 36, 35, color: paper, width: 1.2);
+    curve(
+      Path()
+        ..moveTo(6, 20)
+        ..quadraticBezierTo(3, 17, 6, 13)
+        ..moveTo(14, 16)
+        ..quadraticBezierTo(11, 12, 14, 8),
+      color: soft,
+      width: 1.7,
+    );
+  }
+
+  void slowCooking() {
+    // A substantial lidded pot and visible steam convey a longer cooking time.
+    shape(
+      Path()
+        ..moveTo(10, 32)
+        ..lineTo(54, 32)
+        ..lineTo(51, 51)
+        ..quadraticBezierTo(32, 61, 13, 51)
+        ..close(),
+      fill: tint,
+      width: 2.8,
+    );
+    curve(
+      Path()
+        ..moveTo(10, 37)
+        ..cubicTo(0, 32, 0, 47, 12, 45)
+        ..moveTo(54, 37)
+        ..cubicTo(64, 32, 64, 47, 52, 45),
+      width: 2.4,
+    );
+    shape(
+      Path()
+        ..moveTo(8, 31)
+        ..quadraticBezierTo(32, 11, 56, 31)
+        ..close(),
+      fill: soft,
+      width: 2.5,
+    );
+    rect(27, 19, 10, 5, fill: paper, radius: 2, width: 1.8);
+    line(21, 38, 19, 47, color: paper, width: 2.2);
+    line(24, 53, 42, 53, color: soft, width: 1.5);
+    for (final x in [18.0, 32.0, 46.0]) {
+      curve(
+        Path()
+          ..moveTo(x, 15)
+          ..cubicTo(x - 6, 10, x + 5, 8, x, 3),
+        color: accent,
+        width: 2,
+      );
+    }
+  }
+
+  void economyCoins() {
+    // Savings: a compact stack of coins, rather than another wallet variant.
+    for (final y in [47.0, 38.0, 29.0]) {
+      shape(
+        Path()
+          ..moveTo(5, y)
+          ..lineTo(5, y + 7)
+          ..cubicTo(5, y + 14, 34, y + 14, 34, y + 7)
+          ..lineTo(34, y)
+          ..close(),
+        fill: tint,
+        width: 2.3,
+      );
+      canvas.drawOval(
+        Rect.fromLTRB(5, y - 5, 34, y + 5),
+        Paint()..color = soft,
+      );
+      canvas.drawOval(Rect.fromLTRB(5, y - 5, 34, y + 5), stroke(ink, 2.2));
+      line(11, y + 6, 11, y + 8, color: accent, width: 1.3);
+      line(18, y + 7, 18, y + 9, color: accent, width: 1.3);
+    }
+    circle(44, 42, 16, fill: paper, width: 2.7);
+    circle(44, 42, 11, fill: tint, color: soft, width: 1.6);
+    shape(
+      Path()
+        ..moveTo(40, 47)
+        ..quadraticBezierTo(33, 34, 49, 34)
+        ..quadraticBezierTo(55, 45, 40, 47)
+        ..close(),
+      fill: accent,
+      color: accent,
+      width: 1.4,
+    );
+    line(40, 46, 47, 38, color: paper, width: 1.3);
+    line(44, 12, 44, 18, color: soft, width: 1.6);
+    line(41, 15, 47, 15, color: soft, width: 1.6);
+  }
+
+  void unlimitedBudget() {
+    // A fan of banknotes with a large infinity mark is readable at card size.
+    shape(
+      Path()
+        ..moveTo(13, 26)
+        ..lineTo(20, 5)
+        ..lineTo(55, 18)
+        ..lineTo(48, 36)
+        ..close(),
+      fill: tint,
+      width: 2.3,
+    );
+    shape(
+      Path()
+        ..moveTo(9, 25)
+        ..lineTo(41, 8)
+        ..lineTo(53, 30)
+        ..lineTo(20, 44)
+        ..close(),
+      fill: soft,
+      width: 2.3,
+    );
+    line(23, 15, 37, 9, color: paper, width: 1.5);
+    rect(4, 27, 56, 29, fill: paper, radius: 4, width: 2.8);
+    rect(9, 32, 46, 19, fill: tint, radius: 2, color: soft, width: 1.3);
+    curve(
+      Path()
+        ..moveTo(32, 41)
+        ..cubicTo(26, 28, 13, 34, 18, 44)
+        ..cubicTo(23, 53, 33, 34, 40, 35)
+        ..cubicTo(52, 34, 48, 51, 40, 47)
+        ..quadraticBezierTo(35, 46, 32, 41),
+      color: accent,
+      width: 3.1,
+    );
+    line(11, 36, 11, 39, color: ink, width: 1.5);
+    line(53, 44, 53, 47, color: ink, width: 1.5);
   }
 
   void calendar({bool irregular = false}) {
@@ -818,6 +1057,18 @@ extension _QuestionnaireIllustrations on _OnboardingIllustration {
   }
 
   void fastFood() {
+    if (variant == 1) {
+      rareFastFood();
+      return;
+    }
+    if (variant == 2) {
+      weeklyFastFood();
+      return;
+    }
+    if (variant == 4) {
+      dailyFastFood();
+      return;
+    }
     shape(
       Path()
         ..moveTo(7, 28)
@@ -864,36 +1115,277 @@ extension _QuestionnaireIllustrations on _OnboardingIllustration {
       fill: paper,
       width: 2,
     );
-    badge(variant, crossed: variant == 5);
+    if (variant == 3) {
+      for (var day = 0; day < 7; day++) {
+        rect(
+          6 + day * 8,
+          59,
+          5,
+          3,
+          radius: 1,
+          fill: day < 4 ? accent : paper,
+          color: day < 4 ? accent : soft,
+          width: .9,
+        );
+      }
+    } else {
+      badge(variant, crossed: variant == 5);
+    }
+  }
+
+  void burger(double x, double y, double width) {
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.scale(width / 40);
+    shape(
+      Path()
+        ..moveTo(2, 17)
+        ..cubicTo(3, -1, 37, -1, 38, 17)
+        ..close(),
+      fill: tint,
+      width: 2.3,
+    );
+    for (final seed in [(11.0, 11.0), (21.0, 7.0), (30.0, 12.0)]) {
+      line(
+        seed.$1,
+        seed.$2,
+        seed.$1 + 2,
+        seed.$2 - 1,
+        color: accent,
+        width: 1.3,
+      );
+    }
+    rect(1, 20, 38, 6, fill: soft, radius: 2.5, width: 2);
+    curve(
+      Path()
+        ..moveTo(2, 29)
+        ..lineTo(9, 32)
+        ..lineTo(18, 28)
+        ..lineTo(27, 32)
+        ..lineTo(38, 29),
+      color: accent,
+      width: 2.3,
+    );
+    shape(
+      Path()
+        ..moveTo(2, 35)
+        ..lineTo(38, 35)
+        ..quadraticBezierTo(38, 42, 31, 42)
+        ..lineTo(9, 42)
+        ..quadraticBezierTo(2, 42, 2, 35)
+        ..close(),
+      fill: tint,
+      width: 2.3,
+    );
+    canvas.restore();
+  }
+
+  void rareFastFood() {
+    // An occasional individual meal: a single burger with a prominent clock.
+    burger(6, 6, 45);
+    smallClock(49, 49, 12, 45);
+    line(7, 56, 22, 56, color: soft, width: 1.6);
+  }
+
+  void weeklyFastFood() {
+    // The weekly schedule is the main silhouette; two marked days remain large.
+    rect(7, 10, 46, 46, fill: tint, radius: 6, width: 2.6);
+    line(8, 23, 52, 23, width: 2);
+    for (final x in [18.0, 42.0]) {
+      rect(x, 5, 4, 12, fill: paper, radius: 2, width: 1.8);
+    }
+    rect(14, 29, 8, 8, fill: accent, color: accent, radius: 2, width: 1.4);
+    rect(28, 29, 8, 8, fill: accent, color: accent, radius: 2, width: 1.4);
+    rect(14, 43, 8, 8, fill: paper, color: soft, radius: 2, width: 1.2);
+    // A white backing keeps the food cue separate from the calendar grid.
+    circle(47, 49, 16, fill: paper, color: paper, width: 1);
+    burger(34, 35, 27);
+  }
+
+  void dailyFastFood() {
+    // A takeaway order with repeat arrows conveys an everyday habit.
+    shape(
+      Path()
+        ..moveTo(14, 18)
+        ..lineTo(49, 18)
+        ..lineTo(53, 57)
+        ..quadraticBezierTo(32, 63, 11, 57)
+        ..close(),
+      fill: tint,
+      width: 2.6,
+    );
+    curve(
+      Path()
+        ..moveTo(23, 20)
+        ..lineTo(23, 13)
+        ..cubicTo(23, 1, 41, 1, 41, 13)
+        ..lineTo(41, 20),
+      width: 2.4,
+    );
+    line(15, 23, 48, 23, color: soft, width: 1.5);
+    burger(21, 28, 24);
+    curve(
+      Path()
+        ..moveTo(5, 38)
+        ..cubicTo(0, 18, 14, 6, 28, 8),
+      color: accent,
+      width: 2.8,
+    );
+    curve(
+      Path()
+        ..moveTo(23, 3)
+        ..lineTo(29, 8)
+        ..lineTo(23, 13),
+      color: accent,
+      width: 2.8,
+    );
+    curve(
+      Path()
+        ..moveTo(58, 27)
+        ..cubicTo(65, 46, 51, 61, 36, 59),
+      color: accent,
+      width: 2.8,
+    );
+    curve(
+      Path()
+        ..moveTo(41, 54)
+        ..lineTo(35, 59)
+        ..lineTo(41, 63),
+      color: accent,
+      width: 2.8,
+    );
   }
 
   void planHistory(DietIconKind kind) {
-    paperPage();
-    circle(47, 47, 13, fill: paper, color: accent, width: 2.3);
     if (kind == DietIconKind.firstPlan) {
-      line(41, 47, 53, 47, color: accent, width: 2.5);
-      line(47, 41, 47, 53, color: accent, width: 2.5);
+      firstDiet();
     } else if (kind == DietIconKind.pausedPlan) {
-      line(43, 41, 43, 53, color: accent, width: 3);
-      line(51, 41, 51, 53, color: accent, width: 3);
+      interruptedJourney();
     } else {
-      curve(
-        Path()
-          ..moveTo(52, 48)
-          ..cubicTo(55, 38, 39, 38, 41, 49)
-          ..quadraticBezierTo(44, 55, 50, 52),
-        color: accent,
-        width: 2,
-      );
-      curve(
-        Path()
-          ..moveTo(48, 47)
-          ..lineTo(53, 49)
-          ..lineTo(55, 44),
-        color: accent,
-        width: 2,
-      );
+      returnedWeight();
     }
+  }
+
+  void firstDiet() {
+    // A fresh open plan with a growing sprout: starting a new diet.
+    shape(
+      Path()
+        ..moveTo(5, 22)
+        ..quadraticBezierTo(17, 16, 32, 24)
+        ..quadraticBezierTo(47, 16, 59, 22)
+        ..lineTo(59, 55)
+        ..quadraticBezierTo(45, 51, 32, 59)
+        ..quadraticBezierTo(19, 51, 5, 55)
+        ..close(),
+      fill: tint,
+      width: 2.7,
+    );
+    shape(
+      Path()
+        ..moveTo(9, 18)
+        ..quadraticBezierTo(20, 15, 32, 22)
+        ..lineTo(32, 55)
+        ..quadraticBezierTo(20, 48, 9, 51)
+        ..close(),
+      fill: paper,
+      width: 2,
+    );
+    shape(
+      Path()
+        ..moveTo(32, 22)
+        ..quadraticBezierTo(44, 15, 55, 18)
+        ..lineTo(55, 51)
+        ..quadraticBezierTo(44, 48, 32, 55)
+        ..close(),
+      fill: paper,
+      width: 2,
+    );
+    line(14, 32, 25, 34, color: soft, width: 1.7);
+    line(14, 39, 25, 41, color: soft, width: 1.7);
+    line(39, 36, 49, 34, color: soft, width: 1.7);
+    line(39, 43, 49, 41, color: soft, width: 1.7);
+    curve(
+      Path()
+        ..moveTo(32, 25)
+        ..quadraticBezierTo(31, 15, 35, 8),
+      color: accent,
+      width: 2.4,
+    );
+    shape(
+      Path()
+        ..moveTo(32, 17)
+        ..cubicTo(21, 18, 20, 8, 22, 5)
+        ..cubicTo(31, 4, 35, 10, 32, 17)
+        ..close(),
+      fill: soft,
+      color: accent,
+      width: 1.8,
+    );
+    shape(
+      Path()
+        ..moveTo(33, 13)
+        ..cubicTo(31, 4, 41, 1, 48, 3)
+        ..cubicTo(48, 12, 40, 17, 33, 13)
+        ..close(),
+      fill: accent,
+      color: accent,
+      width: 1.8,
+    );
+    line(35, 13, 43, 7, color: paper, width: 1.3);
+  }
+
+  void returnedWeight() {
+    // The subject is weight itself, with a broad return arrow above the scale.
+    rect(10, 21, 42, 38, fill: tint, radius: 8, width: 2.7);
+    shape(
+      Path()
+        ..moveTo(17, 35)
+        ..quadraticBezierTo(31, 21, 45, 35)
+        ..lineTo(42, 42)
+        ..lineTo(20, 42)
+        ..close(),
+      fill: paper,
+      width: 2,
+    );
+    line(31, 37, 37, 30, color: accent, width: 2.3);
+    circle(31, 37, 1.4, fill: accent, color: accent, width: 1);
+    line(23, 33, 24, 35, color: soft, width: 1.3);
+    line(31, 29, 31, 32, color: soft, width: 1.3);
+    for (final x in [21.0, 36.0]) {
+      rect(x, 47, 5, 7, fill: soft, color: soft, radius: 2, width: 1);
+    }
+    curve(
+      Path()
+        ..moveTo(9, 15)
+        ..cubicTo(10, 1, 51, 0, 55, 16),
+      color: accent,
+      width: 3.4,
+    );
+    curve(
+      Path()
+        ..moveTo(47, 11)
+        ..lineTo(55, 18)
+        ..lineTo(61, 9),
+      color: accent,
+      width: 3.4,
+    );
+  }
+
+  void interruptedJourney() {
+    // A route that reaches a clear pause point, rather than another paper badge.
+    final route = Path()
+      ..moveTo(11, 55)
+      ..cubicTo(3, 36, 51, 45, 30, 29)
+      ..cubicTo(7, 15, 31, 7, 43, 16);
+    curve(route, color: soft, width: 9);
+    curve(route, color: accent, width: 2.2);
+    circle(11, 55, 4, fill: paper, color: ink, width: 2);
+    circle(46, 20, 15, fill: paper, color: ink, width: 2.7);
+    circle(46, 20, 11, fill: tint, color: soft, width: 1.3);
+    line(42, 14, 42, 26, color: accent, width: 3.6);
+    line(50, 14, 50, 26, color: accent, width: 3.6);
+    line(44, 50, 50, 50, color: soft, width: 1.6);
+    line(47, 47, 47, 53, color: soft, width: 1.6);
   }
 
   void trophy() {
