@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { asRows } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
-import { AiBadge, AiCard, AiDialog, AiForm, AiLoad, AiNote, aiApi, errorText, id, itemRows, num, outcomes, poolTitles, str, usd, useAiData, type Row } from './AiUi'
+import { AiBadge, AiCard, AiDialog, AiForm, AiLoad, AiNote, aiApi, date, errorText, id, itemRows, num, outcomes, poolTitles, str, usd, useAiData, type Row } from './AiUi'
 
 const kinds: Record<string, string> = { openrouter: 'OpenRouter', closerouter: 'CloseRouter', openai_compatible: 'سازگار با OpenAI' }
 const baseUrls: Record<string, string> = { openrouter: 'https://openrouter.ai/api/v1', closerouter: 'https://api.closerouter.dev/v1', openai_compatible: '' }
@@ -51,7 +51,7 @@ function ProviderRow({ provider, preview, edit, refresh, notify }: { provider: R
       </li>)}
     </ul> : <p className="ai-saved-empty">هنوز مدلی به این سرویس اضافه نشده است.</p>}
     {remove.isError && <p className="ai-feedback" role="alert">{errorText(remove.error)}</p>}
-    {adding && <AddModelDialog provider={provider} preview={preview} close={() => setAdding(false)} added={async message => { notify(message); await refresh() }} />}
+    {adding && <AddModelDialog provider={provider} preview={preview} close={() => setAdding(false)} added={async message => { setAdding(false); notify(message); await refresh() }} />}
   </div>
 }
 
@@ -174,11 +174,41 @@ const poolFields = [
   ['timeoutS', 'مهلت هر تلاش (ثانیه)', 5, 300, 1], ['maxAttempts', 'حداکثر تلاش', 1, 10, 1],
 ] as const
 
+function MemberDialog({ providers, preview, close, add }: { providers: Row[]; preview: boolean; close: () => void; add: (member: Row) => void }) {
+  const [providerId, setProviderId] = useState(str(providers[0]?.id))
+  const [modelId, setModelId] = useState('')
+  const source = providers.find(provider => str(provider.id) === providerId)
+  const models = asRows(source?.models)
+  return <AiDialog title="افزودن مدل به استخر" close={close}>
+    <AiForm preview={preview} close={close} label="افزودن به صف" submit={async data => {
+      const model = models.find(row => str(row.model) === modelId)
+      if (!providerId || !model) throw new Error('سرویس و مدل را انتخاب کنید.')
+      add({
+        providerId, providerName: source?.name, model: model.model, enabled: true,
+        weight: Number(data.get('weight')), priceInMicrosPerM: model.priceInMicrosPerM, priceOutMicrosPerM: model.priceOutMicrosPerM,
+      })
+    }}>
+      <label>سرویس<select value={providerId} onChange={event => { setProviderId(event.target.value); setModelId('') }}>
+        {providers.map(provider => <option key={str(provider.id)} value={str(provider.id)}>{str(provider.name)}</option>)}
+      </select></label>
+      {!models.length && <AiNote>این سرویس هنوز مدلی ندارد. اول از دکمهٔ افزودن در ردیف همان سرویس، مدل را از فهرست سایت انتخاب کنید.</AiNote>}
+      {!!models.length && <div className="ai-model-picker" role="listbox" aria-label="مدل‌های ذخیره‌شدهٔ سرویس">
+        {models.map(model => {
+          const key = str(model.model)
+          return <button type="button" role="option" key={str(model.id)} aria-selected={modelId === key} onClick={() => setModelId(key)}>
+            <bdi>{key}</bdi>
+            <small className="ai-model-cost"><bdi dir="ltr">{modelCostLabel(model)}</bdi></small>
+          </button>
+        })}
+      </div>}
+      <label>وزن<input name="weight" type="number" min={1} max={100} defaultValue={1} required /></label>
+    </AiForm>
+  </AiDialog>
+}
+
 function PoolCard({ pool, providers, preview, refresh, notify }: { pool: Row; providers: Row[]; preview: boolean; refresh: () => Promise<unknown>; notify: (message: string) => void }) {
   const [draft, setDraft] = useState<Row[] | null>(null)
-  const [selectedProvider, setSelectedProvider] = useState('')
-  const [selectedModel, setSelectedModel] = useState('')
-  const [availableModels, setAvailableModels] = useState<Row[]>([])
+  const [adding, setAdding] = useState(false)
   const members = draft ?? asRows(pool.members)
   const endpoint = 'pools/' + id(pool.code)
   const action = useMutation({
@@ -190,19 +220,23 @@ function PoolCard({ pool, providers, preview, refresh, notify }: { pool: Row; pr
         priceInMicrosPerM: member.priceInMicrosPerM, priceOutMicrosPerM: member.priceOutMicrosPerM,
       })) })
       await refresh()
-      if (task.kind === 'save') { setDraft(null); setSelectedProvider(''); setSelectedModel(''); }
-      notify(task.kind === 'save' ? 'مدل‌های مربی ذخیره شدند.' : 'وضعیت سلامت بازنشانی شد.')
+      if (task.kind === 'save') setDraft(null)
+      notify(task.kind === 'save' ? 'مدل‌های استخر ذخیره شدند.' : 'وضعیت سلامت بازنشانی شد.')
     },
   })
-
-  const currentMember = members.find(m => m.id)
-  
-  return <AiCard title={poolTitles[str(pool.code)] ?? str(pool.title)} description={<>مربی <bdi>{str(pool.code)}</bdi></>}>
+  function move(index: number, delta: number) {
+    const updated = [...members]
+    const [member] = updated.splice(index, 1)
+    if (!member) return
+    updated.splice(index + delta, 0, member)
+    setDraft(updated)
+  }
+  return <AiCard title={poolTitles[str(pool.code)] ?? str(pool.title)} description={<>کد استخر <bdi>{str(pool.code)}</bdi> · اگر مدل اول خطا بدهد، مدل بعدی صدا زده می‌شود.</>}>
     <AiForm key={JSON.stringify([pool.strategy, pool.temperature, pool.maxTokens, pool.timeoutMs, pool.maxAttempts, pool.enabled])}
-      preview={preview} label="ذخیرهٔ تنظیمات مربی" submit={async data => {
+      preview={preview} label="ذخیرهٔ تنظیمات استخر" submit={async data => {
         await aiApi(endpoint, 'PUT', { strategy: data.get('strategy'), temperature: Number(data.get('temperature')),
           maxTokens: Number(data.get('maxTokens')), timeoutMs: Number(data.get('timeoutS')) * 1000, maxAttempts: Number(data.get('maxAttempts')), enabled: data.get('enabled') === 'true' })
-        await refresh(); notify('تنظیمات مربی ذخیره شد.')
+        await refresh(); notify('تنظیمات استخر ذخیره شد.')
       }}>
       <div className="ai-pool-fields"><label>راهبرد انتخاب<select name="strategy" defaultValue={str(pool.strategy)}>
         {Object.entries(strategies).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
@@ -211,72 +245,35 @@ function PoolCard({ pool, providers, preview, refresh, notify }: { pool: Row; pr
         <label>وضعیت<select name="enabled" defaultValue={String(!!pool.enabled)}><option value="true">فعال</option><option value="false">غیرفعال</option></select></label>
       </div>
     </AiForm>
-    
-    <div className="ai-pool-model-selector">
-      <h3>مدل فعال این مربی</h3>
-      {currentMember ? (
-        <div className="ai-current-model">
-          <div className="ai-row-info">
-            <strong><bdi>{str(currentMember.model)}</bdi></strong>
-            <small>{str(currentMember.providerName)}</small>
-          </div>
-          <button type="button" className="secondary" onClick={() => setDraft(members.filter(m => !m.id))}><Icon name="trash" />حذف مدل</button>
+    {!members.length && <p className="ai-feedback">این استخر هنوز مدلی ندارد.</p>}
+    {members.map((member, index) => {
+      const cooldown = Date.parse(str(member.cooldownUntil)) > Date.now()
+      const failures = Number(member.consecutiveFailures ?? 0)
+      return <div className="ai-row ai-member-row" key={str(member.id || `${member.providerId}/${member.model}`)}>
+        <span className="users-current">{num(index + 1)}</span>
+        <div className="ai-row-info"><strong><bdi>{str(member.model)}</bdi></strong><small>{str(member.providerName)} · ورودی {usd(member.priceInMicrosPerM, 3)} · خروجی {usd(member.priceOutMicrosPerM, 3)} در هر میلیون توکن</small></div>
+        <div className="ai-row-info"><AiBadge tone={cooldown ? 'bad' : failures ? 'warn' : 'good'}>{cooldown ? `در استراحت تا ${date(member.cooldownUntil)}` : failures ? `${num(failures)} خطای پیاپی` : 'سالم'}</AiBadge>
+          <small>موفق {num(member.totalOk)} · ناموفق {num(member.totalFail)}{member.lastErrorCode ? ' · ' + str(member.lastErrorCode) : ''}</small></div>
+        <div className="ai-inline-actions">
+          <button type="button" className="secondary icon-button" aria-label="افزایش اولویت" disabled={index === 0 || action.isPending} onClick={() => move(index, -1)}><Icon name="chevron-right" /></button>
+          <button type="button" className="secondary icon-button" aria-label="کاهش اولویت" disabled={index === members.length - 1 || action.isPending} onClick={() => move(index, 1)}><Icon name="chevron-left" /></button>
+          <button type="button" className="secondary" disabled={action.isPending} onClick={() => setDraft(members.map((row, i) => i === index ? { ...row, enabled: !row.enabled } : row))}>{member.enabled ? 'غیرفعال' : 'فعال'}</button>
+          <button type="button" className="secondary icon-button ai-danger" aria-label="برداشتن مدل از استخر" disabled={action.isPending} onClick={() => setDraft(members.filter((_, i) => i !== index))}><Icon name="trash" /></button>
+          {Boolean(member.id) && <button type="button" className="secondary" disabled={preview || action.isPending} onClick={() => action.mutate({ kind: 'reset', member })}>پاک‌کردن خطا</button>}
         </div>
-      ) : <p className="ai-feedback">این مربی هنوز مدلی ندارد.</p>}
-      
-      <h4>انتخاب مدل جدید</h4>
-      <div className="ai-model-form">
-        <label>سرویس
-          <select value={selectedProvider} onChange={(e) => {
-            const providerId = e.target.value
-            setSelectedProvider(providerId)
-            setSelectedModel('')
-            const source = providers.find(item => str(item.id) === providerId)
-            setAvailableModels(asRows(source?.models).map(model => ({
-              id: model.model, name: model.name, priceInMicrosPerM: model.priceInMicrosPerM, priceOutMicrosPerM: model.priceOutMicrosPerM,
-            })))
-          }}>
-            <option value="">انتخاب سرویس</option>
-            {providers.map(provider => <option key={str(provider.id)} value={str(provider.id)}>{str(provider.name)}</option>)}
-          </select>
-        </label>
-        
-        {selectedProvider && !availableModels.length && <p className="ai-hint">این سرویس هنوز مدلی ندارد. از دکمهٔ افزودن در ردیف سرویس، مدل را از فهرست سایت انتخاب کنید.</p>}
-        {selectedProvider && !!availableModels.length && (
-          <label>مدل
-            <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
-              <option value="">انتخاب مدل</option>
-              {availableModels.map(model => <option key={str(model.id)} value={str(model.id)}>{str(model.id)}</option>)}
-            </select>
-          </label>
-        )}
-        
-        <button type="button" disabled={!selectedProvider || !selectedModel || action.isPending} onClick={() => {
-          if (selectedProvider && selectedModel) {
-            const provider = providers.find(p => str(p.id) === selectedProvider)
-            const model = availableModels.find(m => str(m.id) === selectedModel)
-            const priceIn = model?.priceInMicrosPerM != null ? Number(model.priceInMicrosPerM) : 0
-            const priceOut = model?.priceOutMicrosPerM != null ? Number(model.priceOutMicrosPerM) : 0
-            setDraft([{
-              providerId: selectedProvider,
-              providerName: str(provider?.name),
-              model: selectedModel,
-              enabled: true,
-              weight: 1,
-              priceInMicrosPerM: priceIn,
-              priceOutMicrosPerM: priceOut,
-            }])
-          }
-        }}><Icon name="plus" />انتخاب این مدل</button>
       </div>
-    </div>
-
+    })}
     <div className="ai-pool-tools">
-      <button type="button" disabled={preview || !draft || action.isPending} onClick={() => action.mutate({ kind: 'save' })}><Icon name="check" />ذخیرهٔ مدل</button>
-      <button type="button" className="secondary" disabled={preview || !currentMember || action.isPending} onClick={() => action.mutate({ kind: 'test' })}><Icon name="send" />تست مربی</button>
+      <button type="button" className="secondary" disabled={!providers.length || action.isPending} onClick={() => setAdding(true)}><Icon name="plus" />افزودن مدل</button>
+      <button type="button" disabled={preview || !draft || action.isPending} onClick={() => action.mutate({ kind: 'save' })}><Icon name="check" />ذخیرهٔ ترتیب و مدل‌ها</button>
+      <button type="button" className="secondary" disabled={preview || action.isPending} onClick={() => action.mutate({ kind: 'test' })}><Icon name="send" />آزمایش استخر</button>
     </div>
     {action.isError && <p className="ai-feedback" role="alert">{errorText(action.error)}</p>}
-    {action.data && <p className="ai-feedback" role="status">{action.data.ok ? 'مربی پاسخ داد.' : 'مربی پاسخی نگرفت.'} {asRows(action.data.chain).map(row => `${str(row.model)} · ${outcomes[str(row.outcome)] ?? str(row.outcome)}`).join('، ') || str(action.data.errorCode)}</p>}
+    {action.data && <p className="ai-feedback" role="status">{action.data.ok ? 'استخر پاسخ داد.' : 'استخر پاسخی نگرفت.'} {asRows(action.data.chain).map(row => `${str(row.model)} · ${outcomes[str(row.outcome)] ?? str(row.outcome)}`).join('، ') || str(action.data.errorCode)}</p>}
+    {adding && <MemberDialog providers={providers} preview={preview} close={() => setAdding(false)} add={member => {
+      if (members.some(row => row.providerId === member.providerId && row.model === member.model)) throw new Error('این مدل از همین سرویس در استخر وجود دارد.')
+      setDraft([...members, member]); setAdding(false)
+    }} />}
   </AiCard>
 }
 
