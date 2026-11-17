@@ -528,7 +528,7 @@ Regex for catalog: `^admin\/ai\/providers\/[^/]+\/models(?:\?.*)?$` — query st
 | `frontend/src/shared/api/staff-session.ts` | `isAiCatalog` → **90s** abort timer for model catalog `GET` |
 | `backend-laravel/tests/Feature/ReplacementContractTest.php` | Asserts creating `kind: closerouter` provider |
 
-**Related doc:** `backend-laravel/docs/AI_MODELS.md` mentions provider kinds and `AI_HTTP` (large generated catalog doc).
+**Related doc (removed):** generated `AI_MODELS.md` and `tool/expand_ai_models_md.py` were optional offline catalog docs, not used by the app.
 
 ---
 
@@ -614,7 +614,7 @@ Regex for catalog: `^admin\/ai\/providers\/[^/]+\/models(?:\?.*)?$` — query st
 | Laravel | 90s upstream HTTP; 10 min in-memory/file cache per provider id (`ai_catalog:{uuid}`) |
 | Data | Prices from `ProviderClient::modelView`; stored on `POST` into `ai_provider_models` |
 
-**OpenRouter scale:** ~470 models in API ([docs note](backend-laravel/docs/fragments/ai_models_preamble_en.md)); first dialog open is slow by design; cache + longer timeouts prevent false failures.
+**OpenRouter scale:** ~470 models in API; first dialog open is slow by design; cache + longer timeouts prevent false failures.
 
 ---
 
