@@ -207,7 +207,7 @@ void main() {
   );
 
   testWidgets(
-    'greeting on a narrow screen with large text gives space back to the keyboard',
+    'chat never shows an introduction banner on entry or avatar greeting',
     (t) async {
       t.view.physicalSize = const Size(320, 740);
       t.view.devicePixelRatio = 1;
@@ -216,7 +216,11 @@ void main() {
       final repo = ControlledCoach(store);
       await t.pumpWidget(pageHost(store, repo, scale: 1.5));
       await t.pumpAndSettle();
-      expect(find.byType(CoachCompanionNote), findsOneWidget);
+      expect(find.byType(CoachCompanionNote), findsNothing);
+      expect(find.textContaining('من جوانه'), findsNothing);
+      await t.tap(find.byKey(const ValueKey('coach-companion-greet')));
+      await t.pumpAndSettle();
+      expect(find.byType(CoachCompanionNote), findsNothing);
       expect(t.takeException(), isNull);
       await t.pumpWidget(pageHost(store, repo, scale: 1.5, inset: 290));
       await t.pumpAndSettle();

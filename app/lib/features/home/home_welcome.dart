@@ -1,18 +1,16 @@
-import '../../core/icons/diet_icon.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../../core/theme/theme.dart';
-import '../../domain/common/day.dart';
 import '../../domain/common/digits.dart';
 import '../../presentation/widgets/kit/pressable_scale.dart';
 import '../../presentation/widgets/brand_scene.dart';
 import 'home_day_focus.dart';
 import 'home_focus_sparkles.dart';
 
-/// Personal greeting and calendar, separate from the day's changing records.
+/// Personal greeting and profile, separate from the day's changing records.
 class HomeWelcome extends StatelessWidget {
   const HomeWelcome({
     super.key,
@@ -94,22 +92,6 @@ class HomeWelcome extends StatelessWidget {
                       color: AppColors.emeraldDark,
                     ),
                   ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            const DietIcon(DietIconKind.plan, size: 20),
-            const SizedBox(width: AppSpacing.sm),
-            Flexible(
-              child: Text(
-                persianDate(now),
-                style: AppTypography.supporting.copyWith(
-                  color: AppColors.inkSoft,
                 ),
               ),
             ),

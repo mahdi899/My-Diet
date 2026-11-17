@@ -61,7 +61,7 @@ Future<void> choose(WidgetTester tester, String key, String value) async {
 }
 
 Future<void> openPlanPrices(WidgetTester tester) async {
-  if (find.text('پلن‌ها و تعرفه‌ها').evaluate().isNotEmpty) return;
+  if (find.text('پلن مناسب تو').evaluate().isNotEmpty) return;
   await tester.tap(find.byKey(const ValueKey('tab-coach')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('coach-avatar')));
@@ -238,7 +238,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(OnboardingScreen), findsNothing);
       await openPlanPrices(tester);
-      expect(find.text('پلن‌ها و تعرفه‌ها'), findsOneWidget);
+      expect(find.text('پلن مناسب تو'), findsOneWidget);
       expect(store.userSignedIn, true);
       expect(store.questionnaireComplete, isTrue);
       expect(store.requests.length, count);
@@ -307,7 +307,7 @@ void main() {
       expect(store.userSignedIn, isTrue);
       expect(find.byType(LoginScreen), findsNothing);
       await openPlanPrices(tester);
-      expect(find.text('پلن‌ها و تعرفه‌ها'), findsOneWidget);
+      expect(find.text('پلن مناسب تو'), findsOneWidget);
       expect(store.hasUserRequest, isFalse);
       expect(storage.value, isNotNull);
       expect(tester.takeException(), isNull);

@@ -392,12 +392,12 @@ class CoachCompanionNote extends StatelessWidget {
                 children: [
                   Text(
                     switch (mood) {
-                      CompanionMood.greeting => 'سلام، من جوانه‌ام',
+                      CompanionMood.greeting ||
+                      CompanionMood.calm => 'قدم بعدی را با هم برداریم',
                       CompanionMood.thinking => 'دارم به حرفت فکر می‌کنم…',
                       CompanionMood.celebrate => 'یک قدم دیگر برای خودت',
                       CompanionMood.support => 'با هم ادامه می‌دیم',
                       CompanionMood.reply => 'جوابت آماده است',
-                      CompanionMood.calm => 'قدم بعدی را با هم برداریم',
                     },
                     style: const TextStyle(
                       fontSize: 14,
@@ -408,8 +408,8 @@ class CoachCompanionNote extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     switch (mood) {
-                      CompanionMood.greeting =>
-                        'همراه کوچک تو در مسیر رژیم من.',
+                      CompanionMood.greeting || CompanionMood.calm =>
+                        'از وعده‌ها، سلیقه‌ات یا حال امروزت بگو.',
                       CompanionMood.thinking =>
                         'پاسخ همین‌جا نمایش داده می‌شود.',
                       CompanionMood.celebrate =>
@@ -418,8 +418,6 @@ class CoachCompanionNote extends StatelessWidget {
                         'هر وقت آماده بودی، از همین‌جا ادامه بده.',
                       CompanionMood.reply =>
                         'می‌تونی گفتگو را از همین‌جا ادامه بدی.',
-                      CompanionMood.calm =>
-                        'از وعده‌ها، سلیقه‌ات یا حال امروزت بگو.',
                     },
                     style: const TextStyle(
                       fontSize: 11,

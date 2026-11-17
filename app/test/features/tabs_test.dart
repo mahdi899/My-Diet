@@ -63,6 +63,11 @@ void main() {
     await settle(tester);
 
     expect(find.byType(PlanTab), findsOneWidget);
+    expect(find.byKey(const ValueKey('plan-published')), findsOneWidget);
+    expect(find.text('برنامه‌ات آماده‌ست!'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('plan-published-view-meals')));
+    await settle(tester);
+    expect(find.byKey(const ValueKey('plan-published')), findsNothing);
     expect(find.byKey(const ValueKey('plan-hero')), findsOneWidget);
     expect(find.text('شروع کن'), findsOneWidget);
     final list = find.byType(ListView).first;

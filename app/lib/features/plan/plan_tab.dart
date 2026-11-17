@@ -15,11 +15,10 @@ import 'goal_math.dart';
 import 'journey_map.dart';
 import 'meal_detail_page.dart';
 import 'plan_meals.dart';
+import 'plan_published_card.dart';
 import 'plan_shopping_page.dart';
 import 'plan_states.dart';
 import 'streak_chip.dart';
-import '../../presentation/widgets/operation_status.dart';
-import '../../presentation/widgets/brand_scene.dart';
 
 class PlanTab extends StatefulWidget {
   const PlanTab({super.key});
@@ -118,16 +117,9 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
             ),
             children: [
               if (_showPublication) ...[
-                const BrandScene(kind: BrandSceneKind.planReady, height: 110),
-                OperationStatus(
+                PlanPublishedCard(
                   key: const ValueKey('plan-published'),
-                  title: 'برنامه‌ات آماده است',
-                  message:
-                      'این نسخه تأیید و منتشر شده؛ مقدار مواد و دستور هر وعده را می‌توانی ببینی.',
-                  icon: Icons.task_alt_rounded,
-                  tone: OperationTone.success,
-                  actionLabel: 'وعده‌ها را ببین',
-                  onAction: () => setState(() => _showPublication = false),
+                  onViewMeals: () => setState(() => _showPublication = false),
                 ),
                 const SizedBox(height: 16),
               ],

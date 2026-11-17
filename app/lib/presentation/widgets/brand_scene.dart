@@ -15,6 +15,7 @@ enum BrandSceneKind {
   paymentPending,
   paymentIssue,
   habits,
+  weightJourney,
   shopping;
 
   String get asset => switch (this) {
@@ -29,6 +30,7 @@ enum BrandSceneKind {
     paymentPending => 'assets/images/brand_scenes/payment_pending.png',
     paymentIssue => 'assets/images/brand_scenes/payment_issue_v2.png',
     habits => 'assets/images/brand_scenes/habits.png',
+    weightJourney => 'assets/images/brand_scenes/weight_journey_v1.png',
     shopping => 'assets/images/brand_scenes/shopping.png',
   };
 }

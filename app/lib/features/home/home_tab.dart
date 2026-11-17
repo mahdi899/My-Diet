@@ -1,4 +1,3 @@
-import '../../core/icons/diet_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -10,8 +9,6 @@ import '../../presentation/widgets/kit/kit.dart';
 import '../coach/coach_launcher.dart';
 import '../plan/goal_math.dart';
 import '../plan/meal_detail_page.dart';
-import '../plan/streak_chip.dart';
-import 'sparkline.dart';
 import 'home_day_focus.dart';
 import 'home_welcome.dart';
 import 'water_log.dart';
@@ -19,7 +16,7 @@ import 'water_card.dart';
 export 'water_card.dart' show WaterCard;
 import 'habit_garden.dart';
 import 'today_summary.dart';
-import 'weight_sheet.dart';
+import 'home_journey_footer.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key, this.onOpenPlan, this.waterLog});
@@ -149,62 +146,11 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
             }
           },
         ).rise(index: 4),
-        const SizedBox(height: 12),
-        const StreakChip(),
-        const SizedBox(height: AppSpacing.lg),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'وزن',
-                          style: TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        Ticker(
-                          value: store.latestWeight,
-                          fractionDigits: fractionDigits(store.latestWeight),
-                          suffix: ' کیلو',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ],
-                    ),
-                  ),
-                  PillButton(
-                    label: 'ثبت وزن',
-                    expanded: false,
-                    height: 42,
-                    variant: PillVariant.soft,
-                    onPressed: () => showWeightSheet(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 64,
-                child: CustomPaint(
-                  painter: SparklinePainter(store.weightEntries),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            ],
-          ),
-        ).rise(index: 5),
         const SizedBox(height: AppSpacing.xl),
-        PillButton(
-          label: _nudge(next),
-          iconWidget: const DietIcon(DietIconKind.coach, size: 22),
-          variant: PillVariant.soft,
-          onPressed: () => openCoach(context, prefill: _prefill(store, next)),
-        ).rise(index: 6),
+        HomeJourneyFooter(
+          key: const ValueKey('home-journey-footer'),
+          onCoach: () => openCoach(context, prefill: _prefill(store, next)),
+        ).rise(index: 5),
       ],
     );
   }
@@ -260,11 +206,6 @@ String _firstName(CustomerWorkspace store) {
   final raw = store.userSignedIn ? store.questionnaire.name.trim() : '';
   if (raw.isEmpty) return 'دوست';
   return raw.split(RegExp(r'\s+')).first;
-}
-
-String _nudge(NextMeal? next) {
-  if (next == null) return 'امروز را با مربی ببند';
-  return 'دربارهٔ ${next.meal.name} بپرس';
 }
 
 String _prefill(CustomerWorkspace store, NextMeal? next) {

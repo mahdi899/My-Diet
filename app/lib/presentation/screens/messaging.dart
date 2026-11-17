@@ -10,6 +10,8 @@ import '../../data/day.dart';
 import '../../data/messaging.dart';
 import '../../core/theme/theme.dart';
 import '../widgets/ui.dart';
+import '../../features/plan/plan_change_sheet.dart';
+export '../../features/plan/plan_change_sheet.dart' show showPlanChange;
 
 String chatTime(DateTime value) => fa(
   '${value.toLocal().hour.toString().padLeft(2, '0')}:${value.toLocal().minute.toString().padLeft(2, '0')}',
@@ -509,7 +511,10 @@ class _MessagingScreenState extends State<MessagingScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: OutlinedButton.icon(
-                onPressed: () => showPlanChange(context),
+                onPressed: () async {
+                  await showPlanChange(context);
+                  if (mounted && live) await load();
+                },
                 icon: const Icon(Icons.edit_note),
                 label: const Text('درخواست تغییر برنامه غذایی'),
               ),
@@ -853,207 +858,4 @@ class PlanChangeCard extends StatelessWidget {
       ],
     ),
   );
-}
-
-Future<void> showPlanChange(BuildContext context) async {
-  final store = DemoScope.of(context);
-  Map<String, dynamic>? livePlan;
-  if (store.serverAuthEnabled) {
-    try {
-      livePlan =
-          await store.customerAuth!.api('me/plan') as Map<String, dynamic>?;
-      if (!context.mounted) return;
-      if (livePlan == null) {
-        showToast(context, 'هنوز برنامه تأییدشده نداری.');
-        return;
-      }
-    } catch (e) {
-      if (context.mounted) {
-        showToast(
-          context,
-          e is TimeoutException
-              ? 'اتصال کند است؛ درخواست ارسال نشد. دوباره تلاش کن.'
-              : 'اتصال به سرویس برقرار نیست؛ درخواست ارسال نشد. دوباره تلاش کن.',
-        );
-      }
-      return;
-    }
-  } else if (!store.hasUserRequest || !store.userRequest.isPublished) {
-    showToast(context, 'ابتدا باید برنامه تأییدشده داشته باشی.');
-    return;
-  }
-  final details = TextEditingController(), selected = <String>{};
-  var submitted = false;
-  String? error;
-  final route = ModalBottomSheetRoute<void>(
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (sheet) => StatefulBuilder(
-      builder: (sheet, update) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            4,
-            20,
-            MediaQuery.viewInsetsOf(sheet).bottom + 16,
-          ),
-          child: SizedBox(
-            height: MediaQuery.sizeOf(sheet).height * .78,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'درخواست تغییر برنامه غذایی',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                Text(
-                  store.serverAuthEnabled
-                      ? 'برنامه فعلی از سرور دریافت شده؛ ثبت اصلاح به API درخواست تغییر و دلایل مدیر نیاز دارد.'
-                      : 'نسخه نمایشی • برنامه فعلی تا انتشار برنامه جدید فعال می‌ماند.',
-                  style: TextStyle(color: muted, fontSize: 11),
-                ),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      ExpansionTile(
-                        title: const Text('مشاهده برنامه فعلی • ۷ روز'),
-                        children: [
-                          for (
-                            var day = 0;
-                            day <
-                                (livePlan == null
-                                    ? 7
-                                    : (livePlan['days'] as List).length);
-                            day++
-                          )
-                            ExpansionTile(
-                              title: Text(
-                                [
-                                  'شنبه',
-                                  'یکشنبه',
-                                  'دوشنبه',
-                                  'سه‌شنبه',
-                                  'چهارشنبه',
-                                  'پنجشنبه',
-                                  'جمعه',
-                                ][day],
-                              ),
-                              children: [
-                                if (livePlan != null)
-                                  for (final meal
-                                      in (livePlan['days'][day]['meals']
-                                          as List))
-                                    ListTile(
-                                      title: Text(meal['title'] ?? ''),
-                                      subtitle: Text(
-                                        (meal['items'] as List)
-                                            .map(
-                                              (i) =>
-                                                  "${i['name']} ${i['quantity'] ?? ''} ${i['unit'] ?? ''}",
-                                            )
-                                            .join('، '),
-                                      ),
-                                    ),
-                                if (livePlan == null)
-                                  for (final meal
-                                      in store.userRequest.mealsForDay(day))
-                                    ListTile(
-                                      title: Text(
-                                        '${meal.name} • ${meal.title}',
-                                      ),
-                                      subtitle: Text(meal.amount),
-                                    ),
-                              ],
-                            ),
-                        ],
-                      ),
-                      ExpansionTile(
-                        title: Text(
-                          selected.isEmpty
-                              ? 'انتخاب دلیل تغییر'
-                              : '${fa(selected.length)} دلیل انتخاب شد',
-                        ),
-                        initiallyExpanded: true,
-                        children: [
-                          if (store.serverAuthEnabled)
-                            const ListTile(
-                              title: Text(
-                                'گزینه‌های دلیل هنوز از سرور ارائه نشده‌اند.',
-                              ),
-                            ),
-                          for (final reason
-                              in store.serverAuthEnabled
-                                  ? <String>[]
-                                  : store.messaging.reasons)
-                            CheckboxListTile(
-                              value: selected.contains(reason),
-                              title: Text(reason),
-                              onChanged: (value) => update(() {
-                                value == true
-                                    ? selected.add(reason)
-                                    : selected.remove(reason);
-                              }),
-                            ),
-                        ],
-                      ),
-                      TextField(
-                        controller: details,
-                        maxLines: 3,
-                        maxLength: 2000,
-                        decoration: const InputDecoration(
-                          labelText: 'توضیحات اضافی (اختیاری)',
-                        ),
-                      ),
-                      if (error != null)
-                        Text(error!, style: const TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-                PrimaryButton(
-                  'ارسال درخواست',
-                  onPressed: store.serverAuthEnabled
-                      ? () => update(
-                          () => error =
-                              'ارسال درخواست در این نسخه به سرویس سرور متصل نیست؛ درخواست ارسال نشد.',
-                        )
-                      : () {
-                          try {
-                            store.messaging.submit(
-                              store.userRequest.id,
-                              selected.toList(),
-                              details.text.trim(),
-                            );
-                            store.requestRevision(
-                              selected.join('، '),
-                              details.text.trim(),
-                            );
-                            submitted = true;
-                            Navigator.pop(sheet);
-                          } catch (e) {
-                            update(() => error = '$e');
-                          }
-                        },
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(sheet),
-                  child: const Text('انصراف'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-  await Navigator.of(context).push<void>(route);
-  await route.completed;
-  details.dispose();
-  if (submitted && context.mounted) {
-    showToast(
-      context,
-      store.serverAuthEnabled
-          ? 'درخواست شما ارسال شد.'
-          : 'درخواست شما در نسخهٔ نمایشی ثبت شد.',
-    );
-  }
 }

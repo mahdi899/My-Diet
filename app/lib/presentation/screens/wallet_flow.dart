@@ -10,6 +10,8 @@ import '../../core/theme/theme.dart';
 import '../session/live_session.dart';
 import '../widgets/operation_status.dart';
 import '../widgets/ui.dart';
+import '../widgets/brand_scene.dart';
+import '../widgets/subscription_plan_card.dart';
 import 'weekly_feedback.dart';
 import 'payment_recovery_view.dart';
 import 'messaging.dart';
@@ -111,47 +113,116 @@ class SubscriptionSummaryCard extends StatelessWidget {
     final store = DemoScope.of(context);
     final subscription = store.planSubscription;
     final active = subscription?.activeAt(store.today) == true;
-    return Surface(
-      key: const ValueKey('subscription-summary'),
-      color: sage,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Heading('اشتراک من'),
-          const SizedBox(height: 10),
-          if (subscription == null)
-            const Text(
-              'هنوز اشتراک فعالی نداری. با انتخاب و پرداخت پلن، اشتراکت فعال می‌شود.',
-              style: TextStyle(height: 1.8),
-            )
-          else ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    subscription.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'اشتراک فعلی',
+          style: TextStyle(color: Color(0xFFE7EFD8), fontSize: 12, height: 1.7),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 10,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              subscription?.title ?? 'بدون اشتراک فعال',
+              style: const TextStyle(
+                color: Color(0xFFFFFCF0),
+                fontSize: 22,
+                height: 1.5,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (subscription != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: active
+                      ? const Color(0xFFE4F1CC)
+                      : const Color(0xFFFFECCD),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  active ? 'فعال' : 'پایان یافته',
+                  style: const TextStyle(
+                    color: Color(0xFF07543A),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                Tag(active ? 'فعال' : 'پایان یافته'),
-              ],
-            ),
-            if (subscription.endsAt != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'اعتبار تا ${persianDate(subscription.endsAt!.toUtc().add(const Duration(hours: 3, minutes: 30)), year: true)}',
-                style: const TextStyle(color: muted, fontSize: 12),
               ),
-            ],
-            if (active && store.hasUserRequest) ...[
-              const SizedBox(height: 8),
-              Text(
-                store.userRequest.status.label,
-                style: const TextStyle(color: pine, fontSize: 12),
-              ),
-            ],
           ],
+        ),
+        const SizedBox(height: 8),
+        if (subscription == null)
+          const Text(
+            'هنوز اشتراک فعالی نداری. با انتخاب و پرداخت پلن، اشتراکت فعال می‌شود.',
+            style: TextStyle(
+              color: Color(0xFFE7EFD8),
+              height: 1.8,
+              fontSize: 12,
+            ),
+          )
+        else if (subscription.endsAt != null)
+          Text(
+            'اعتبار تا ${persianDate(subscription.endsAt!.toUtc().add(const Duration(hours: 3, minutes: 30)), year: true)}',
+            style: const TextStyle(
+              color: Color(0xFFE7EFD8),
+              height: 1.8,
+              fontSize: 11,
+            ),
+          ),
+        if (active && store.hasUserRequest) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD6ECC0),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              store.userRequest.status.label,
+              style: const TextStyle(
+                color: Color(0xFF07543A),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
+      ],
+    );
+    return Material(
+      key: const ValueKey('subscription-summary'),
+      color: const Color(0xFF07543A),
+      borderRadius: BorderRadius.circular(26),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact =
+                constraints.maxWidth < 280 ||
+                MediaQuery.textScalerOf(context).scale(14) > 18;
+            if (compact) return content;
+            return Row(
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: 8),
+                BrandScene(
+                  kind: BrandSceneKind.companion,
+                  width: compact ? 64 : 104,
+                  height: compact ? 92 : 126,
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -387,7 +458,11 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     return PopScope(
       canPop: !processing,
       child: Scaffold(
+        backgroundColor: const Color(0xFFFBF9F3),
         appBar: AppBar(
+          backgroundColor: const Color(0xFFFBF9F3),
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: const Color(0xFF07543A),
           centerTitle: recovering,
           title: Text(recovering ? 'پرداخت' : 'پلن‌ها و اشتراک من'),
         ),
@@ -414,6 +489,8 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                 ),
               )
             : PageBody(
+                padding: 16,
+                spacing: 12,
                 controller: _scroll,
                 children: [
                   if (loading)
@@ -442,25 +519,20 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                     ),
                   const SubscriptionSummaryCard(),
                   const Heading(
-                    'پلن‌ها و تعرفه‌ها',
-                    subtitle:
-                        'پلنت را انتخاب کن؛ برنامهٔ غذایی پس از بررسی و تأیید متخصص منتشر می‌شود.',
+                    'پلن مناسب تو',
+                    subtitle: 'برنامه پس از بررسی و تأیید متخصص منتشر می‌شود.',
                   ),
                   for (final plan
                       in catalogReady
                           ? store.subscriptionOffers
                           : <SubscriptionPlanOffer>[])
-                    _OfferCard(
+                    SubscriptionPlanCard(
                       key: ValueKey('plan-${plan.id}'),
-                      title: 'پلن ${plan.title} · ${fa(plan.days)} روزه',
-                      subtitle:
-                          '${plan.description}${store.selectedPlanServiceId == 'new-plan' && store.selectedSubscriptionPlanId == plan.id ? '\n• ${plan.features.join('\n• ')}' : ''}',
-                      price: formatToman(plan.priceToman),
-                      icon: Icons.workspace_premium_outlined,
+                      plan: plan,
                       selected:
                           store.selectedPlanServiceId == 'new-plan' &&
                           store.selectedSubscriptionPlanId == plan.id,
-                      onTap: selectionLocked
+                      onSelect: selectionLocked
                           ? null
                           : () {
                               store.selectedPlanServiceId = 'new-plan';
@@ -549,34 +621,82 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      selected == null
-                          ? 'برای ادامه یک پلن انتخاب کن.'
-                          : 'مبلغ قابل پرداخت: ${formatToman(covered ? 0 : selected.priceToman)}',
-                      key: const ValueKey('payable-amount'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                    if (selected == null)
+                      const Text(
+                        'برای ادامه یک پلن انتخاب کن.',
+                        key: ValueKey('payable-amount'),
+                        style: TextStyle(
+                          color: AppColors.inkSoft,
+                          fontSize: 13,
+                        ),
+                      )
+                    else
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        runSpacing: 6,
+                        children: [
+                          Text(
+                            selected.id == 'new-plan' && selectedPlan != null
+                                ? 'پلن ${selectedPlan.title} · ${fa(selectedPlan.days)} روزه'
+                                : selected.title,
+                            key: const ValueKey('checkout-selection'),
+                            style: const TextStyle(
+                              color: Color(0xFF07543A),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            formatToman(covered ? 0 : selected.priceToman),
+                            key: const ValueKey('payable-amount'),
+                            style: const TextStyle(
+                              color: Color(0xFF07543A),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
                     const SizedBox(height: 12),
-                    PrimaryButton(
-                      processing
-                          ? 'در حال بررسی پرداخت…'
-                          : error != null && errorKind == 'pending'
-                          ? 'بررسی نتیجهٔ پرداخت'
-                          : covered
-                          ? 'استفاده از اشتراک'
-                          : 'پرداخت و فعال‌سازی پلن',
-                      onPressed:
-                          selected == null ||
-                              !eligible ||
-                              processing ||
-                              loading ||
-                              !catalogReady
-                          ? null
-                          : purchase,
-                      icon: Icons.payment_outlined,
+                    FilledButtonTheme(
+                      data: FilledButtonThemeData(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF07543A),
+                          foregroundColor: const Color(0xFFFFFCF0),
+                          minimumSize: const Size(0, 52),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
+                          textStyle: AppTypography.button.copyWith(
+                            fontSize: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                      child: PrimaryButton(
+                        processing
+                            ? 'در حال بررسی پرداخت…'
+                            : error != null && errorKind == 'pending'
+                            ? 'بررسی نتیجهٔ پرداخت'
+                            : covered
+                            ? 'استفاده از اشتراک'
+                            : 'پرداخت و فعال‌سازی پلن',
+                        onPressed:
+                            selected == null ||
+                                !eligible ||
+                                processing ||
+                                loading ||
+                                !catalogReady
+                            ? null
+                            : purchase,
+                        icon: Icons.payment_outlined,
+                      ),
                     ),
                   ],
                 ),
@@ -649,6 +769,11 @@ class _PaymentBottom extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      side: BorderSide(color: Color(0xFFE5E7DD)),
+    ),
+    clipBehavior: Clip.antiAlias,
     child: SafeArea(
       top: false,
       child: Padding(

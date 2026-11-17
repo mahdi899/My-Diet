@@ -176,9 +176,7 @@ class _CoachPageState extends State<CoachPage> {
                   periodRemaining:
                       (_quota!['periodRemaining'] as num?)?.toInt() ?? 0,
                 ),
-              if (!keyboardOpen &&
-                  (mood == CompanionMood.greeting ||
-                      mood == CompanionMood.celebrate))
+              if (!keyboardOpen && mood == CompanionMood.celebrate)
                 CoachCompanionNote(
                   typing: false,
                   celebrated: mood == CompanionMood.celebrate,

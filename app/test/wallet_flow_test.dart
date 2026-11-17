@@ -32,6 +32,11 @@ Future<void> startPlans(
   bool questionnaireComplete = true,
 }) async {
   mobile(tester);
+  tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(
+    tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+  );
   store.questionnaireComplete = questionnaireComplete;
   store.login(AppRole.user);
   await tester.pumpWidget(
@@ -60,7 +65,10 @@ void main() {
     expect(find.byKey(const ValueKey('subscription-summary')), findsOneWidget);
     expect(find.textContaining('هنوز اشتراک فعالی نداری'), findsOneWidget);
     await tapPlan(tester, find.byKey(const ValueKey('plan-monthly')));
-    expect(find.text('مبلغ قابل پرداخت: ۱٬۹۹۰٬۰۰۰ تومان'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('payable-amount'))).data,
+      '۱٬۹۹۰٬۰۰۰ تومان',
+    );
     expect(find.textContaining('کیف پول'), findsNothing);
     expect(find.textContaining('موجودی'), findsNothing);
     expect(primary(tester, 'پرداخت و فعال‌سازی پلن').onPressed, isNotNull);

@@ -129,6 +129,76 @@ void main() {
     store.dispose();
   });
 
+  testWidgets('summary progress and next meal follow actual registrations', (
+    tester,
+  ) async {
+    phone(tester);
+    final store = ready();
+    await tester.pumpWidget(host(store, _SpyCoach(store)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('coach-summary-toggle')));
+    await tester.pumpAndSettle();
+    final summary = find.byType(CoachTodaySummary);
+    Finder inSummary(Finder matching) =>
+        find.descendant(of: summary, matching: matching);
+    expect(inSummary(find.text('۰ از ۴ وعده')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('coach-summary-meal-0')),
+        matching: find.text('وعده بعدی'),
+      ),
+      findsOneWidget,
+    );
+
+    await store.setMealEaten(store.today, 0, true);
+    await tester.pumpAndSettle();
+    expect(inSummary(find.text('۱ از ۴ وعده')), findsOneWidget);
+    expect(inSummary(find.text('انجام شد')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('coach-summary-meal-1')),
+        matching: find.text('وعده بعدی'),
+      ),
+      findsOneWidget,
+    );
+    for (var i = 1; i < store.mealsOn(store.today).length; i++) {
+      await store.setMealEaten(store.today, i, true);
+    }
+    await tester.pumpAndSettle();
+    expect(inSummary(find.text('۴ از ۴ وعده')), findsOneWidget);
+    expect(inSummary(find.text('وعده بعدی')), findsNothing);
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            inSummary(find.byType(LinearProgressIndicator)),
+          )
+          .value,
+      1,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    store.dispose();
+  });
+
+  testWidgets('summary meal cards open their actual meal details', (
+    tester,
+  ) async {
+    phone(tester);
+    final store = ready();
+    await tester.pumpWidget(host(store, _SpyCoach(store)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('coach-summary-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('coach-summary-meal-1')));
+    await tester.pumpAndSettle();
+    final detail = tester.widget<MealDetailPage>(find.byType(MealDetailPage));
+    expect(detail.index, 1);
+    expect(detail.date, store.today);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    store.dispose();
+  });
+
   testWidgets(
     'quick water uses the existing action rather than a text request',
     (tester) async {
