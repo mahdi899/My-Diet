@@ -21,7 +21,8 @@ function flutterArgs() {
     'build',
     'web',
     '--debug',
-    '--dart-define=API_BASE_URL=',
+    `--dart-define=API_BASE_URL=http://127.0.0.1:${Number(process.env.SABZINE_PREVIEW_PORT || 8781)}`,
+    ...(process.argv.includes('--demo') ? ['--dart-define=USE_DEMO=true'] : []),
     '--no-wasm-dry-run',
   ];
 }

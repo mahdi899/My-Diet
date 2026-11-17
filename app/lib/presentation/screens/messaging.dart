@@ -124,6 +124,8 @@ class _MessagingScreenState extends State<MessagingScreen> {
   StreamSubscription<Uint8List>? recording;
   final chunks = BytesBuilder();
   Timer? timer;
+  Timer? pollTimer;
+  final mediaCache = <String, ChatAttachment>{};
   DemoStore? store;
   String? error, conversationId;
   List<ConversationMessage> liveMessages = [], outbox = [];
@@ -144,6 +146,14 @@ class _MessagingScreenState extends State<MessagingScreen> {
     store!.messaging.addListener(changed);
     if (live) {
       load();
+      pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+        if (mounted &&
+            !loading &&
+            !sending &&
+            ModalRoute.of(context)?.isCurrent == true) {
+          load(silent: true);
+        }
+      });
     } else {
       store!.messaging.seed(
         thread,
@@ -177,6 +187,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
   void dispose() {
     operation++;
     timer?.cancel();
+    pollTimer?.cancel();
     recording?.cancel();
     recorder?.dispose();
     inputFocus.dispose();
@@ -186,11 +197,27 @@ class _MessagingScreenState extends State<MessagingScreen> {
     super.dispose();
   }
 
-  Future<void> load() async {
+  Future<ChatAttachment> downloadMedia(String id) async {
+    if (mediaCache.containsKey(id)) return mediaCache[id]!;
+    final api = store!.customerAuth!;
+    final grant = await api.api('media/$id/access', method: 'POST', body: {});
+    final content = await api.api(
+      'media/$id/content',
+      method: 'POST',
+      body: {'grant': grant['grant']},
+    );
+    return mediaCache[id] = ChatAttachment(
+      id,
+      content['detectedType'],
+      base64Decode(content['contentBase64']),
+    );
+  }
+
+  Future<void> load({bool silent = false}) async {
     final expected = ++operation;
     setState(() {
       loading = true;
-      error = null;
+      if (!silent) error = null;
     });
     try {
       final api = store!.customerAuth!;
@@ -216,16 +243,16 @@ class _MessagingScreenState extends State<MessagingScreen> {
       }
       final result =
           await api.api('conversations/$conversationId/messages') as List;
-      String? actor;
-      try {
-        actor = jsonDecode(
-          utf8.decode(
-            base64Url.decode(
-              base64Url.normalize(api.session!.accessToken.split('.')[1]),
-            ),
-          ),
-        )['sub'];
-      } catch (_) {}
+      final actor = api.userId;
+      for (final row in result) {
+        if (row['mediaId'] != null) {
+          try {
+            await downloadMedia(row['mediaId']);
+          } catch (_) {
+            // Text messages remain readable when a media download needs retrying.
+          }
+        }
+      }
       if (!mounted || expected != operation) return;
       setState(() {
         liveMessages = result
@@ -240,11 +267,24 @@ class _MessagingScreenState extends State<MessagingScreen> {
                         .where((s) => s.name == r['status'])
                         .firstOrNull ??
                     MessageState.sent,
+                kind: r['kind'] == 'image'
+                    ? MessageKind.photo
+                    : r['kind'] == 'voice'
+                    ? MessageKind.voice
+                    : MessageKind.text,
+                mediaId: r['mediaId'],
+                attachment: mediaCache[r['mediaId']],
               ),
             )
             .toList();
         final ids = liveMessages.map((m) => m.id).toSet();
-        outbox.removeWhere((m) => ids.contains(m.id));
+        final requests = result
+            .map((r) => r['clientRequestId'])
+            .whereType<String>()
+            .toSet();
+        outbox.removeWhere(
+          (m) => ids.contains(m.id) || requests.contains(m.clientRequestId),
+        );
       });
       await api.api(
         'conversations/$conversationId/read',
@@ -262,13 +302,6 @@ class _MessagingScreenState extends State<MessagingScreen> {
     if (sending) return;
     if (live && conversationId == null) return;
     if (retry == null && attachment == null && input.text.trim().isEmpty) {
-      return;
-    }
-    if (live && attachment != null) {
-      setState(
-        () => error =
-            'ارسال رسانه به API رسانه نیاز دارد؛ فایل فقط پیش‌نمایش است.',
-      );
       return;
     }
     final message =
@@ -290,6 +323,20 @@ class _MessagingScreenState extends State<MessagingScreen> {
       setState(() => error = 'پیام حداکثر ۲۰۰۰ کاراکتر است.');
       return;
     }
+    if (live && message.attachment != null) {
+      final file = message.attachment!;
+      final image = file.mime.startsWith('image/');
+      if (file.bytes.length > (image ? 1500000 : 1000000) ||
+          !(image ? ['image/jpeg', 'image/png'] : ['audio/wav', 'audio/ogg'])
+              .contains(file.mime)) {
+        setState(
+          () => error = image
+              ? 'عکس باید JPG یا PNG و حداکثر ۱٫۵ مگابایت باشد.'
+              : 'ویس باید WAV یا OGG و حداکثر ۱ مگابایت باشد.',
+        );
+        return;
+      }
+    }
     sending = true;
     if (retry == null) {
       setState(() {
@@ -302,12 +349,42 @@ class _MessagingScreenState extends State<MessagingScreen> {
         setState(() {
           if (!outbox.contains(message)) outbox.add(message);
           message.state = MessageState.pending;
+          error = null;
+          if (retry == null) input.clear();
         });
         try {
+          final api = store!.customerAuth!;
+          final file = message.attachment;
+          if (file != null && message.mediaId == null) {
+            final media = await api.api(
+              'conversations/$conversationId/media',
+              method: 'POST',
+              body: {
+                'purpose': file.mime.startsWith('image/') ? 'image' : 'voice',
+                'declaredType': file.mime,
+                if (file.seconds != null)
+                  'voiceDurationMs': file.seconds! * 1000,
+              },
+            );
+            await api.api(
+              'media/${media['id']}',
+              method: 'PUT',
+              body: {
+                'declaredType': file.mime,
+                'contentBase64': base64Encode(file.bytes),
+              },
+            );
+            message.mediaId = media['id'];
+            mediaCache[message.mediaId!] = file;
+          }
           final data = await store!.customerAuth!.api(
             'conversations/$conversationId/messages',
             method: 'POST',
-            body: {'body': message.body},
+            body: {
+              'body': message.body,
+              'clientRequestId': message.clientRequestId,
+              if (message.mediaId != null) 'mediaId': message.mediaId,
+            },
           );
           if (!mounted) return;
           setState(() {
@@ -318,8 +395,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
           if (mounted) {
             setState(() {
               message.state = MessageState.failed;
-              error =
-                  '$e — ممکن است پیام در سرور ثبت شده باشد؛ پیش از تلاش مجدد تازه‌سازی کن.';
+              error = '$e — پیام حفظ شد؛ دوباره تلاش کن.';
             });
           }
         }
@@ -344,7 +420,10 @@ class _MessagingScreenState extends State<MessagingScreen> {
           if (mounted) setState(() => error = '$e');
         }
       }
-      if (retry == null && message.state == MessageState.sent) input.clear();
+      if (message.state == MessageState.sent &&
+          input.text.trim() == message.body) {
+        input.clear();
+      }
       if (mounted && scroll.hasClients) {
         await scroll.animateTo(
           scroll.position.maxScrollExtent,
@@ -362,13 +441,19 @@ class _MessagingScreenState extends State<MessagingScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+        allowedExtensions: live
+            ? ['jpg', 'jpeg', 'png']
+            : ['jpg', 'jpeg', 'png', 'webp'],
         withData: true,
       );
       if (result == null || !mounted) return;
       final f = result.files.single;
-      if (f.size > 10 * 1024 * 1024 || f.bytes == null) {
-        throw StateError('حداکثر اندازه عکس ۱۰ مگابایت است.');
+      if (f.size > (live ? 1500000 : 10 * 1024 * 1024) || f.bytes == null) {
+        throw StateError(
+          live
+              ? 'حداکثر اندازه عکس ۱٫۵ مگابایت است.'
+              : 'حداکثر اندازه عکس ۱۰ مگابایت است.',
+        );
       }
       final media = ChatAttachment(
         f.name,
@@ -424,7 +509,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
       timer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;
         setState(() => seconds++);
-        if (seconds >= 120) stopRecord();
+        if (seconds >= (live ? 30 : 120)) stopRecord();
       });
     } catch (e) {
       if (mounted) setState(() => error = 'ضبط ویس انجام نشد: $e');
@@ -492,7 +577,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
             padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               live
-                  ? 'پیام‌ها با تازه‌سازی دریافت می‌شوند'
+                  ? 'پیام‌ها خودکار تازه می‌شوند'
                   : 'نسخه نمایشی • پیام‌ها به کسی ارسال نمی‌شوند',
               style: const TextStyle(color: muted, fontSize: 11),
             ),
@@ -629,8 +714,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
                     onPressed:
                         sending ||
                             recordingNow ||
-                            (live &&
-                                (conversationId == null || attachment != null))
+                            (live && conversationId == null)
                         ? null
                         : send,
                     icon: const Icon(Icons.send_outlined),
@@ -639,14 +723,6 @@ class _MessagingScreenState extends State<MessagingScreen> {
               ),
             ),
           ),
-          if (live && attachment != null)
-            const Padding(
-              padding: EdgeInsets.all(8),
-              child: Text(
-                'پیش‌نمایش رسانه آماده است؛ ارسال با اتصال API رسانه فعال می‌شود.',
-                style: TextStyle(fontSize: 11),
-              ),
-            ),
         ],
       ),
     );
@@ -669,6 +745,19 @@ class _MessagingScreenState extends State<MessagingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (m.mediaId != null && m.attachment == null)
+            TextButton.icon(
+              icon: const Icon(Icons.download),
+              label: const Text('دریافت پیوست'),
+              onPressed: () async {
+                try {
+                  final file = await downloadMedia(m.mediaId!);
+                  if (mounted) setState(() => m.attachment = file);
+                } catch (e) {
+                  if (mounted) setState(() => error = '$e');
+                }
+              },
+            ),
           if (m.kind == MessageKind.photo && m.attachment != null)
             InkWell(
               onTap: () => Navigator.of(context).push(
@@ -706,7 +795,9 @@ class _MessagingScreenState extends State<MessagingScreen> {
                   }}' : ''}',
             style: const TextStyle(fontSize: 10, color: muted),
           ),
-          if (m.state == MessageState.pending && m.attachment != null) ...[
+          if (!live &&
+              m.state == MessageState.pending &&
+              m.attachment != null) ...[
             LinearProgressIndicator(value: m.progress),
             TextButton(
               onPressed: () => store!.messaging.cancel(m),

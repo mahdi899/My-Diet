@@ -109,6 +109,7 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
       children: [
         Positioned.fill(
           child: ListView(
+            key: const ValueKey('plan-tab'),
             padding: EdgeInsets.fromLTRB(
               20,
               8,

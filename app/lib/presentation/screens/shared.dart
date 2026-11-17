@@ -69,6 +69,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Widget build(BuildContext context) {
     final s = DemoScope.of(context), role = s.role ?? AppRole.user;
     if (s.serverAuthEnabled && role == AppRole.user) {
+      if (widget.support) {
+        return const MessagingScreen(threadId: 'support-main', support: true);
+      }
       return const LiveConversationsScreen();
     }
     final threads = s

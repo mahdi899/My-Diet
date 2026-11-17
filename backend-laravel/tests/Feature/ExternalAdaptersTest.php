@@ -19,6 +19,7 @@ use App\Modules\Worker\Application\WorkerStore;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\MySqlTestCase;
 
@@ -49,6 +50,7 @@ final class ExternalAdaptersTest extends MySqlTestCase
         $this->db->table('ai_pools')->where('code', $code)->delete();
         $this->db->table('ai_pools')->insert(['id' => $pool, 'code' => $code, 'title' => 'HTTP test', 'strategy' => 'priority', 'max_tokens' => 1000, 'max_attempts' => 2]);
         $this->db->table('ai_pool_members')->insert(['id' => $member, 'pool_id' => $pool, 'provider_id' => $provider, 'model' => 'real-wire-model']);
+        Cache::put('ai_catalog:'.$provider, [['id' => 'real-wire-model', 'priceInMicrosPerM' => 1_000_000, 'priceOutMicrosPerM' => 1_000_000]]);
 
         return compact('provider', 'pool', 'member');
     }
@@ -56,6 +58,7 @@ final class ExternalAdaptersTest extends MySqlTestCase
     public function test_real_provider_uses_configured_endpoint_key_and_model_and_accounts_for_usage(): void
     {
         $ids = $this->pool();
+        Cache::forget('ai_catalog:'.$ids['provider']);
         Http::preventStrayRequests();
         Http::fake(['provider.example/v1/models' => Http::response(['data' => [['id' => 'remote-model', 'name' => 'Remote model']]]),
             'provider.example/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'پاسخ مدل از HTTP']]], 'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 20, 'cost' => 0.000123]])]);
@@ -113,12 +116,12 @@ final class ExternalAdaptersTest extends MySqlTestCase
         Http::swap(new Factory);
         Http::preventStrayRequests();
         Http::fake(['*' => Http::response(['malformed' => 'paid upstream reply'], 200)]);
-        try {
-            $coach->accept($user['id'], Crypto::uuid(), 'سلام دوباره');
-            self::fail('Malformed provider output must fail');
-        } catch (Problem $error) {
-            self::assertSame('outcome_unknown', $error->problemCode);
-        }
+        $client = Crypto::uuid();
+        $failed = $coach->accept($user['id'], $client, 'سلام دوباره');
+        self::assertFalse($failed['metered']);
+        self::assertStringContainsString('اجرای مدل تکمیل نشد', $failed['replies'][0]['fallback_text']);
+        self::assertSame($failed['replies'], $coach->accept($user['id'], $client, 'سلام دوباره')['replies']);
+        Http::assertSentCount(1);
         self::assertSame(1, $this->db->table('ai_usage_ledger')->where('outcome', 'outcome_unknown')->count());
     }
 
@@ -159,7 +162,7 @@ final class ExternalAdaptersTest extends MySqlTestCase
         $this->postJson('/v1/me/onboarding/submit', ['consent' => true])->assertCreated();
         $profile = $this->app->make(OnboardingStore::class)->profile($user['id']);
         $plan = $this->planFixture($user['id']);
-        $this->db->table('nutrition_profiles')->where('user_id', $user['id'])->update(['allergens' => '[]', 'diet_style' => 'omnivore', 'safety_tier' => 'ai_ok']);
+        $this->db->table('nutrition_profiles')->where('user_id', $user['id'])->update(['allergens' => '[]', 'conditions' => '[]', 'diet_style' => 'omnivore', 'safety_tier' => 'ai_ok']);
         $slots = EnergyEngine::slots((int) $profile['target_kcal'], $profile['meals_per_day']);
         $meals = [];
         foreach ($slots as $i => $slot) {

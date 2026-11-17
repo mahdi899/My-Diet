@@ -31,6 +31,7 @@ class HistoryRepository extends MockCoachRepository {
   final loads = <Completer<CoachThreadPage>>[];
   final turns = <StreamController<CoachEvent>>[];
   final requests = <CoachSendRequest>[];
+  List<CoachMessage> persisted = [];
 
   @override
   Future<CoachThreadPage> loadThread({String? cursor}) {
@@ -48,12 +49,35 @@ class HistoryRepository extends MockCoachRepository {
   }
 
   @override
-  Future<void> persist(List<CoachMessage> messages) async {}
+  Future<void> persist(List<CoachMessage> messages) async {
+    persisted = List.of(messages);
+  }
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test(
+    'confirmed replies persist before their visual reveal finishes',
+    () async {
+      final repo = HistoryRepository();
+      final session = CoachSession(repository: repo, animateReplies: true);
+      addTearDown(session.close);
+      final sending = session.sendText('پرسش');
+      repo.turns.single.add(CoachMessageEvent(message('answer')));
+      repo.turns.single.add(const CoachDone());
+      await repo.turns.single.close();
+      await sending;
+      expect(session.messages.last.id, 'answer');
+      expect(repo.persisted.last.id, 'answer');
+      expect(session.revealingMessageId, 'answer');
+      session.setReplyAnimation(false);
+      expect(session.revealingMessageId, isNull);
+      expect(session.draftText, isNull);
+      expect(session.messages.last.text, 'answer');
+    },
+  );
 
   test('reopening the local coach never overwrites previous turns', () async {
     final first = CoachSession(
@@ -277,11 +301,15 @@ void main() {
       await session.sendText('ارسال هم‌زمان');
       expect(repo.requests, hasLength(1));
       repo.turns.single.add(const CoachDelta(streamId: 's', text: 'پاسخ نیمه'));
+      await Future<void>.delayed(Duration.zero);
+      session.setReplyAnimation(false);
+      expect(session.draftText, 'پاسخ نیمه');
       await repo.turns.single.close();
       await sending;
       expect(session.draftText, 'پاسخ نیمه');
       expect(session.messages.single.failed, isTrue);
       final retrying = session.retrySend(null);
+      expect(session.draftText, 'پاسخ نیمه');
       expect(
         repo.requests.last.clientMessageId,
         repo.requests.first.clientMessageId,

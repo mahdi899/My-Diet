@@ -8,7 +8,11 @@ import '../domain/payload_values.dart';
 
 /// Optimistic send, streaming draft, suggestions and thread history.
 class CoachSession {
-  CoachSession({required this.repository, this.onChanged});
+  CoachSession({
+    required this.repository,
+    this.onChanged,
+    bool animateReplies = false,
+  }) : _animateReplies = animateReplies;
 
   void Function()? onChanged;
 
@@ -23,6 +27,14 @@ class CoachSession {
   List<CoachMessage> messages = const [];
   String? draftText;
   String? get typingLayout => _reveal?.text;
+  String? get revealingMessageId => _reveal?.id;
+  bool _animateReplies;
+
+  void setReplyAnimation(bool enabled) {
+    _animateReplies = enabled;
+    if (!enabled && _reveal != null) _finishReveal();
+  }
+
   bool typing = false;
   bool loading = true;
   bool busy = false;
@@ -228,6 +240,7 @@ class CoachSession {
     bool reuse = false,
   }) async {
     if (busy || _disposed) return;
+    if (_reveal != null) _finishReveal();
     _sent[request.clientMessageId] = request;
     if (photoBytes != null && photoBytes.isNotEmpty) {
       final bytes = photoBytes is Uint8List
@@ -308,7 +321,8 @@ class CoachSession {
                   break;
                 }
                 _dropAnalyzing();
-                if (!message.isUser &&
+                if (_animateReplies &&
+                    !message.isUser &&
                     message.type == 'text' &&
                     message.text.length > 1) {
                   _typeOut(message);
@@ -662,6 +676,7 @@ class CoachSession {
 
   void _typeOut(CoachMessage message) {
     _revealTimer?.cancel();
+    _upsert(message);
     _reveal = message;
     var shown = 0;
     final full = message.text;
@@ -674,7 +689,6 @@ class CoachSession {
         _reveal = null;
         draftText = null;
         typing = false;
-        _upsert(message);
         _notify();
         return;
       }
@@ -693,6 +707,14 @@ class CoachSession {
     }
 
     _revealTimer = Timer(const Duration(milliseconds: 46), step);
+  }
+
+  void _finishReveal() {
+    _revealTimer?.cancel();
+    _revealTimer = null;
+    _reveal = null;
+    draftText = null;
+    typing = false;
   }
 
   void close() {

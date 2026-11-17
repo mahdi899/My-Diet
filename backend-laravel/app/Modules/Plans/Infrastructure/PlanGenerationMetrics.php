@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Plans\Application;
+namespace App\Modules\Plans\Infrastructure;
 
 use Illuminate\Database\ConnectionInterface;
 
@@ -17,7 +17,7 @@ final class PlanGenerationMetrics
     public function requestMetrics(string $requestId): array
     {
         $request = $this->db->table('plan_requests')->where('id', $requestId)->first();
-        if (!$request) {
+        if (! $request) {
             return ['error' => 'Request not found'];
         }
 
@@ -31,7 +31,7 @@ final class PlanGenerationMetrics
             ->get();
 
         $totalCost = $usage->sum('cost_micros');
-        $totalTokens = $usage->sum(fn($u) => $u->tokens_in + $u->tokens_out);
+        $totalTokens = $usage->sum(fn ($u) => $u->tokens_in + $u->tokens_out);
         $inputTokens = $usage->sum('tokens_in');
         $outputTokens = $usage->sum('tokens_out');
 
@@ -88,7 +88,7 @@ final class PlanGenerationMetrics
         $totalCost = $usage->sum('cost_micros');
         $avgCostPerRequest = $successful > 0 ? $totalCost / $successful : 0;
 
-        $outcomes = $usage->groupBy('outcome')->map(fn($group) => $group->count());
+        $outcomes = $usage->groupBy('outcome')->map(fn ($group) => $group->count());
 
         return [
             'period' => ['from' => $from, 'to' => $to],
@@ -99,8 +99,8 @@ final class PlanGenerationMetrics
             'success_rate' => $requests > 0 ? round($successful / $requests * 100, 2) : 0,
             'total_cost_usd' => round($totalCost / 1_000_000, 4),
             'avg_cost_per_success_usd' => round($avgCostPerRequest / 1_000_000, 4),
-            'total_tokens' => $usage->sum(fn($u) => $u->tokens_in + $u->tokens_out),
-            'avg_tokens_per_call' => $usage->count() > 0 ? round($usage->sum(fn($u) => $u->tokens_in + $u->tokens_out) / $usage->count()) : 0,
+            'total_tokens' => $usage->sum(fn ($u) => $u->tokens_in + $u->tokens_out),
+            'avg_tokens_per_call' => $usage->count() > 0 ? round($usage->sum(fn ($u) => $u->tokens_in + $u->tokens_out) / $usage->count()) : 0,
             'outcomes' => $outcomes->toArray(),
         ];
     }
@@ -114,22 +114,22 @@ final class PlanGenerationMetrics
         // With JSON overhead: ~250 chars per food
         $avgFoodsPerSlot = min(50, max(20, $catalogSize / 20));
         $slots = $mealsPerDay <= 2 ? 2 : ($mealsPerDay >= 4 ? 4 : 3);
-        
+
         $totalFoods = $avgFoodsPerSlot * $slots;
         $promptSize = $totalFoods * 250; // characters
         $tokenEstimate = (int) ceil($promptSize / 3.5); // rough tokens
-        
+
         // System prompt + user context: ~1000 tokens
         $inputTokens = $tokenEstimate + 1000;
-        
+
         // Output: 7 days * meals * 2 options * ~200 tokens = ~2800 tokens
         $outputTokens = $slots * 7 * 2 * 200;
-        
+
         // Using typical pricing: $3/M input, $15/M output (GPT-4 class)
         $costInput = ($inputTokens / 1_000_000) * 3;
         $costOutput = ($outputTokens / 1_000_000) * 15;
         $totalCost = $costInput + $costOutput;
-        
+
         return [
             'catalog_size' => $catalogSize,
             'foods_sent_to_ai' => (int) $totalFoods,

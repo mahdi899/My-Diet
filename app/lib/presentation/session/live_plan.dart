@@ -42,6 +42,7 @@ void showServerPlan(
   store.entryStage = EntryStage.home;
   if (targetKcal != null) store.liveTargetKcal = targetKcal;
   store.serverMealUids.clear();
+  store.serverFeedbackOptionIds.clear();
   if (walletToman != null) store.walletBalance = walletToman;
 
   final id = plan?.requestId ?? request?.id;
@@ -84,6 +85,9 @@ void showServerPlan(
       final date = DateTime.parse(day.date);
       for (var i = 0; i < day.meals.length; i++) {
         final meal = day.meals[i];
+        final option = meal.selected;
+        store.serverFeedbackOptionIds['$id|${diet.version}|${weekDayIndex(date)}|$i'] =
+            option?.id ?? meal.uid;
         store.rememberServerMeal(
           date: date,
           index: i,

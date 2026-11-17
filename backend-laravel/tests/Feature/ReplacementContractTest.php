@@ -58,7 +58,8 @@ final class ReplacementContractTest extends MySqlTestCase
         $this->getJson('/v1/admin/web-analytics/live')->assertStatus(503)->assertJsonPath('code', 'analytics_unavailable');
         $this->get('/metrics')->assertOk()->assertSee('sabzine_outbox_undispatched', false);
         $this->withToken($user['token']);
-        $this->postJson('/v1/me/coach/messages', ['clientMessageId' => Crypto::uuid(), 'kind' => 'text', 'text' => 'سلام'])->assertOk();
+        $reply = $this->postJson('/v1/me/coach/messages', ['clientMessageId' => Crypto::uuid(), 'kind' => 'text', 'text' => 'سلام'])->assertOk();
+        self::assertStringContainsString('event: done', $reply->streamedContent());
         self::assertSame('پاسخ آزمایشی', $this->db->table('coach_messages')->where('user_id', $user['id'])->where('role', 'assistant')->value('fallback_text'));
         $this->postJson('/v1/me/coach/actions', ['clientMessageId' => Crypto::uuid(), 'action' => 'log_water'])->assertOk()->assertJsonPath('today.waterMl', 250);
         $this->postJson('/v1/me/coach/day-brief')->assertOk()->assertJsonPath('created', true);

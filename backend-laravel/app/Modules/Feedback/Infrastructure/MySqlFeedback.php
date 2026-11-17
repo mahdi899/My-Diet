@@ -25,13 +25,29 @@ final class MySqlFeedback
             $changed = $current === null || $this->json($current->favorites) !== $input['favorites'] || $this->json($current->dislikes) !== $input['dislikes']
                 || $current->preparation_difficulty !== $input['preparationDifficulty'] || $current->ingredient_availability !== $input['ingredientAvailability']
                 || $current->affordability !== $input['affordability'] || $current->portion_satisfaction !== $input['portionSatisfaction']
-                || ! $sameRating || $current->comment !== $input['comment'] || (bool) $current->publish_permission !== $input['publishPermission'];
+                || ! $sameRating || $current->comment !== $input['comment'] || (bool) $current->publish_permission !== $input['publishPermission']
+                || (array_key_exists('publicText', $input) && $current->public_text !== $input['publicText'])
+                || (isset($input['details']) && $this->json($current->details) != $input['details']);
             $revision = $current === null ? 1 : (int) $current->revision + ($changed ? 1 : 0);
             $row = ['user_id' => $user, 'week_start' => $week, 'revision' => $revision, 'favorites' => json_encode($input['favorites']), 'dislikes' => json_encode($input['dislikes']), 'preparation_difficulty' => $input['preparationDifficulty'], 'ingredient_availability' => $input['ingredientAvailability'], 'affordability' => $input['affordability'], 'portion_satisfaction' => $input['portionSatisfaction'], 'service_rating' => $input['serviceRating'], 'comment' => $input['comment'], 'publish_permission' => $input['publishPermission'], 'updated_at' => $this->db->raw('current_timestamp(6)')];
+            if (array_key_exists('publicText', $input)) {
+                $row['public_text'] = $input['publicText'];
+            }
+            if (isset($input['details'])) {
+                $owned = $this->db->table('plan_requests')->where(['id' => $input['details']['requestId'], 'user_id' => $user])->exists();
+                if (! $owned) {
+                    throw new Problem(404, 'not_found', 'برنامه پیدا نشد');
+                }
+                $row['details'] = json_encode($input['details'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            }
             if ($current === null) {
                 $this->db->table('weekly_feedback')->insert($row);
             } else {
                 $this->db->table('weekly_feedback')->where(['user_id' => $user, 'week_start' => $week])->update($row);
+            }
+
+            if (array_key_exists('publicText', $input) && $input['publishPermission']) {
+                $this->publish($user, $week);
             }
 
             return $this->present($user, $week);
@@ -58,7 +74,8 @@ final class MySqlFeedback
             if ($feedback['serviceRating'] === null) {
                 throw new Problem(409, 'rating_required', 'امتیاز خدمت برای نظر عمومی لازم است');
             }
-            $request = $this->db->selectOne("select id,status from plan_requests where user_id=? and status<>'cancelled' and (week_start=? or week_start is null) order by case when week_start=? then 0 else 1 end, created_at desc limit 1", [$user, $week, $week]);
+            $requestId = $feedback['details']['requestId'] ?? null;
+            $request = $this->db->selectOne("select id,status from plan_requests where user_id=? and status<>'cancelled' and (week_start=? or week_start is null) and (? is null or id=?) order by case when week_start=? then 0 else 1 end, created_at desc limit 1", [$user, $week, $requestId, $requestId, $week]);
             if ($request === null) {
                 throw new Problem(409, 'no_plan', 'برنامهٔ این هفته برای نظر عمومی پیدا نشد');
             }
@@ -66,12 +83,12 @@ final class MySqlFeedback
             if ($existing === null) {
                 $reviewId = Crypto::uuid();
                 $status = 'pending';
-                $this->db->table('program_reviews')->insert(['id' => $reviewId, 'user_id' => $user, 'request_id' => $request->id, 'week_start' => $week, 'rating' => $feedback['serviceRating'], 'body' => $feedback['comment'], 'status' => 'pending']);
+                $this->db->table('program_reviews')->insert(['id' => $reviewId, 'user_id' => $user, 'request_id' => $request->id, 'week_start' => $week, 'rating' => $feedback['serviceRating'], 'body' => $feedback['publicText'] ?? $feedback['comment'], 'status' => 'pending']);
             } else {
                 $reviewId = $existing->id;
                 $status = $existing->status === 'approved' ? 'approved' : 'pending';
                 if ($existing->status !== 'approved') {
-                    $this->db->table('program_reviews')->where('id', $reviewId)->update(['rating' => $feedback['serviceRating'], 'body' => $feedback['comment'], 'status' => 'pending']);
+                    $this->db->table('program_reviews')->where('id', $reviewId)->update(['rating' => $feedback['serviceRating'], 'body' => $feedback['publicText'] ?? $feedback['comment'], 'status' => 'pending']);
                 }
             }
             $this->db->statement('insert into feedback_publications (user_id,week_start,review_id) values (?,?,?) as incoming on duplicate key update review_id=incoming.review_id', [$user, $week, $reviewId]);
@@ -163,7 +180,8 @@ final class MySqlFeedback
             return null;
         }
 
-        return ['weekStart' => $week, 'revision' => (int) $row->revision, 'favorites' => $this->json($row->favorites), 'dislikes' => $this->json($row->dislikes), 'preparationDifficulty' => $row->preparation_difficulty, 'ingredientAvailability' => $row->ingredient_availability, 'affordability' => $row->affordability, 'portionSatisfaction' => $row->portion_satisfaction, 'serviceRating' => $row->service_rating === null ? null : (int) $row->service_rating, 'comment' => $row->comment, 'publishPermission' => (bool) $row->publish_permission];
+        return ['weekStart' => $week, 'revision' => (int) $row->revision, 'favorites' => $this->json($row->favorites), 'dislikes' => $this->json($row->dislikes), 'preparationDifficulty' => $row->preparation_difficulty, 'ingredientAvailability' => $row->ingredient_availability, 'affordability' => $row->affordability, 'portionSatisfaction' => $row->portion_satisfaction, 'serviceRating' => $row->service_rating === null ? null : (int) $row->service_rating, 'comment' => $row->comment, 'publishPermission' => (bool) $row->publish_permission,
+            'publicText' => $row->public_text, 'details' => $row->details === null ? null : $this->json($row->details)];
     }
 
     private function sources(string $user): array

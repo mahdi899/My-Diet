@@ -166,6 +166,16 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text(s.mealsOn(date).first.title), findsWidgets);
       final done = find.widgetWithText(PillButton, 'انجام شد');
+      await t.scrollUntilVisible(
+        find.byKey(const ValueKey('plan-meal-log-0')),
+        250,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('plan-tab')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await t.ensureVisible(done.first);
       await t.pumpAndSettle();
       await t.tap(done.first);

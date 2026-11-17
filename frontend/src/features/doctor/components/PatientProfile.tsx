@@ -4,12 +4,10 @@ import {
   loadPatientProfile,
   loadInfoQuestions,
   askInfoQuestion,
-  slaHoursRemaining,
-  slaUrgency,
   apiError,
   type PatientProfile,
   type InfoQuestion,
-} from "../../data/api";
+} from "../data/api";
 
 export function PatientProfileCard({ userId }: { userId: string }) {
   const [showAll, setShowAll] = useState(false);

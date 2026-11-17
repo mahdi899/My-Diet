@@ -113,6 +113,19 @@ class CustomerAuth {
   }
 
   CustomerSession? session;
+  String? get userId {
+    try {
+      final payload = session!.accessToken.split('.')[1];
+      return (jsonDecode(
+                utf8.decode(base64Url.decode(base64Url.normalize(payload))),
+              )
+              as Map)['sub']
+          as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<CustomerSession?>? _refreshing;
 
   /// Public routes such as the onboarding spec. No session is required.

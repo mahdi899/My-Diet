@@ -9,12 +9,17 @@ const target = path.join(root, 'backend-laravel/contracts/nest-routes.json');
 const snapshotDirectory = path.join(root, 'backend-laravel/contracts/postgres-source');
 const manifest = JSON.parse(fs.readFileSync(path.join(snapshotDirectory, 'manifest.json'), 'utf8'));
 
+function snapshotHash(file) {
+  const sql = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+  return crypto.createHash('sha256').update(sql).digest('hex');
+}
+
 function snapshotHashes() {
   const names = Object.keys(manifest).sort();
   for (const name of names) {
     const file = path.join(snapshotDirectory, name);
     if (!fs.existsSync(file)) throw new Error('PostgreSQL source snapshot is missing: ' + name);
-    const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    const hash = snapshotHash(file);
     if (hash !== manifest[name]) throw new Error('PostgreSQL source snapshot mismatch: ' + name);
   }
   return names.length;
@@ -97,7 +102,7 @@ const sqlFiles = fs.readdirSync(sourceDirectory).filter(f => f.endsWith('.sql'))
 if (JSON.stringify(sqlFiles) !== JSON.stringify(Object.keys(manifest).sort())) throw new Error('PostgreSQL migration inventory is stale.');
 for (const name of sqlFiles) {
   for (const directory of [sourceDirectory, snapshotDirectory]) {
-    const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(directory, name))).digest('hex');
+    const hash = snapshotHash(path.join(directory, name));
     if (hash !== manifest[name]) throw new Error('PostgreSQL source snapshot mismatch: ' + name);
   }
 }

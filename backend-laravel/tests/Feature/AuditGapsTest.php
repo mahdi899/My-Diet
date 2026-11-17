@@ -123,7 +123,7 @@ final class AuditGapsTest extends MySqlTestCase
 
         $reply = app(MySqlCoach::class)->accept($userId, 'risk-1', 'فکر می‌کنم اختلال خوردن دارم');
 
-        self::assertStringContainsString('متخصص', $reply['replies'][0]['text']);
+        self::assertStringContainsString('متخصص', $reply['replies'][0]['fallback_text']);
         self::assertNotNull($this->db->table('notifications')->where(['user_id' => $specialist, 'kind' => 'eating_risk'])->first());
     }
 

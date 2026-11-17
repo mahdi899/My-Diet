@@ -150,6 +150,8 @@ void main() {
   testWidgets(
     'water rises after success, Undo persists, failures preserve the count and midnight starts a new day',
     (t) async {
+      t.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures();
       t.view.physicalSize = const Size(390, 844);
       t.view.devicePixelRatio = 1;
       addTearDown(t.view.reset);

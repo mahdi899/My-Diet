@@ -48,15 +48,13 @@ export async function loadPlan(id: string): Promise<PlanRequest> {
 }
 
 export async function publishPlan(id: string): Promise<void> {
-  await staff.api("specialist/requests/" + encodeURIComponent(id) + "/publish", {
-    method: "POST",
-  });
+  await staff.api("specialist/requests/" + encodeURIComponent(id) + "/publish", "POST");
 }
 
 export async function regeneratePlan(id: string): Promise<void> {
   await staff.api(
     "specialist/requests/" + encodeURIComponent(id) + "/regenerate",
-    { method: "POST" }
+    "POST"
   );
 }
 
@@ -65,11 +63,7 @@ export async function savePlanDraft(
   draft: object,
   etag: string
 ): Promise<void> {
-  await staff.api("specialist/requests/" + encodeURIComponent(id) + "/draft", {
-    method: "PUT",
-    headers: { "If-Match": etag },
-    body: JSON.stringify(draft),
-  });
+  await staff.api("specialist/requests/" + encodeURIComponent(id) + "/draft", "PUT", draft, { "If-Match": etag });
 }
 
 export async function addCorrection(
@@ -78,10 +72,7 @@ export async function addCorrection(
 ): Promise<void> {
   await staff.api(
     "specialist/requests/" + encodeURIComponent(id) + "/corrections",
-    {
-      method: "POST",
-      body: JSON.stringify({ note }),
-    }
+    "POST", { note }
   );
 }
 
@@ -172,14 +163,14 @@ export async function askInfoQuestion(
 ): Promise<void> {
   await staff.api(
     "specialist/requests/" + encodeURIComponent(requestId) + "/questions",
-    { method: "POST", body: JSON.stringify({ text }) }
+    "POST", { text }
   );
 }
 
 export async function acknowledgeInfoQuestion(id: string): Promise<void> {
   await staff.api(
     "specialist/info-questions/" + encodeURIComponent(id) + "/acknowledge",
-    { method: "POST" }
+    "POST"
   );
 }
 
@@ -199,10 +190,7 @@ export async function loadProfile() {
 }
 
 export async function saveProfile(data: Partial<typeof previewProfile>): Promise<void> {
-  await staff.api("specialist/profile", {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
+  await staff.api("specialist/profile", "PUT", data);
 }
 
 // ── SLA helpers ───────────────────────────────────────────────────────────────

@@ -116,6 +116,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('onboarding-profile-preview')));
     await tester.pumpAndSettle();
+    expect(find.textContaining('۶۵'), findsWidgets);
     await tester.tap(find.text('وزن هدف'));
     await tester.pumpAndSettle();
     expect(c.current.id, 'target_weight');
@@ -135,7 +136,7 @@ void main() {
       ..loginDemoUser();
     store.approveActiveUserRequest();
     await tester.pumpWidget(
-      DemoScope(store: store, child: host(const HomeTab(), reduced: false)),
+      DemoScope(store: store, child: host(const HomeTab())),
     );
     await tester.pumpAndSettle();
     final list = find.byKey(const ValueKey('home-tab'));

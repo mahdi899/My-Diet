@@ -17,6 +17,7 @@ final class MySqlMessaging implements MessagingStore
 
     public function conversations(string $user): array
     {
+        $this->joinSupportStaff(admin: $user);
         $rows = $this->db->select("select c.id,c.kind,c.request_id,c.created_at from conversations c join conversation_participants p on p.conversation_id=c.id join users viewer on viewer.id=p.user_id left join plan_requests r on r.id=c.request_id where p.user_id=? and (c.kind<>'care' or viewer.role<>'specialist' or r.assigned_specialist_id=?) order by c.created_at desc", [$user, $user]);
         $counts = [];
         if ($rows !== []) {
@@ -32,12 +33,14 @@ final class MySqlMessaging implements MessagingStore
 
     public function participant(string $user, string $conversation): bool
     {
+        $this->joinSupportStaff($conversation, $user);
+
         return $this->db->selectOne("select p.user_id from conversation_participants p join conversations c on c.id=p.conversation_id join users viewer on viewer.id=p.user_id left join plan_requests r on r.id=c.request_id where p.conversation_id=? and p.user_id=? and (c.kind<>'care' or viewer.role<>'specialist' or r.assigned_specialist_id=?)", [$conversation, $user, $user]) !== null;
     }
 
     public function messages(string $conversation, ?int $after, int $limit): array
     {
-        $sql = 'select id,author_id,body,created_at,kind,position,media_id from messages where conversation_id=?';
+        $sql = 'select id,author_id,body,created_at,kind,position,media_id,client_request_id from messages where conversation_id=?';
         $bind = [$conversation];
         if ($after !== null) {
             $sql .= ' and position>?';
@@ -46,7 +49,7 @@ final class MySqlMessaging implements MessagingStore
         $sql .= ' order by position limit ?';
         $bind[] = $limit;
 
-        return array_map(fn ($row) => ['id' => $row->id, 'authorId' => $row->author_id, 'body' => $row->body, 'kind' => $row->kind, 'mediaId' => $row->media_id, 'position' => (int) $row->position, 'createdAt' => Crypto::iso($row->created_at)], $this->db->select($sql, $bind));
+        return array_map(fn ($row) => ['id' => $row->id, 'authorId' => $row->author_id, 'body' => $row->body, 'kind' => $row->kind, 'mediaId' => $row->media_id, 'clientRequestId' => $row->client_request_id, 'position' => (int) $row->position, 'createdAt' => Crypto::iso($row->created_at)], $this->db->select($sql, $bind));
     }
 
     public function priorMessage(string $conversation, string $author, string $client): ?string
@@ -77,6 +80,8 @@ final class MySqlMessaging implements MessagingStore
 
     public function others(string $conversation, string $author): array
     {
+        $this->joinSupportStaff($conversation);
+
         return array_map(fn ($row) => $row->user_id, $this->db->select('select user_id from conversation_participants where conversation_id=? and user_id<>?', [$conversation, $author]));
     }
 
@@ -101,6 +106,22 @@ final class MySqlMessaging implements MessagingStore
     {
         $this->db->table('conversations')->insert(['id' => $id, 'kind' => 'support', 'user_id' => $user]);
         $this->db->table('conversation_participants')->insert(['conversation_id' => $id, 'user_id' => $user]);
+        $this->joinSupportStaff($id);
+    }
+
+    private function joinSupportStaff(?string $conversation = null, ?string $admin = null): void
+    {
+        $sql = "insert ignore into conversation_participants (conversation_id,user_id) select c.id,u.id from conversations c join users u on u.role='admin' and u.status='active' where c.kind='support'";
+        $bindings = [];
+        if ($conversation !== null) {
+            $sql .= ' and c.id=?';
+            $bindings[] = $conversation;
+        }
+        if ($admin !== null) {
+            $sql .= ' and u.id=?';
+            $bindings[] = $admin;
+        }
+        $this->db->statement($sql, $bindings);
     }
 
     public function careRequest(string $user): ?array

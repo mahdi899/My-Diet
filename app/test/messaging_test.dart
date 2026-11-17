@@ -198,6 +198,7 @@ void main() {
         'پیام جدید من',
       );
       await t.tap(find.byTooltip('ارسال پیام'));
+      await t.pump(const Duration(seconds: 1));
       await t.pumpAndSettle();
       expect(store.messaging.messages('user-main').last.body, 'پیام جدید من');
       expect(store.threadMessages('user-main').last.text, 'پیام جدید من');

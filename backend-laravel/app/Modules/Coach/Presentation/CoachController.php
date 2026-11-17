@@ -55,9 +55,6 @@ final class CoachController
         $client = Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : '');
 
         return response()->stream(function () use ($userId, $client, $text): void {
-            while (ob_get_level() > 0) {
-                ob_end_flush();
-            }
             $write = function (string $event, array $data): void {
                 echo 'event: '.$event."\n".'data: '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n\n";
                 flush();

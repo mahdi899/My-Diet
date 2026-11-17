@@ -85,6 +85,55 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     }
   }
 
+  Future<void> _reviewAnswers() async {
+    final answered = c.steps
+        .whereType<QuestionStep>()
+        .where(_answered)
+        .toList();
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheet) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheet).height * .6,
+          child: ListView(
+            children: [
+              const ListTile(title: Text('مرور پاسخ‌ها')),
+              for (final step in answered)
+                ListTile(
+                  title: Text(step.question.title),
+                  subtitle: Text(_answerSummary(step)),
+                  trailing: const Icon(Icons.edit_outlined),
+                  onTap: () => Navigator.pop(sheet, step.id),
+                ),
+              TextButton(
+                onPressed: () => Navigator.pop(sheet),
+                child: const Text('بستن'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (mounted && selected != null) {
+      forward = false;
+      c.revisit(selected);
+    }
+  }
+
+  String _answerSummary(QuestionStep step) {
+    final value = c.answer(step.question.key);
+    String label(Object? item) =>
+        step.question.option('$item')?.label ?? fa(item ?? '');
+    if (value is List) return value.map(label).join('، ');
+    if (value is Map) return value.values.map(label).join(' · ');
+    if (value is num) {
+      return '${faNumber(value)} ${step.question.unit ?? ''}'.trim();
+    }
+    return label(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final step = c.current;
@@ -122,6 +171,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         progress: c.progress,
         groupTitle: c.groupTitle,
         onBack: c.isFirst && widget.onExit == null ? null : _back,
+        onReview:
+            c.submitting || !c.steps.whereType<QuestionStep>().any(_answered)
+            ? null
+            : _reviewAnswers,
         primaryLabel: c.submitError != null
             ? 'تلاش دوباره برای ثبت'
             : c.isLast

@@ -78,6 +78,7 @@ class OnboardingFrame extends StatelessWidget {
     required this.stepKey,
     this.groupTitle,
     this.onBack,
+    this.onReview,
     this.primaryLabel = 'ادامه',
     this.onPrimary,
     this.busy = false,
@@ -90,6 +91,7 @@ class OnboardingFrame extends StatelessWidget {
   final String stepKey;
   final String? groupTitle, syncHint;
   final VoidCallback? onBack, onPrimary;
+  final VoidCallback? onReview;
   final String primaryLabel;
   final bool busy, forward;
   final Widget? secondary;
@@ -138,7 +140,15 @@ class OnboardingFrame extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 44),
+                        if (onReview == null)
+                          const SizedBox(width: 44)
+                        else
+                          IconButton(
+                            key: const ValueKey('onboarding-profile-preview'),
+                            tooltip: 'مرور پاسخ‌ها',
+                            onPressed: onReview,
+                            icon: const Icon(Icons.assignment_outlined),
+                          ),
                       ],
                     ),
                   ),

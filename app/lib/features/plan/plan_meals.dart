@@ -91,6 +91,7 @@ class _PlanMealCardState extends State<PlanMealCard> {
               ],
               Expanded(
                 child: PillButton(
+                  key: ValueKey('plan-meal-log-${widget.index}'),
                   label: logged ? 'ثبت شد' : 'انجام شد',
                   icon: Icons.check_rounded,
                   variant: eaten ? PillVariant.lime : PillVariant.primary,

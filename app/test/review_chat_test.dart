@@ -110,6 +110,7 @@ void main() {
         'حدود بیست دقیقه',
       );
       await t.tap(find.byTooltip('ارسال پیام'));
+      await t.pump(const Duration(seconds: 1));
       await t.pumpAndSettle();
       expect(r.revisionAwaitingUser, false);
       expect(r.status, PlanStatus.reviewing);

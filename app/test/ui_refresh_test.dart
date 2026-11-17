@@ -135,6 +135,16 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('tab-plan')));
     await t.pumpAndSettle();
+    await t.scrollUntilVisible(
+      find.byKey(const ValueKey('plan-day-strip')),
+      250,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('plan-tab')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     final strip = t.widget<ListView>(
       find.byKey(const ValueKey('plan-day-strip')),
     );

@@ -32,6 +32,14 @@ class _CoachMessageListState extends State<CoachMessageList> {
   bool _away = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.controller.setReplyAnimation(
+      !MediaQuery.disableAnimationsOf(context),
+    );
+  }
+
+  @override
   void initState() {
     super.initState();
     _scroll.addListener(() {
@@ -78,7 +86,10 @@ class _CoachMessageListState extends State<CoachMessageList> {
     }
     DateTime? day;
     for (final message in controller.messages) {
-      if (message.id == widget.pinnedBriefId) continue;
+      if (message.id == widget.pinnedBriefId ||
+          message.id == controller.revealingMessageId) {
+        continue;
+      }
       final stamp = DateTime(
         message.createdAt.year,
         message.createdAt.month,
@@ -295,11 +306,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
     if (sameDay && matches.length == 1) {
       Navigator.of(context, rootNavigator: true).push(
         foodDetailRoute<void>(
-          MealDetailPage(
-            date: now,
-            index: matches.single,
-            heroes: false,
-          ),
+          MealDetailPage(date: now, index: matches.single, heroes: false),
           reduced: Motion.reduced(context),
         ),
       );

@@ -51,7 +51,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     });
     process.stdout.write(migrated.stdout);
     if (!process.argv.includes('--schema-only')) {
-      const tests = await run(php, ['vendor/bin/phpunit', '--fail-on-skipped'], options);
+      const filterIndex = process.argv.indexOf('--filter');
+      const tests = await run(php, ['vendor/bin/phpunit', '--fail-on-skipped',
+        ...(filterIndex === -1 ? [] : ['--filter', process.argv[filterIndex + 1]])], options);
       process.stdout.write(tests.stdout);
     }
     if (process.argv.includes('--cross-runtime')) {

@@ -23,7 +23,8 @@ class _HomeFocusSparklesState extends State<HomeFocusSparkles>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final play =
-        TickerMode.of(context) && !MediaQuery.disableAnimationsOf(context);
+        TickerMode.valuesOf(context).enabled &&
+        !MediaQuery.disableAnimationsOf(context);
     if (play) {
       if (!_life.isAnimating) _life.repeat();
     } else if (_life.isAnimating) {

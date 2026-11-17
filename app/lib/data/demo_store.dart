@@ -5,6 +5,7 @@ export '../domain/onboarding/questionnaire.dart';
 import '../presentation/session/customer_scope.dart';
 import 'preferences_water_log.dart';
 import 'weekly_feedback.dart';
+import 'http_weekly_feedback_repository.dart';
 export 'weekly_feedback.dart';
 import 'shopping_list.dart';
 export 'shopping_list.dart';
@@ -453,7 +454,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
        _storage = storage,
        _settingsStorage = settingsStorage,
        _nutritionStorage = nutritionStorage,
-       feedbackRepository =
+       _feedbackRepository =
            feedbackRepository ?? MemoryWeeklyFeedbackRepository(),
        _clock = clock ?? DateTime.now {
     final approved = requests[4];
@@ -2581,6 +2582,9 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     coachWaterGlasses = null;
     coachWaterDay = null;
     serverMealUids.clear();
+    serverFeedbackOptionIds.clear();
+    _weeklyFeedback.clear();
+    feedbackLoadError = null;
     reportEaten = null;
     liveServices = null;
     liveOpenQuestions = [];
@@ -2680,11 +2684,40 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     return null;
   }
 
-  final WeeklyFeedbackRepository feedbackRepository;
+  final WeeklyFeedbackRepository _feedbackRepository;
+  HttpWeeklyFeedbackRepository? _httpFeedbackRepository;
+  WeeklyFeedbackRepository get feedbackRepository => customerAuth == null
+      ? _feedbackRepository
+      : _httpFeedbackRepository ??= HttpWeeklyFeedbackRepository(
+          customerAuth!,
+          localPreferences: _feedbackRepository,
+          current: () {
+            final request = feedbackProgram;
+            if (request == null) return null;
+            return WeeklyFeedback(
+              owner: feedbackOwner,
+              requestId: request.id,
+              planVersion: request.version,
+              week: dateKey(request.programWeek!),
+              at: today,
+              meals: feedbackMeals(request),
+              favorite: [],
+              disliked: [],
+              difficult: [],
+              availability: 'easy',
+              budget: 'comfortable',
+              portion: 'suitable',
+              service: 'not_used',
+              rating: 0,
+            );
+          },
+        );
+  final serverFeedbackOptionIds = <String, String>{};
   final List<WeeklyFeedback> _weeklyFeedback = [];
   bool savingFeedback = false;
-  String get feedbackOwner =>
-      'demo:${sessionPhone.isEmpty ? 'local' : sessionPhone}';
+  String get feedbackOwner => serverAuthEnabled
+      ? 'server:${customerAuth!.userId ?? sessionPhone}'
+      : 'demo:${sessionPhone.isEmpty ? 'local' : sessionPhone}';
   List<WeeklyFeedback> get weeklyFeedback =>
       List.unmodifiable(_weeklyFeedback.where((f) => f.owner == feedbackOwner));
   FoodPreferences? foodPreferences;
@@ -2701,7 +2734,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
         ..addAll(records);
       foodPreferences = preferences;
       for (final record in records) {
-        _projectPublicFeedback(record);
+        if (!serverAuthEnabled) _projectPublicFeedback(record);
       }
       feedbackLoadError = null;
       update();
@@ -2757,7 +2790,8 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
             : alternatives.first.meal;
         result.add(
           FeedbackMeal(
-            '${request.id}|${request.version}|$day|$index',
+            serverFeedbackOptionIds['${request.id}|${request.version}|$day|$index'] ??
+                '${request.id}|${request.version}|$day|$index',
             '${persianWeekDays[day]} · ${originals[index].name} · ${meal.title}',
           ),
         );
@@ -2797,11 +2831,15 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
         (feedback.service == 'not_used'
             ? feedback.rating != 0
             : feedback.rating < 1 || feedback.rating > 5) ||
-        feedback.comment.length > 1500 ||
+        feedback.comment.length > (serverAuthEnabled ? 1000 : 1500) ||
         feedback.publicText.length > 500 ||
         (feedback.publicConsent && feedback.publicText.trim().isEmpty) ||
         (!feedback.publicConsent && feedback.publicText.isNotEmpty)) {
       throw ArgumentError('پاسخ‌ها را کامل کن.');
+    }
+    if (serverAuthEnabled &&
+        (feedback.favorite.length > 20 || feedback.disliked.length > 20)) {
+      throw ArgumentError('در هر بخش حداکثر ۲۰ غذا انتخاب کن.');
     }
     final owner = feedbackOwner;
     savingFeedback = true;
@@ -2810,7 +2848,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
       await feedbackRepository.save(feedback);
       _weeklyFeedback.add(feedback);
       if (userSignedIn && owner == feedbackOwner) {
-        _projectPublicFeedback(feedback);
+        if (!serverAuthEnabled) _projectPublicFeedback(feedback);
       }
     } finally {
       savingFeedback = false;

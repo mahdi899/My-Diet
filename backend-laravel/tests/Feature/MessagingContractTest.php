@@ -9,6 +9,31 @@ use Tests\MySqlTestCase;
 
 final class MessagingContractTest extends MySqlTestCase
 {
+    public function test_support_reaches_existing_and_new_admins_and_replies_reach_only_the_owner(): void
+    {
+        $user = $this->actor();
+        $admin = $this->actor('admin');
+        $this->withToken($user['token']);
+        $id = $this->postJson('/v1/me/support-conversation')->assertOk()->json('id');
+        $client = Crypto::uuid();
+        $message = $this->postJson('/v1/conversations/'.$id.'/messages', ['body' => 'کمک می‌خواهم', 'clientRequestId' => $client])->assertOk()->json('id');
+        self::assertTrue($this->db->table('notifications')->where(['user_id' => $admin['id'], 'kind' => 'message'])->exists());
+        $this->withToken($admin['token']);
+        $this->getJson('/v1/conversations')->assertOk()->assertJsonFragment(['id' => $id, 'unreadCount' => 1]);
+        $this->getJson('/v1/conversations/'.$id.'/messages')->assertOk()->assertJsonFragment(['id' => $message, 'clientRequestId' => $client]);
+        $this->postJson('/v1/conversations/'.$id.'/read')->assertOk();
+        $this->postJson('/v1/conversations/'.$id.'/messages', ['body' => 'پاسخ پشتیبانی'])->assertOk();
+        $this->actor('admin');
+        $this->getJson('/v1/conversations')->assertOk()->assertJsonFragment(['id' => $id]);
+        $this->getJson('/v1/conversations/'.$id.'/messages')->assertOk();
+        $this->withToken($user['token']);
+        $this->getJson('/v1/conversations/'.$id.'/messages')->assertOk()->assertJsonFragment(['body' => 'پاسخ پشتیبانی']);
+        $this->actor();
+        $this->getJson('/v1/conversations/'.$id.'/messages')->assertNotFound();
+        $this->actor('specialist');
+        $this->postJson('/v1/conversations/'.$id.'/messages', ['body' => 'نباید ثبت شود'])->assertForbidden();
+    }
+
     public function test_messages_media_assignment_and_events_stay_with_their_owner(): void
     {
         $user = $this->actor();

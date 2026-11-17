@@ -37,10 +37,11 @@ class _WeeklyFeedbackScreenState extends State<WeeklyFeedbackScreen> {
   Future<void> save(DemoStore store, DietRequest request) async {
     if (busy) return;
     if ([availability, budget, portion, service].contains(null) ||
-        (consent && publicText.text.trim().isEmpty)) {
+        (consent &&
+            (publicText.text.trim().isEmpty || service == 'not_used'))) {
       setState(
         () => error =
-            'پرسش‌های انتخابی و در صورت رضایت، متن نظر عمومی را تکمیل کن.',
+            'پرسش‌های انتخابی و در صورت رضایت، متن و امتیاز نظر عمومی را تکمیل کن.',
       );
       return;
     }
@@ -70,7 +71,14 @@ class _WeeklyFeedbackScreenState extends State<WeeklyFeedbackScreen> {
           publicText: consent ? publicText.text.trim() : '',
         ),
       );
-      if (mounted) showToast(context, 'بازخورد در نسخهٔ نمایشی ذخیره شد.');
+      if (mounted) {
+        showToast(
+          context,
+          store.serverAuthEnabled
+              ? 'بازخورد ثبت شد.'
+              : 'بازخورد در نسخهٔ نمایشی ذخیره شد.',
+        );
+      }
     } catch (_) {
       if (mounted) {
         setState(
@@ -179,8 +187,10 @@ class _WeeklyFeedbackScreenState extends State<WeeklyFeedbackScreen> {
           children: [
             const Heading('بازخورد این هفته ذخیره شد'),
             Text(persianDate(request.programWeek!)),
-            const Notice(
-              'پاسخ‌های خصوصی برای شخصی‌سازی و بررسی متخصص هستند. این نسخه روی همین دستگاه ذخیره می‌شود.',
+            Notice(
+              store.serverAuthEnabled
+                  ? 'پاسخ‌های خصوصی در حساب تو ثبت شدند و برای شخصی‌سازی و بررسی متخصص هستند.'
+                  : 'پاسخ‌های خصوصی برای شخصی‌سازی و بررسی متخصص هستند. این نسخه روی همین دستگاه ذخیره می‌شود.',
             ),
             Text(
               sent.rating == 0
@@ -206,8 +216,10 @@ class _WeeklyFeedbackScreenState extends State<WeeklyFeedbackScreen> {
           Text(
             '${persianDate(request.programWeek!)} · برنامهٔ ${fa(request.id)}',
           ),
-          const Notice(
-            'بازخورد خصوصی است. انتشار نظر عمومی فقط با اجازهٔ جداگانهٔ تو و تأیید مدیر انجام می‌شود. ذخیره در این نسخه نمایشی و محلی است.',
+          Notice(
+            store.serverAuthEnabled
+                ? 'بازخورد خصوصی است. انتشار نظر عمومی فقط با اجازهٔ جداگانهٔ تو و تأیید مدیر انجام می‌شود.'
+                : 'بازخورد خصوصی است. انتشار نظر عمومی فقط با اجازهٔ جداگانهٔ تو و تأیید مدیر انجام می‌شود. ذخیره در این نسخه نمایشی و محلی است.',
           ),
           meals(
             'کدام غذاها را دوست داشتی؟',
@@ -273,7 +285,7 @@ class _WeeklyFeedbackScreenState extends State<WeeklyFeedbackScreen> {
           ],
           TextField(
             controller: comment,
-            maxLength: 1500,
+            maxLength: store.serverAuthEnabled ? 1000 : 1500,
             maxLines: 3,
             enabled: !busy,
             decoration: const InputDecoration(

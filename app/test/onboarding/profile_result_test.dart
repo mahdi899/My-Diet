@@ -13,6 +13,8 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     var continued = 0;
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures();
     await tester.pumpWidget(
       MaterialApp(
         home: Directionality(

@@ -17,27 +17,26 @@ void main() {
       ..addFont(rootBundle.load('assets/fonts/Vazirmatn-Bold.ttf'));
     await font.load();
   });
-  testWidgets(
-    'Compact energy retains its metrics and pastel message follows immediately',
-    (t) async {
-      mobile(t);
-      final s = DemoStore(clock: () => DateTime(2026, 10, 26))..loginDemoUser();
-      s.approveActiveUserRequest();
-      await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
-      await t.pumpAndSettle();
-      final ring = find.byKey(const ValueKey('home-calorie-ring'));
-      expect(ring, findsOneWidget);
-      expect(t.getSize(ring).height, lessThan(260));
-      expect(t.getSize(ring).height, greaterThanOrEqualTo(64));
-      expect(find.text('کالری'), findsOneWidget);
-      expect(find.text('هدف روزانه'), findsNothing);
-      expect(find.text('کالری امروز تو'), findsNothing);
-      expect(find.text('با تیک «خوردم»'), findsNothing);
-      expect(find.text('توصیهٔ امروز'), findsNothing);
-      await t.pumpWidget(const SizedBox());
-      s.dispose();
-    },
-  );
+  testWidgets('Home focus shows the current meal progress in a compact card', (
+    t,
+  ) async {
+    mobile(t);
+    final s = DemoStore(clock: () => DateTime(2026, 10, 26))..loginDemoUser();
+    s.approveActiveUserRequest();
+    await t.pumpWidget(SabzineApp(store: s, splashDuration: Duration.zero));
+    await t.pumpAndSettle();
+    final focus = find.byKey(const ValueKey('home-focus-card'));
+    expect(focus, findsOneWidget);
+    expect(t.getSize(focus).height, lessThan(300));
+    expect(find.byKey(const ValueKey('home-focus-progress')), findsOneWidget);
+    expect(find.text('وعده‌های ثبت‌شده'), findsOneWidget);
+    expect(find.text('هدف روزانه'), findsNothing);
+    expect(find.text('کالری امروز تو'), findsNothing);
+    expect(find.text('با تیک «خوردم»'), findsNothing);
+    expect(find.text('توصیهٔ امروز'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+    s.dispose();
+  });
   testWidgets('Pregnancy details are secondary to current and target weights', (
     t,
   ) async {
@@ -83,6 +82,16 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('tab-plan')));
       await t.pumpAndSettle();
+      await t.scrollUntilVisible(
+        find.byKey(const ValueKey('plan-day-strip')),
+        250,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('plan-tab')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       expect(find.text('همین هفته'), findsNothing);
       final strip = t.widget<ListView>(
         find.byKey(const ValueKey('plan-day-strip')),
@@ -146,6 +155,16 @@ void main() {
       await t.tap(find.byKey(const ValueKey('tab-plan')));
       await t.pumpAndSettle();
       final action = find.widgetWithText(PillButton, 'انجام شد');
+      await t.scrollUntilVisible(
+        find.byKey(const ValueKey('plan-meal-log-0')),
+        250,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('plan-tab')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await t.ensureVisible(action.first);
       await t.pumpAndSettle();
       await t.tap(action.first);

@@ -7,6 +7,7 @@ use App\Modules\Feedback\Infrastructure\MySqlFeedback;
 use App\Shared\Domain\Problem;
 use App\Shared\Presentation\StrictInput;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 final class FeedbackController
 {
@@ -24,11 +25,45 @@ final class FeedbackController
             throw new Problem(400, 'validation', 'بازخورد معتبر نیست');
         }
         $rating = $body['serviceRating'] ?? null;
+        $body['serviceRating'] = $rating;
         if ($rating !== null && (! is_int($rating) || $rating < 1 || $rating > 5)) {
             throw new Problem(400, 'validation', 'بازخورد معتبر نیست');
         }
         $body['favorites'] = array_map(fn ($id) => StrictInput::uuid($id), $body['favorites']);
         $body['dislikes'] = array_map(fn ($id) => StrictInput::uuid($id), $body['dislikes']);
+        if (array_key_exists('publicText', $body)) {
+            if (! is_string($body['publicText']) || mb_strlen($body['publicText']) > 500 ||
+                ($body['publishPermission'] && (trim($body['publicText']) === '' || $rating === null)) ||
+                (! $body['publishPermission'] && $body['publicText'] !== '')) {
+                throw new Problem(400, 'validation', 'متن و امتیاز نظر عمومی معتبر نیست');
+            }
+        }
+        if (array_key_exists('details', $body)) {
+            $validator = Validator::make($body, [
+                'details' => 'required|array:requestId,planVersion,week,at,meals,favorite,disliked,difficult,availability,budget,portion,service',
+                'details.requestId' => 'required|uuid',
+                'details.planVersion' => 'required|integer|min:1',
+                'details.week' => 'required|date_format:Y-m-d',
+                'details.at' => 'required|date',
+                'details.meals' => 'present|array|max:100',
+                'details.meals.*' => 'required|array:id,title',
+                'details.meals.*.id' => 'required|uuid',
+                'details.meals.*.title' => 'required|string|max:500',
+                'details.favorite' => 'present|array|max:20',
+                'details.favorite.*' => 'required|uuid',
+                'details.disliked' => 'present|array|max:20',
+                'details.disliked.*' => 'required|uuid',
+                'details.difficult' => 'present|array|max:100',
+                'details.difficult.*' => 'required|uuid',
+                'details.availability' => 'required|in:easy,sometimes,hard',
+                'details.budget' => 'required|in:comfortable,mixed,expensive',
+                'details.portion' => 'required|in:small,suitable,large',
+                'details.service' => 'required|in:good,average,poor,not_used',
+            ]);
+            if ($validator->fails() || $body['details']['week'] !== ($body['weekStart'] ?? null)) {
+                throw new Problem(400, 'validation', 'پاسخ‌های بازخورد معتبر نیست');
+            }
+        }
 
         return $this->feedback->save($this->actor($request), $body);
     }
