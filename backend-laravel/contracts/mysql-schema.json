@@ -27,7 +27,7 @@
     },
     {
       "name": "ai_pool_members",
-      "sql": "create table `ai_pool_members` (\n`id` char(36) not null,\n`pool_id` char(36) not null,\n`provider_id` char(36) not null,\n`model` varchar(255) not null,\n`position` smallint not null default 0,\n`weight` smallint not null default 1,\n`enabled` tinyint not null default 1,\n`price_in_micros_per_m` bigint not null default 0,\n`price_out_micros_per_m` bigint not null default 0,\n`created_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
+      "sql": "create table `ai_pool_members` (\n`id` char(36) not null,\n`pool_id` char(36) not null,\n`provider_id` char(36) not null,\n`model` varchar(255) not null,\n`position` smallint not null default 0,\n`weight` smallint not null default 1,\n`enabled` tinyint not null default 1,\n`created_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
     {
       "name": "ai_pools",
@@ -40,10 +40,6 @@
     {
       "name": "ai_providers",
       "sql": "create table `ai_providers` (\n`id` char(36) not null,\n`name` varchar(255) not null,\n`kind` longtext not null,\n`base_url` longtext not null,\n`api_key_encrypted` longtext null,\n`http_referer` longtext null,\n`app_title` longtext null,\n`active` tinyint not null default 1,\n`created_at` datetime(6) not null default current_timestamp(6),\n`updated_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
-    },
-    {
-      "name": "ai_provider_models",
-      "sql": "create table `ai_provider_models` (\n`id` char(36) not null,\n`provider_id` char(36) not null,\n`model` varchar(255) not null,\n`name` varchar(255) null,\n`price_in_micros_per_m` bigint not null default 0,\n`price_out_micros_per_m` bigint not null default 0,\n`created_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
     {
       "name": "ai_usage_ledger",
@@ -510,16 +506,6 @@
     },
     {
       "table": "ai_pool_members",
-      "name": "ai_pool_members_price_in_micros_per_m_check",
-      "sql": "alter table `ai_pool_members` add constraint `ai_pool_members_price_in_micros_per_m_check` CHECK ((`price_in_micros_per_m` >= 0))"
-    },
-    {
-      "table": "ai_pool_members",
-      "name": "ai_pool_members_price_out_micros_per_m_check",
-      "sql": "alter table `ai_pool_members` add constraint `ai_pool_members_price_out_micros_per_m_check` CHECK ((`price_out_micros_per_m` >= 0))"
-    },
-    {
-      "table": "ai_pool_members",
       "name": "ai_pool_members_weight_check",
       "sql": "alter table `ai_pool_members` add constraint `ai_pool_members_weight_check` CHECK (((`weight` >= 1) AND (`weight` <= 100)))"
     },
@@ -592,26 +578,6 @@
       "table": "ai_providers",
       "name": "ai_providers_name_key",
       "sql": "alter table `ai_providers` add constraint `ai_providers_name_key` UNIQUE (`name`)"
-    },
-    {
-      "table": "ai_provider_models",
-      "name": "ai_provider_models_price_in_micros_per_m_check",
-      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_price_in_micros_per_m_check` CHECK ((`price_in_micros_per_m` >= 0))"
-    },
-    {
-      "table": "ai_provider_models",
-      "name": "ai_provider_models_price_out_micros_per_m_check",
-      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_price_out_micros_per_m_check` CHECK ((`price_out_micros_per_m` >= 0))"
-    },
-    {
-      "table": "ai_provider_models",
-      "name": "ai_provider_models_provider_id_fkey",
-      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_provider_id_fkey` FOREIGN KEY (`provider_id`) REFERENCES `ai_providers`(`id`) ON DELETE CASCADE"
-    },
-    {
-      "table": "ai_provider_models",
-      "name": "ai_provider_models_provider_id_model_key",
-      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_provider_id_model_key` UNIQUE (`provider_id`,`model`)"
     },
     {
       "table": "ai_usage_ledger",

@@ -6,6 +6,8 @@ use App\Modules\Plans\Domain\CivilDates;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 final class ModelPools
 {
@@ -25,13 +27,14 @@ final class ModelPools
         return [['role' => 'system', 'content' => strtr($prompt->system_prompt, $replace)], ['role' => 'user', 'content' => strtr($prompt->user_template, $replace)]];
     }
 
-    public function run(string $code, array $messages, ?string $request = null, ?string $user = null, bool $json = false, ?\Closure $validate = null): array
+    public function run(string $code, array $messages, ?string $request = null, ?string $user = null, bool $json = false, ?\Closure $validate = null, ?callable $onDelta = null): array
     {
         $pool = $this->db->table('ai_pools')->where('code', $code)->first();
         if (! $pool || ! $pool->enabled) {
             throw new Problem(503, 'pool_unavailable', 'استخر مدل فعال نیست');
         }
         $members = $this->db->select('select m.*,p.name as provider_name,p.kind,p.base_url,p.api_key_encrypted,p.http_referer,p.app_title,h.cooldown_until from ai_pool_members m join ai_providers p on p.id=m.provider_id left join ai_pool_health h on h.member_id=m.id where m.pool_id=? and m.enabled=1 and p.active=1 and (h.cooldown_until is null or h.cooldown_until<=current_timestamp(6)) order by m.position,m.id', [$pool->id]);
+        $this->applyLivePrices($members);
         if ($pool->strategy === 'cost_first') {
             usort($members, fn ($a, $b) => ($a->price_in_micros_per_m + $a->price_out_micros_per_m) <=> ($b->price_in_micros_per_m + $b->price_out_micros_per_m));
         } elseif ($pool->strategy === 'weighted') {
@@ -42,6 +45,11 @@ final class ModelPools
         }
         $last = null;
         $detail = null;
+        $spoke = false;
+        $delta = $onDelta === null ? null : function (string $piece) use (&$spoke, $onDelta): void {
+            $spoke = true;
+            $onDelta($piece);
+        };
         foreach (array_slice($members, 0, max(1, $pool->max_attempts)) as $index => $member) {
             $inputBound = strlen(json_encode($messages, JSON_THROW_ON_ERROR)) + 256;
             $estimate = (int) ceil(($inputBound * $member->price_in_micros_per_m + $pool->max_tokens * $member->price_out_micros_per_m) / 1_000_000);
@@ -49,7 +57,7 @@ final class ModelPools
             $started = microtime(true);
             $result = null;
             try {
-                $result = $this->client->complete((array) $member, $member->model, $messages, $pool->max_tokens, $pool->timeout_ms, (float) $pool->temperature, $json);
+                $result = $this->client->complete((array) $member, $member->model, $messages, $pool->max_tokens, $pool->timeout_ms, (float) $pool->temperature, $json, $delta);
                 $result['costMicros'] ??= $result['usageKnown']
                     ? (int) ceil(($result['tokensIn'] * $member->price_in_micros_per_m + $result['tokensOut'] * $member->price_out_micros_per_m) / 1_000_000) : $estimate;
                 $result['value'] = $validate ? $validate($result['text']) : $result['text'];
@@ -60,18 +68,49 @@ final class ModelPools
                 $outcome = $error instanceof Problem ? $error->problemCode :
                     ($error instanceof \InvalidArgumentException ? 'invalid_plan' : 'outcome_unknown');
                 $last = $outcome;
+                Log::warning('AI pool member failed', ['pool' => $code, 'model' => $member->model, 'outcome' => $outcome, 'message' => $error->getMessage()]);
                 if ($error instanceof \InvalidArgumentException) {
-                    $detail = $error->getMessage();
+                    $detail = 'خروجی مدل با قاعدهٔ برنامه جور نبود.';
                 }
                 $cost = $result['costMicros'] ?? ($outcome === 'outcome_unknown' ? $estimate : 0);
                 $this->finish($reservation, $member, $code, $request, $index + 1,
                     ($result ?? ['tokensIn' => 0, 'tokensOut' => 0]) + ['costMicros' => $cost], $outcome, $started);
+                if ($spoke) {
+                    throw new Problem(503, $outcome, 'جواب ناتمام ماند. یک بار دیگر بفرست.');
+                }
                 if (in_array($outcome, ['outcome_unknown', 'ai_disabled', 'ai_key_missing', 'endpoint_invalid'], true)) {
                     throw new Problem(503, $outcome, 'اجرای مدل تکمیل نشد؛ وضعیت هزینه و تنظیمات را بررسی کنید');
                 }
             }
         }
         throw new Problem(503, $last ?? 'pool_empty', $detail ?? 'هیچ مدل آماده‌ای پاسخ معتبر نداد');
+    }
+
+    /** @param  list<object>  $members */
+    private function applyLivePrices(array $members): void
+    {
+        $grouped = [];
+        foreach ($members as $member) {
+            $member->price_in_micros_per_m = 0;
+            $member->price_out_micros_per_m = 0;
+            $grouped[$member->provider_id][] = $member;
+        }
+        foreach ($grouped as $providerId => $rows) {
+            $cached = Cache::get('ai_catalog:'.$providerId);
+            if (! is_array($cached)) {
+                continue;
+            }
+            $prices = [];
+            $catalog = $cached;
+            foreach ($catalog as $row) {
+                if (is_array($row) && is_string($row['id'] ?? null)) {
+                    $prices[$row['id']] = [(int) ($row['priceInMicrosPerM'] ?? 0), (int) ($row['priceOutMicrosPerM'] ?? 0)];
+                }
+            }
+            foreach ($rows as $member) {
+                [$member->price_in_micros_per_m, $member->price_out_micros_per_m] = $prices[$member->model] ?? [0, 0];
+            }
+        }
     }
 
     private function reserve(int $estimate, ?string $request, ?string $user): string

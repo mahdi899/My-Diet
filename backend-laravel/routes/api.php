@@ -386,8 +386,6 @@ Route::prefix('v1/admin')->middleware('session:admin')->group(function (): void 
         Route::delete('providers/{id}', 'deleteProvider');
         Route::post('providers/{id}/test', 'testProvider');
         Route::get('providers/{id}/models', 'models');
-        Route::post('providers/{id}/models', 'addModel');
-        Route::delete('providers/{id}/models/{modelId}', 'removeModel');
         Route::get('pools', 'pools');
         Route::put('pools/{code}', 'updatePool');
         Route::put('pools/{code}/members', 'members');

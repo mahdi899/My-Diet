@@ -13,6 +13,7 @@ use App\Modules\Tracking\Application\TrackingService;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Facades\Log;
 
 final class MySqlCoach implements CoachGateway
 {
@@ -37,9 +38,9 @@ final class MySqlCoach implements CoachGateway
         return ['thread' => ['id' => $thread->id, 'dayBriefDate' => $thread->day_brief_date], 'messages' => $page->map(fn ($row) => $this->message($row))->all(), 'nextCursor' => $rows->count() > $limit ? (int) $page->first()->seq : null];
     }
 
-    public function accept(string $user, string $client, string $text): array
+    public function accept(string $user, string $client, string $text, ?callable $emit = null): array
     {
-        return $this->serial($user, function () use ($user, $client, $text) {
+        return $this->serial($user, function () use ($user, $client, $text, $emit) {
             $thread = $this->ensure($user);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
@@ -71,7 +72,22 @@ final class MySqlCoach implements CoachGateway
 
                 return ['replay' => false, 'metered' => false, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
             }
-            $reply = $this->model->reply($user, $text);
+            $userMessage = $this->message($this->db->table('coach_messages')->where('id', $id)->first());
+            if ($emit !== null) {
+                $emit('message', ['message' => $userMessage]);
+            }
+            $answered = true;
+            try {
+                $reply = $this->model->reply($user, $text, $emit === null ? null : function (string $piece) use ($emit): void {
+                    if ($piece !== '') {
+                        $emit('delta', ['text' => $piece, 'segment' => 0]);
+                    }
+                });
+            } catch (\Throwable $error) {
+                $answered = false;
+                Log::error('Coach reply failed', ['type' => $error::class, 'message' => $error->getMessage(), 'file' => $error->getFile(), 'line' => $error->getLine()]);
+                $reply = ['text' => $error instanceof Problem ? $error->messageFa : 'الان نتوانستم جواب بدهم. یک بار دیگر بفرست.', 'tokensIn' => 0, 'tokensOut' => 0, 'costMicros' => 0, 'model' => 'unavailable'];
+            }
             $assistant = Crypto::uuid();
             $this->db->transaction(function () use ($assistant, $thread, $user, $reply, $id): void {
                 $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $reply['text'], 'reply_to' => $id, 'model' => $reply['model'] ?? 'unreported', 'tokens_in' => $reply['tokensIn'] ?? 0, 'tokens_out' => $reply['tokensOut'] ?? 0, 'payload' => '{}']);
@@ -79,7 +95,7 @@ final class MySqlCoach implements CoachGateway
                 $this->db->table('coach_threads')->where('id', $thread->id)->update(['last_message_at' => $this->db->raw('current_timestamp(6)')]);
             });
 
-            return ['replay' => false, 'metered' => true, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $id)->first()), 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
+            return ['replay' => false, 'metered' => $answered, 'streamed' => $emit !== null, 'userMessage' => $userMessage, 'replies' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'blocked' => null];
         });
     }
 
@@ -95,7 +111,12 @@ final class MySqlCoach implements CoachGateway
         $this->db->table('coach_media')->insert(['id' => $media, 'user_id' => $user, 'mime' => $detected, 'byte_size' => strlen($bytes), 'content' => $bytes]);
         $message = Crypto::uuid();
         $this->db->table('coach_messages')->insert(['id' => $message, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'photo', 'fallback_text' => '', 'client_message_id' => $client, 'payload' => json_encode(['mediaId' => $media])]);
-        $analysis = $this->model->analyzePhoto($user, base64_encode($bytes));
+        try {
+            $analysis = $this->model->analyzePhoto($user, base64_encode($bytes));
+        } catch (\Throwable $error) {
+            Log::error('Coach photo failed', ['type' => $error::class, 'message' => $error->getMessage(), 'file' => $error->getFile(), 'line' => $error->getLine()]);
+            throw $error instanceof Problem ? $error : new Problem(503, 'outcome_unknown', 'الان نتوانستم عکس را بخوانم. یک بار دیگر بفرست.');
+        }
         $assistant = Crypto::uuid();
         $foods = $analysis['foods'] ?? [];
         $kcal = (int) array_sum(array_map(fn ($food) => (int) ($food['kcal'] ?? 0), $foods));

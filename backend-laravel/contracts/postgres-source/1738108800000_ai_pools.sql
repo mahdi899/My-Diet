@@ -34,8 +34,6 @@ CREATE TABLE ai_pool_members (
   position smallint NOT NULL DEFAULT 0,
   weight smallint NOT NULL DEFAULT 1 CHECK (weight BETWEEN 1 AND 100),
   enabled boolean NOT NULL DEFAULT true,
-  price_in_micros_per_m bigint NOT NULL DEFAULT 0 CHECK (price_in_micros_per_m >= 0),
-  price_out_micros_per_m bigint NOT NULL DEFAULT 0 CHECK (price_out_micros_per_m >= 0),
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (pool_id, provider_id, model)
 );
@@ -107,8 +105,8 @@ SELECT id, name, 'openai_compatible', base_url, api_key_encrypted, true FROM ai_
 INSERT INTO ai_pools (id, code, title) VALUES
   (gen_random_uuid(), 'plan_draft', 'پیش‌نویس برنامه غذایی'),
   (gen_random_uuid(), 'plan_critic', 'بازبینی فرهنگی و بالینی');
-INSERT INTO ai_pool_members (id, pool_id, provider_id, model, position, enabled, price_in_micros_per_m, price_out_micros_per_m)
-SELECT gen_random_uuid(), p.id, c.id, c.model, 0, c.active, c.cost_per_1k_tokens * 1000, c.cost_per_1k_tokens * 1000
+INSERT INTO ai_pool_members (id, pool_id, provider_id, model, position, enabled)
+SELECT gen_random_uuid(), p.id, c.id, c.model, 0, c.active
 FROM ai_connections c CROSS JOIN ai_pools p WHERE p.code = 'plan_draft';
 
 -- Down Migration

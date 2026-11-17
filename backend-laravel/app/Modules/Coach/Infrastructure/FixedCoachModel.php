@@ -14,7 +14,7 @@ final class FixedCoachModel implements CoachModel
         return false;
     }
 
-    public function reply(string $userId, string $userMessage): array
+    public function reply(string $userId, string $userMessage, ?callable $onDelta = null): array
     {
         $this->calls++;
 

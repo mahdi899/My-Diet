@@ -48,7 +48,7 @@ final class ExternalAdaptersTest extends MySqlTestCase
         $this->db->table('ai_providers')->insert(['id' => $provider, 'name' => 'HTTP test '.$provider, 'kind' => 'openai_compatible', 'base_url' => 'https://provider.example/v1', 'api_key_encrypted' => Crypto::encrypt('adapter-test-secret', config('identity.field_key'))]);
         $this->db->table('ai_pools')->where('code', $code)->delete();
         $this->db->table('ai_pools')->insert(['id' => $pool, 'code' => $code, 'title' => 'HTTP test', 'strategy' => 'priority', 'max_tokens' => 1000, 'max_attempts' => 2]);
-        $this->db->table('ai_pool_members')->insert(['id' => $member, 'pool_id' => $pool, 'provider_id' => $provider, 'model' => 'real-wire-model', 'price_in_micros_per_m' => 1000, 'price_out_micros_per_m' => 2000]);
+        $this->db->table('ai_pool_members')->insert(['id' => $member, 'pool_id' => $pool, 'provider_id' => $provider, 'model' => 'real-wire-model']);
 
         return compact('provider', 'pool', 'member');
     }

@@ -8,6 +8,7 @@ use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Shared\Domain\Problem;
 use App\Shared\Presentation\StrictInput as Input;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -51,14 +52,40 @@ final class CoachController
         $text = $kind === 'quick_reply'
             ? (Input::optional($body, 'label', 80) ?? Input::optional($body, 'value', 200) ?? Input::optional($body, 'text', 8000) ?? '')
             : (Input::optional($body, 'text', 8000) ?? Input::optional($body, 'caption', 300) ?? '');
-        $accepted = $this->coach->accept($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $text);
+        $client = Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : '');
 
-        // Consume quota after successful reply
-        if (! $accepted['replay'] && ($accepted['metered'] ?? false) && $accepted['blocked'] === null && count($accepted['replies']) > 0) {
-            $this->quota->consumeChat($userId);
-        }
-
-        return $this->stream($accepted);
+        return response()->stream(function () use ($userId, $client, $text): void {
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+            $write = function (string $event, array $data): void {
+                echo 'event: '.$event."\n".'data: '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n\n";
+                flush();
+            };
+            try {
+                $accepted = $this->coach->accept($userId, $client, $text, $write);
+                if (empty($accepted['streamed'])) {
+                    $write('message', ['message' => $accepted['userMessage']]);
+                }
+                if ($accepted['blocked'] !== null) {
+                    $write('error', ['code' => 'ai_budget_exceeded', 'messageFa' => $accepted['blocked'] === 'kill_switch' ? 'مربی موقتاً خاموش است.' : 'سقف استفاده از هوش مصنوعی پر شده است.', 'retryable' => false]);
+                }
+                foreach ($accepted['replies'] as $reply) {
+                    $write('message', ['message' => $reply]);
+                }
+                if (! $accepted['replay'] && ($accepted['metered'] ?? false) && $accepted['blocked'] === null && count($accepted['replies']) > 0) {
+                    $this->quota->consumeChat($userId);
+                }
+                $write('done', ['replay' => $accepted['replay']]);
+            } catch (Problem $error) {
+                $write('error', ['code' => $error->problemCode, 'messageFa' => $error->messageFa, 'retryable' => $error->status >= 500 || $error->status === 429]);
+                $write('done', ['replay' => false]);
+            } catch (\Throwable $error) {
+                Log::error('Coach request failed', ['type' => $error::class, 'message' => $error->getMessage(), 'file' => $error->getFile(), 'line' => $error->getLine()]);
+                $write('error', ['code' => 'internal', 'messageFa' => 'الان نتوانستم جواب بدهم. یک بار دیگر بفرست.', 'retryable' => true]);
+                $write('done', ['replay' => false]);
+            }
+        }, 200, ['Content-Type' => 'text/event-stream; charset=utf-8', 'Cache-Control' => 'no-cache, no-transform', 'X-Accel-Buffering' => 'no']);
     }
 
     public function photo(Request $request): array
@@ -176,23 +203,6 @@ final class CoachController
         $budgetOk = isset($body['budgetOk']) && $body['budgetOk'] === true;
 
         return $swap->alternatives($this->actor($request), $mealId, $reason, $budgetOk);
-    }
-
-    private function stream(array $accepted): StreamedResponse
-    {
-        return response()->stream(function () use ($accepted): void {
-            $write = function (string $event, array $data): void {
-                echo 'event: '.$event."\n".'data: '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n\n";
-            };
-            $write('message', ['message' => $accepted['userMessage']]);
-            if ($accepted['blocked'] !== null) {
-                $write('error', ['code' => 'ai_budget_exceeded', 'messageFa' => $accepted['blocked'] === 'kill_switch' ? 'مربی موقتاً خاموش است.' : 'سقف استفاده از هوش مصنوعی پر شده است.', 'retryable' => false]);
-            }
-            foreach ($accepted['replies'] as $reply) {
-                $write('message', ['message' => $reply]);
-            }
-            $write('done', ['replay' => $accepted['replay']]);
-        }, 200, ['Content-Type' => 'text/event-stream; charset=utf-8', 'Cache-Control' => 'no-cache, no-transform', 'X-Accel-Buffering' => 'no']);
     }
 
     private function actor(Request $request): string
