@@ -19,6 +19,7 @@ import 'presentation/widgets/weekly_progress.dart';
 import 'presentation/widgets/connection_gate.dart';
 import 'presentation/screens/wallet_flow.dart';
 import 'presentation/session/live_entry.dart';
+import 'presentation/session/live_entry_bootstrap.dart';
 import 'presentation/session/live_session.dart';
 
 class SabzineApp extends StatefulWidget {
@@ -92,15 +93,24 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
   }
 
   Future<void> initialize() async {
+    Future<void> restoreAndBootstrap() async {
+      if (widget.restoreOnStart) {
+        await Future.wait<void>([
+          store.restoreQuestionnaire(),
+          store.restoreNutritionLog(),
+          store.restoreWorkspaceSettings(),
+          store.restoreWalletState(),
+          store.restoreUserSession(),
+        ]);
+        await store.restoreWeeklyFeedback();
+      }
+      await bootstrapLiveEntry(store);
+    }
+
     await Future.wait<void>([
       Future<void>.delayed(widget.splashDuration),
-      if (widget.restoreOnStart) store.restoreQuestionnaire(),
-      if (widget.restoreOnStart) store.restoreNutritionLog(),
-      if (widget.restoreOnStart) store.restoreWorkspaceSettings(),
-      if (widget.restoreOnStart) store.restoreWalletState(),
-      if (widget.restoreOnStart) store.restoreUserSession(),
+      restoreAndBootstrap(),
     ]);
-    if (widget.restoreOnStart) await store.restoreWeeklyFeedback();
     if (mounted) setState(() => starting = false);
   }
 

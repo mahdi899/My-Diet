@@ -93,12 +93,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
       rows.add(
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Reveal(
-            child: _Stamped(
-              message: message,
-              child: _tile(context, controller, message),
-            ),
-          ),
+          child: Reveal(child: _tile(context, controller, message)),
         ),
       );
     }
@@ -180,6 +175,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
       return CoachTextBubble(
         text: text.isEmpty ? '…' : text,
         isUser: message.isUser,
+        time: _clock(message.createdAt.toLocal()),
       );
     }
     return switch (message.type) {
@@ -249,6 +245,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
         isUser: message.isUser,
         pending: message.pending,
         failed: message.failed,
+        time: _clock(message.createdAt.toLocal()),
       ),
     };
   }
@@ -270,12 +267,10 @@ class _CoachMessageListState extends State<CoachMessageList> {
         if (meals[i].title == title) i,
     ];
     if (hits.length != 1) return;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => HeroMode(
-          enabled: false,
-          child: MealDetailPage(date: day, index: hits.single),
-        ),
+    Navigator.of(context, rootNavigator: true).push(
+      foodDetailRoute<void>(
+        MealDetailPage(date: day, index: hits.single, heroes: false),
+        reduced: Motion.reduced(context),
       ),
     );
   }
@@ -298,9 +293,13 @@ class _CoachMessageListState extends State<CoachMessageList> {
       }
     }
     if (sameDay && matches.length == 1) {
-      Navigator.of(context).push(
+      Navigator.of(context, rootNavigator: true).push(
         foodDetailRoute<void>(
-          MealDetailPage(date: now, index: matches.single),
+          MealDetailPage(
+            date: now,
+            index: matches.single,
+            heroes: false,
+          ),
           reduced: Motion.reduced(context),
         ),
       );
@@ -326,40 +325,6 @@ String _clock(DateTime time) {
   final hour = time.hour.toString().padLeft(2, '0');
   final minute = time.minute.toString().padLeft(2, '0');
   return fa('$hour:$minute');
-}
-
-class _Stamped extends StatelessWidget {
-  const _Stamped({required this.message, required this.child});
-  final CoachMessage message;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final user = message.isUser;
-    return Align(
-      widthFactor: 1,
-      alignment: user ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          child,
-          Padding(
-            padding: const EdgeInsets.only(top: 3, right: 6),
-            child: Text(
-              _clock(message.createdAt.toLocal()),
-              style: const TextStyle(
-                color: AppColors.faint,
-                fontSize: 10,
-                height: 1,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _DayHeader extends StatelessWidget {

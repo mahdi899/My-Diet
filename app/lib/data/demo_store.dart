@@ -30,6 +30,7 @@ import 'journey_analytics.dart';
 import '../domain/commerce/commerce.dart';
 import '../domain/plan/plan.dart';
 import 'session/services.dart';
+import 'session/live_entry_cache.dart';
 
 enum AppRole { user, expert, admin }
 
@@ -2258,6 +2259,9 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   @override
   bool liveReady = false;
 
+  /// Filled during startup splash; consumed when [LiveEntry] mounts.
+  LiveEntryCache? liveEntryCache;
+
   /// Keeps the login screen under an in-app signup questionnaire until that route closes.
   bool suppressLiveEntry = false;
   @override
@@ -2564,6 +2568,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     foodPreferences = null;
     userRequestIds.clear();
     liveReady = false;
+    liveEntryCache = null;
     suppressLiveEntry = false;
     profilePhoto = null;
     liveTargetKcal = null;

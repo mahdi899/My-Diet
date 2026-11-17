@@ -7,6 +7,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../../plan/goal_math.dart';
+import '../../plan/meal_detail_page.dart';
 import '../presentation/coach_controller.dart';
 import '../data/coach_parse.dart';
 import '../domain/coach_message.dart';
@@ -18,21 +19,10 @@ Future<void> openNutritionMode(
   required CoachController controller,
   required CoachMessage message,
 }) {
-  return Navigator.of(context).push<void>(
-    PageRouteBuilder<void>(
-      transitionDuration: Motion.page,
-      pageBuilder: (_, _, _) =>
-          NutritionModePage(controller: controller, message: message),
-      transitionsBuilder: (context, animation, _, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Motion.curve);
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween(begin: 1.04, end: 1.0).animate(curved),
-            child: child,
-          ),
-        );
-      },
+  return Navigator.of(context, rootNavigator: true).push<void>(
+    foodDetailRoute<void>(
+      NutritionModePage(controller: controller, message: message),
+      reduced: Motion.reduced(context),
     ),
   );
 }

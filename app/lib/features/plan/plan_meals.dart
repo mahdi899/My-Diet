@@ -51,6 +51,8 @@ class _PlanMealCardState extends State<PlanMealCard> {
     final mode = record?['mode'];
     final caption = mode is String ? consumeLabels[mode] : null;
     final logging = canLogMeal(store, widget.date);
+    final logged = record != null || eaten;
+    final onCard = logged ? (caption ?? 'طبق برنامه') : null;
     return SparkleBurst(
       trigger: _burst,
       radius: 90,
@@ -69,32 +71,28 @@ class _PlanMealCardState extends State<PlanMealCard> {
             ingredients: [for (final item in meal.ingredients) item.name],
             height: 210,
             done: eaten,
+            note: onCard,
             onTap: _open,
           ),
-          if (caption != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              caption,
-              style: const TextStyle(color: AppColors.muted, fontSize: 12),
-            ),
-          ],
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                child: PillButton(
-                  label: 'تعویض',
-                  icon: Icons.swap_horiz_rounded,
-                  variant: PillVariant.soft,
-                  height: 46,
-                  onPressed: () =>
-                      openCoach(context, prefill: swapPrefill(meal)),
+              if (!logged) ...[
+                Expanded(
+                  child: PillButton(
+                    label: 'تعویض',
+                    icon: Icons.swap_horiz_rounded,
+                    variant: PillVariant.soft,
+                    height: 46,
+                    onPressed: () =>
+                        openCoach(context, prefill: swapPrefill(meal)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
               Expanded(
                 child: PillButton(
-                  label: record != null || eaten ? 'ثبت شد' : 'انجام شد',
+                  label: logged ? 'ثبت شد' : 'انجام شد',
                   icon: Icons.check_rounded,
                   variant: eaten ? PillVariant.lime : PillVariant.primary,
                   height: 46,

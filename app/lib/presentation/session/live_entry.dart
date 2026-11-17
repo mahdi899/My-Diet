@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../data/demo_store.dart';
+import '../../data/session/live_entry_cache.dart';
 import '../../core/theme/theme.dart';
 import '../../core/network/api_client.dart';
 import '../widgets/brand_mark.dart';
+import '../screens/splash.dart';
 import '../onboarding/consent_screen.dart';
 import '../onboarding/profile_result.dart';
 import '../onboarding/controller.dart';
 import '../onboarding/onboarding_flow.dart';
 import '../../domain/onboarding/onboarding.dart';
 import '../../data/session/services.dart';
+import 'live_entry_bootstrap.dart';
 import 'live_session.dart';
 
 /// After the phone is verified: the website answers are claimed, or the same
@@ -35,7 +38,44 @@ class _LiveEntryState extends State<LiveEntry> {
   void initState() {
     super.initState();
     bindLiveReports(widget.store);
-    _open();
+    final cached = widget.store.liveEntryCache;
+    widget.store.liveEntryCache = null;
+    if (cached != null) {
+      _applyCache(cached);
+    } else {
+      _open();
+    }
+  }
+
+  void _applyCache(LiveEntryCache cached) {
+    switch (cached) {
+      case LiveEntryCacheEntered():
+        assert(widget.store.liveReady);
+      case LiveEntryCacheConsent():
+        if (mounted) setState(() => stage = _Stage.consent);
+      case LiveEntryCacheError(:final message):
+        if (mounted) {
+          setState(() {
+            stage = _Stage.error;
+            error = message;
+          });
+        }
+      case LiveEntryCacheFlow(
+        :final state,
+        :final spec,
+        :final profile,
+        :final claimed,
+      ):
+        this.profile = profile;
+        this.claimed = claimed;
+        controller?.dispose();
+        controller = OnboardingController(
+          repository: services.onboarding,
+          spec: spec,
+          state: state,
+        );
+        if (mounted) setState(() => stage = _Stage.flow);
+    }
   }
 
   @override
@@ -50,27 +90,18 @@ class _LiveEntryState extends State<LiveEntry> {
       error = null;
     });
     try {
-      final state = await services.onboarding.state();
-      profile = state.profile;
-      claimed = state.claimedFromDemo;
-      switch (state.nextStep) {
-        case NextStep.enterApp:
-          await _enter();
-        case NextStep.consent:
-          if (mounted) setState(() => stage = _Stage.consent);
-        case NextStep.resume || NextStep.gaps when state.missing.isEmpty:
-          profile = await services.onboarding.submit(patch: _legalTarget(state));
-          await _enter();
-        case NextStep.start || NextStep.resume || NextStep.gaps:
-          final spec = await services.onboarding.spec();
-          controller?.dispose();
-          controller = OnboardingController(
-            repository: services.onboarding,
-            spec: spec,
-            state: state,
-          );
-          if (mounted) setState(() => stage = _Stage.flow);
+      await bootstrapLiveEntry(widget.store);
+      final cached = widget.store.liveEntryCache;
+      widget.store.liveEntryCache = null;
+      if (cached != null && mounted) {
+        _applyCache(cached);
+        return;
       }
+      if (!mounted || widget.store.liveReady) return;
+      setState(() {
+        stage = _Stage.error;
+        error = 'بارگذاری نشد.';
+      });
     } on ApiException catch (e) {
       if (e.expired) {
         widget.store.signOutCustomer();
@@ -89,45 +120,10 @@ class _LiveEntryState extends State<LiveEntry> {
     await refreshLive(widget.store, profile: profile);
   }
 
-  /// A finished questionnaire must not be shown again at login.
-  /// An illegal target is pulled just inside the server rule so submit can finish.
-  Map<String, Object?> _legalTarget(OnboardingState state) {
-    final answers = state.draft?.answers;
-    final weight = answers?['weight_kg'];
-    final target = answers?['target_weight_kg'];
-    if (weight is! num || target is! num) return const {};
-    if (state.track == 'weight_loss' && target >= weight) {
-      return {
-        'target_weight_kg': double.parse((weight - 0.5).toStringAsFixed(1)),
-      };
-    }
-    if (state.track == 'weight_gain' && target <= weight) {
-      return {
-        'target_weight_kg': double.parse((weight + 0.5).toStringAsFixed(1)),
-      };
-    }
-    return const {};
-  }
-
   @override
   Widget build(BuildContext context) {
     return switch (stage) {
-      _Stage.loading => const Scaffold(
-        backgroundColor: AppColors.bg,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SabzineMark(size: 84),
-              SizedBox(height: 14),
-              Text(
-                'یک لحظه',
-                style: TextStyle(color: AppColors.muted, fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-      ),
+      _Stage.loading => const SplashScreen(),
       _Stage.error => Scaffold(
         backgroundColor: AppColors.bg,
         body: Center(

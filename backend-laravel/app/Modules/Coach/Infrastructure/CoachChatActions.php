@@ -203,9 +203,12 @@ final class CoachChatActions
             'yesterday' => 'دیروز',
             default => 'امروز',
         };
+        $lead = count($meals) === 1
+            ? $meals[0]['typeFa'].' '.$label.'ت اینه'
+            : 'برنامه '.$label.' اینه';
 
-        return $this->card('fact_card', $label, [
-            'title' => $label,
+        return $this->card('fact_card', $lead, [
+            'title' => $lead,
             'date' => $date,
             'kind' => 'meals',
             'items' => array_map(fn (array $meal) => [
