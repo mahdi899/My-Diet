@@ -6,6 +6,7 @@ use App\Modules\Identity\Application\IdentitySettings;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 final class ProviderClient
@@ -121,16 +122,63 @@ final class ProviderClient
 
     public function models(array $provider): array
     {
-        $response = $this->request($provider, 15000)->get(rtrim($provider['base_url'], '/').'/models');
-        if (! $response->successful() || strlen($response->body()) > 2_000_000 || ! is_array($response->json('data'))) {
+        $id = $provider['id'] ?? null;
+        if (is_string($id) && $id !== '') {
+            return Cache::remember('ai_catalog:'.$id, 600, fn () => $this->fetchModels($provider));
+        }
+
+        return $this->fetchModels($provider);
+    }
+
+    private function fetchModels(array $provider): array
+    {
+        $catalog = ($provider['kind'] ?? '') === 'closerouter' ? '/providers' : '/models';
+        $response = $this->request($provider, 90000)->get(rtrim($provider['base_url'], '/').$catalog);
+        $rows = $response->json('data');
+        if (! $response->successful() || strlen($response->body()) > 8_000_000 || ! is_array($rows)) {
             throw new Problem(502, 'provider_rejected', 'فهرست مدل‌ها در دسترس نیست');
         }
 
-        return array_map(fn ($model) => ['id' => $model['id'], 'name' => $model['name'] ?? $model['id'],
-            'contextLength' => $model['context_length'] ?? null,
-            'priceInMicrosPerM' => (int) ceil((float) ($model['pricing']['prompt'] ?? 0) * (($model['pricing']['unit'] ?? '') === 'usd_per_million_tokens' ? 1_000_000 : 1_000_000_000_000)),
-            'priceOutMicrosPerM' => (int) ceil((float) ($model['pricing']['completion'] ?? 0) * (($model['pricing']['unit'] ?? '') === 'usd_per_million_tokens' ? 1_000_000 : 1_000_000_000_000)),
-            'free' => isset($model['pricing']) && (float) ($model['pricing']['prompt'] ?? 0) === 0.0 && (float) ($model['pricing']['completion'] ?? 0) === 0.0],
-            array_values(array_filter($response->json('data'), fn ($model) => is_string($model['id'] ?? null))));
+        return array_map(fn ($model) => $this->modelView($model), array_values(array_filter($rows, fn ($model) => is_string($model['id'] ?? null))));
+    }
+
+    private function modelView(array $model): array
+    {
+        $pricing = $this->pricing($model);
+
+        return ['id' => $model['id'], 'name' => is_string($model['name'] ?? null) ? $model['name'] : $model['id'],
+            'contextLength' => $pricing['context_length'] ?? $model['context_length'] ?? null,
+            'priceInMicrosPerM' => $this->micros($pricing, 'prompt', 'input'),
+            'priceOutMicrosPerM' => $this->micros($pricing, 'completion', 'output'),
+            'free' => $this->micros($pricing, 'prompt', 'input') === 0 && $this->micros($pricing, 'completion', 'output') === 0];
+    }
+
+    private function pricing(array $model): array
+    {
+        if (is_array($model['pricing'] ?? null)) {
+            return $model['pricing'];
+        }
+        $options = is_array($model['providers'] ?? null) ? $model['providers'] : [];
+        $selected = $model['selected_provider'] ?? 'auto';
+        foreach ($options as $option) {
+            if (is_array($option) && ($option['name'] ?? null) === $selected && is_array($option['pricing'] ?? null)) {
+                return $option['pricing'] + ['context_length' => $option['context_length'] ?? null];
+            }
+        }
+        $first = is_array($options[0] ?? null) ? $options[0] : [];
+
+        return is_array($first['pricing'] ?? null) ? $first['pricing'] + ['context_length' => $first['context_length'] ?? null] : [];
+    }
+
+    private function micros(array $pricing, string $perToken, string $perMillion): int
+    {
+        $raw = $pricing[$perToken] ?? $pricing[$perMillion] ?? 0;
+        if (! is_numeric($raw)) {
+            return 0;
+        }
+        $unit = $pricing['unit'] ?? '';
+        $perMillionUnit = in_array($unit, ['usd_per_million_tokens', 'usd_per_image', 'usd_per_second', 'usd_per_request'], true);
+
+        return (int) ceil(((float) $raw) * ($perMillionUnit ? 1_000_000 : 1_000_000_000_000));
     }
 }

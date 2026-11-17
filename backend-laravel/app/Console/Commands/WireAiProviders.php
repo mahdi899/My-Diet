@@ -31,7 +31,7 @@ class WireAiProviders extends Command
             return 1;
         }
 
-        $closer = $this->provider($db, $settings, 'Closerouter', 'openai_compatible', (string) env('CLOSEROUTER_BASE_URL', 'https://api.closerouter.dev/v1'), $closerKey);
+        $closer = $this->provider($db, $settings, 'Closerouter', 'closerouter', (string) env('CLOSEROUTER_BASE_URL', 'https://api.closerouter.dev/v1'), $closerKey);
         $open = $this->provider($db, $settings, 'OpenRouter', 'openrouter', (string) env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'), $openKey);
         $closerModels = $this->models($closer['base'], $closerKey);
         $openModels = $this->models($open['base'], $openKey);

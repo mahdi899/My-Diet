@@ -42,6 +42,10 @@
       "sql": "create table `ai_providers` (\n`id` char(36) not null,\n`name` varchar(255) not null,\n`kind` longtext not null,\n`base_url` longtext not null,\n`api_key_encrypted` longtext null,\n`http_referer` longtext null,\n`app_title` longtext null,\n`active` tinyint not null default 1,\n`created_at` datetime(6) not null default current_timestamp(6),\n`updated_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
     {
+      "name": "ai_provider_models",
+      "sql": "create table `ai_provider_models` (\n`id` char(36) not null,\n`provider_id` char(36) not null,\n`model` varchar(255) not null,\n`name` varchar(255) null,\n`price_in_micros_per_m` bigint not null default 0,\n`price_out_micros_per_m` bigint not null default 0,\n`created_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
+    },
+    {
       "name": "ai_usage_ledger",
       "sql": "create table `ai_usage_ledger` (\n`id` char(36) not null,\n`request_id` char(36) null,\n`task` longtext not null,\n`pool_code` longtext not null,\n`member_id` char(36) null,\n`provider_name` longtext not null,\n`model` varchar(255) not null,\n`attempt_no` smallint not null default 1,\n`chunk` longtext null,\n`outcome` longtext not null,\n`tokens_in` int not null default 0,\n`tokens_out` int not null default 0,\n`cost_micros` bigint not null default 0,\n`cost_source` longtext not null default ('estimate'),\n`latency_ms` int not null default 0,\n`error_code` longtext null,\n`created_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
@@ -582,12 +586,32 @@
     {
       "table": "ai_providers",
       "name": "ai_providers_kind_check",
-      "sql": "alter table `ai_providers` add constraint `ai_providers_kind_check` CHECK ((`kind` IN ('openrouter', 'openai_compatible')))"
+      "sql": "alter table `ai_providers` add constraint `ai_providers_kind_check` CHECK ((`kind` IN ('openrouter', 'closerouter', 'openai_compatible')))"
     },
     {
       "table": "ai_providers",
       "name": "ai_providers_name_key",
       "sql": "alter table `ai_providers` add constraint `ai_providers_name_key` UNIQUE (`name`)"
+    },
+    {
+      "table": "ai_provider_models",
+      "name": "ai_provider_models_price_in_micros_per_m_check",
+      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_price_in_micros_per_m_check` CHECK ((`price_in_micros_per_m` >= 0))"
+    },
+    {
+      "table": "ai_provider_models",
+      "name": "ai_provider_models_price_out_micros_per_m_check",
+      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_price_out_micros_per_m_check` CHECK ((`price_out_micros_per_m` >= 0))"
+    },
+    {
+      "table": "ai_provider_models",
+      "name": "ai_provider_models_provider_id_fkey",
+      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_provider_id_fkey` FOREIGN KEY (`provider_id`) REFERENCES `ai_providers`(`id`) ON DELETE CASCADE"
+    },
+    {
+      "table": "ai_provider_models",
+      "name": "ai_provider_models_provider_id_model_key",
+      "sql": "alter table `ai_provider_models` add constraint `ai_provider_models_provider_id_model_key` UNIQUE (`provider_id`,`model`)"
     },
     {
       "table": "ai_usage_ledger",
