@@ -112,7 +112,7 @@ PROMPT;
      *
      * @return array{text: string, tokensIn: int, tokensOut: int, costMicros: int, model?: string}
      */
-    public function reply(string $userId, string $userMessage): array
+    public function reply(string $userId, string $userMessage, ?callable $onDelta = null): array
     {
         // Build context based on message content
         $contextBuilder = app(CoachContextBuilder::class);
@@ -135,7 +135,7 @@ PROMPT;
         }
 
         try {
-            $result = $this->pools->run('nutrition_coach', $messages, null, $userId);
+            $result = $this->pools->run('nutrition_coach', $messages, null, $userId, false, null, $onDelta);
         } catch (Problem $error) {
             throw $error;
         }

@@ -22,6 +22,7 @@ class CoachSession {
 
   List<CoachMessage> messages = const [];
   String? draftText;
+  String? get typingLayout => _reveal?.text;
   bool typing = false;
   bool loading = true;
   bool busy = false;
@@ -43,6 +44,8 @@ class CoachSession {
   int _historyOperation = 0;
   bool _historyLoaded = false;
   StreamSubscription<CoachEvent>? _sub;
+  Timer? _revealTimer;
+  CoachMessage? _reveal;
   final _sent = <String, CoachSendRequest>{};
   final _bytes = <String, Uint8List>{};
 
@@ -305,6 +308,12 @@ class CoachSession {
                   break;
                 }
                 _dropAnalyzing();
+                if (!message.isUser &&
+                    message.type == 'text' &&
+                    message.text.length > 1) {
+                  _typeOut(message);
+                  break;
+                }
                 draft.clear();
                 draftText = null;
                 segment = -1;
@@ -332,8 +341,10 @@ class CoachSession {
                 replayed = wasReplayed;
                 settled = true;
                 succeeded = true;
-                draft.clear();
-                draftText = null;
+                if (_reveal == null) {
+                  draft.clear();
+                  draftText = null;
+                }
                 _dropAnalyzing();
                 if (suggestions.isNotEmpty) this.suggestions = suggestions;
                 if (userMessage != null) _replacePending(userMessage);
@@ -408,7 +419,7 @@ class CoachSession {
     required bool reloadPlan,
     bool acknowledge = false,
   }) {
-    typing = false;
+    typing = failure == null && _reveal != null;
     busy = false;
     _sub = null;
     if (failure != null) {
@@ -649,8 +660,44 @@ class CoachSession {
     if (!_disposed) onChanged?.call();
   }
 
+  void _typeOut(CoachMessage message) {
+    _revealTimer?.cancel();
+    _reveal = message;
+    var shown = 0;
+    final full = message.text;
+    draftText = '';
+    typing = true;
+    _notify();
+    void step() {
+      if (_disposed || _reveal?.id != message.id) return;
+      if (shown >= full.length) {
+        _reveal = null;
+        draftText = null;
+        typing = false;
+        _upsert(message);
+        _notify();
+        return;
+      }
+      shown += 1;
+      draftText = full.substring(0, shown);
+      _notify();
+      final mark = full[shown - 1];
+      final pause = switch (mark) {
+        '\n' => 90,
+        ' ' => 26,
+        '،' || ',' || '؛' || ':' => 160,
+        '.' || '!' || '؟' || '?' => 240,
+        _ => 46,
+      };
+      _revealTimer = Timer(Duration(milliseconds: pause), step);
+    }
+
+    _revealTimer = Timer(const Duration(milliseconds: 46), step);
+  }
+
   void close() {
     _disposed = true;
+    _revealTimer?.cancel();
     _sub?.cancel();
     repository.close();
     onChanged = null;

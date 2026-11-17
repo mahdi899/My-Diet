@@ -10,6 +10,7 @@ class CoachTextBubble extends StatelessWidget {
     super.key,
     required this.text,
     required this.isUser,
+    this.layoutText,
     this.pending = false,
     this.failed = false,
     this.mood = CompanionMood.calm,
@@ -17,6 +18,7 @@ class CoachTextBubble extends StatelessWidget {
   });
 
   final String text;
+  final String? layoutText;
   final bool isUser;
   final bool pending;
   final bool failed;
@@ -30,6 +32,7 @@ class CoachTextBubble extends StatelessWidget {
     
     // Fix RTL for Persian text
     final displayText = _fixPersianText(text);
+    final measureText = _fixPersianText(layoutText ?? text);
     final maxWidth = MediaQuery.sizeOf(context).width * (isUser ? .72 : .66);
     final bodyStyle = DefaultTextStyle.of(context).style.merge(
       TextStyle(
@@ -39,7 +42,7 @@ class CoachTextBubble extends StatelessWidget {
         fontWeight: isUser ? FontWeight.w600 : FontWeight.w500,
       ),
     );
-    final textWidth = _balancedWidth(displayText, bodyStyle, maxWidth);
+    final textWidth = _balancedWidth(measureText, bodyStyle, maxWidth);
     
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth + 26),

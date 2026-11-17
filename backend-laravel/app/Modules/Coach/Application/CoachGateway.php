@@ -6,7 +6,7 @@ interface CoachGateway
 {
     public function thread(string $user, ?int $before, int $limit): array;
 
-    public function accept(string $user, string $client, string $text): array;
+    public function accept(string $user, string $client, string $text, ?callable $emit = null): array;
 
     public function photo(string $user, string $client, string $bytes, string $mime): array;
 

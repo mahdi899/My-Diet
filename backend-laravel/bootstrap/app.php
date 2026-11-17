@@ -33,7 +33,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontReport([Problem::class]);
         $exceptions->report(function (Throwable $error): bool {
-            Log::error('Request failed', ['exceptionType' => get_class($error)]);
+            Log::error('Request failed', [
+                'type' => $error::class,
+                'message' => $error->getMessage(),
+                'file' => $error->getFile(),
+                'line' => $error->getLine(),
+            ]);
 
             return false;
         });

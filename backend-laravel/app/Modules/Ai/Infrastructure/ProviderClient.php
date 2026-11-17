@@ -6,6 +6,7 @@ use App\Modules\Identity\Application\IdentitySettings;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -13,7 +14,8 @@ final class ProviderClient
 {
     public function __construct(private IdentitySettings $settings) {}
 
-    private function request(array $provider, int $timeout): PendingRequest
+    /** @return array{token: string, headers: array<string, string>, resolve: list<string>} */
+    private function wire(array $provider): array
     {
         if (! config('ai.http')) {
             throw new Problem(503, 'ai_disabled', 'اتصال هوش مصنوعی فعال نشده است');
@@ -25,7 +27,7 @@ final class ProviderClient
             (! $privateAllowed && ($url['scheme'] ?? '') !== 'https')) {
             throw new Problem(400, 'endpoint_invalid', 'نشانی سرویس معتبر نیست');
         }
-        $options = ['allow_redirects' => false, 'proxy' => ''];
+        $resolve = [];
         if (! $privateAllowed) {
             $records = filter_var($host, FILTER_VALIDATE_IP) ? [] : (dns_get_record($host, DNS_A | DNS_AAAA) ?: []);
             $addresses = filter_var($host, FILTER_VALIDATE_IP) ? [$host] :
@@ -39,7 +41,7 @@ final class ProviderClient
             }
             $port = $url['port'] ?? 443;
             $address = str_contains($addresses[0], ':') ? '['.$addresses[0].']' : $addresses[0];
-            $options['curl'] = [CURLOPT_RESOLVE => [$host.':'.$port.':'.$address]];
+            $resolve = [$host.':'.$port.':'.$address];
         }
         $key = $provider['api_key_encrypted'] ?? null;
         if (! is_string($key) || $key === '') {
@@ -55,11 +57,22 @@ final class ProviderClient
             }
         }
 
-        return Http::withToken(Crypto::decrypt($key, $this->settings->fieldKey))->withHeaders($headers)
+        return ['token' => Crypto::decrypt($key, $this->settings->fieldKey), 'headers' => $headers, 'resolve' => $resolve];
+    }
+
+    private function request(array $provider, int $timeout): PendingRequest
+    {
+        $wire = $this->wire($provider);
+        $options = ['allow_redirects' => false, 'proxy' => ''];
+        if ($wire['resolve'] !== []) {
+            $options['curl'] = [CURLOPT_RESOLVE => $wire['resolve']];
+        }
+
+        return Http::withToken($wire['token'])->withHeaders($wire['headers'])
             ->acceptJson()->asJson()->connectTimeout(5)->timeout(max(1, min(300, $timeout / 1000)))->withOptions($options);
     }
 
-    public function complete(array $provider, string $model, array $messages, int $tokens = 1500, int $timeout = 30000, float $temperature = 0.2, bool $json = false): array
+    public function complete(array $provider, string $model, array $messages, int $tokens = 1500, int $timeout = 30000, float $temperature = 0.2, bool $json = false, ?callable $onDelta = null): array
     {
         $body = ['model' => $model, 'messages' => $messages, 'max_tokens' => $tokens, 'temperature' => $temperature];
         if ($json) {
@@ -70,16 +83,29 @@ final class ProviderClient
             $body['usage'] = ['include' => true];
         }
         $response = $this->request($provider, $timeout)->post(rtrim($provider['base_url'], '/').'/chat/completions', $body);
-        if (! $response->successful()) {
-            $code = match ($response->status()) {
-                401, 402, 403 => 'auth_failed', 429 => 'rate_limited', 408, 504 => 'outcome_unknown', default => 'provider_rejected',
-            };
-            throw new Problem(502, $code, 'سرویس هوش مصنوعی پاسخ معتبر نداد');
-        }
+        $this->guardStatus($response);
         if (strlen($response->body()) > 2_000_000) {
             throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس بیش از حد بزرگ است');
         }
-        $value = $response->json();
+        return $this->completion($response->json(), $model);
+    }
+
+    private function guardStatus(Response $response): void
+    {
+        if ($response->successful()) {
+            return;
+        }
+        $code = match ($response->status()) {
+            401, 402, 403 => 'auth_failed', 429 => 'rate_limited', 408, 504 => 'outcome_unknown', default => 'provider_rejected',
+        };
+        throw new Problem(502, $code, 'سرویس هوش مصنوعی پاسخ معتبر نداد');
+    }
+
+    private function completion(mixed $value, string $model): array
+    {
+        if (! is_array($value)) {
+            throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس قابل پردازش نیست');
+        }
         $text = $this->messageText($value['choices'][0]['message']['content'] ?? null);
         if ($text === null || trim($text) === '' || isset($value['error'])) {
             throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس قابل پردازش نیست');
@@ -134,8 +160,13 @@ final class ProviderClient
     {
         $catalog = ($provider['kind'] ?? '') === 'closerouter' ? '/providers' : '/models';
         $response = $this->request($provider, 90000)->get(rtrim($provider['base_url'], '/').$catalog);
-        $rows = $response->json('data');
-        if (! $response->successful() || strlen($response->body()) > 8_000_000 || ! is_array($rows)) {
+        if (! $response->successful() || strlen($response->body()) > 4_000_000) {
+            throw new Problem(502, 'provider_rejected', 'فهرست مدل‌ها در دسترس نیست');
+        }
+        $raw = $response->body();
+        $decoded = json_decode($raw, true);
+        $rows = is_array($decoded) ? ($decoded['data'] ?? null) : null;
+        if (! is_array($rows)) {
             throw new Problem(502, 'provider_rejected', 'فهرست مدل‌ها در دسترس نیست');
         }
 

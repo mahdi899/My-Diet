@@ -102,6 +102,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: CoachTextBubble(
             text: controller.draftText!,
+            layoutText: controller.typingLayout,
             isUser: false,
             mood: CompanionMood.thinking,
           ),
