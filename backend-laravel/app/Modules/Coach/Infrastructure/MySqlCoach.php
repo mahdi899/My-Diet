@@ -356,6 +356,9 @@ final class MySqlCoach implements CoachGateway
     {
         $intent = $this->intents->parse($text);
         $memory = $this->actions->remember($user, $text);
+        if ($intent['intent'] === 'check_progress') {
+            return null;
+        }
         if ($intent['intent'] === 'remember') {
             return $memory ?? ['type' => 'text', 'text' => 'کدام غذا را بگویم یادداشت کنم؟', 'payload' => ['text' => 'کدام غذا را بگویم یادداشت کنم؟']];
         }

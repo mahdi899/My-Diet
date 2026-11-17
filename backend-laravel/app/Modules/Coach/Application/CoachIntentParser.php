@@ -39,6 +39,7 @@ final class CoachIntentParser
             ?? $this->plan($text)
             ?? $this->mood($text)
             ?? $this->memory($text)
+            ?? $this->plateau($text)
             ?? $this->open($text);
     }
 
@@ -218,6 +219,16 @@ final class CoachIntentParser
     {
         if ($this->has($text, ['رژیم جدید', 'برنامه جدید', 'هفته بعد', 'برنامه هفته بعد'])) {
             return $this->hit('refer_plan', 0.9, []);
+        }
+
+        return null;
+    }
+
+    /** @return Intent|null */
+    private function plateau(string $text): ?array
+    {
+        if ($this->has($text, ['لاغر نمیش', 'کم نمیش', 'کم نمی', 'وزنم ثابت', 'ثابت مونده', 'ثابت مانده', 'نتیجه نمی'])) {
+            return $this->hit('check_progress', 0.7, []);
         }
 
         return null;

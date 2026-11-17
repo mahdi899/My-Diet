@@ -204,10 +204,15 @@ final class CoachChatActions
             default => 'امروز',
         };
 
-        return $this->card('fact_card', 'برنامه '.$label, [
-            'title' => 'برنامه '.$label,
+        return $this->card('fact_card', $label, [
+            'title' => $label,
+            'date' => $date,
             'kind' => 'meals',
-            'items' => array_map(fn (array $meal) => ['title' => $meal['title'], 'meal' => $meal['typeFa'], 'kcal' => $meal['kcal']], $meals),
+            'items' => array_map(fn (array $meal) => [
+                'title' => $meal['title'],
+                'meal' => $meal['typeFa'],
+                'kcal' => $meal['kcal'],
+            ], $meals),
         ]);
     }
 

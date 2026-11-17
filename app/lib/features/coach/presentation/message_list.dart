@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/motion/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
+import '../../../domain/common/day.dart';
+import '../../../domain/common/digits.dart';
 import '../../plan/meal_detail_page.dart';
 import '../../../presentation/widgets/kit/kit.dart';
 import '../presentation/coach_controller.dart';
@@ -85,12 +87,18 @@ class _CoachMessageListState extends State<CoachMessageList> {
       );
       if (day != stamp) {
         day = stamp;
-        rows.add(_DayHeader(stamp));
+        final label = _olderDateLabel(context, stamp);
+        if (label != null) rows.add(_DayHeader(label));
       }
       rows.add(
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          child: Reveal(child: _tile(context, controller, message)),
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Reveal(
+            child: _Stamped(
+              message: message,
+              child: _tile(context, controller, message),
+            ),
+          ),
         ),
       );
     }
@@ -226,7 +234,10 @@ class _CoachMessageListState extends State<CoachMessageList> {
       'calorie_ring' => CalorieRingView(message: message),
       'weigh_in' => WeighInView(message: message, controller: controller),
       'water' => WaterView(message: message, controller: controller),
-      'fact_card' => FactCardView(message: message),
+      'fact_card' => FactCardView(
+        message: message,
+        onOpenMeal: (item) => _openFactMeal(context, message, item),
+      ),
       'day_brief' => DayBriefView(
         message: message,
         onPick: controller.sendText,
@@ -240,6 +251,33 @@ class _CoachMessageListState extends State<CoachMessageList> {
         failed: message.failed,
       ),
     };
+  }
+
+  void _openFactMeal(
+    BuildContext context,
+    CoachMessage message,
+    Map<String, dynamic> item,
+  ) {
+    final store = DemoScope.of(context);
+    final raw = asString(message.payload['date']);
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return;
+    final day = DateTime(parsed.year, parsed.month, parsed.day);
+    final meals = store.mealsOn(day);
+    final title = asString(item['title']);
+    final hits = <int>[
+      for (var i = 0; i < meals.length; i++)
+        if (meals[i].title == title) i,
+    ];
+    if (hits.length != 1) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => HeroMode(
+          enabled: false,
+          child: MealDetailPage(date: day, index: hits.single),
+        ),
+      ),
+    );
   }
 
   void _openPlanMeal(BuildContext context, CoachMessage message) {
@@ -276,19 +314,60 @@ class _CoachMessageListState extends State<CoachMessageList> {
   }
 }
 
-class _DayHeader extends StatelessWidget {
-  const _DayHeader(this.day);
-  final DateTime day;
+String? _olderDateLabel(BuildContext context, DateTime day) {
+  final now = DemoScope.of(context).today;
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  if (day == today || day == yesterday) return null;
+  return persianDate(day, year: day.year != today.year);
+}
+
+String _clock(DateTime time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return fa('$hour:$minute');
+}
+
+class _Stamped extends StatelessWidget {
+  const _Stamped({required this.message, required this.child});
+  final CoachMessage message;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final now = DemoScope.of(context).today;
-    final today = DateTime(now.year, now.month, now.day);
-    final label = day == today
-        ? 'امروز'
-        : day == today.subtract(const Duration(days: 1))
-        ? 'دیروز'
-        : fa('${day.year}/${day.month}/${day.day}');
+    final user = message.isUser;
+    return Align(
+      widthFactor: 1,
+      alignment: user ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          child,
+          Padding(
+            padding: const EdgeInsets.only(top: 3, right: 6),
+            child: Text(
+              _clock(message.createdAt.toLocal()),
+              style: const TextStyle(
+                color: AppColors.faint,
+                fontSize: 10,
+                height: 1,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayHeader extends StatelessWidget {
+  const _DayHeader(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(

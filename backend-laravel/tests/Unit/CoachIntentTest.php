@@ -21,6 +21,9 @@ final class CoachIntentTest extends TestCase
     {
         $parsed = $this->parser->parse($text);
         self::assertSame($intent, $parsed['intent'], $text);
+        if ($intent === 'check_progress') {
+            self::assertLessThan(0.8, $parsed['confidence']);
+        }
         foreach ($params as $key => $value) {
             self::assertEquals($value, $parsed['params'][$key] ?? null, $text.' '.$key);
         }
@@ -53,6 +56,7 @@ final class CoachIntentTest extends TestCase
             'dislike is memory' => ['دوست ندارم قارچ', 'remember'],
             'swap is explicit' => ['ناهار را عوض کن', 'swap_meal', ['meal' => 'lunch']],
             'hello' => ['سلام', 'general_question'],
+            'plateau' => ['حس میکنم هر کاری میکنم لاغر نمیشم', 'check_progress'],
         ];
     }
 }

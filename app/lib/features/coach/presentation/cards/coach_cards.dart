@@ -312,33 +312,49 @@ class QuickRepliesView extends StatelessWidget {
 }
 
 class FactCardView extends StatelessWidget {
-  const FactCardView({super.key, required this.message});
+  const FactCardView({super.key, required this.message, this.onOpenMeal});
   final CoachMessage message;
+  final void Function(Map<String, dynamic> item)? onOpenMeal;
 
   @override
   Widget build(BuildContext context) {
     final payload = message.payload;
     final items = asMapList(payload['items']);
     final kind = asString(payload['kind']);
+    final meals = kind == 'meals';
     return Align(
+      widthFactor: 1,
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.88,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.86,
         ),
         child: AppCard(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: EdgeInsets.fromLTRB(10, meals ? 8 : 12, 10, meals ? 8 : 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                asString(payload['title'], message.fallbackText),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: AppColors.emeraldDark,
+              if (!meals)
+                Text(
+                  asString(payload['title'], message.fallbackText),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: AppColors.emeraldDark,
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 2, 4, 6),
+                  child: Text(
+                    asString(payload['title']),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted,
+                    ),
+                  ),
                 ),
-              ),
               if (asString(payload['body']).isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
@@ -346,67 +362,98 @@ class FactCardView extends StatelessWidget {
                   style: const TextStyle(height: 1.7, fontSize: 13),
                 ),
               ],
-              const SizedBox(height: 6),
               for (final item in items)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      if (kind == 'meals') ...[
-                        FoodImage(
-                          title: asString(item['title']),
-                          mealType: asString(item['meal']),
-                          thumb: true,
-                          width: 44,
-                          height: 44,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              asString(item['title']),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                height: 1.4,
-                              ),
-                            ),
-                            if (asString(item['subtitle']).isNotEmpty ||
-                                asString(item['meal']).isNotEmpty)
-                              Text(
-                                [
-                                  asString(item['meal']),
-                                  asString(item['subtitle']),
-                                ].where((part) => part.isNotEmpty).join(' · '),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppColors.muted,
-                                  fontSize: 12,
-                                  height: 1.5,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (asInt(item['kcal']) > 0)
-                        Text(
-                          fa(asInt(item['kcal'])),
-                          style: const TextStyle(
-                            color: AppColors.emeraldDeep,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                _FactRow(item: item, kind: kind, onOpen: onOpenMeal),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FactRow extends StatelessWidget {
+  const _FactRow({required this.item, required this.kind, this.onOpen});
+  final Map<String, dynamic> item;
+  final String kind;
+  final void Function(Map<String, dynamic> item)? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final kcal = asInt(item['kcal']);
+    final meal = kind == 'meals';
+    final meta = [
+      if (asString(item['meal']).isNotEmpty) asString(item['meal']),
+      if (asString(item['subtitle']).isNotEmpty) asString(item['subtitle']),
+      if (kcal > 0) '${fa(kcal)} کالری',
+    ].join(' · ');
+    final row = Row(
+      children: [
+        if (meal) ...[
+          FoodImage(
+            title: asString(item['title']),
+            mealType: asString(item['meal']),
+            thumb: true,
+            width: 56,
+            height: 56,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          const SizedBox(width: 10),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                asString(item['title']),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  height: 1.45,
+                  color: AppColors.ink,
+                ),
+              ),
+              if (meta.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  meta,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: meal ? AppColors.emeraldDeep : AppColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (meal)
+          const Icon(
+            Icons.chevron_left_rounded,
+            color: AppColors.faint,
+            size: 22,
+          ),
+      ],
+    );
+    if (!meal || onOpen == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: row,
+      );
+    }
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onOpen!(item),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: row,
         ),
       ),
     );
@@ -562,6 +609,7 @@ class SwapOptionsView extends StatelessWidget {
     final mealId = asString(payload['mealId']);
     final reason = asString(payload['reason'], 'variety');
     return Align(
+      widthFactor: 1,
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(

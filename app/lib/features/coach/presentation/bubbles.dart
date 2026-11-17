@@ -77,6 +77,7 @@ class CoachTextBubble extends StatelessWidget {
       ),
     );
     return Align(
+      widthFactor: 1,
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: isUser
           ? bubble
@@ -133,6 +134,7 @@ class CoachPhotoBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
+      widthFactor: 1,
       alignment: Alignment.centerRight,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.lg),

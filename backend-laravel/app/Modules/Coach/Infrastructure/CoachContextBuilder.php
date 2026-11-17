@@ -14,15 +14,47 @@ final class CoachContextBuilder
     public function __construct(private ConnectionInterface $db) {}
 
     /**
-     * Build context for a chat message.
-     * Dynamically includes: profile summary, today plan, preferences, progress.
+     * A short tail of the same thread, oldest first. The current user line is omitted.
      *
-     * @param  string  $messageText  User message text for relevance detection
+     * @return list<array{role: string, content: string}>
+     */
+    public function recentDialogue(string $userId, string $currentText): array
+    {
+        $threadId = $this->db->table('coach_threads')->where('user_id', $userId)->value('id');
+        if (! is_string($threadId) || $threadId === '') {
+            return [];
+        }
+        $rows = $this->db->table('coach_messages')
+            ->where('thread_id', $threadId)
+            ->whereIn('role', ['user', 'assistant'])
+            ->orderByDesc('seq')
+            ->limit(7)
+            ->get(['role', 'fallback_text']);
+        $turns = [];
+        foreach ($rows->reverse() as $row) {
+            $text = trim((string) $row->fallback_text);
+            if ($text === '') {
+                continue;
+            }
+            if (mb_strlen($text, 'UTF-8') > 500) {
+                $text = mb_substr($text, 0, 500, 'UTF-8').'…';
+            }
+            $turns[] = ['role' => $row->role === 'assistant' ? 'assistant' : 'user', 'content' => $text];
+        }
+        $last = $turns[array_key_last($turns)] ?? null;
+        if (is_array($last) && $last['role'] === 'user' && $last['content'] === trim($currentText)) {
+            array_pop($turns);
+        }
+
+        return $turns;
+    }
+
+    /**
      * @return array{profile: array, todayPlan: ?array, preferences: array, progress: ?array}
      */
     public function buildForChat(string $userId, string $messageText): array
     {
-        $lower = mb_strtolower($messageText, 'UTF-8');
+        $lower = str_replace("\u{200c}", '', mb_strtolower($messageText, 'UTF-8'));
 
         return [
             'profile' => $this->profileSummary($userId),
@@ -185,19 +217,38 @@ final class CoachContextBuilder
             ->get(['civil_date', 'kilograms']);
 
         if ($weights->isEmpty()) {
-            return null;
+            return [
+                'memberSince' => $this->memberSince($userId),
+                'latestWeightKg' => null,
+                'history' => [],
+                'changeKg' => null,
+                'direction' => 'ثبت نشده',
+            ];
         }
 
         $latest = $weights->first();
         $oldest = $weights->last();
-        $change = $weights->count() > 1 ? round($latest->kilograms - $oldest->kilograms, 1) : 0;
+        $change = $weights->count() > 1 ? round((float) $latest->kilograms - (float) $oldest->kilograms, 1) : 0;
+        $history = $weights->reverse()->values()->map(fn ($row) => [
+            'date' => $row->civil_date,
+            'kg' => round((float) $row->kilograms, 1),
+        ])->all();
 
         return [
-            'latestWeight' => round((float) $latest->kilograms, 1),
+            'memberSince' => $this->memberSince($userId),
+            'latestWeightKg' => round((float) $latest->kilograms, 1),
             'latestDate' => $latest->civil_date,
-            'weeklyChange' => $change,
-            'trend' => $change < -0.3 ? 'decreasing' : ($change > 0.3 ? 'increasing' : 'stable'),
+            'changeKg' => $change,
+            'direction' => $change < -0.3 ? 'کاهش' : ($change > 0.3 ? 'افزایش' : 'ثابت'),
+            'history' => $history,
         ];
+    }
+
+    private function memberSince(string $userId): ?string
+    {
+        $created = $this->db->table('users')->where('id', $userId)->value('created_at');
+
+        return is_string($created) && $created !== '' ? substr($created, 0, 10) : null;
     }
 
     private function mealDetails(string $mealId): ?array
@@ -280,7 +331,7 @@ final class CoachContextBuilder
 
     private function needsProgress(string $lower): bool
     {
-        $keywords = ['وزن', 'پیشرفت', 'کاهش', 'افزایش', 'چقدر', 'کیلو', 'موفق'];
+        $keywords = ['وزن', 'پیشرفت', 'کاهش', 'افزایش', 'کیلو', 'لاغر', 'ثابت', 'کم نمیش', 'کم نمی'];
         foreach ($keywords as $kw) {
             if (str_contains($lower, $kw)) {
                 return true;

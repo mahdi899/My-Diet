@@ -125,10 +125,13 @@ PROMPT;
         $systemPrompt = $this->injectContext(self::SYSTEM_PROMPT, $context);
 
         // Build messages array
-        $messages = $this->pools->promptMessages('coach_system', ['context' => json_encode($context, JSON_UNESCAPED_UNICODE), 'input' => $userMessage]);
-
-        if ($intent['intent'] !== 'general_question') {
-            $messages[] = ['role' => 'system', 'content' => 'نیت تشخیص‌داده‌شده: '.$intent['intent'].' '.json_encode($intent['params'], JSON_UNESCAPED_UNICODE)];
+        $messages = $this->addressUser(
+            $this->pools->promptMessages('coach_system', ['context' => json_encode($context, JSON_UNESCAPED_UNICODE), 'input' => $userMessage]),
+            $userMessage,
+            $contextBuilder->recentDialogue($userId, $userMessage),
+        );
+        if ($intent['intent'] === 'check_progress') {
+            $messages[] = ['role' => 'system', 'content' => 'این پیام دربارهٔ نرسیدن به کاهش وزن است. فقط از progress در زمینه استفاده کن: memberSince تاریخ عضویت، history وزن‌ها به کیلوگرم، changeKg و direction. عدد تازه‌ای نساز. اگر history خالی است بگو وزن ثبت نشده. کوتاه، همدل و بدون سرزنش جواب بده.'];
         }
 
         try {
@@ -220,6 +223,29 @@ PROMPT;
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
+    /**
+     * The stored user template can be empty. The model must still see the message.
+     *
+     * @param  list<array{role: string, content: mixed}>  $messages
+     * @return list<array{role: string, content: mixed}>
+     */
+    /**
+     * @param  list<array{role: string, content: string}>  $history
+     */
+    private function addressUser(array $messages, string $userMessage, array $history = []): array
+    {
+        $system = $messages[0] ?? ['role' => 'system', 'content' => ''];
+        $notes = [];
+        foreach (array_slice($messages, 1) as $message) {
+            if (($message['role'] ?? '') === 'system') {
+                $notes[] = $message;
+            }
+        }
+        $notes[] = ['role' => 'system', 'content' => 'ابزاری در این گفتگو صدا زده نمی‌شود. فقط متن بفرست. اگر کاربر سلام نکرده، جواب را با سلام شروع نکن. این ادامهٔ همان گفتگو است؛ حرف قبلی خودت را به یاد داشته باش، خودت را دوباره معرفی نکن و از کاربر نخواه کاری را که همین حالا گفته انجام داده، از نو انجام دهد.'];
+
+        return [$system, ...$history, ['role' => 'user', 'content' => $userMessage], ...$notes];
+    }
+
     private function injectContext(string $template, array $context): string
     {
         $profile = $this->formatProfile($context['profile']);
@@ -308,16 +334,12 @@ TEXT;
             return 'هنوز وزنی ثبت نشده.';
         }
 
-        $trend = [
-            'decreasing' => 'در حال کاهش ✓',
-            'increasing' => 'در حال افزایش',
-            'stable' => 'ثابت',
-        ][$progress['trend']] ?? '';
+        $direction = $progress['direction'] ?? 'ثبت نشده';
+        $latest = $progress['latestWeightKg'] ?? 'ثبت نشده';
+        $change = $progress['changeKg'] ?? 'ثبت نشده';
+        $since = $progress['memberSince'] ?? 'ثبت نشده';
 
-        return <<<TEXT
-آخرین وزن: {$progress['latestWeight']} کیلو ({$progress['latestDate']})
-تغییر هفتگی: {$progress['weeklyChange']} کیلو ({$trend})
-TEXT;
+        return "عضویت: {$since}\nآخرین وزن: {$latest} کیلو\nتغییر: {$change} کیلو ({$direction})";
     }
 
     private function parseVisionResponse(string $content): array
