@@ -63,6 +63,9 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <section className="login-layout" aria-label="ورود به پنل پزشک">
+      <div className="doctor-login-portrait" aria-hidden="true">
+        <span>پنل پزشکان</span>
+      </div>
       <div className="login-form-area"><div className="login-form-wrap">
         <div style={{ marginBottom: 28 }}><BrandLogo size={52} /></div>
         <h1>متخصص گرامی خوش آمدید!</h1>

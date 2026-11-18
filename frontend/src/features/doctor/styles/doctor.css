@@ -3,7 +3,72 @@
 .doctor-portal.admin-reference .login-form-area { width: min(480px, 100%); margin: -48px auto 0; }
 .doctor-portal.admin-reference .login-form-wrap h1 { white-space: nowrap; font-size: 28px; line-height: 1.4; margin: 0 0 36px; text-align: center; }
 .doctor-portal.admin-reference .login-form-wrap { max-width: 420px; }
+.doctor-login-portrait { display: none; }
+@media (min-width: 960px) {
+  .doctor-portal.admin-reference .login-layout:has(.doctor-login-portrait) {
+    display: grid;
+    direction: rtl;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+    align-items: stretch;
+    gap: clamp(24px, 4vw, 80px);
+  }
+  .doctor-login-portrait {
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px;
+    padding: clamp(32px, 4vw, 72px);
+    background: linear-gradient(0deg, #173f32 0%, transparent 22%),
+      url('./olive-canvas.svg') center / cover no-repeat, #ede7d4;
+  }
+  .doctor-login-portrait::before {
+    content: '';
+    position: absolute;
+    inset: 16px;
+    border: 1px solid rgb(255 255 255 / 30%);
+    border-radius: 18px;
+  }
+  .doctor-login-portrait span {
+    color: white;
+    font-size: clamp(32px, 3vw, 52px);
+    font-weight: 700;
+  }
+  .doctor-portal.admin-reference .doctor-login-portrait + .login-form-area {
+    align-self: center;
+    margin: 0 auto;
+  }
+}
 .doctor-portal.admin-reference .profile strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doctor-portal .profile img, .doctor-portal .topbar-avatar img, .doctor-profile-photo img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+}
+.doctor-portal .doctor-profile-editor { max-width: 880px; display: grid; gap: 20px; }
+.doctor-profile-summary, .doctor-row-actions, .doctor-details-dialog header {
+  display: flex; align-items: center; gap: 12px;
+}
+.doctor-profile-summary p { margin: 4px 0 0; }
+.doctor-profile-photo {
+  width: 78px; height: 78px; display: grid; place-items: center; flex-shrink: 0;
+  border-radius: 50%; background: #e9f0df; color: #254e40; font-size: 28px;
+}
+.doctor-profile-fields, .doctor-detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 16px;
+}
+.doctor-profile-fields { align-items: end; }
+.doctor-profile-editor > button { justify-self: start; }
+.doctor-portal .doctor-row-actions button.icon-button, .doctor-details-dialog button.icon-button { min-width: 44px; min-height: 44px; padding: 8px; }
+.doctor-details-dialog {
+  width: min(620px, calc(100% - 32px)); max-height: 85dvh; padding: 24px;
+  border: 1px solid var(--line, #dbe4d6); border-radius: 20px;
+  background: #fdfefb; color: var(--ink, #1d382e); overflow: auto; direction: rtl;
+}
+.doctor-details-dialog::backdrop { background: #183b31a6; }
+.doctor-details-dialog header { justify-content: space-between; }
+.doctor-details-dialog header h2 { margin: 0; }
+.doctor-detail-grid > div { padding: 12px; background: #f1f5ee; border-radius: 12px; overflow-wrap: anywhere; }
+.doctor-detail-grid dd { margin: 5px 0 0; font-weight: 600; }
+.doctor-details-dialog .doctor-row-actions { flex-wrap: wrap; }
 .doctor-portal.admin-reference .login-submit,
 .doctor-portal.admin-reference .login-switch,
 .doctor-portal.admin-reference .login-form-wrap .secondary { width: 100%; justify-content: center; }

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { AdminIcon as Icon } from '../../admin/components/AdminIcon'
 import { doctorNav } from '../nav'
 import { loadProfile } from '../data/api'
@@ -16,14 +17,10 @@ export function DoctorShell({ section, onNavigate, onLogout, children, onRefresh
 }) {
   const [open, setOpen] = useState(false)
   const [account, setAccount] = useState(false)
-  const [name, setName] = useState('پزشک')
+  const { data: profile } = useQuery({ queryKey: ['doctor', 'profile'], queryFn: loadProfile })
+  const name = profile?.displayName?.trim() || 'پزشک'
   const current = doctorNav.find((item) => item.id === section) ?? doctorNav[0]!
   const groups = [...new Set(doctorNav.map((item) => item.group))]
-  useEffect(() => {
-    let alive = true
-    loadProfile().then((profile) => { if (alive) setName(profile.displayName?.trim() || 'پزشک') }).catch(() => {})
-    return () => { alive = false }
-  }, [])
   useEffect(() => {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); setAccount(false) } }
     document.addEventListener('keydown', escape)
@@ -33,6 +30,7 @@ export function DoctorShell({ section, onNavigate, onLogout, children, onRefresh
   function go(id: string) {
     if (!canLeaveDoctor()) return
     setOpen(false)
+    setAccount(false)
     onNavigate(id)
   }
   return (
@@ -60,7 +58,7 @@ export function DoctorShell({ section, onNavigate, onLogout, children, onRefresh
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="profile"><span className="avatar">{initial}</span><div><strong>{name}</strong><small>حساب پزشک رژیم من</small></div></div>
+          <Link className="profile" to="/doctor/profile" onClick={event => { event.preventDefault(); go('profile') }}><span className="avatar">{profile?.portrait ? <img src={profile.portrait} alt="" /> : initial}</span><div><strong>{name}</strong><small>پروفایل حرفه‌ای</small></div></Link>
           <button className="logout-button" onClick={onLogout}><Icon name="logout" />خروج از حساب</button>
         </div>
       </aside>
@@ -76,8 +74,8 @@ export function DoctorShell({ section, onNavigate, onLogout, children, onRefresh
           <div className="topbar-meta">
             <span className="today"><Icon name="calendar" /><time>{new Date().toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran', weekday: 'long', day: 'numeric', month: 'long' })}</time></span>
             <div className="account-menu">
-              <button className="topbar-avatar" aria-label={'حساب ' + name} aria-expanded={account} onClick={() => setAccount((value) => !value)}>{initial}</button>
-              {account && <div className="account-dropdown"><button onClick={onLogout}><Icon name="logout" />خروج از حساب</button></div>}
+              <button className="topbar-avatar" aria-label={'حساب ' + name} aria-expanded={account} onClick={() => setAccount((value) => !value)}>{profile?.portrait ? <img src={profile.portrait} alt="" /> : initial}</button>
+              {account && <div className="account-dropdown"><button onClick={() => go('profile')}><Icon name="medical" />پروفایل حرفه‌ای</button><button onClick={onLogout}><Icon name="logout" />خروج از حساب</button></div>}
             </div>
           </div>
         </div>

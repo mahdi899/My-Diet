@@ -27,9 +27,11 @@ export function clearDoctorPreview() {
 }
 
 export const previewProfile = {
+  portrait: '',
+  education: '',
   displayName: 'دکتر نازنین رضایی',
   credential: 'تغذیه و رژیم‌درمانی',
   councilNo: '۱۳۳۴۵۶',
-  verificationStatus: 'verified' as const,
+  verificationStatus: 'verified',
   bio: 'همراه برنامهٔ غذایی کاربران رژیم من. این متن فقط برای نمایش ظاهر پروفایل است.',
 }

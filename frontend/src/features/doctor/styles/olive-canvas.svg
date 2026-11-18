@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <defs>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".64" numOctaves="3" stitchTiles="stitch"/></filter>
+    <path id="leaf" d="M0 0 Q-13 -51 16 -89 Q37 -34 0 0Z"/>
+  </defs>
+  <rect width="600" height="800" fill="#ede7d4"/>
+  <circle cx="384" cy="214" r="105" fill="#d3ad71"/>
+  <path d="M-30 503 Q85 422 138 283 T337 84 Q243 220 241 340 T136 583Z" fill="#b6bd98"/>
+  <path d="M-40 583 Q124 514 218 444 T495 364 Q346 412 311 491 T29 678Z" fill="#839677"/>
+  <path d="M-20 694 Q186 571 322 582 T633 453 V820 H-20Z" fill="#487362"/>
+  <path d="M-20 743 Q146 654 327 665 T630 550 V820 H-20Z" fill="#204e40"/>
+  <g fill="#456552" stroke="#456552" stroke-linecap="round">
+    <path d="M187 615 Q227 475 338 347 T454 114" fill="none" stroke-width="4"/>
+    <use href="#leaf" transform="translate(236 500) rotate(-50) scale(1.18)"/>
+    <use href="#leaf" transform="translate(254 471) rotate(56) scale(1.04)"/>
+    <use href="#leaf" transform="translate(286 418) rotate(-42)"/>
+    <use href="#leaf" transform="translate(316 376) rotate(52)"/>
+    <use href="#leaf" transform="translate(355 326) rotate(-39) scale(.93)"/>
+    <use href="#leaf" transform="translate(380 288) rotate(45) scale(.9)"/>
+    <use href="#leaf" transform="translate(408 241) rotate(-35) scale(.84)"/>
+    <use href="#leaf" transform="translate(428 196) rotate(34) scale(.75)"/>
+    <use href="#leaf" transform="translate(449 133) rotate(-5) scale(.66)"/>
+  </g>
+  <rect width="600" height="800" filter="url(#grain)" opacity=".18" style="mix-blend-mode:multiply"/>
+</svg>

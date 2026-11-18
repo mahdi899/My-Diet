@@ -115,6 +115,9 @@ export type ChangeRequest = {
 export type QueueRow = {
   id: string
   displayName: string
+  phone?: string | null
+  goal?: string | null
+  track?: string | null
   status: string
   kind: string
   createdAt: string
@@ -316,8 +319,8 @@ export function composePreviewOption(kind: PlanOption['kind'], items: { slug: st
 }
 
 export const previewReviewQueue: QueueRow[] = [
-  { id: 'plan-demo', displayName: 'سارا احمدی', status: 'awaiting_review', kind: 'new_plan', createdAt: '2026-11-12T08:00:00+03:30' },
-  { id: 'plan-demo-2', displayName: 'امیر حسینی', status: 'in_review', kind: 'revision', createdAt: '2026-11-11T09:30:00+03:30' },
+  { id: 'plan-demo', displayName: 'سارا احمدی', phone: '+989120000001', track: 'weight_loss', status: 'awaiting_review', kind: 'new_plan', createdAt: '2026-11-12T08:00:00+03:30' },
+  { id: 'plan-demo-2', displayName: 'امیر حسینی', phone: '+989120000002', track: 'weight_gain', status: 'in_review', kind: 'revision', createdAt: '2026-11-11T09:30:00+03:30' },
 ]
 
 export function createChangeSample() {

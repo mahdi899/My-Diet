@@ -120,7 +120,11 @@ final class MySqlPlanQueries implements PlanQueryStore
     {
         $where = ['generating' => "r.status in ('queued','generating')", 'awaiting_review' => "r.status='in_review' and r.kind='new_plan'", 'awaiting_user' => "r.status='awaiting_user'",
             'response_received' => "r.status='response_received'", 'revisions' => "r.kind in ('ai_revision','specialist_revision') and r.status not in ('published','cancelled')", 'published' => "r.status='published'"];
-        $q = $this->db->table('plan_requests as r')->join('users as u', 'u.id', '=', 'r.user_id')->where('r.assigned_specialist_id', $actor)->select('r.id', 'r.status', 'r.kind', 'r.created_at', 'u.display_name')->orderByDesc('r.created_at')->limit(100);
+        $q = $this->db->table('plan_requests as r')->join('users as u', 'u.id', '=', 'r.user_id')
+            ->leftJoin('nutrition_profiles as p', 'p.user_id', '=', 'u.id')
+            ->where('r.assigned_specialist_id', $actor)
+            ->select('r.id', 'r.status', 'r.kind', 'r.created_at', 'u.display_name', 'u.phone_e164', 'p.goal', 'p.track')
+            ->orderByDesc('r.created_at')->limit(100);
         if ($bucket !== null) {
             $q->whereRaw($where[$bucket]);
         }
