@@ -43,9 +43,9 @@ final class MySqlWorker implements WorkerStore
         });
     }
 
-    public function succeed(string $id, string $lease): void
+    public function succeed(string $id, string $lease, ?string $note = null): void
     {
-        $this->db->table('worker_jobs')->where('id', $id)->where('status', 'leased')->where('lease_token', $lease)->update(['status' => 'succeeded', 'lease_until' => null, 'lease_token' => null, 'last_error' => null, 'updated_at' => $this->db->raw('current_timestamp(6)')]);
+        $this->db->table('worker_jobs')->where('id', $id)->where('status', 'leased')->where('lease_token', $lease)->update(['status' => 'succeeded', 'lease_until' => null, 'lease_token' => null, 'last_error' => $note === null ? null : mb_substr($note, 0, 500), 'updated_at' => $this->db->raw('current_timestamp(6)')]);
     }
 
     public function fail(string $id, string $error, int $attempts, int $limit = 3, ?string $lease = null): void

@@ -56,18 +56,10 @@ class HomeWeightCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   if (values.isNotEmpty)
-                    Ticker(
+                    _WeightTicker(
+                      key: ObjectKey(store),
+                      session: store,
                       value: store.latestWeight,
-                      fractionDigits:
-                          store.latestWeight ==
-                              store.latestWeight.roundToDouble()
-                          ? 0
-                          : 1,
-                      suffix: ' کیلو',
-                      style: AppTypography.number.copyWith(
-                        fontSize: 36,
-                        color: const Color(0xFF07543A),
-                      ),
                     )
                   else
                     const Text('هنوز ثبت نشده', style: AppTypography.cardTitle),
@@ -204,4 +196,41 @@ class HomeWeightCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _WeightTicker extends StatefulWidget {
+  const _WeightTicker({super.key, required this.session, required this.value});
+
+  final CustomerWorkspace session;
+  final double value;
+
+  @override
+  State<_WeightTicker> createState() => _WeightTickerState();
+}
+
+class _WeightTickerState extends State<_WeightTicker> {
+  // The workspace lives for the app session, even when scrolling disposes cards.
+  // Weak keys keep this presentation state out of persisted customer data.
+  static final _started = Expando<bool>('home-weight-intro');
+  late final double _from;
+
+  @override
+  void initState() {
+    super.initState();
+    _from = _started[widget.session] == true ? widget.value : 0;
+    // Claim at the start so an interrupted entrance cannot replay on return.
+    _started[widget.session] = true;
+  }
+
+  @override
+  Widget build(BuildContext context) => Ticker(
+    value: widget.value,
+    from: _from,
+    fractionDigits: widget.value == widget.value.roundToDouble() ? 0 : 1,
+    suffix: ' کیلو',
+    style: AppTypography.number.copyWith(
+      fontSize: 36,
+      color: const Color(0xFF07543A),
+    ),
+  );
 }

@@ -72,6 +72,13 @@ final class MySqlPlanQueries implements PlanQueryStore
         return $row === null ? null : (array) $row;
     }
 
+    public function latestGenerationStatus(string $request): ?string
+    {
+        $status = $this->db->table('ai_generations')->where('request_id', $request)->orderByDesc('created_at')->value('status');
+
+        return is_string($status) ? $status : null;
+    }
+
     public function requests(string $user): array
     {
         return $this->rows($this->db->table('plan_requests')->where('user_id', $user)->orderByDesc('created_at')->limit(50)->get()->all());

@@ -71,6 +71,7 @@ Widget host(
 }) => DemoScope(
   store: store,
   child: MaterialApp(
+    debugShowCheckedModeBanner: false,
     theme: appTheme(),
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(
@@ -112,7 +113,7 @@ void main() {
       find.descendant(of: summary, matching: find.textContaining(breakfast)),
       findsNothing,
     );
-    await tester.tap(find.byKey(const ValueKey('coach-summary-toggle')));
+    await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
     await tester.pumpAndSettle();
     expect(
       find.descendant(of: summary, matching: find.textContaining(breakfast)),
@@ -136,7 +137,7 @@ void main() {
     final store = ready();
     await tester.pumpWidget(host(store, _SpyCoach(store)));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('coach-summary-toggle')));
+    await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
     await tester.pumpAndSettle();
     final summary = find.byType(CoachTodaySummary);
     Finder inSummary(Finder matching) =>
@@ -187,7 +188,7 @@ void main() {
     final store = ready();
     await tester.pumpWidget(host(store, _SpyCoach(store)));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('coach-summary-toggle')));
+    await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('coach-summary-meal-1')));
     await tester.pumpAndSettle();
@@ -227,13 +228,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('coach-input')),
+        'وعدهٔ بعدی',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('coach-send')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('coach-input')),
         'دربارهٔ ناهار سوال دارم',
       );
       await tester.ensureVisible(find.text('مشاهدهٔ وعده'));
       await tester.tap(find.text('مشاهدهٔ وعده'));
       await tester.pumpAndSettle();
       final detail = tester.widget<MealDetailPage>(find.byType(MealDetailPage));
-      expect(detail.index, 1);
+      expect(detail.index, 0);
+      expect(detail.date, store.today);
       Navigator.of(tester.element(find.byType(MealDetailPage))).pop();
       await tester.pumpAndSettle();
       expect(
@@ -276,7 +285,7 @@ void main() {
     final repo = _SpyCoach(store);
     await tester.pumpWidget(host(store, repo, scale: 1.35));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('coach-summary-toggle')));
+    await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(host(store, repo, scale: 1.35, inset: 300));

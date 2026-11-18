@@ -27,7 +27,7 @@ class SabzineApp extends StatefulWidget {
     super.key,
     this.store,
     this.link,
-    this.splashDuration = const Duration(milliseconds: 1300),
+    this.splashDuration = Duration.zero,
     this.restoreOnStart = false,
   });
   final Duration splashDuration;
@@ -145,14 +145,7 @@ class _SabzineAppState extends State<SabzineApp> with WidgetsBindingObserver {
           textDirection: TextDirection.rtl,
           child: ConnectionGate(link: links, child: child!),
         ),
-        home: starting
-            ? (widget.splashDuration > Duration.zero
-                  ? const SplashScreen()
-                  : const Scaffold(
-                      backgroundColor: cream,
-                      body: SizedBox.shrink(),
-                    ))
-            : const AppRoot(),
+        home: starting ? const SplashScreen() : const AppRoot(),
       ),
     ),
   );
@@ -164,7 +157,9 @@ class AppRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     // Legacy fixtures may still set staff roles; the shipped client is user-only.
-    if (!store.userSignedIn || store.suppressLiveEntry) return const FirstLoginScreen();
+    if (!store.userSignedIn || store.suppressLiveEntry) {
+      return const FirstLoginScreen();
+    }
     // One app. The server only decides the onboarding path; the home is always this shell.
     if (store.serverAuthEnabled && !store.liveReady) {
       return LiveEntry(store: store);
@@ -192,28 +187,33 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
   bool resumingPlan = false;
   Timer? _livePoll;
   bool _refreshing = false;
+  bool _foreground = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _foreground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    if (_foreground) _startLivePolling();
+  }
+
+  void _startLivePolling() {
+    _livePoll?.cancel();
     _livePoll = Timer.periodic(
       const Duration(seconds: 8),
       (_) => _refreshLive(),
     );
   }
 
-  bool _waiting(DemoStore store) =>
-      store.serverAuthEnabled &&
-      store.liveReady &&
-      (!store.hasUserRequest ||
-          !store.userRequest.isPublished ||
-          store.liveOpenQuestions.isNotEmpty);
-
   Future<void> _refreshLive() async {
-    if (!mounted || _refreshing) return;
+    if (!mounted || !_foreground || _refreshing) return;
     final store = DemoScope.of(context);
-    if (!_waiting(store) || store.walletPurchaseBusy) return;
+    if (!store.serverAuthEnabled ||
+        !store.userSignedIn ||
+        store.walletPurchaseBusy) {
+      return;
+    }
     _refreshing = true;
     try {
       await refreshLive(store);
@@ -224,7 +224,13 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshLive();
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) {
+      _startLivePolling();
+      unawaited(_refreshLive());
+    } else {
+      _livePoll?.cancel();
+    }
   }
 
   int get _index => _tabs?.index ?? _local;
@@ -238,6 +244,7 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
 
   void _onTab() {
     if (mounted) setState(() {});
+    if (_index == 2) unawaited(_refreshLive());
   }
 
   void _show(int index) {
@@ -250,6 +257,7 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
       tabs.show(index);
     } else {
       setState(() => _local = index);
+      if (index == 2) unawaited(_refreshLive());
     }
   }
 

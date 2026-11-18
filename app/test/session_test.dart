@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sabzine_flutter/app.dart';
@@ -6,6 +7,8 @@ import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/session_storage.dart';
 import 'package:sabzine_flutter/presentation/screens/entry.dart';
 import 'package:sabzine_flutter/presentation/screens/first_login.dart';
+import 'package:sabzine_flutter/presentation/screens/splash.dart';
+import 'package:sabzine_flutter/presentation/widgets/brand_mark.dart';
 import 'package:sabzine_flutter/presentation/screens/wallet_flow.dart';
 import 'widget_test.dart' show mobile;
 
@@ -24,7 +27,40 @@ class MemorySession implements SessionStorage {
   }
 }
 
+class DeferredSession extends MemorySession {
+  final pending = Completer<String?>();
+  @override
+  Future<String?> read() => pending.future;
+}
+
 void main() {
+  testWidgets(
+    'restoring a saved session has no logo flash or intermediate login',
+    (tester) async {
+      mobile(tester);
+      final now = DateTime(2026, 11, 19);
+      final memory = MemorySession();
+      final first = DemoStore(sessionStorage: memory, clock: () => now)
+        ..login(AppRole.user);
+      addTearDown(first.dispose);
+      await first.saveUserSession();
+      final disk = DeferredSession();
+      final store = DemoStore(sessionStorage: disk, clock: () => now);
+      addTearDown(store.dispose);
+      await tester.pumpWidget(SabzineApp(store: store, restoreOnStart: true));
+      expect(find.byType(SplashScreen), findsOneWidget);
+      expect(find.byType(SabzineMark), findsNothing);
+      expect(find.byType(FirstLoginScreen), findsNothing);
+      disk.pending.complete(memory.value);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('shell-tab-bar')), findsOneWidget);
+      expect(find.byType(SplashScreen), findsNothing);
+      expect(find.byType(FirstLoginScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   test(
     'Thirty day session survives restart, does not slide, expires at exact boundary and logout clears it',
     () async {

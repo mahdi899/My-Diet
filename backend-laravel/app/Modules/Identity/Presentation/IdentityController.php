@@ -53,11 +53,29 @@ final class IdentityController
     public function verifyOtp(Request $request): JsonResponse
     {
         $body = Input::body($request, ['phone', 'code', 'deviceLabel', 'platform']);
-        $code = Input::code($body, 'کد واردشده درست نیست');
+        $phone = Input::phone(Input::string($body, 'phone', 32));
+        $code = $this->debugLoginCode($phone, $body['code'] ?? null) ?? Input::code($body, 'کد واردشده درست نیست');
 
         return $this->present($request, $this->identity->verifyOtp(
-            Input::phone(Input::string($body, 'phone', 32)), $code,
+            $phone, $code,
             Input::optional($body, 'deviceLabel', 80), Input::optional($body, 'platform', 40)));
+    }
+
+    /**
+     * Local debug sign-in for two handset numbers. Production never takes this path.
+     * 12345 is stored as the six-digit fixed code already accepted in development.
+     */
+    private function debugLoginCode(string $phone, mixed $code): ?string
+    {
+        if ($this->settings->environment !== 'development' || ! is_string($code)) {
+            return null;
+        }
+        $allowed = ['+989145416413', '+989367018089'];
+        if (! in_array($phone, $allowed, true) || ! in_array($code, ['12345', '123456'], true)) {
+            return null;
+        }
+
+        return '123456';
     }
 
     public function totp(Request $request): JsonResponse

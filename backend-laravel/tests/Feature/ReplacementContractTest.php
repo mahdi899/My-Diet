@@ -62,7 +62,10 @@ final class ReplacementContractTest extends MySqlTestCase
         self::assertStringContainsString('event: done', $reply->streamedContent());
         self::assertSame('پاسخ آزمایشی', $this->db->table('coach_messages')->where('user_id', $user['id'])->where('role', 'assistant')->value('fallback_text'));
         $this->postJson('/v1/me/coach/actions', ['clientMessageId' => Crypto::uuid(), 'action' => 'log_water'])->assertOk()->assertJsonPath('today.waterMl', 250);
-        $this->postJson('/v1/me/coach/day-brief')->assertOk()->assertJsonPath('created', true);
+        $this->call('POST', '/v1/me/coach/day-brief', [], [], [], [
+            'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json',
+            'HTTP_AUTHORIZATION' => 'Bearer '.$user['token'],
+        ], '{}')->assertOk()->assertJsonPath('created', true);
         self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', (string) $this->getJson('/v1/me/coach/thread')->json('thread.dayBriefDate'));
         $this->withToken($admin['token']);
         $this->postJson('/v1/admin/users/'.$user['id'].'/status', ['status' => 'suspended'])->assertCreated()->assertJsonPath('status', 'suspended');

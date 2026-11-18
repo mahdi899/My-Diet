@@ -2093,7 +2093,9 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
 
   Future<void> verifyLoginCode(String phone, String code) async {
     if (customerAuth == null) {
-      if (code != '123456') throw const AuthFailure('کد نمونه ۱۲۳۴۵۶ است.');
+      if (code != '123456' && !debugLoginOtp(phone, code)) {
+        throw const AuthFailure('کد نمونه ۱۲۳۴۵۶ است.');
+      }
       login(AppRole.user, phone: phone);
       return;
     }

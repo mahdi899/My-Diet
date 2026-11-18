@@ -10,24 +10,25 @@ import 'package:sabzine_flutter/features/home/weight_card.dart';
 import 'package:sabzine_flutter/features/plan/streak_chip.dart';
 import 'package:sabzine_flutter/features/coach/presentation/coach_page.dart';
 
-Widget footerHost(DemoStore store, Widget page, {double scale = 1}) =>
-    DemoScope(
-      store: store,
-      child: MaterialApp(
-        theme: appTheme(),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            disableAnimations: true,
-            textScaler: TextScaler.linear(scale),
-          ),
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: child!,
-          ),
-        ),
-        home: Scaffold(body: page),
+Widget footerHost(
+  DemoStore store,
+  Widget page, {
+  double scale = 1,
+  bool disableAnimations = true,
+}) => DemoScope(
+  store: store,
+  child: MaterialApp(
+    theme: appTheme(),
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        disableAnimations: disableAnimations,
+        textScaler: TextScaler.linear(scale),
       ),
-    );
+      child: Directionality(textDirection: TextDirection.rtl, child: child!),
+    ),
+    home: Scaffold(body: page),
+  ),
+);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -36,6 +37,68 @@ void main() {
           ..addFont(rootBundle.load('assets/fonts/Vazirmatn-Regular.ttf'))
           ..addFont(rootBundle.load('assets/fonts/Vazirmatn-Bold.ttf')))
         .load();
+  });
+
+  testWidgets('weight intro survives scroll disposal and tab recreation', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures(disableAnimations: false);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final store = DemoStore()..applyOnboardingWeight(54);
+    addTearDown(store.dispose);
+    Widget page() => footerHost(
+      store,
+      ListView.builder(
+        itemCount: 2,
+        itemBuilder: (_, index) =>
+            index == 0 ? const HomeWeightCard() : const SizedBox(height: 2000),
+      ),
+      disableAnimations: false,
+    );
+
+    await tester.pumpWidget(page());
+    expect(find.text('۰ کیلو'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('۰ کیلو'), findsNothing);
+    expect(find.text('۵۴ کیلو'), findsNothing);
+
+    // Scroll away before the entrance finishes, then rebuild the lazy child.
+    await tester.drag(find.byType(ListView), const Offset(0, -1400));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeWeightCard), findsNothing);
+    await tester.drag(find.byType(ListView), const Offset(0, 2000));
+    await tester.pump();
+    expect(find.text('۵۴ کیلو'), findsOneWidget);
+    expect(find.text('۰ کیلو'), findsNothing);
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(page());
+    expect(find.text('۵۴ کیلو'), findsOneWidget);
+
+    // A new measurement updates from the displayed weight, never from zero.
+    store.addWeight(55);
+    await tester.pump();
+    expect(find.text('۵۴ کیلو'), findsOneWidget);
+    expect(find.text('۰ کیلو'), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.text('۵۵ کیلو'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+
+    // A fresh app workspace gets its own first entrance.
+    final fresh = DemoStore()..applyOnboardingWeight(54);
+    addTearDown(fresh.dispose);
+    await tester.pumpWidget(
+      footerHost(fresh, const HomeWeightCard(), disableAnimations: false),
+    );
+    expect(find.text('۰ کیلو'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('۵۴ کیلو'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets(

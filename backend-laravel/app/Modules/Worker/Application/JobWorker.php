@@ -18,8 +18,8 @@ final class JobWorker
             $jobs = $this->store->claim();
             foreach ($jobs as $job) {
                 try {
-                    $this->handle($job);
-                    $this->store->succeed($job->id, $job->lease_token);
+                    $note = $this->handle($job);
+                    $this->store->succeed($job->id, $job->lease_token, $note);
                     $done++;
                 } catch (Throwable $error) {
                     $limit = $job->topic === 'plan.generate' ? 3 : 5;
@@ -31,15 +31,15 @@ final class JobWorker
         return $done;
     }
 
-    private function handle(object $job): void
+    private function handle(object $job): ?string
     {
         $payload = is_string($job->payload) ? json_decode($job->payload, true) : (array) $job->payload;
         if ($job->topic === 'plan.generate') {
             $requestId = $payload['payload']['requestId'] ?? $payload['requestId'] ?? $job->aggregate_id;
             $regenerate = (bool) ($payload['payload']['regenerate'] ?? $payload['regenerate'] ?? false);
-            $this->plans->generate((string) $requestId, $regenerate);
+            $reason = $this->plans->generate((string) $requestId, $regenerate);
 
-            return;
+            return in_array($reason, ['provider_error', 'invalid_draft'], true) ? $reason : null;
         }
         if ($job->topic === 'push.send') {
             $userId = $payload['userId'] ?? $payload['payload']['userId'] ?? null;
@@ -48,15 +48,15 @@ final class JobWorker
                 $this->realtime->deliver($userId, $kind);
             }
 
-            return;
+            return null;
         }
         if ($job->topic === 'shopping.invalidate') {
-            return;
+            return null;
         }
         if ($job->topic === 'coach.proactive') {
             $this->coach->proactive();
 
-            return;
+            return null;
         }
         throw new \RuntimeException('unknown topic '.$job->topic);
     }

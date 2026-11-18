@@ -4,6 +4,7 @@ namespace App\Modules\Coach\Presentation;
 
 use App\Modules\Coach\Application\CoachGateway;
 use App\Modules\Coach\Infrastructure\CoachQuotaService;
+use App\Modules\Coach\Infrastructure\CoachThreads;
 use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Shared\Domain\Problem;
 use App\Shared\Presentation\StrictInput as Input;
@@ -18,8 +19,36 @@ final class CoachController
 
     public function __construct(
         private CoachGateway $coach,
-        private CoachQuotaService $quota
+        private CoachQuotaService $quota,
+        private CoachThreads $threads,
     ) {}
+
+    public function threads(Request $request): array
+    {
+        return $this->threads->listing($this->actor($request));
+    }
+
+    public function createThread(Request $request): array
+    {
+        $body = Input::body($request, ['id'], true);
+        $id = Input::optional($body, 'id', 36);
+
+        return ['thread' => $this->threads->create($this->actor($request), $id === null ? null : Input::uuid($id))];
+    }
+
+    public function renameThread(Request $request, string $id): array
+    {
+        $body = Input::body($request, ['title']);
+
+        return ['thread' => $this->threads->rename($this->actor($request), Input::uuid($id), Input::string($body, 'title', 80))];
+    }
+
+    public function deleteThread(Request $request, string $id): array
+    {
+        $this->threads->delete($this->actor($request), Input::uuid($id));
+
+        return ['deleted' => true];
+    }
 
     public function thread(Request $request): array
     {
@@ -37,14 +66,23 @@ final class CoachController
             throw new Problem(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
         }
 
-        return $this->coach->thread($this->actor($request), $cursor, $size);
+        $threadId = $request->query('threadId');
+        if ($threadId !== null && ! is_string($threadId)) {
+            throw new Problem(400, 'validation', 'شناسه معتبر نیست');
+        }
+
+        return $this->coach->thread($this->actor($request), $cursor, $size, $threadId === null ? null : Input::uuid($threadId));
     }
 
     public function messages(Request $request): StreamedResponse
     {
         $userId = $this->actor($request);
 
-        $body = Input::body($request, ['clientMessageId', 'kind', 'text', 'value', 'label', 'action', 'args', 'sourceMessageId', 'mediaId', 'caption', 'mealType']);
+        $body = Input::body($request, ['threadId', 'clientMessageId', 'kind', 'text', 'value', 'label', 'action', 'args', 'sourceMessageId', 'mediaId', 'caption', 'mealType']);
+        $threadId = $this->threadId($body);
+        if ($threadId !== null) {
+            $this->threads->owned($userId, $threadId);
+        }
         $kind = Input::string($body, 'kind', 20);
         if (! in_array($kind, ['text', 'quick_reply', 'card_action', 'photo'], true)) {
             throw new Problem(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
@@ -54,13 +92,13 @@ final class CoachController
             : (Input::optional($body, 'text', 8000) ?? Input::optional($body, 'caption', 300) ?? '');
         $client = Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : '');
 
-        return response()->stream(function () use ($userId, $client, $text): void {
+        return response()->stream(function () use ($userId, $client, $text, $threadId): void {
             $write = function (string $event, array $data): void {
                 echo 'event: '.$event."\n".'data: '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n\n";
                 flush();
             };
             try {
-                $accepted = $this->coach->accept($userId, $client, $text, $write);
+                $accepted = $this->coach->accept($userId, $client, $text, $write, $threadId);
                 if (empty($accepted['streamed'])) {
                     $write('message', ['message' => $accepted['userMessage']]);
                 }
@@ -89,10 +127,7 @@ final class CoachController
     {
         $userId = $this->actor($request);
 
-        // Check vision quota
-        $this->quota->requireVision($userId);
-
-        $body = Input::body($request, ['clientMessageId', 'image', 'mime', 'caption', 'mealType']);
+        $body = Input::body($request, ['threadId', 'clientMessageId', 'image', 'mime', 'caption', 'mealType']);
         $image = Input::string($body, 'image', 2_800_000);
         $bytes = base64_decode($image, true);
         if ($bytes === false) {
@@ -100,10 +135,12 @@ final class CoachController
         }
         $mime = Input::optional($body, 'mime', 80) ?? 'image/jpeg';
 
-        $result = $this->coach->photo($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $bytes, $mime);
+        $result = $this->coach->photo($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $bytes, $mime, $this->threadId($body));
 
         // Consume vision quota after successful analysis
-        $this->quota->consumeVision($userId);
+        if (! ($result['replay'] ?? false)) {
+            $this->quota->consumeVision($userId);
+        }
 
         return $result;
     }
@@ -122,12 +159,14 @@ final class CoachController
 
     public function dayBrief(Request $request): array
     {
-        return $this->coach->dayBrief($this->actor($request));
+        $body = Input::body($request, ['threadId'], true);
+
+        return $this->coach->dayBrief($this->actor($request), $this->threadId($body));
     }
 
     public function action(Request $request): array
     {
-        $body = Input::body($request, ['clientMessageId', 'action', 'args', 'label', 'sourceMessageId']);
+        $body = Input::body($request, ['threadId', 'clientMessageId', 'action', 'args', 'label', 'sourceMessageId']);
         $action = Input::string($body, 'action', 40);
         if (! in_array($action, self::ACTIONS, true)) {
             throw new Problem(400, 'validation', 'اطلاعات واردشده ناقص یا نادرست است');
@@ -147,6 +186,7 @@ final class CoachController
             $action,
             $args,
             Input::optional($body, 'label', 80),
+            $this->threadId($body),
         );
     }
 
@@ -200,6 +240,13 @@ final class CoachController
         $budgetOk = isset($body['budgetOk']) && $body['budgetOk'] === true;
 
         return $swap->alternatives($this->actor($request), $mealId, $reason, $budgetOk);
+    }
+
+    private function threadId(array $body): ?string
+    {
+        $id = Input::optional($body, 'threadId', 36);
+
+        return $id === null ? null : Input::uuid($id);
     }
 
     private function actor(Request $request): string

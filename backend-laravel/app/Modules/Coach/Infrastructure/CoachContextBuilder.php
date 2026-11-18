@@ -18,9 +18,11 @@ final class CoachContextBuilder
      *
      * @return list<array{role: string, content: string}>
      */
-    public function recentDialogue(string $userId, string $currentText): array
+    public function recentDialogue(string $userId, string $currentText, ?string $threadId = null): array
     {
-        $threadId = $this->db->table('coach_threads')->where('user_id', $userId)->value('id');
+        $threadId = $threadId === null
+            ? $this->db->table('coach_threads')->where('user_id', $userId)->orderByDesc('last_message_at')->value('id')
+            : $this->db->table('coach_threads')->where(['id' => $threadId, 'user_id' => $userId])->value('id');
         if (! is_string($threadId) || $threadId === '') {
             return [];
         }
@@ -56,11 +58,17 @@ final class CoachContextBuilder
     {
         $lower = str_replace("\u{200c}", '', mb_strtolower($messageText, 'UTF-8'));
 
+        $profile = $this->profileSummary($userId);
+        $asked = $this->needsSwap($lower);
+        $plan = $this->needsFood($lower) || $asked ? $this->todayPlan($userId) : null;
+
         return [
-            'profile' => $this->profileSummary($userId),
-            'todayPlan' => $this->needsPlan($lower) ? $this->todayPlan($userId) : null,
-            'preferences' => $this->needsPreferences($lower) ? $this->userPreferences($userId) : [],
+            'profile' => $profile,
+            'todayPlan' => $plan,
+            'preferences' => $this->needsPreferences($lower) || $asked ? $this->userPreferences($userId) : [],
             'progress' => $this->needsProgress($lower) ? $this->progressSummary($userId) : null,
+            'alternatives' => $asked ? $this->catalogAlternatives($userId, $lower, $plan, is_array($profile['allergens'] ?? null) ? $profile['allergens'] : []) : [],
+            'askedForAlternative' => $asked,
         ];
     }
 
@@ -305,16 +313,90 @@ final class CoachContextBuilder
         ], $logs);
     }
 
-    private function needsPlan(string $lower): bool
+    private function needsFood(string $lower): bool
     {
-        $keywords = ['ناهار', 'صبحانه', 'شام', 'میان‌وعده', 'برنامه', 'امروز', 'فردا', 'غذا'];
-        foreach ($keywords as $kw) {
-            if (str_contains($lower, $kw)) {
+        foreach (['ناهار', 'صبحانه', 'شام', 'میان', 'برنامه', 'امروز', 'فردا', 'غذا', 'بخورم'] as $word) {
+            if (str_contains($lower, $word)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private function needsSwap(string $lower): bool
+    {
+        foreach (['جایگزین', 'تعویض', 'عوض', 'پیشنهاد', 'به جاش', 'به‌جاش', 'نمی‌خوام', 'نمیخوام', 'دوست ندارم', 'چی بخورم', 'چیز دیگه', 'غذای دیگه'] as $word) {
+            if (str_contains($lower, $word)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function mealTypeFrom(string $lower): ?string
+    {
+        return match (true) {
+            str_contains($lower, 'صبحانه') => 'breakfast',
+            str_contains($lower, 'ناهار') => 'lunch',
+            str_contains($lower, 'شام') => 'dinner',
+            str_contains($lower, 'میان') => 'snack',
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array{meals?: list<array{type: string, title: string, kcal: int}>}|null  $plan
+     * @param  list<string>  $allergens
+     * @return list<array{name: string, kcal: int}>
+     */
+    private function catalogAlternatives(string $userId, string $lower, ?array $plan, array $allergens): array
+    {
+        $type = $this->mealTypeFrom($lower);
+        $current = '';
+        $target = 450;
+        foreach ($plan['meals'] ?? [] as $meal) {
+            if ($type !== null && $meal['type'] !== $type) {
+                continue;
+            }
+            $current = mb_strtolower($meal['title'], 'UTF-8');
+            $target = (int) $meal['kcal'];
+            $type ??= $meal['type'];
+            break;
+        }
+        $type ??= 'lunch';
+        $dislikes = $this->db->table('coach_preferences')
+            ->where('user_id', $userId)->where('pref_key', 'food_dislike')->where('active', 1)
+            ->pluck('value')->map(fn ($name) => mb_strtolower((string) $name, 'UTF-8'))->all();
+        $rows = $this->db->table('food_catalog')
+            ->where('active', 1)
+            ->whereBetween('kcal', [(int) floor($target * 0.65), (int) ceil($target * 1.35)])
+            ->where('meal_types', 'like', '%"'.$type.'"%')
+            ->orderByRaw('abs(kcal - ?)', [$target])
+            ->limit(30)
+            ->get(['name_fa', 'kcal', 'allergens']);
+        $choices = [];
+        foreach ($rows as $row) {
+            $name = trim((string) $row->name_fa);
+            $folded = mb_strtolower($name, 'UTF-8');
+            if ($name === '' || $folded === $current) {
+                continue;
+            }
+            $foodAllergens = json_decode((string) $row->allergens, true);
+            if (is_array($foodAllergens) && array_intersect($allergens, $foodAllergens) !== []) {
+                continue;
+            }
+            if (array_any($dislikes, fn (string $dislike) => $dislike !== '' && (str_contains($folded, $dislike) || str_contains($dislike, $folded)))) {
+                continue;
+            }
+            $choices[] = ['name' => $name, 'kcal' => (int) $row->kcal];
+            if (count($choices) === 6) {
+                break;
+            }
+        }
+
+        return $choices;
     }
 
     private function needsPreferences(string $lower): bool

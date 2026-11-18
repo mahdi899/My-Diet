@@ -137,6 +137,23 @@ void main() {
         wireMessage('old-answer', 'assistant', 'برنامه امروزت را ببین.'),
       ];
       final client = MockClient((request) async {
+        if (request.url.path.endsWith('/threads')) {
+          return http.Response(
+            jsonEncode({
+              'threads': [
+                {
+                  'id': 't',
+                  'title': 'chat',
+                  'createdAt': '2026-11-19T08:00:00Z',
+                  'lastMessageAt': null,
+                  'preview': '',
+                },
+              ],
+              'limit': 10,
+            }),
+            200,
+          );
+        }
         if (request.url.path.endsWith('/thread')) {
           return http.Response.bytes(
             utf8.encode(jsonEncode({'messages': saved, 'nextCursor': null})),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import '../domain/coach_events.dart';
+import '../domain/coach_conversation.dart';
 import '../domain/coach_message.dart';
 import '../domain/coach_repository.dart';
 import '../domain/payload_values.dart';
@@ -17,6 +18,122 @@ class CoachSession {
   void Function()? onChanged;
 
   final CoachRepository repository;
+
+  CoachConversationRepository? get conversationRepository =>
+      repository is CoachConversationRepository
+      ? repository as CoachConversationRepository
+      : null;
+  String? get conversationId => conversationRepository?.conversationId;
+  List<CoachConversation> conversations = const [];
+  bool conversationsLoading = false;
+  String? conversationsError;
+  int _listOperation = 0;
+  int _conversationVersion = 0;
+  int get conversationVersion => _conversationVersion;
+  Completer<void>? _pendingTurn;
+
+  Future<void> refreshConversations() async {
+    final repo = conversationRepository;
+    if (repo == null || _disposed) return;
+    final operation = ++_listOperation;
+    conversationsLoading = true;
+    conversationsError = null;
+    _notify();
+    try {
+      final result = await repo.listConversations();
+      if (_disposed || operation != _listOperation) return;
+      conversations = result;
+    } catch (failure) {
+      if (_disposed || operation != _listOperation) return;
+      conversationsError = failure is CoachTransportException
+          ? failure.message
+          : 'تاریخچه دریافت نشد. دوباره تلاش کن.';
+    } finally {
+      if (!_disposed && operation == _listOperation) {
+        conversationsLoading = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<bool> newConversation() async {
+    await refreshConversations();
+    if (_disposed || conversationsError != null) return false;
+    if (conversations.length >= 10) {
+      conversationsError =
+          '۱۰ گفتگو ذخیره داری. برای شروع گفتگوی جدید، یکی از گفتگوهای قبلی را حذف کن.';
+      _notify();
+      return false;
+    }
+    await selectConversation(null);
+    return true;
+  }
+
+  Future<void> selectConversation(String? id) async {
+    final repo = conversationRepository;
+    if (repo == null || _disposed) return;
+    if (id != null && id == conversationId && !loading && !historyFailed) {
+      return;
+    }
+    final version = ++_conversationVersion;
+    ++_historyOperation;
+    _sub?.cancel();
+    _sub = null;
+    if (_pendingTurn?.isCompleted == false) _pendingTurn!.complete();
+    _pendingTurn = null;
+    _finishReveal();
+    messages = const [];
+    suggestions = const [];
+    fresh.clear();
+    answered.clear();
+    photos.clear();
+    _sent.clear();
+    _bytes.clear();
+    _historyLoaded = false;
+    busy = false;
+    typing = false;
+    loading = true;
+    loadingMore = false;
+    hasMore = false;
+    historyFailed = false;
+    cursor = null;
+    error = null;
+    budgetNote = null;
+    canRetry = false;
+    retryClientId = null;
+    _notify();
+    try {
+      await repo.selectConversation(id);
+      if (_disposed || version != _conversationVersion) return;
+      if (id == null) {
+        loading = false;
+        _notify();
+      } else {
+        await _load();
+      }
+    } catch (failure) {
+      if (_disposed || version != _conversationVersion) return;
+      loading = false;
+      historyFailed = true;
+      error = failure is CoachTransportException
+          ? failure.message
+          : 'گفتگو باز نشد.';
+      _notify();
+    }
+  }
+
+  Future<void> renameConversation(String id, String title) async {
+    await conversationRepository?.renameConversation(id, title);
+    await refreshConversations();
+  }
+
+  Future<void> deleteConversation(String id) async {
+    final wasSelected = conversationId == id;
+    await conversationRepository?.deleteConversation(id);
+    await refreshConversations();
+    if (_disposed) return;
+    if (wasSelected) await selectConversation(conversations.firstOrNull?.id);
+  }
 
   /// Fresh `GET /today`. [reloadPlan] is set when a meal was logged.
   void Function(Map<String, dynamic> today, {required bool reloadPlan})?
@@ -62,8 +179,11 @@ class CoachSession {
   final _bytes = <String, Uint8List>{};
 
   Future<void> start({String? autoSend}) async {
+    final version = _conversationVersion;
     await _load();
+    if (_disposed || version != _conversationVersion) return;
     await _brief();
+    if (_disposed || version != _conversationVersion) return;
     final text = autoSend?.trim();
     if (text != null && text.isNotEmpty) await sendText(text);
   }
@@ -106,6 +226,7 @@ class CoachSession {
       loading = false;
       historyFailed = false;
       unawaited(_warmPhotos());
+      if (!older) unawaited(refreshConversations());
     } on CoachTransportException catch (error) {
       if (_disposed || operation != _historyOperation) return;
       loading = false;
@@ -128,9 +249,10 @@ class CoachSession {
   }
 
   Future<void> _brief() async {
+    final version = _conversationVersion;
     try {
       final brief = await repository.ensureDayBrief();
-      if (_disposed || brief == null) return;
+      if (_disposed || version != _conversationVersion || brief == null) return;
       if (brief.created) {
         await _load();
         return;
@@ -185,6 +307,7 @@ class CoachSession {
     String? planMealUid,
     String? sourceId,
   }) async {
+    final version = _conversationVersion;
     if (sourceId != null) answered.add(sourceId);
     try {
       final message = await repository.patchMeal(entryId, {
@@ -194,20 +317,20 @@ class CoachSession {
         if (planMealUid != null && planMealUid.isNotEmpty)
           'planMealUid': planMealUid,
       });
-      if (_disposed) return null;
+      if (_disposed || version != _conversationVersion) return null;
       if (message != null) _upsert(message);
       onTurnCompleted?.call(saved: true);
       _notify();
       await refreshToday(reloadPlan: true);
       return null;
     } on CoachTransportException catch (error) {
-      if (_disposed) return error.message;
+      if (_disposed || version != _conversationVersion) return error.message;
       _note(error.problem, error.message, retryable: false, clientId: null);
       _notify();
       return error.message;
     } catch (_) {
       const text = 'ثبت وعده انجام نشد. دوباره تلاش کن.';
-      if (!_disposed) {
+      if (!_disposed && version == _conversationVersion) {
         error = text;
         _notify();
       }
@@ -240,6 +363,7 @@ class CoachSession {
     bool reuse = false,
   }) async {
     if (busy || _disposed) return;
+    final version = _conversationVersion;
     if (_reveal != null) _finishReveal();
     _sent[request.clientMessageId] = request;
     if (photoBytes != null && photoBytes.isNotEmpty) {
@@ -296,11 +420,12 @@ class CoachSession {
     var replayed = false;
     CoachTransportException? failure;
     final done = Completer<void>();
+    _pendingTurn = done;
     _sub = repository
         .send(request, photoBytes: photoBytes)
         .listen(
           (event) {
-            if (_disposed) return;
+            if (_disposed || version != _conversationVersion) return;
             switch (event) {
               case CoachDelta(text: final text, segment: final next):
                 if (next != segment) {
@@ -380,7 +505,7 @@ class CoachSession {
             _notify();
           },
           onError: (Object error) {
-            if (_disposed) return;
+            if (_disposed || version != _conversationVersion) return;
             settled = true;
             failure = error is CoachTransportException
                 ? error
@@ -400,7 +525,7 @@ class CoachSession {
             if (!done.isCompleted) done.complete();
           },
           onDone: () {
-            if (_disposed) return;
+            if (_disposed || version != _conversationVersion) return;
             if (!settled) {
               failure = const CoachTransportException(
                 'ارتباط وسط جواب قطع شد. دوباره بفرست.',
@@ -422,6 +547,11 @@ class CoachSession {
           cancelOnError: true,
         );
     await done.future;
+    if (_disposed || version != _conversationVersion) return;
+    _pendingTurn = null;
+    await repository.persist(messages);
+    if (_disposed || version != _conversationVersion) return;
+    unawaited(refreshConversations());
   }
 
   void _closeTurn({
@@ -450,7 +580,6 @@ class CoachSession {
     if (succeeded && refresh) {
       unawaited(refreshToday(reloadPlan: reloadPlan));
     }
-    unawaited(repository.persist(messages));
     _notify();
   }
 
@@ -618,6 +747,7 @@ class CoachSession {
   }
 
   Future<void> _warmPhotos() async {
+    final version = _conversationVersion;
     final ids = <String>[];
     for (final message in messages) {
       final id = message.payload['mediaId'];
@@ -628,6 +758,7 @@ class CoachSession {
     for (final id in ids) {
       if (_disposed) return;
       final bytes = await repository.fetchMedia(id);
+      if (_disposed || version != _conversationVersion) return;
       if (bytes == null || bytes.isEmpty) continue;
       photos[id] = bytes;
       _notify();
@@ -719,6 +850,7 @@ class CoachSession {
 
   void close() {
     _disposed = true;
+    if (_pendingTurn?.isCompleted == false) _pendingTurn!.complete();
     _revealTimer?.cancel();
     _sub?.cancel();
     repository.close();

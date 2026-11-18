@@ -535,7 +535,9 @@ class _SignupCodeSheetState extends State<_SignupCodeSheet> {
 
   Future<void> _verify() async {
     final digits = latinDigits(code.text).trim();
-    if (!RegExp(r'^\d{6}$').hasMatch(digits)) {
+    final phoneDigits = latinDigits(phone.text).trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(digits) &&
+        !debugLoginOtp(phoneDigits, digits)) {
       setState(() => error = 'کد شش‌رقمی را وارد کن.');
       return;
     }

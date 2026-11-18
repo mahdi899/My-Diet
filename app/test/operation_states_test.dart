@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/core/network/api_client.dart';
 import 'package:sabzine_flutter/core/theme/theme.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/data/session/services.dart';
 import 'package:sabzine_flutter/domain/commerce/commerce.dart';
 import 'package:sabzine_flutter/domain/common/failure.dart';
+import 'package:sabzine_flutter/domain/common/day.dart';
 import 'package:sabzine_flutter/domain/plan/plan.dart';
 import 'package:sabzine_flutter/features/plan/plan_states.dart';
-import 'package:sabzine_flutter/features/plan/plan_tab.dart';
 import 'package:sabzine_flutter/presentation/widgets/brand_scene.dart';
 import 'package:sabzine_flutter/presentation/session/live_session.dart';
 import 'session/home_test.dart'
@@ -16,8 +18,10 @@ import 'session/home_test.dart'
 
 class FaultPlans extends FakePlans {
   bool failRequest = false, failPublished = false;
+  int latestCalls = 0;
   @override
   Future<PlanRequestInfo?> latestRequest() async {
+    latestCalls++;
     if (failRequest) {
       throw const ApiException('ارتباط قطع شد؛ دوباره تلاش کن.', offline: true);
     }
@@ -86,6 +90,7 @@ Widget statusHost(DemoStore store, Widget child, {double scale = 1}) =>
     );
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   test(
     'failed refresh retains the actual request and previous published cache',
     () async {
@@ -112,33 +117,118 @@ void main() {
     },
   );
 
-  testWidgets(
-    'first-load failure has a working retry rather than an endless skeleton',
-    (t) async {
-      t.view.physicalSize = const Size(320, 720);
-      t.view.devicePixelRatio = 1;
-      addTearDown(t.view.reset);
-      final plans = FaultPlans()..failRequest = true;
-      final store = liveStore(FakeCommerce(), plans);
-      await refreshLive(store);
-      expect(store.liveReady, isFalse);
-      await t.pumpWidget(statusHost(store, const PlanTab(), scale: 1.5));
-      await t.pumpAndSettle();
-      expect(find.byKey(const ValueKey('plan-error')), findsOneWidget);
-      expect(find.byKey(const ValueKey('plan-skeleton')), findsNothing);
-      plans.failRequest = false;
-      plans.request = requestWith('queued');
-      await t.ensureVisible(find.text('تلاش دوباره'));
-      await t.tap(find.text('تلاش دوباره'));
-      await t.pumpAndSettle();
-      expect(find.byKey(const ValueKey('plan-error')), findsNothing);
-      expect(find.text('درخواستت ثبت شده'), findsOneWidget);
-      expect(store.hasUserRequest, isTrue);
-      expect(t.takeException(), isNull);
-      await t.pumpWidget(const SizedBox());
-      store.dispose();
-    },
-  );
+  testWidgets('plan status recovers automatically after a first-load failure', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(320, 720);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final plans = FaultPlans()..failRequest = true;
+    final store = liveStore(FakeCommerce(), plans)..login(AppRole.user);
+    await refreshLive(store);
+    expect(store.liveReady, isFalse);
+    await t.pumpWidget(
+      statusHost(store, const PanelShell(role: AppRole.user), scale: 1.5),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('tab-plan')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('plan-error')), findsOneWidget);
+    expect(find.byKey(const ValueKey('plan-skeleton')), findsNothing);
+    expect(find.text('بررسی وضعیت'), findsNothing);
+    expect(find.text('تلاش دوباره'), findsNothing);
+    plans.failRequest = false;
+    plans.request = requestWith('queued');
+    await t.pump(const Duration(seconds: 8));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('plan-error')), findsNothing);
+    expect(find.text('درخواستت ثبت شده'), findsOneWidget);
+    expect(store.hasUserRequest, isTrue);
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox());
+    store.dispose();
+  });
+
+  testWidgets('online plan updates continue after publication and on resume', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final plans = FaultPlans()..request = requestWith('queued');
+    final store = liveStore(FakeCommerce(), plans)..login(AppRole.user);
+    addTearDown(store.dispose);
+    await refreshLive(store);
+    await t.pumpWidget(statusHost(store, const PanelShell(role: AppRole.user)));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('tab-plan')));
+    await t.pumpAndSettle();
+    expect(find.text('درخواستت ثبت شده'), findsOneWidget);
+    expect(find.text('بررسی وضعیت'), findsNothing);
+
+    plans.request = requestWith('in_review');
+    await t.pump(const Duration(seconds: 8));
+    await t.pumpAndSettle();
+    expect(find.text('برنامه‌ات در دست متخصص است'), findsOneWidget);
+
+    PublishedPlan published(String title) => PublishedPlan.fromJson({
+      'requestId': 'r1',
+      'weekStart': dateKey(startOfWeek(store.today)),
+      'days': [
+        {
+          'date': dateKey(store.today),
+          'meals': [
+            {
+              'mealUid': 'live-meal',
+              'mealType': 'breakfast',
+              'suggestedTime': '08:00',
+              'title': title,
+              'calories': 400,
+            },
+          ],
+        },
+      ],
+    });
+    plans.request = requestWith('published');
+    plans.plan = published('صبحانهٔ اول');
+    await t.pump(const Duration(seconds: 8));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('plan-tab')), findsOneWidget);
+    expect(store.userRequest.isPublished, isTrue);
+
+    plans.plan = published('صبحانهٔ اصلاح‌شده');
+    await t.pump(const Duration(seconds: 8));
+    await t.pumpAndSettle();
+    expect(store.mealsOn(store.today).single.title, 'صبحانهٔ اصلاح‌شده');
+
+    plans.failRequest = true;
+    await t.pump(const Duration(seconds: 8));
+    await t.pumpAndSettle();
+    expect(store.liveNotice, isNotNull);
+    plans.failRequest = false;
+    await t.pump(const Duration(seconds: 8));
+    await t.pumpAndSettle();
+    expect(store.liveNotice, isNull);
+
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    final pausedCalls = plans.latestCalls;
+    plans.plan = published('صبحانهٔ تازه');
+    await t.pump(const Duration(seconds: 24));
+    expect(plans.latestCalls, pausedCalls);
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pumpAndSettle();
+    expect(plans.latestCalls, pausedCalls + 1);
+    expect(store.mealsOn(store.today).single.title, 'صبحانهٔ تازه');
+
+    await t.tap(find.byKey(const ValueKey('tab-home')));
+    await t.pumpAndSettle();
+    plans.plan = published('صبحانهٔ نهایی');
+    await t.tap(find.byKey(const ValueKey('tab-plan')));
+    await t.pumpAndSettle();
+    expect(store.mealsOn(store.today).single.title, 'صبحانهٔ نهایی');
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox());
+  });
 
   testWidgets(
     'generation, review, missing info and publication stay tied to actual state',

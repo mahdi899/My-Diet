@@ -147,38 +147,10 @@ class PlanWaiting extends StatelessWidget {
   }
 }
 
-/// Re-checks server state without claiming a generation/review ETA.
-class PlanProgressCard extends StatefulWidget {
+/// Reflects server state supplied by the shell's automatic synchronization.
+class PlanProgressCard extends StatelessWidget {
   const PlanProgressCard({super.key, this.error});
   final String? error;
-  @override
-  State<PlanProgressCard> createState() => _PlanProgressCardState();
-}
-
-class _PlanProgressCardState extends State<PlanProgressCard> {
-  bool _checking = false;
-  String? _error;
-  Future<void> _refresh() async {
-    if (_checking) return;
-    final store = DemoScope.of(context);
-    setState(() {
-      _checking = true;
-      _error = null;
-    });
-    try {
-      await refreshLive(store);
-      if (mounted) setState(() => _error = store.liveNotice);
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error =
-              'وضعیت دریافت نشد؛ اتصال اینترنت را بررسی کن و دوباره تلاش کن.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _checking = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +165,7 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
               ((store.userRequest.question.isNotEmpty &&
                       store.userRequest.infoAnswer.isEmpty) ||
                   store.userRequest.revisionAwaitingUser);
-    final error = _error ?? widget.error ?? store.liveNotice;
+    final error = this.error ?? store.liveNotice;
     final (title, message, _, current) = published
         ? (
             'برنامه‌ات آماده است',
@@ -204,13 +176,13 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
         : switch (status) {
             PlanStatus.incomplete => (
               'اطلاعات برنامه را کامل کن',
-              'برای ادامه، اطلاعات درخواست را بررسی کن. اگر قبلاً ثبت کرده‌ای، وضعیت را دوباره دریافت کن.',
+              'برای ادامه، اطلاعات درخواست را کامل کن. وضعیت ثبت‌شده به‌صورت خودکار نمایش داده می‌شود.',
               Icons.edit_note_rounded,
               0,
             ),
             PlanStatus.queued => (
               'درخواستت ثبت شده',
-              'اطلاعاتت در صف آماده‌سازی برنامه است. فعلاً کاری لازم نیست؛ می‌توانی بعداً وضعیت را بررسی کنی.',
+              'اطلاعاتت در صف آماده‌سازی برنامه است. هر تغییری خودکار همین‌جا نمایش داده می‌شود.',
               Icons.inbox_outlined,
               1,
             ),
@@ -226,13 +198,13 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
                   : 'اطلاعات تکمیلی در حال بررسی است',
               awaitingAnswer
                   ? 'سؤال‌های پایین صفحه را پاسخ بده تا بررسی برنامه ادامه پیدا کند.'
-                  : 'اگر سؤال دیگری لازم باشد، همین‌جا نمایش داده می‌شود. می‌توانی بعداً وضعیت را بررسی کنی.',
+                  : 'اگر سؤال دیگری لازم باشد، خودکار همین‌جا نمایش داده می‌شود.',
               Icons.question_answer_outlined,
               2,
             ),
             PlanStatus.ready => (
               'در حال دریافت نسخهٔ منتشرشده',
-              'تأیید برنامه ثبت شده؛ برای دریافت وعده‌ها وضعیت را به‌روز کن.',
+              'تأیید برنامه ثبت شده؛ وعده‌ها به‌صورت خودکار دریافت و نمایش داده می‌شوند.',
               Icons.cloud_download_outlined,
               3,
             ),
@@ -264,7 +236,7 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
               ? store.planHoldReason!
               : message),
       badge: error != null
-          ? 'نیاز به بررسی دوباره'
+          ? 'در انتظار به‌روزرسانی خودکار'
           : published
           ? 'منتشر شده'
           : status == PlanStatus.needsInfo && awaitingAnswer
@@ -275,11 +247,6 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
       current: current,
       error: error != null,
       showPath: store.hasUserRequest,
-      actionLabel: store.serverAuthEnabled
-          ? (error == null ? 'بررسی وضعیت' : 'تلاش دوباره')
-          : null,
-      onAction: _refresh,
-      busy: _checking,
       onSupport: () => Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) =>

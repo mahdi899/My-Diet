@@ -19,7 +19,6 @@ class _WaterCardState extends State<WaterCard> {
   WaterRepository get _log => widget.log ?? CustomerScope.of(context).waterLog;
   String? _day;
   int _glasses = 0;
-  int? _undoValue, _undoExpected;
   bool _loading = true, _busy = false, _loadFailed = false;
   String? _notice;
 
@@ -42,14 +41,12 @@ class _WaterCardState extends State<WaterCard> {
       _day = key;
       _loading = true;
       _notice = null;
-      _undoValue = null;
       _glasses = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) => _load());
     } else if (!_busy) {
       final remote = store.waterGlassesOn(store.today);
       if (remote != null && remote != _glasses) {
         _glasses = remote;
-        _undoValue = null;
       }
     }
   }
@@ -88,7 +85,7 @@ class _WaterCardState extends State<WaterCard> {
     }
   }
 
-  Future<void> _save(int value, {bool undo = false}) async {
+  Future<void> _save(int value) async {
     if (_busy || _loading || _loadFailed) return;
     final store = CustomerScope.of(context);
     final date = store.today;
@@ -106,20 +103,13 @@ class _WaterCardState extends State<WaterCard> {
       _notice = null;
     });
     try {
-      if (undo && await _log.read(date) != _undoExpected) {
-        throw StateError('ثبت آب تغییر کرده است.');
-      }
       await _log.write(date, next);
       if (!mounted || _day != dateKey(date) || owner != store.userRequestId) {
         return;
       }
       setState(() {
         _glasses = next;
-        _undoValue = undo ? null : previous;
-        _undoExpected = next;
-        _notice = undo
-            ? 'تغییر برگردانده شد.'
-            : next > previous
+        _notice = next > previous
             ? 'یک لیوان به آب امروزت اضافه شد.'
             : 'یک لیوان از ثبت امروز کم شد.';
       });
@@ -277,45 +267,19 @@ class _WaterCardState extends State<WaterCard> {
               child: const Text('ثبت‌های آب خوانده نشد؛ تلاش دوباره'),
             )
           else
-            Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    liveRegion: _notice != null,
-                    child: Text(
-                      _notice ??
-                          (_glasses == 0
-                              ? 'از اولین لیوان امروز شروع کنیم؟'
-                              : 'هر لیوان، یک قدم مراقبت از خودت.'),
-                      style: AppTypography.supporting.copyWith(
-                        fontSize: 11,
-                        height: 1.5,
-                        color: AppColors.inkSoft,
-                      ),
-                    ),
-                  ),
+            Semantics(
+              liveRegion: _notice != null,
+              child: Text(
+                _notice ??
+                    (_glasses == 0
+                        ? 'از اولین لیوان امروز شروع کنیم؟'
+                        : 'هر لیوان، یک قدم مراقبت از خودت.'),
+                style: AppTypography.supporting.copyWith(
+                  fontSize: 11,
+                  height: 1.5,
+                  color: AppColors.inkSoft,
                 ),
-                if (_undoValue != null) ...[
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    key: const ValueKey('water-undo'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      minimumSize: const Size(0, 40),
-                      textStyle: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: disabled
-                        ? null
-                        : () => _save(_undoValue!, undo: true),
-                    icon: const Icon(Icons.undo_rounded, size: 16),
-                    label: const Text('برگرداندن'),
-                  ),
-                ],
-              ],
+              ),
             ),
         ],
       ),
@@ -324,7 +288,7 @@ class _WaterCardState extends State<WaterCard> {
 }
 
 /// Animate the saved count so glasses fill in reading order on initial load,
-/// then only the changed glass fills or empties on add, remove, and Undo.
+/// then only the changed glass fills or empties on add and remove.
 class _WaterGlasses extends StatelessWidget {
   const _WaterGlasses({super.key, required this.count, required this.goal});
 

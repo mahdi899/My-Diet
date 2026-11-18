@@ -10,6 +10,8 @@ import '../../core/photos/food_image.dart';
 import '../../core/theme/theme.dart';
 import '../../data/customer_auth.dart';
 import '../../data/demo_store.dart' show latinDigits;
+import '../widgets/sms_otp_autofill.dart';
+
 /// Website order after the questionnaire: analysis, specialist, plan, then phone.
 class AfterAnswersFlow extends StatefulWidget {
   const AfterAnswersFlow({
@@ -59,7 +61,9 @@ enum _Stage { analysis, specialists, plans, phone }
 
 class _AfterAnswersFlowState extends State<AfterAnswersFlow> {
   late _Stage _stage = _stageOf(widget.initialStage);
-  late final List<_Specialist> _offered = _offeredFrom(widget.initialOfferedIds);
+  late final List<_Specialist> _offered = _offeredFrom(
+    widget.initialOfferedIds,
+  );
   late String? _specialistId = widget.initialSpecialistId;
   late String _planId = widget.initialPlanId ?? 'monthly';
 
@@ -128,9 +132,7 @@ class _AfterAnswersFlowState extends State<AfterAnswersFlow> {
           ),
           _Stage.plans => _PlansScreen(
             key: const ValueKey('plans'),
-            doctor: _offered
-                .firstWhere((p) => p.id == _specialistId)
-                .name,
+            doctor: _offered.firstWhere((p) => p.id == _specialistId).name,
             planId: _planId,
             onSelect: (id) {
               setState(() => _planId = id);
@@ -223,10 +225,11 @@ class _AnalysisScreenState extends State<_AnalysisScreen>
         builder: (context, _) {
           final eased = Curves.easeInOutSine.transform(_progress.value);
           final percent = (eased * 100).round();
-          final stage = _stages[math.min(
-            _stages.length - 1,
-            (_progress.value * _stages.length).floor(),
-          )];
+          final stage =
+              _stages[math.min(
+                _stages.length - 1,
+                (_progress.value * _stages.length).floor(),
+              )];
           return Column(
             children: [
               const SizedBox(height: 28),
@@ -246,7 +249,10 @@ class _AnalysisScreenState extends State<_AnalysisScreen>
               const SizedBox(height: 12),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 8,
+                  ),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -535,7 +541,11 @@ class _SpecialistsScreenState extends State<_SpecialistsScreen>
             height: 1,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0x00D9E7C7), Color(0x66D9E7C7), Color(0x00D9E7C7)],
+                colors: [
+                  Color(0x00D9E7C7),
+                  Color(0x66D9E7C7),
+                  Color(0x00D9E7C7),
+                ],
               ),
             ),
           ),
@@ -678,6 +688,12 @@ class _PhoneScreenState extends State<_PhoneScreen> {
     text: widget.initialPhone ?? '',
   );
   final _code = TextEditingController();
+  late final _smsAutofill = SmsOtpAutofill(
+    controller: _code,
+    onFilled: () {
+      if (mounted) setState(() => _error = null);
+    },
+  );
   bool _otp = false;
   bool _pay = false;
   bool _success = false;
@@ -687,6 +703,7 @@ class _PhoneScreenState extends State<_PhoneScreen> {
 
   @override
   void dispose() {
+    _smsAutofill.stop();
     _phone.dispose();
     _code.dispose();
     super.dispose();
@@ -703,15 +720,18 @@ class _PhoneScreenState extends State<_PhoneScreen> {
       _error = null;
     });
     try {
+      _code.clear();
+      await _smsAutofill.start();
+      if (!mounted) return;
       await widget.requestCode(phone);
       if (!mounted) return;
       setState(() {
         _otp = true;
-        _code.clear();
         _error = null;
         _busy = false;
       });
     } on AuthFailure catch (failure) {
+      _smsAutofill.stop();
       if (mounted) {
         setState(() {
           _error = failure.message;
@@ -723,7 +743,8 @@ class _PhoneScreenState extends State<_PhoneScreen> {
 
   Future<void> _verify() async {
     final code = latinDigits(_code.text).trim();
-    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+    final phone = latinDigits(_phone.text).trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(code) && !debugLoginOtp(phone, code)) {
       setState(() => _error = 'کد شش‌رقمی پیامک‌شده را وارد کن.');
       return;
     }
@@ -733,6 +754,8 @@ class _PhoneScreenState extends State<_PhoneScreen> {
     });
     try {
       await widget.verifyCode(latinDigits(_phone.text).trim(), code);
+      _smsAutofill.stop();
+      TextInput.finishAutofillContext(shouldSave: false);
       if (!mounted) return;
       setState(() {
         _success = true;
@@ -835,6 +858,7 @@ class _PhoneScreenState extends State<_PhoneScreen> {
               controller: _phone,
               enabled: !_busy,
               keyboardType: TextInputType.phone,
+              autofillHints: const [AutofillHints.telephoneNumberNational],
               textDirection: TextDirection.ltr,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -1028,43 +1052,53 @@ class _OtpCellsState extends State<_OtpCells>
                         colors: [Color(0xFF347A52), Color(0xFF205638)],
                       ),
                     ),
-                    child: const OnboardingIcon(Icons.check_rounded, color: Colors.white, size: 40),
+                    child: const OnboardingIcon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 40,
+                    ),
                   ),
                 ),
               ),
               Positioned.fill(
-                child: TextField(
-                  controller: _hidden,
-                  focusNode: _focus,
-                  autofocus: true,
-                  enabled: !widget.success,
-                  keyboardType: TextInputType.number,
-                  textDirection: TextDirection.ltr,
-                  maxLength: 6,
-                  style: const TextStyle(color: Colors.transparent),
-                  cursorColor: Colors.transparent,
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
+                child: AutofillGroup(
+                  child: TextField(
+                    controller: _hidden,
+                    focusNode: _focus,
+                    autofocus: true,
+                    enabled: !widget.success,
+                    keyboardType: TextInputType.number,
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    autocorrect: false,
+                    textDirection: TextDirection.ltr,
+                    maxLength: 6,
+                    style: const TextStyle(color: Colors.transparent),
+                    cursorColor: Colors.transparent,
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                    ),
+                    inputFormatters: [
+                      TextInputFormatter.withFunction((oldValue, newValue) {
+                        final digits = latinDigits(
+                          newValue.text,
+                        ).replaceAll(RegExp(r'\D'), '');
+                        final text = digits.length > 6
+                            ? digits.substring(0, 6)
+                            : digits;
+                        return TextEditingValue(
+                          text: text,
+                          selection: TextSelection.collapsed(
+                            offset: text.length,
+                          ),
+                        );
+                      }),
+                    ],
+                    onChanged: (value) => widget.onChanged(latinDigits(value)),
                   ),
-                  inputFormatters: [
-                    TextInputFormatter.withFunction((oldValue, newValue) {
-                      final digits = latinDigits(
-                        newValue.text,
-                      ).replaceAll(RegExp(r'\D'), '');
-                      final text = digits.length > 6
-                          ? digits.substring(0, 6)
-                          : digits;
-                      return TextEditingValue(
-                        text: text,
-                        selection: TextSelection.collapsed(offset: text.length),
-                      );
-                    }),
-                  ],
-                  onChanged: (value) => widget.onChanged(latinDigits(value)),
                 ),
               ),
             ],
@@ -1149,7 +1183,9 @@ class _SpecialistCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: selected ? const Color(0xFFDCE8C4) : const Color(0x26CDE0BD),
+              color: selected
+                  ? const Color(0xFFDCE8C4)
+                  : const Color(0x26CDE0BD),
             ),
             gradient: LinearGradient(
               begin: Alignment.topRight,
@@ -1230,7 +1266,9 @@ class _SpecialistCard extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: selected ? const Color(0xFF24543A) : Colors.transparent,
+                    color: selected
+                        ? const Color(0xFF24543A)
+                        : Colors.transparent,
                     border: Border.all(
                       color: selected
                           ? const Color(0xFF24543A)
@@ -1239,7 +1277,11 @@ class _SpecialistCard extends StatelessWidget {
                     ),
                   ),
                   child: selected
-                      ? const OnboardingIcon(Icons.check, size: 12, color: Colors.white)
+                      ? const OnboardingIcon(
+                          Icons.check,
+                          size: 12,
+                          color: Colors.white,
+                        )
                       : null,
                 ),
               ),
@@ -1264,7 +1306,11 @@ class _Portrait extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0x30FFFFFF)),
         boxShadow: const [
-          BoxShadow(color: Color(0x15061B16), blurRadius: 14, offset: Offset(0, 5)),
+          BoxShadow(
+            color: Color(0x15061B16),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -1305,7 +1351,11 @@ class _WhiteContinue extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(color: Color(0x38000000), blurRadius: 28, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x38000000),
+            blurRadius: 28,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Material(
@@ -1423,7 +1473,9 @@ class _PlanCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFFF0F6ED),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFFD4E3D4)),
+                              border: Border.all(
+                                color: const Color(0xFFD4E3D4),
+                              ),
                             ),
                             child: Text(
                               plan.days,
@@ -1508,7 +1560,10 @@ class _PlanCard extends StatelessWidget {
                         const Text(
                           'تومان',
                           textAlign: TextAlign.left,
-                          style: TextStyle(color: Color(0xFF6D7F72), fontSize: 12),
+                          style: TextStyle(
+                            color: Color(0xFF6D7F72),
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ],

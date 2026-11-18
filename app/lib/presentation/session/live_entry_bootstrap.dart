@@ -11,7 +11,7 @@ bool shouldBootstrapLiveEntry(DemoStore store) =>
     !store.liveReady &&
     !store.suppressLiveEntry;
 
-/// Runs onboarding resolution and live refresh during the branded splash.
+/// Resolves the saved session before showing the first application screen.
 Future<void> bootstrapLiveEntry(DemoStore store) async {
   if (!shouldBootstrapLiveEntry(store)) {
     store.liveEntryCache = null;

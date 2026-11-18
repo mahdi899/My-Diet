@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../domain/coach_conversation.dart';
 
 import '../../../data/customer_auth.dart';
 import '../domain/coach_events.dart';
@@ -13,7 +16,8 @@ import 'coach_parse.dart';
 import 'coach_wire.dart';
 
 /// Live coach client. JSON and SSE both use [http.Client.send] and the session bearer token.
-class HttpCoachRepository implements CoachRepository {
+class HttpCoachRepository
+    implements CoachRepository, CoachConversationRepository {
   HttpCoachRepository({required this.auth, http.Client? client})
     : _client = client ?? http.Client(),
       _ownsClient = client == null;
@@ -21,6 +25,88 @@ class HttpCoachRepository implements CoachRepository {
   final CustomerAuth auth;
   final http.Client _client;
   final bool _ownsClient;
+
+  String? _conversationId;
+  bool _selectionReady = false;
+  int _selectionVersion = 0;
+  String? _creationId;
+
+  @override
+  String? get conversationId => _conversationId;
+  String get _selectionKey => 'rejime_man.coach.selected.${auth.userId}';
+
+  @override
+  Future<List<CoachConversation>> listConversations() async {
+    final data = asMap(await _json('threads'));
+    return [
+      for (final row in asMapList(data['threads']))
+        CoachConversation.fromJson(row),
+    ];
+  }
+
+  Future<void> _restoreSelection() async {
+    if (_selectionReady) return;
+    final version = _selectionVersion;
+    final threads = await listConversations();
+    final prefs = await SharedPreferences.getInstance();
+    if (version != _selectionVersion || _selectionReady) return;
+    final saved = prefs.getString(_selectionKey);
+    _conversationId = threads.any((t) => t.id == saved)
+        ? saved
+        : threads.firstOrNull?.id;
+    _selectionReady = true;
+  }
+
+  @override
+  Future<void> selectConversation(String? id) async {
+    _selectionVersion++;
+    _selectionReady = true;
+    _conversationId = id;
+    _creationId = null;
+    final prefs = await SharedPreferences.getInstance();
+    if (id == null) {
+      await prefs.remove(_selectionKey);
+    } else {
+      await prefs.setString(_selectionKey, id);
+    }
+  }
+
+  Future<String> _ensureConversation() async {
+    final version = _selectionVersion;
+    await _restoreSelection();
+    if (version != _selectionVersion) {
+      throw const CoachTransportException('گفتگو تغییر کرد؛ پیام ارسال نشد.');
+    }
+    if (_conversationId != null) return _conversationId!;
+    _creationId ??= CoachSendRequest.text('').clientMessageId;
+    final result = asMap(
+      await _json('threads', method: 'POST', body: {'id': _creationId}),
+    );
+    final id = asMap(result['thread'])['id'] as String;
+    if (version == _selectionVersion) {
+      _conversationId = id;
+      final prefs = await SharedPreferences.getInstance();
+      if (version == _selectionVersion) {
+        await prefs.setString(_selectionKey, id);
+      }
+    }
+    return id;
+  }
+
+  @override
+  Future<void> renameConversation(String id, String title) async {
+    await _json(
+      'threads/${Uri.encodeComponent(id)}',
+      method: 'PATCH',
+      body: {'title': title},
+    );
+  }
+
+  @override
+  Future<void> deleteConversation(String id) async {
+    await _json('threads/${Uri.encodeComponent(id)}', method: 'DELETE');
+    if (_conversationId == id) await selectConversation(null);
+  }
 
   Uri _uri(String path) {
     final root = auth.baseUrl.replaceAll(RegExp(r'/+$'), '');
@@ -47,10 +133,19 @@ class HttpCoachRepository implements CoachRepository {
 
   @override
   Future<CoachThreadPage> loadThread({String? cursor}) async {
-    final path = cursor == null || cursor.isEmpty
-        ? 'thread'
-        : 'thread?before=${Uri.encodeQueryComponent(cursor)}';
-    return parseThreadPage(await _json(path));
+    await _restoreSelection();
+    final id = _conversationId;
+    if (id == null) return const CoachThreadPage();
+    final query = Uri(
+      queryParameters: {
+        'threadId': id,
+        if (cursor != null && cursor.isNotEmpty) 'before': cursor,
+      },
+    ).query;
+    final page = parseThreadPage(await _json('thread?$query'));
+    final prefs = await SharedPreferences.getInstance();
+    if (_conversationId == id) await prefs.setString(_selectionKey, id);
+    return page;
   }
 
   @override
@@ -70,7 +165,8 @@ class HttpCoachRepository implements CoachRepository {
         yield* _action(request);
         return;
       }
-      yield* _sse(coachMessageBody(request));
+      final threadId = await _ensureConversation();
+      yield* _sse({...coachMessageBody(request), 'threadId': threadId});
     } on CoachTransportException {
       rethrow;
     } catch (_) {
@@ -82,19 +178,13 @@ class HttpCoachRepository implements CoachRepository {
     }
   }
 
-  Stream<CoachEvent> _photo(
-    CoachSendRequest request,
-    List<int> bytes,
-  ) async* {
+  Stream<CoachEvent> _photo(CoachSendRequest request, List<int> bytes) async* {
     yield CoachMessageEvent(
       CoachMessage(
         id: 'analyzing-${request.clientMessageId}',
         role: 'assistant',
         type: 'system_note',
-        payload: const {
-          'analyzing': true,
-          'text': 'دارم عکست رو نگاه می‌کنم…',
-        },
+        payload: const {'analyzing': true, 'text': 'دارم عکست رو نگاه می‌کنم…'},
         fallbackText: 'دارم عکست رو نگاه می‌کنم…',
         createdAt: DateTime.now(),
       ),
@@ -110,26 +200,35 @@ class HttpCoachRepository implements CoachRepository {
     List<int> bytes, {
     Duration timeout = const Duration(seconds: 90),
   }) async {
+    final threadId = await _ensureConversation();
     final compressed = await compressFoodPhoto(
       bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
     );
     return _json(
       'food-photos',
       method: 'POST',
-      body: coachPhotoBody(
-        clientMessageId: request.clientMessageId,
-        base64: base64Encode(compressed.bytes),
-        mime: compressed.mime,
-        caption: request.text,
-        mealType: request.data['mealType'] as String?,
-      ),
+      body: {
+        'threadId': threadId,
+        ...coachPhotoBody(
+          clientMessageId: request.clientMessageId,
+          base64: base64Encode(compressed.bytes),
+          mime: compressed.mime,
+          caption: request.text,
+          mealType: request.data['mealType'] as String?,
+        ),
+      },
       timeout: timeout,
     );
   }
 
   Stream<CoachEvent> _action(CoachSendRequest request) async* {
+    final threadId = await _ensureConversation();
     final data = asMap(
-      await _json('actions', method: 'POST', body: coachActionBody(request)),
+      await _json(
+        'actions',
+        method: 'POST',
+        body: {...coachActionBody(request), 'threadId': threadId},
+      ),
     );
     yield* _transcript(data);
   }
@@ -287,7 +386,11 @@ class HttpCoachRepository implements CoachRepository {
 
   @override
   Future<CoachDayBrief?> ensureDayBrief() async {
-    final data = asMap(await _json('day-brief', method: 'POST', body: const {}));
+    final id = _conversationId;
+    if (id == null) return null;
+    final data = asMap(
+      await _json('day-brief', method: 'POST', body: {'threadId': id}),
+    );
     final message = parseOptionalMessage(data['message']);
     if (message == null) return null;
     return CoachDayBrief(message: message, created: data['created'] == true);
@@ -298,14 +401,13 @@ class HttpCoachRepository implements CoachRepository {
     try {
       if (auth.session == null || id.isEmpty) return null;
       Future<http.Response> once() {
-        final request = http.Request(
-          'GET',
-          _uri('media/${Uri.encodeComponent(id)}'),
-        )..headers.addAll({
-          'Accept': 'image/*',
-          if (kIsWeb) 'x-sabzine-client': 'web',
-          'Authorization': 'Bearer ${auth.session!.accessToken}',
-        });
+        final request =
+            http.Request('GET', _uri('media/${Uri.encodeComponent(id)}'))
+              ..headers.addAll({
+                'Accept': 'image/*',
+                if (kIsWeb) 'x-sabzine-client': 'web',
+                'Authorization': 'Bearer ${auth.session!.accessToken}',
+              });
         return _client
             .send(request)
             .then(http.Response.fromStream)

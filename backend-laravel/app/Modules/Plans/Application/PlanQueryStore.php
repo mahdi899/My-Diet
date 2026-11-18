@@ -14,6 +14,8 @@ interface PlanQueryStore
 
     public function latest(string $user): ?array;
 
+    public function latestGenerationStatus(string $request): ?string;
+
     public function requests(string $user): array;
 
     public function request(string $user, string $id): ?array;

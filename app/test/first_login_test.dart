@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -12,6 +14,55 @@ import 'customer_auth_test.dart' show TokenMemory;
 import 'widget_test.dart' show mobile;
 
 void main() {
+  testWidgets('consented SMS fills the login code without manual typing', (
+    tester,
+  ) async {
+    mobile(tester);
+    const channel = MethodChannel('ir.sabzine/sms_otp');
+    final sms = Completer<String?>();
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    var ready = false;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'start') {
+        ready = true;
+        return null;
+      }
+      if (call.method == 'read') return sms.future;
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final client = MockClient((request) async {
+      expect(ready, isTrue);
+      return http.Response('{}', 200);
+    });
+    addTearDown(client.close);
+    final store = DemoStore(
+      customerAuth: CustomerAuth(
+        baseUrl: 'https://example.test',
+        storage: TokenMemory(),
+        client: client,
+      ),
+    );
+    addTearDown(store.dispose);
+    await tester.pumpWidget(SabzineApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '09123456789');
+    await tester.tap(find.text('ورود'));
+    await tester.pumpAndSettle();
+    expect(find.text('کد تأیید پیامکی'), findsOneWidget);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    sms.complete('کد تأیید رژیم من: ۴۵۶۷۸۹\nاعتبار: ۲ دقیقه');
+    await tester.pumpAndSettle();
+    final field = tester.widget<TextFormField>(find.byType(TextFormField));
+    expect(field.controller!.text, '456789');
+    expect(find.byType(AutofillGroup), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('phone feedback accepts localized digits and rejects bad input', (
     tester,
   ) async {

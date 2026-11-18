@@ -207,7 +207,7 @@ void main() {
   );
 
   testWidgets(
-    'chat never shows an introduction banner on entry or avatar greeting',
+    'new chat introduces the coach, fits the keyboard and gives way to messages',
     (t) async {
       t.view.physicalSize = const Size(320, 740);
       t.view.devicePixelRatio = 1;
@@ -217,15 +217,29 @@ void main() {
       await t.pumpWidget(pageHost(store, repo, scale: 1.5));
       await t.pumpAndSettle();
       expect(find.byType(CoachCompanionNote), findsNothing);
+      expect(find.text('من مربی تغذیهٔ توام'), findsOneWidget);
       expect(find.textContaining('من جوانه'), findsNothing);
       await t.tap(find.byKey(const ValueKey('coach-companion-greet')));
       await t.pumpAndSettle();
       expect(find.byType(CoachCompanionNote), findsNothing);
+      expect(find.byKey(const ValueKey('coach-welcome')), findsOneWidget);
       expect(t.takeException(), isNull);
       await t.pumpWidget(pageHost(store, repo, scale: 1.5, inset: 290));
       await t.pumpAndSettle();
       expect(find.byType(CoachCompanionNote), findsNothing);
       expect(t.takeException(), isNull);
+      await t.enterText(
+        find.byKey(const ValueKey('coach-input')),
+        'برای شام چی بخورم؟',
+      );
+      await t.pump();
+      await t.tap(find.byKey(const ValueKey('coach-send')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('coach-welcome')), findsNothing);
+      expect(find.text('برای شام چی بخورم؟'), findsOneWidget);
+      repo.add(const CoachDone());
+      await repo.finish();
+      await t.pumpAndSettle();
       await t.pumpWidget(const SizedBox());
       store.dispose();
     },

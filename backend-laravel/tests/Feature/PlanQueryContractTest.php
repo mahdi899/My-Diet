@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Shared\Domain\LegacyCrypto as Crypto;
 use Tests\MySqlTestCase;
 
 final class PlanQueryContractTest extends MySqlTestCase
@@ -25,6 +26,23 @@ final class PlanQueryContractTest extends MySqlTestCase
         $this->getJson('/v1/me/info-questions?status=bad')->assertStatus(400);
         $this->actor();
         $this->getJson('/v1/me/requests/'.$plan['request'])->assertNotFound();
+    }
+
+    public function test_failed_ai_draft_does_not_claim_the_preview_is_ready(): void
+    {
+        $user = $this->actor();
+        $plan = $this->planFixture($user['id']);
+        $this->db->table('ai_generations')->insert([
+            'id' => Crypto::uuid(),
+            'request_id' => $plan['request'],
+            'provider' => 'pool',
+            'status' => 'failed',
+            'skipped_reason' => 'provider_error',
+        ]);
+
+        $this->getJson('/v1/me/request')->assertOk()
+            ->assertJsonPath('status', 'in_review')
+            ->assertJsonPath('holdReason', 'ساخت خودکار برنامه ناموفق بود. متخصص تغذیه خودش برنامه را می‌نویسد.');
     }
 
     public function test_specialist_queue_is_scoped_to_assignment_and_bucket(): void

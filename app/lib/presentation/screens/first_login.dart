@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/motion/motion.dart';
-import '../../core/photos/food_image.dart';
 import '../../core/theme/theme.dart';
 import '../../data/demo_store.dart' show DemoScope, latinDigits;
 import '../../data/customer_auth.dart';
 import '../../data/onboarding/signup_progress.dart';
 import '../onboarding/signup_onboarding.dart';
 import '../widgets/brand_mark.dart';
+import '../widgets/sms_otp_autofill.dart';
 import '../widgets/kit/pill_button.dart';
 
 class FirstLoginScreen extends StatefulWidget {
@@ -19,6 +19,12 @@ class FirstLoginScreen extends StatefulWidget {
 class _FirstLoginScreenState extends State<FirstLoginScreen> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
+  late final _smsAutofill = SmsOtpAutofill(
+    controller: _code,
+    onFilled: () {
+      if (mounted) setState(() => _error = null);
+    },
+  );
   final _form = GlobalKey<FormState>();
   final _inputFocus = FocusNode();
   bool _inputSubmitted = false;
@@ -48,6 +54,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
 
   @override
   void dispose() {
+    _smsAutofill.stop();
     _inputFocus.dispose();
     _phone.dispose();
     _code.dispose();
@@ -100,16 +107,25 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
     try {
       if (_codeStep) {
         await store.verifyLoginCode(phone, latinDigits(_code.text).trim());
+        _smsAutofill.stop();
+        TextInput.finishAutofillContext(shouldSave: false);
       } else {
+        _code.clear();
+        await _smsAutofill.start();
+        if (!mounted) return;
         await auth.requestCode(phone, existingAccountOnly: true);
         if (mounted) {
           setState(() {
             _codeStep = true;
             _inputSubmitted = false;
           });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _codeStep) _inputFocus.requestFocus();
+          });
         }
       }
     } on AuthFailure catch (failure) {
+      if (!_codeStep) _smsAutofill.stop();
       if (!mounted) return;
       if (failure.code == 'account_not_registered') {
         setState(() => _unregistered = true);
@@ -138,7 +154,9 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
       return 'شماره موبایل باید با ۰۹ شروع شود.';
     }
     final length = _codeStep ? 6 : 11;
-    if (requireComplete && digits.length != length) {
+    final debugCode =
+        _codeStep && debugLoginOtp(latinDigits(_phone.text).trim(), digits);
+    if (requireComplete && digits.length != length && !debugCode) {
       return _codeStep
           ? 'کد تأیید باید ۶ رقم باشد.'
           : 'شماره موبایل باید ۱۱ رقم باشد.';
@@ -148,8 +166,10 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
 
   Widget _numberInput(BuildContext context) {
     final digits = latinDigits((_codeStep ? _code : _phone).text).trim();
-    final valid = (_codeStep ? RegExp(r'^\d{6}$') : RegExp(r'^09\d{9}$'))
-        .hasMatch(digits);
+    final phone = latinDigits(_phone.text).trim();
+    final valid = (_codeStep
+        ? RegExp(r'^\d{6}$').hasMatch(digits) || debugLoginOtp(phone, digits)
+        : RegExp(r'^09\d{9}$').hasMatch(digits));
     final error = _inputError(
       digits,
       requireComplete: _inputSubmitted || !_inputFocus.hasFocus,
@@ -188,7 +208,10 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
               focusNode: _inputFocus,
               controller: _codeStep ? _code : _phone,
               enabled: !_busy,
-              keyboardType: TextInputType.phone,
+              keyboardType: _codeStep
+                  ? TextInputType.number
+                  : TextInputType.phone,
+              autocorrect: false,
               textInputAction: TextInputAction.done,
               textDirection: TextDirection.ltr,
               textAlign: TextAlign.left,
@@ -227,7 +250,7 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
                   height: 1.2,
                 ),
                 helperText: _codeStep
-                    ? 'کد پیامک‌شده را وارد کن.'
+                    ? 'کد پیامک را از پیشنهاد تکمیل خودکار انتخاب کن یا وارد کن.'
                     : valid
                     ? 'فرمت شماره درست است.'
                     : 'شماره‌ات را با ۰۹ وارد کن؛ ۱۱ رقم.',
@@ -315,128 +338,126 @@ class _FirstLoginScreenState extends State<FirstLoginScreen> {
   Widget build(BuildContext context) => Scaffold(
     resizeToAvoidBottomInset: true,
     backgroundColor: AppColors.emeraldDark,
-    body: Stack(
-      fit: StackFit.expand,
-      children: [
-        const FoodImage(
-          photoId: 'woman_walking_through',
-          fit: BoxFit.cover,
-          alignment: Alignment.topCenter,
-        ),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0.28, 0.58, 0.78, 1],
-              colors: [
-                Color(0x00000000),
-                Color(0x990A1F18),
-                Color(0xF20A1F18),
-                Color(0xFF071510),
-              ],
-            ),
+    body: AutofillGroup(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/brand_scenes/login_nutrition.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            excludeFromSemantics: true,
           ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-            child: Form(
-              key: _form,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(),
-                  const SabzineMark(size: 64, color: Colors.white),
-                  const SizedBox(height: 10),
-                  const BrandWordmark(width: 120, color: Colors.white),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'ادامهٔ مسیر سلامتی تو',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'برنامه‌ات آمادهٔ همراهی با توست.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFFD7EDE3), height: 1.7),
-                  ),
-                  const SizedBox(height: 22),
-                  _numberInput(context),
-                  const SizedBox(height: 18),
-                  PillButton(
-                    label: _busy
-                        ? 'در حال بررسی…'
-                        : _codeStep
-                        ? 'تأیید و ورود'
-                        : 'ورود',
-                    loading: _busy,
-                    onPressed: _busy ? null : _continue,
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFFFFB4B4),
-                        height: 1.7,
-                      ),
-                    ),
-                  ],
-                  if (_unregistered) ...[
-                    const SizedBox(height: 12),
-                    const Text(
-                      'ثبت‌نام نکردی',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFFFFB4B4), height: 1.7),
-                    ),
-                    const SizedBox(height: 12),
-                    PillButton(
-                      label: 'ثبت‌نام',
-                      onPressed: _busy
-                          ? null
-                          : () => _openOnboarding(fresh: true),
-                    ),
-                  ],
-                  if (_codeStep)
-                    TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => setState(() {
-                              _codeStep = false;
-                              _inputSubmitted = false;
-                              _code.clear();
-                              _error = null;
-                              _unregistered = false;
-                            }),
-                      child: const Text(
-                        'تغییر شماره یا درخواست کد جدید',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    )
-                  else if (!_unregistered)
-                    TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => _openOnboarding(fresh: true),
-                      child: const Text(
-                        'هنوز ثبت‌نام نکردی؟',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0.28, 0.58, 0.78, 1],
+                colors: [
+                  Color(0x00000000),
+                  Color(0x990A1F18),
+                  Color(0xF20A1F18),
+                  Color(0xFF071510),
                 ],
               ),
             ),
           ),
-        ),
-      ],
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+              child: Form(
+                key: _form,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Spacer(),
+                    const SabzineMark(size: 64, color: Colors.white),
+                    const SizedBox(height: 10),
+                    const BrandWordmark(width: 120, color: Colors.white),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'ادامهٔ مسیر سلامتی تو',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    _numberInput(context),
+                    const SizedBox(height: 18),
+                    PillButton(
+                      label: _busy
+                          ? 'در حال بررسی…'
+                          : _codeStep
+                          ? 'تأیید و ورود'
+                          : 'ورود',
+                      loading: _busy,
+                      onPressed: _busy ? null : _continue,
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFFFB4B4),
+                          height: 1.7,
+                        ),
+                      ),
+                    ],
+                    if (_unregistered) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'ثبت‌نام نکردی',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFFFFB4B4), height: 1.7),
+                      ),
+                      const SizedBox(height: 12),
+                      PillButton(
+                        label: 'ثبت‌نام',
+                        onPressed: _busy
+                            ? null
+                            : () => _openOnboarding(fresh: true),
+                      ),
+                    ],
+                    if (_codeStep)
+                      TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () => setState(() {
+                                _smsAutofill.stop();
+                                _codeStep = false;
+                                _inputSubmitted = false;
+                                _code.clear();
+                                _error = null;
+                                _unregistered = false;
+                              }),
+                        child: const Text(
+                          'تغییر شماره یا درخواست کد جدید',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
+                    else if (!_unregistered)
+                      TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () => _openOnboarding(fresh: true),
+                        child: const Text(
+                          'هنوز ثبت‌نام نکردی؟',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }

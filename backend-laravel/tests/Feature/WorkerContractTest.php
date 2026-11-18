@@ -8,6 +8,24 @@ use App\Modules\Worker\Application\WorkerStore;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use Tests\MySqlTestCase;
 
+final class FailingDraft implements DraftProvider
+{
+    public function name(): string
+    {
+        return 'test-adapter';
+    }
+
+    public function callsExternalNetwork(): bool
+    {
+        return false;
+    }
+
+    public function draft(string $requestId): array
+    {
+        throw new \RuntimeException('model rejected the plan');
+    }
+}
+
 final class CountingDraft implements DraftProvider
 {
     public int $calls = 0;
@@ -87,6 +105,31 @@ final class WorkerContractTest extends MySqlTestCase
         $this->withToken($user['token']);
         $this->getJson('/v1/me/plan')->assertOk()->assertJsonPath('versionId', $published)->assertJsonCount(7, 'days');
         $this->artisan('sabzine:work', ['--once' => true])->assertExitCode(1);
+    }
+
+    public function test_rejected_draft_stays_with_the_specialist_and_records_the_failure(): void
+    {
+        $this->app->instance(DraftProvider::class, new FailingDraft);
+        $user = $this->actor();
+        $doctor = $this->actor('specialist');
+        $this->db->table('specialist_profiles')->insert(['user_id' => $doctor['id'], 'display_name' => 'متخصص تولید', 'verification_status' => 'verified']);
+        $submission = Crypto::uuid();
+        $order = Crypto::uuid();
+        $request = Crypto::uuid();
+        $this->db->table('questionnaire_submissions')->insert(['id' => $submission, 'user_id' => $user['id'], 'schema_version' => 1, 'answers' => '{}', 'risk_flags' => '[]']);
+        $this->db->table('orders')->insert(['id' => $order, 'user_id' => $user['id'], 'service_code' => 'new_plan', 'price_toman' => 100, 'cash_toman' => 100, 'promo_toman' => 0, 'status' => 'paid', 'idempotency_key' => Crypto::uuid()]);
+        $this->db->table('plan_requests')->insert(['id' => $request, 'user_id' => $user['id'], 'order_id' => $order, 'kind' => 'new_plan', 'status' => 'queued', 'submission_id' => $submission, 'assigned_specialist_id' => $doctor['id'], 'price_toman' => 100]);
+        $this->db->table('outbox_events')->insert(['id' => Crypto::uuid(), 'topic' => 'plan.generate', 'aggregate_id' => $request, 'payload' => json_encode(['requestId' => $request])]);
+        $store = $this->app->make(WorkerStore::class);
+        self::assertSame(1, $store->relay());
+        self::assertSame(1, $this->app->make(JobWorker::class)->drain());
+        $job = $this->db->table('worker_jobs')->where('aggregate_id', $request)->first();
+        self::assertSame('succeeded', $job->status);
+        self::assertSame('provider_error', $job->last_error);
+        self::assertSame('failed', $this->db->table('ai_generations')->where('request_id', $request)->value('status'));
+        self::assertSame('specialist_required', $this->db->table('notifications')->where('user_id', $doctor['id'])->value('kind'));
+        $this->withToken($user['token']);
+        $this->getJson('/v1/me/request')->assertOk()->assertJsonPath('holdReason', 'ساخت خودکار برنامه ناموفق بود. متخصص تغذیه خودش برنامه را می‌نویسد.');
     }
 
     public function test_expired_lease_is_claimed_once_and_maintenance_uses_the_same_thresholds(): void

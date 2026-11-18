@@ -44,7 +44,7 @@ final class ConfiguredDraftProvider implements DraftProvider
             ($profile['diet_style'] !== 'vegetarian' || ! array_intersect(['meat', 'poultry', 'fish'], $f['tags'])) &&
             ($profile['track'] !== 'pregnancy' || ! in_array('raw', $f['tags'], true)) &&
             $gate->allows($f, $profile, $learned['avoid'], $learned['specialistNotes'], true));
-        
+
         $selector = new FoodSelectionEngine($profile, $learned);
         try {
             $offeredForPrompt = $selector->selectForSlots($foods, $slots);
@@ -82,16 +82,17 @@ final class ConfiguredDraftProvider implements DraftProvider
         // Use compact text catalog for prompt, full JSON for validation
         $catalogText = '';
         foreach ($catalogPrompt as $mealType => $lines) {
-            $catalogText .= strtoupper($mealType) . ":\n{$lines}\n\n";
+            $catalogText .= strtoupper($mealType).":\n{$lines}\n\n";
         }
         $values = ['profile' => json_encode($safe, JSON_UNESCAPED_UNICODE), 'catalog' => trim($catalogText), 'days' => '[1,2,3,4,5,6,7]', 'schema' => $schema, 'untrusted' => '', 'repair' => '', 'used' => '', 'season' => $this->currentSeason()];
         $template = $prompt->user_template ?? "{{profile}}\n{{catalog}}\n{{days}}\n{{schema}}";
         foreach ($values as $key => $value) {
             $template = str_replace('{{'.$key.'}}', $value, $template);
         }
+        $bounds = $this->constraints($slots, (int) $profile['target_kcal']);
         $messages = [
-            ['role' => 'system', 'content' => $prompt->system_prompt ?? 'Return JSON for all 7 numbered days, every required slot, primary and a different alternative. Select ONLY offered catalogue slugs. Portions: 0.5,0.75,1,1.25,1.5,2. This is a draft for specialist approval.'],
-            ['role' => 'user', 'content' => $template],
+            ['role' => 'system', 'content' => ($prompt->system_prompt ?? 'Return JSON for all 7 numbered days, every required slot, primary and a different alternative. Select ONLY offered catalogue slugs. Portions: 0.5,0.75,1,1.25,1.5,2. This is a draft for specialist approval.')."\n".$bounds],
+            ['role' => 'user', 'content' => $template."\n\n".$bounds],
         ];
         $validate = function ($text) use ($slots, $offered, $profile) {
             try {
@@ -109,28 +110,26 @@ final class ConfiguredDraftProvider implements DraftProvider
             if ($error->problemCode !== 'invalid_plan') {
                 throw $error;
             }
-            
+
             // Log the validation failure for analysis
             if (getenv('DRAFT_DEBUG') === '1') {
                 file_put_contents(
-                    storage_path('logs/draft-validation-fail.txt'), 
-                    date('Y-m-d H:i:s') . " | Request: {$requestId} | Error: {$error->messageFa}\n",
+                    storage_path('logs/draft-validation-fail.txt'),
+                    date('Y-m-d H:i:s')." | Request: {$requestId} | Error: {$error->messageFa}\n",
                     FILE_APPEND
                 );
             }
-            
+
             // Only retry if the error is potentially fixable by better instructions
-            $retryableErrors = ['meal_energy_invalid', 'daily_energy_invalid', 'alternative_same', 'unknown_food_or_portion'];
+            $retryableErrors = ['seven_days_required', 'meal_energy_invalid', 'daily_energy_invalid', 'alternative_same', 'unknown_food_or_portion'];
             $errorCode = $error->messageFa;
-            
-            if (!$this->isRetryable($errorCode, $retryableErrors)) {
+
+            if (! $this->isRetryable($errorCode, $retryableErrors)) {
                 throw $error;
             }
-            
-            // Enhanced repair prompt with specific guidance
-            $repairGuidance = $this->buildRepairGuidance($errorCode, $slot['kcal'] ?? 0);
-            $messages[1]['content'] .= "\n\n{$repairGuidance}";
-            
+
+            $messages[1]['content'] .= "\n\n".$this->buildRepairGuidance($errorCode, $slots, (int) $profile['target_kcal']);
+
             try {
                 $result = $this->pools->run('plan_draft', $messages, $requestId, $user, true, $validate);
             } catch (Problem $repairError) {
@@ -143,7 +142,7 @@ final class ConfiguredDraftProvider implements DraftProvider
 
         return $result['value'];
     }
-    
+
     private function currentSeason(): string
     {
         $month = (int) date('n');
@@ -167,30 +166,52 @@ final class ConfiguredDraftProvider implements DraftProvider
                 return true;
             }
         }
+
         return false;
     }
-    
-    /**
-     * Build specific repair guidance based on the error.
-     */
-    private function buildRepairGuidance(string $error, int $targetCalories): string
+
+    /** @param  list<array{mealType: string, kcal: int}>  $slots */
+    private function constraints(array $slots, int $target): string
     {
+        $lowDay = (int) floor($target * 0.85);
+        $highDay = (int) ceil($target * 1.15);
+        $lines = [
+            'قیدهای قطعی: دقیقاً ۷ روز با day از ۱ تا ۷ و همهٔ وعده‌های هر روز. JSON را ناقص رها نکن.',
+            "جمع کالری primary هر روز باید بین {$lowDay} و {$highDay} باشد.",
+        ];
+        foreach ($slots as $slot) {
+            $kcal = (int) $slot['kcal'];
+            $low = (int) floor($kcal * 0.65);
+            $high = (int) ceil($kcal * 1.35);
+            $lines[] = sprintf('%s هدف %d؛ primary و alternative هر کدام جداگانه بین %d و %d کیلوکالری.', $slot['mealType'], $kcal, $low, $high);
+        }
+        $lines[] = 'servings فقط 0.5، 0.75، 1، 1.25، 1.5 یا 2. اگر یک غذا به بازه نمی‌رسد، دو یا سه غذا از همان وعده را جمع کن. alternative باید slug متفاوت داشته باشد.';
+
+        return implode("\n", $lines);
+    }
+
+    private function buildRepairGuidance(string $error, array $slots, int $target): string
+    {
+        $bounds = $this->constraints($slots, $target);
+        if (str_contains($error, 'seven_days_required')) {
+            return "خروجی قبلی هفت روز کامل نبود.\n{$bounds}";
+        }
         if (str_contains($error, 'meal_energy_invalid')) {
-            return "⚠️ CRITICAL: Previous attempt failed energy validation. Each meal MUST be within 30% of target calories. For a {$targetCalories} kcal slot, use servings 1.25, 1.5, or 2.0 to hit the target. Choose foods closer to the target, and if needed combine 2-3 foods per meal.";
+            return "خروجی قبلی کالری وعده را خارج از بازهٔ ۳۵٪ گذاشت.\n{$bounds}";
         }
-        
+
         if (str_contains($error, 'daily_energy_invalid')) {
-            return "⚠️ CRITICAL: Daily total must be within 15% of target. Carefully balance all meals. If breakfast is too low, lunch or dinner must compensate. Review ALL meals before submitting.";
+            return "خروجی قبلی جمع روز را خارج از بازهٔ ۱۵٪ هدف گذاشت.\n{$bounds}";
         }
-        
+
         if (str_contains($error, 'alternative_same')) {
-            return "⚠️ CRITICAL: Alternative must be DIFFERENT food than primary. Alternative should have similar calories but completely different title and slug.";
+            return '⚠️ CRITICAL: Alternative must be DIFFERENT food than primary. Alternative should have similar calories but completely different title and slug.';
         }
-        
+
         if (str_contains($error, 'unknown_food_or_portion')) {
-            return "⚠️ CRITICAL: You used a food slug that is NOT in the catalogue. ONLY use slugs from the provided catalogue. Portions must be exactly one of: 0.5, 0.75, 1.0, 1.25, 1.5, 2.0";
+            return '⚠️ CRITICAL: You used a food slug that is NOT in the catalogue. ONLY use slugs from the provided catalogue. Portions must be exactly one of: 0.5, 0.75, 1.0, 1.25, 1.5, 2.0';
         }
-        
+
         return "⚠️ Previous JSON failed validation: {$error}. Use only offered slugs, valid servings (0.5, 0.75, 1.0, 1.25, 1.5, 2.0), and ensure energy targets are met within tolerance.";
     }
 
@@ -230,7 +251,7 @@ final class ConfiguredDraftProvider implements DraftProvider
         // Reduced from 0.45 to 0.30 for tighter control
         return 0.30;
     }
-    
+
     /**
      * Additional safety gates beyond AI capability checks.
      * These are hard backend rules that cannot be overridden by AI.
@@ -239,20 +260,20 @@ final class ConfiguredDraftProvider implements DraftProvider
     {
         $track = $profile['track'] ?? '';
         $conditions = $profile['conditions'] ?? [];
-        
+
         // Pregnancy and breastfeeding require specialist approval
         if ($track === 'pregnancy') {
             $stage = $profile['life_stage'] ?? '';
             if ($stage === 'pregnant' || $stage === 'breastfeeding') {
-                throw new Problem(409, 'specialist_approval_required', 
+                throw new Problem(409, 'specialist_approval_required',
                     'برنامه بارداری و شیردهی نیاز به تأیید متخصص دارد');
             }
         }
-        
+
         // Critical medical conditions require specialist
         $criticalConditions = ['diabetes', 'kidney', 'heart', 'thyroid', 'pcos'];
         if (array_intersect($criticalConditions, $conditions)) {
-            throw new Problem(409, 'medical_review_required', 
+            throw new Problem(409, 'medical_review_required',
                 'وضعیت پزشکی شما نیاز به بررسی متخصص دارد');
         }
     }

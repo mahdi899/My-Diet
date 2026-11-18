@@ -6,11 +6,11 @@ final class PlanGeneration
 {
     public function __construct(private PlanGenerationStore $store, private DraftProvider $provider) {}
 
-    public function generate(string $requestId, bool $regenerate = false): void
+    public function generate(string $requestId, bool $regenerate = false): ?string
     {
         $claim = $this->store->begin($requestId, $regenerate);
         if ($claim === null) {
-            return;
+            return null;
         }
         $days = null;
         $reason = $claim['skip'];
@@ -29,6 +29,8 @@ final class PlanGeneration
         if ($days !== null && $reason === null && app()->environment('local')) {
             $this->store->publishLocal($requestId);
         }
+
+        return $reason;
     }
 
     public function regenerate(string $specialist, string $requestId, int $lock): array

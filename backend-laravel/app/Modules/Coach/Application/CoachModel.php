@@ -13,7 +13,7 @@ interface CoachModel
      * @param  string  $userMessage  The user's message text
      * @return array{text: string, tokensIn: int, tokensOut: int, costMicros: int, model?: string}
      */
-    public function reply(string $userId, string $userMessage, ?callable $onDelta = null): array;
+    public function reply(string $userId, string $userMessage, ?callable $onDelta = null, ?string $threadId = null): array;
 
     /**
      * @return array{foods: list<array>, confidence: float, questions: list<string>, needsConfirmation: bool, tokensIn: int, tokensOut: int, costMicros: int, text: string}

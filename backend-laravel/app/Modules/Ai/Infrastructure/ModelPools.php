@@ -70,7 +70,7 @@ final class ModelPools
                 $last = $outcome;
                 Log::warning('AI pool member failed', ['pool' => $code, 'model' => $member->model, 'outcome' => $outcome, 'message' => $error->getMessage()]);
                 if ($error instanceof \InvalidArgumentException) {
-                    $detail = 'خروجی مدل با قاعدهٔ برنامه جور نبود.';
+                    $detail = $error->getMessage();
                 }
                 $cost = $result['costMicros'] ?? ($outcome === 'outcome_unknown' ? $estimate : 0);
                 $this->finish($reservation, $member, $code, $request, $index + 1,

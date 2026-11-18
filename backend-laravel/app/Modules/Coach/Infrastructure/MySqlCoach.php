@@ -25,9 +25,9 @@ final class MySqlCoach implements CoachGateway
         private CoachChatActions $actions,
     ) {}
 
-    public function thread(string $user, ?int $before, int $limit): array
+    public function thread(string $user, ?int $before, int $limit, ?string $threadId = null): array
     {
-        $thread = $this->ensure($user);
+        $thread = $this->ensure($user, $threadId);
         $query = $this->db->table('coach_messages')->where('thread_id', $thread->id)->orderByDesc('seq');
         if ($before !== null) {
             $query->where('seq', '<', $before);
@@ -38,10 +38,10 @@ final class MySqlCoach implements CoachGateway
         return ['thread' => ['id' => $thread->id, 'dayBriefDate' => $thread->day_brief_date], 'messages' => $page->map(fn ($row) => $this->message($row))->all(), 'nextCursor' => $rows->count() > $limit ? (int) $page->first()->seq : null];
     }
 
-    public function accept(string $user, string $client, string $text, ?callable $emit = null): array
+    public function accept(string $user, string $client, string $text, ?callable $emit = null, ?string $threadId = null): array
     {
-        return $this->serial($user, function () use ($user, $client, $text, $emit) {
-            $thread = $this->ensure($user);
+        return $this->serial($user, function () use ($user, $client, $text, $emit, $threadId) {
+            $thread = $this->ensure($user, $threadId);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
                 return ['replay' => true, 'metered' => false, 'userMessage' => $this->message($prior), 'replies' => $this->replies($prior->id), 'blocked' => null];
@@ -49,6 +49,7 @@ final class MySqlCoach implements CoachGateway
             $blocked = $this->blocked();
             $id = Crypto::uuid();
             $this->db->table('coach_messages')->insert(['id' => $id, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $text, 'client_message_id' => $client, 'payload' => '{}']);
+            app(CoachThreads::class)->touch($thread->id, $text);
             $local = $blocked === null ? (CoachSafety::localReply($text) ?? $this->factual($user, $text)) : null;
             if (is_string($local) && preg_match('/اختلال خوردن|گرسنگی شدید|هیچ.?چیز نخورم/u', $text) === 1) {
                 $this->alertSpecialist($user, 'eating_risk');
@@ -82,7 +83,7 @@ final class MySqlCoach implements CoachGateway
                     if ($piece !== '') {
                         $emit('delta', ['text' => $piece, 'segment' => 0]);
                     }
-                });
+                }, $thread->id);
             } catch (\Throwable $error) {
                 $answered = false;
                 Log::error('Coach reply failed', ['type' => $error::class, 'message' => $error->getMessage(), 'file' => $error->getFile(), 'line' => $error->getLine()]);
@@ -99,18 +100,38 @@ final class MySqlCoach implements CoachGateway
         });
     }
 
-    public function photo(string $user, string $client, string $bytes, string $mime): array
+    public function photo(string $user, string $client, string $bytes, string $mime, ?string $threadId = null): array
+    {
+        return $this->serial($user, fn () => $this->photoInThread($user, $client, $bytes, $mime, $threadId));
+    }
+
+    private function photoInThread(string $user, string $client, string $bytes, string $mime, ?string $threadId): array
     {
         try {
             $detected = MediaSignature::inspect('image', $mime, $bytes);
         } catch (\InvalidArgumentException) {
             throw new Problem(400, 'invalid_media', 'محتوای فایل با نوع مجاز یکی نیست');
         }
-        $thread = $this->ensure($user);
-        $media = Crypto::uuid();
-        $this->db->table('coach_media')->insert(['id' => $media, 'user_id' => $user, 'mime' => $detected, 'byte_size' => strlen($bytes), 'content' => $bytes]);
-        $message = Crypto::uuid();
-        $this->db->table('coach_messages')->insert(['id' => $message, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'photo', 'fallback_text' => '', 'client_message_id' => $client, 'payload' => json_encode(['mediaId' => $media])]);
+        $thread = $this->ensure($user, $threadId);
+        $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
+        $replies = $prior === null ? [] : $this->replies($prior->id);
+        if ($replies !== []) {
+            return ['replay' => true, 'userMessage' => $this->message($prior), 'messages' => $replies];
+        }
+        app(CoachQuotaService::class)->requireVision($user);
+        if ($prior === null) {
+            $media = Crypto::uuid();
+            $message = Crypto::uuid();
+            $this->db->transaction(function () use ($media, $message, $user, $detected, $bytes, $thread, $client): void {
+                $this->db->table('coach_media')->insert(['id' => $media, 'user_id' => $user, 'mime' => $detected, 'byte_size' => strlen($bytes), 'content' => $bytes]);
+                $this->db->table('coach_messages')->insert(['id' => $message, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'photo', 'fallback_text' => '', 'client_message_id' => $client, 'payload' => json_encode(['mediaId' => $media])]);
+            });
+        } else {
+            $message = $prior->id;
+            $media = json_decode($prior->payload, true)['mediaId'];
+            $bytes = $this->db->table('coach_media')->where(['id' => $media, 'user_id' => $user])->value('content');
+        }
+        app(CoachThreads::class)->touch($thread->id, 'عکس غذا');
         try {
             $analysis = $this->model->analyzePhoto($user, base64_encode($bytes));
         } catch (\Throwable $error) {
@@ -137,7 +158,7 @@ final class MySqlCoach implements CoachGateway
         ]);
         $this->usage($user, $analysis['costMicros'], 0, 1);
 
-        return ['mediaId' => $media, 'messageId' => $message, 'entryId' => $entry, 'status' => 'suggested', 'analysis' => $analysis];
+        return ['replay' => false, 'mediaId' => $media, 'messageId' => $message, 'entryId' => $entry, 'status' => 'suggested', 'analysis' => $analysis, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $message)->first()), 'messages' => $this->replies($message)];
     }
 
     public function followUps(string $user): array
@@ -177,11 +198,11 @@ final class MySqlCoach implements CoachGateway
         return ['date' => $day, 'waterMl' => $water, 'meals' => $meals, 'notADiagnosis' => true];
     }
 
-    public function dayBrief(string $user): array
+    public function dayBrief(string $user, ?string $threadId = null): array
     {
-        $thread = $this->ensure($user);
+        $thread = $this->ensure($user, $threadId);
         $today = CivilDates::today();
-        if ($thread->day_brief_date === $today) {
+        if ($this->db->table('coach_threads')->where('user_id', $user)->where('day_brief_date', $today)->exists()) {
             return ['date' => $today, 'created' => false];
         }
         $follow = app(FollowUpQuestions::class)->forUser($user);
@@ -204,10 +225,10 @@ final class MySqlCoach implements CoachGateway
         return ['date' => $today, 'created' => true];
     }
 
-    public function action(string $user, string $client, string $action, array $args = [], ?string $label = null): array
+    public function action(string $user, string $client, string $action, array $args = [], ?string $label = null, ?string $threadId = null): array
     {
-        return $this->serial($user, function () use ($user, $client, $action, $args, $label): array {
-            $thread = $this->ensure($user);
+        return $this->serial($user, function () use ($user, $client, $action, $args, $label, $threadId): array {
+            $thread = $this->ensure($user, $threadId);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
                 return ['userMessage' => $this->message($prior), 'messages' => $this->replies($prior->id), 'today' => $this->today($user)];
@@ -228,9 +249,11 @@ final class MySqlCoach implements CoachGateway
                 $this->db->table('coach_messages')->insert(['id' => $userMessage, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $userText, 'client_message_id' => $client, 'payload' => '{}']);
                 $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $local['text'], 'reply_to' => $userMessage, 'payload' => '{}']);
 
+                app(CoachThreads::class)->touch($thread->id, $userText);
+
                 return ['userMessage' => $this->message($this->db->table('coach_messages')->where('id', $userMessage)->first()), 'messages' => [$this->message($this->db->table('coach_messages')->where('id', $assistant)->first())], 'today' => $this->today($user)];
             }
-            $accepted = $this->accept($user, $client, $action);
+            $accepted = $this->accept($user, $client, $action, null, $thread->id);
 
             return ['userMessage' => $accepted['userMessage'], 'messages' => $accepted['replies'], 'today' => $this->today($user)];
         });
@@ -273,6 +296,7 @@ final class MySqlCoach implements CoachGateway
         foreach ($this->db->table('coach_threads as t')
             ->join('users u', 'u.id', '=', 't.user_id')
             ->where('u.role', 'user')
+            ->whereRaw('t.id = (select latest.id from coach_threads latest where latest.user_id = t.user_id order by latest.last_message_at desc, latest.created_at desc, latest.id desc limit 1)')
             ->select(['t.id', 't.user_id', 't.last_message_at'])
             ->get() as $thread) {
 
@@ -538,16 +562,9 @@ final class MySqlCoach implements CoachGateway
         return $this->faDigits($ml).' میلی‌لیتر آب ثبت شد. مجموع امروز '.$this->faDigits($total).' میلی‌لیتر است.';
     }
 
-    private function ensure(string $user): object
+    private function ensure(string $user, ?string $threadId = null): object
     {
-        $existing = $this->db->table('coach_threads')->where('user_id', $user)->first();
-        if ($existing !== null) {
-            return $existing;
-        }
-        $id = Crypto::uuid();
-        $this->db->table('coach_threads')->insert(['id' => $id, 'user_id' => $user]);
-
-        return $this->db->table('coach_threads')->where('id', $id)->first();
+        return app(CoachThreads::class)->resolve($user, $threadId);
     }
 
     private function replies(string $userMessage): array

@@ -148,7 +148,7 @@ void main() {
   );
 
   testWidgets(
-    'water rises after success, Undo persists, failures preserve the count and midnight starts a new day',
+    'water add and subtract persist, failures preserve the count and midnight starts a new day',
     (t) async {
       t.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures();
@@ -194,7 +194,8 @@ void main() {
       expect(store.waterGlassesOn(now), 3);
       expect(find.text('یک لیوان به آب امروزت اضافه شد.'), findsOneWidget);
       expect(t.binding.transientCallbackCount, 0);
-      await t.tap(find.byKey(const ValueKey('water-undo')));
+      expect(find.byKey(const ValueKey('water-undo')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('water-remove')));
       await t.pump();
       await t.pump(const Duration(milliseconds: 120));
       expect(level(2), greaterThan(0));
@@ -211,7 +212,7 @@ void main() {
       await t.pumpAndSettle();
       expect(await log.read(now), 1);
       expect(level(1), 0);
-      await t.tap(find.byKey(const ValueKey('water-undo')));
+      await t.tap(find.byKey(const ValueKey('water-add')));
       await t.pumpAndSettle();
       expect(await log.read(now), 2);
       expect(level(1), 1);

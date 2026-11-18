@@ -9,7 +9,7 @@ interface WorkerStore
     /** @return list<object> */
     public function claim(int $limit = 1): array;
 
-    public function succeed(string $id, string $lease): void;
+    public function succeed(string $id, string $lease, ?string $note = null): void;
 
     public function fail(string $id, string $error, int $attempts, int $limit = 3, ?string $lease = null): void;
 

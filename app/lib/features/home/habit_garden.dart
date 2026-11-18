@@ -120,7 +120,7 @@ class _HabitGardenState extends State<HabitGarden> {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'باغ قدم‌های کوچک',
+                  'قدم‌های کوچک',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -141,7 +141,10 @@ class _HabitGardenState extends State<HabitGarden> {
                           anchor.day - 1,
                         );
                       }),
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const Icon(
+                  Icons.chevron_right_rounded,
+                  textDirection: TextDirection.ltr,
+                ),
               ),
               IconButton(
                 key: const ValueKey('habit-current-week'),
@@ -152,7 +155,10 @@ class _HabitGardenState extends State<HabitGarden> {
                         _week = 0;
                         _selected = today;
                       }),
-                icon: const Icon(Icons.chevron_left_rounded),
+                icon: const Icon(
+                  Icons.chevron_left_rounded,
+                  textDirection: TextDirection.ltr,
+                ),
               ),
             ],
           ),

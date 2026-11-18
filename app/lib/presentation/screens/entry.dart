@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../data/customer_auth.dart';
 import '../../data/demo_store.dart';
 import '../../core/theme/theme.dart';
 import '../widgets/auth_canvas.dart';
 import '../widgets/kit/pill_button.dart';
 import '../widgets/ui.dart';
+import '../widgets/sms_otp_autofill.dart';
 
 /// Compatibility widget; the customer application no longer has role selection.
 class EntryScreen extends StatelessWidget {
@@ -44,11 +47,18 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final phone = TextEditingController(), code = TextEditingController();
+  late final _smsAutofill = SmsOtpAutofill(
+    controller: code,
+    onFilled: () {
+      if (mounted) setState(() => error = null);
+    },
+  );
   final form = GlobalKey<FormState>();
   bool codeStep = false, busy = false;
   String? error;
   @override
   void dispose() {
+    _smsAutofill.stop();
     phone.dispose();
     code.dispose();
     super.dispose();
@@ -56,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void back() {
     if (codeStep) {
+      _smsAutofill.stop();
       setState(() => codeStep = false);
     } else {
       final store = DemoScope.of(context);
@@ -82,6 +93,8 @@ class _LoginScreenState extends State<LoginScreen> {
           latinDigits(code.text).trim(),
         );
       }
+      _smsAutofill.stop();
+      TextInput.finishAutofillContext(shouldSave: false);
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     } catch (failure) {
       if (mounted) setState(() => error = failure.toString());
@@ -102,9 +115,13 @@ class _LoginScreenState extends State<LoginScreen> {
       error = null;
     });
     try {
+      code.clear();
+      if (store.serverAuthEnabled) await _smsAutofill.start();
+      if (!mounted) return;
       await store.requestLoginCode(latinDigits(phone.text).trim());
       if (mounted) setState(() => codeStep = true);
     } catch (failure) {
+      _smsAutofill.stop();
       if (mounted) setState(() => error = failure.toString());
     } finally {
       if (mounted) setState(() => busy = false);
@@ -151,55 +168,67 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
           ],
         ),
-        child: Form(
-          key: form,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                key: ValueKey(codeStep),
-                controller: codeStep ? code : phone,
-                enabled: !busy,
-                keyboardType: TextInputType.phone,
-                textDirection: TextDirection.ltr,
-                textAlign: TextAlign.center,
-                scrollPadding: const EdgeInsets.only(bottom: 140),
-                decoration: InputDecoration(
-                  labelText: codeStep ? 'کد تأیید' : 'شماره تلفن',
-                  hintText: codeStep ? '123456' : '09120000000',
-                ),
-                validator: (value) {
-                  final v = latinDigits(value ?? '').trim();
-                  if (codeStep) {
-                    return RegExp(r'^\d{6}$').hasMatch(v)
+        child: AutofillGroup(
+          child: Form(
+            key: form,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  key: ValueKey(codeStep),
+                  controller: codeStep ? code : phone,
+                  enabled: !busy,
+                  keyboardType: codeStep
+                      ? TextInputType.number
+                      : TextInputType.phone,
+                  autocorrect: false,
+                  autofocus: codeStep,
+                  autofillHints: [
+                    codeStep
+                        ? AutofillHints.oneTimeCode
+                        : AutofillHints.telephoneNumberNational,
+                  ],
+                  textDirection: TextDirection.ltr,
+                  textAlign: TextAlign.center,
+                  scrollPadding: const EdgeInsets.only(bottom: 140),
+                  decoration: InputDecoration(
+                    labelText: codeStep ? 'کد تأیید' : 'شماره تلفن',
+                    hintText: codeStep ? '123456' : '09120000000',
+                  ),
+                  validator: (value) {
+                    final v = latinDigits(value ?? '').trim();
+                    if (codeStep) {
+                      return RegExp(r'^\d{6}$').hasMatch(v) ||
+                              debugLoginOtp(latinDigits(phone.text).trim(), v)
+                          ? null
+                          : 'کد شش‌رقمی را وارد کن.';
+                    }
+                    return RegExp(r'^09\d{9}$').hasMatch(v)
                         ? null
-                        : 'کد شش‌رقمی را وارد کن.';
-                  }
-                  return RegExp(r'^09\d{9}$').hasMatch(v)
-                      ? null
-                      : 'شمارهٔ ۱۱ رقمی با ۰۹ وارد کن.';
-                },
-              ),
-              if (error != null) ...[
-                const SizedBox(height: 12),
-                Semantics(
-                  liveRegion: true,
-                  child: Notice(error!, icon: Icons.error_outline),
+                        : 'شمارهٔ ۱۱ رقمی با ۰۹ وارد کن.';
+                  },
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 12),
+                  Semantics(
+                    liveRegion: true,
+                    child: Notice(error!, icon: Icons.error_outline),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                PillButton(
+                  label: busy
+                      ? 'در حال بررسی…'
+                      : codeStep
+                      ? 'ورود'
+                      : server
+                      ? 'دریافت کد'
+                      : 'دریافت کد نمونه',
+                  loading: busy,
+                  onPressed: busy ? null : sendCode,
                 ),
               ],
-              const SizedBox(height: 16),
-              PillButton(
-                label: busy
-                    ? 'در حال بررسی…'
-                    : codeStep
-                    ? 'ورود'
-                    : server
-                    ? 'دریافت کد'
-                    : 'دریافت کد نمونه',
-                loading: busy,
-                onPressed: busy ? null : sendCode,
-              ),
-            ],
+            ),
           ),
         ),
       ),

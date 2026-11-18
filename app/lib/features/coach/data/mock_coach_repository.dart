@@ -7,14 +7,15 @@ import '../../../data/demo_store.dart';
 import '../../../data/day.dart';
 import '../../home/water_log.dart';
 import '../../plan/goal_math.dart';
-import '../../home/home_day_focus.dart';
 import '../domain/coach_events.dart';
+import '../domain/coach_conversation.dart';
 import '../domain/coach_message.dart';
 import '../domain/coach_repository.dart';
 import 'coach_parse.dart';
 
 /// Local Persian coach used when there is no customer API.
-class MockCoachRepository implements CoachRepository {
+class MockCoachRepository
+    implements CoachRepository, CoachConversationRepository {
   MockCoachRepository({
     this.store,
     this.charDelay = const Duration(milliseconds: 12),
@@ -45,9 +46,13 @@ class MockCoachRepository implements CoachRepository {
   Future<CoachThreadPage> loadThread({String? cursor}) async {
     final saved = await _read();
     if (saved.isNotEmpty) {
-      return CoachThreadPage(messages: saved, suggestions: _followUps);
+      return CoachThreadPage(
+        threadId: _conversationId,
+        messages: saved,
+        suggestions: _followUps,
+      );
     }
-    final seeded = _welcome();
+    final seeded = [_dayBrief()];
     await persist(seeded);
     return CoachThreadPage(messages: seeded, suggestions: _followUps);
   }
@@ -72,16 +77,138 @@ class MockCoachRepository implements CoachRepository {
     yield* _reply(request.text ?? '');
   }
 
+  String? _conversationId;
+  bool _initialized = false;
+  final _threads = <String, Map<String, dynamic>>{};
+  String get _threadsKey =>
+      'rejime_man.coach.threads.v2.${store?.sessionPhone ?? "demo"}';
+
+  @override
+  String? get conversationId => _conversationId;
+
+  Future<void>? _initializing;
+  Future<void> _initialize() {
+    if (_initialized) return Future<void>.value();
+    return _initializing ??= _initializeOnce().whenComplete(
+      () => _initializing = null,
+    );
+  }
+
+  Future<void> _initializeOnce() async {
+    final prefs = await _prefs();
+    final raw = prefs?.getString(_threadsKey);
+    if (raw != null) {
+      final data = asMap(jsonDecode(raw));
+      for (final row in asMapList(data['threads'])) {
+        _threads[row['id'] as String] = row;
+      }
+      final selected = data['selected'] as String?;
+      _conversationId = _threads.containsKey(selected)
+          ? selected
+          : _threads.keys.firstOrNull;
+    } else {
+      final old = prefs?.getString(_prefsKey);
+      if (old != null) {
+        final items = asMapList(jsonDecode(old));
+        if (items.any((m) => m['role'] == 'user')) {
+          final id = CoachSendRequest.text('').clientMessageId;
+          _conversationId = id;
+          _threads[id] = {
+            'id': id,
+            'title':
+                items.firstWhere((m) => m['role'] == 'user')['fallback_text'] ??
+                'گفتگو',
+            'createdAt': items.first['created_at'],
+            'lastMessageAt': items.last['created_at'],
+            'messages': items,
+          };
+        }
+      }
+    }
+    _initialized = true;
+    if (raw == null && _threads.isNotEmpty) {
+      await _saveThreads();
+      await prefs?.remove(_prefsKey);
+    }
+  }
+
+  Future<void> _saveThreads() async {
+    final value = jsonEncode({
+      'selected': _conversationId,
+      'threads': _threads.values.toList(),
+    });
+    final prefs = await _prefs();
+    await prefs?.setString(_threadsKey, value);
+  }
+
+  @override
+  Future<List<CoachConversation>> listConversations() async {
+    await _initialize();
+    final result = [
+      for (final row in _threads.values)
+        CoachConversation.fromJson({
+          ...row,
+          'preview':
+              asMapList(row['messages']).lastOrNull?['fallback_text'] ?? '',
+        }),
+    ];
+    result.sort(
+      (a, b) => (b.lastMessageAt ?? b.createdAt).compareTo(
+        a.lastMessageAt ?? a.createdAt,
+      ),
+    );
+    return result;
+  }
+
+  @override
+  Future<void> selectConversation(String? id) async {
+    await _initialize();
+    if (id != null && !_threads.containsKey(id)) {
+      throw const CoachTransportException('گفتگو پیدا نشد.');
+    }
+    _conversationId = id;
+    await _saveThreads();
+  }
+
+  @override
+  Future<void> renameConversation(String id, String title) async {
+    await _initialize();
+    _threads[id]?['title'] = title;
+    await _saveThreads();
+  }
+
+  @override
+  Future<void> deleteConversation(String id) async {
+    await _initialize();
+    _threads.remove(id);
+    if (_conversationId == id) _conversationId = null;
+    await _saveThreads();
+  }
+
   @override
   Future<void> persist(List<CoachMessage> messages) async {
-    final prefs = await _prefs();
-    if (prefs == null) return;
-    final ready = messages.where((m) => !m.pending).toList();
-    final kept = ready.length <= 80 ? ready : ready.sublist(ready.length - 80);
-    await prefs.setString(
-      _prefsKey,
-      jsonEncode([for (final m in kept) m.toJson()]),
-    );
+    await _initialize();
+    final ready = messages.where((m) => !m.pending && !m.failed).toList();
+    if (!ready.any((m) => m.isUser)) return;
+    if (_conversationId == null) {
+      if (_threads.length >= 10) {
+        throw const CoachTransportException(
+          '۱۰ گفتگو ذخیره داری. ابتدا یکی را حذف کن.',
+        );
+      }
+      _conversationId = CoachSendRequest.text('').clientMessageId;
+    }
+    final id = _conversationId!;
+    final first = ready.firstWhere((m) => m.isUser);
+    _threads[id] = {
+      'id': id,
+      'title': _threads[id]?['title'] ?? first.text,
+      'createdAt':
+          _threads[id]?['createdAt'] ?? first.createdAt.toIso8601String(),
+      'lastMessageAt': ready.last.createdAt.toIso8601String(),
+      'messages': [for (final m in ready) m.toJson()],
+    };
+    await _saveThreads();
   }
 
   @override
@@ -118,24 +245,6 @@ class MockCoachRepository implements CoachRepository {
   ) async {
     await _applyAction(action, data);
     return _m(type: 'text', text: 'انجام شد.');
-  }
-
-  List<CoachMessage> _welcome() {
-    final current = store;
-    final next = current == null ? null : HomeDayFocus.from(current).next;
-    final rawName = current?.questionnaire.name.trim() ?? '';
-    final name = rawName.isEmpty
-        ? 'دوست من'
-        : rawName.split(RegExp(r'\s+')).first;
-    return [
-      _dayBrief(),
-      _m(
-        type: 'text',
-        text: 'سلام $name، خوش اومدی\nبرای وعدهٔ بعدی با هم آماده بشیم؟',
-      ),
-      if (next != null) _planMeal(selected: next.meal) else _quick(),
-      _m(type: 'text', text: 'هر سوالی دربارهٔ برنامه‌ات داری، من اینجام.'),
-    ];
   }
 
   Stream<CoachEvent> _reply(String text) async* {
@@ -355,8 +464,8 @@ class MockCoachRepository implements CoachRepository {
     );
   }
 
-  CoachMessage _planMeal({Meal? selected}) {
-    final meal = selected ?? _pickMeal();
+  CoachMessage _planMeal() {
+    final meal = _pickMeal();
     return _m(
       type: 'plan_meal',
       fallback: meal.title,
@@ -442,23 +551,6 @@ class MockCoachRepository implements CoachRepository {
     },
   );
 
-  CoachMessage _quick() => _m(
-    type: 'quick_replies',
-    fallback: 'از کجا شروع کنیم؟',
-    payload: {
-      'prompt': 'از کجا شروع کنیم؟',
-      'options': [
-        for (final label in const [
-          'وعدهٔ بعدی',
-          'وزن امروز',
-          'یه لیوان آب',
-          'حلقهٔ کالری',
-        ])
-          {'label': label, 'value': label},
-      ],
-    },
-  );
-
   CoachMessage _m({
     required String type,
     String text = '',
@@ -489,20 +581,11 @@ class MockCoachRepository implements CoachRepository {
   }
 
   Future<List<CoachMessage>> _read() async {
-    final prefs = await _prefs();
-    if (prefs == null) return const [];
-    final raw = prefs.getString(_prefsKey);
-    if (raw == null || raw.isEmpty) return const [];
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) return const [];
-      return [
-        for (final item in decoded)
-          if (item is Map) parseCoachMessage(item),
-      ];
-    } on FormatException {
-      return const [];
-    }
+    await _initialize();
+    return [
+      for (final row in asMapList(_threads[_conversationId]?['messages']))
+        parseCoachMessage(row),
+    ];
   }
 
   Future<SharedPreferences?> _prefs() async {

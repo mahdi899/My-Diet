@@ -315,6 +315,10 @@ Route::get('v1/public/daily-message', [AdminDeskController::class, 'daily']);
 Route::put('v1/specialist/profile', [AdminDeskController::class, 'saveProfile'])->middleware('session:specialist');
 Route::middleware('session:user')->controller(CoachController::class)->group(function (): void {
     Route::get('v1/me/coach/thread', 'thread');
+    Route::get('v1/me/coach/threads', 'threads');
+    Route::post('v1/me/coach/threads', 'createThread');
+    Route::patch('v1/me/coach/threads/{id}', 'renameThread');
+    Route::delete('v1/me/coach/threads/{id}', 'deleteThread');
     Route::post('v1/me/coach/messages', 'messages');
     Route::post('v1/me/coach/food-photos', 'photo');
     Route::post('v1/me/coach/food-entries/{id}/confirm', 'confirmPhoto');

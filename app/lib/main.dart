@@ -61,10 +61,6 @@ void main() {
             ? null
             : LinkMonitor(probe: () => probeHealth(apiBase)),
         restoreOnStart: true,
-        // Local Chrome refresh reloads the whole app; skip the extra logo hold in debug.
-        splashDuration: kIsWeb && kDebugMode
-            ? Duration.zero
-            : const Duration(milliseconds: 1300),
       ),
     ),
   );

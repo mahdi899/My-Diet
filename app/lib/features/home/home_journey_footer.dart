@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/icons/diet_icon.dart';
 import '../../core/theme/theme.dart';
 import '../../presentation/widgets/brand_scene.dart';
 import '../../presentation/widgets/kit/app_card.dart';
-import '../plan/streak_chip.dart';
 import 'weight_card.dart';
 
 class HomeJourneyFooter extends StatelessWidget {
@@ -12,41 +10,13 @@ class HomeJourneyFooter extends StatelessWidget {
   final VoidCallback onCoach;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: const Color(0xFFFBF9F3),
-      borderRadius: BorderRadius.circular(28),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Padding(
-          padding: EdgeInsetsDirectional.only(start: 4, bottom: 16, top: 8),
-          child: Row(
-            children: [
-              DietIcon(DietIconKind.leaf, size: 27),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'پیگیری مسیرت',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    height: 1.6,
-                    color: Color(0xFF07543A),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const StreakChip(explained: true),
-        const SizedBox(height: 14),
-        const HomeWeightCard(),
-        const SizedBox(height: 14),
-        _CoachReviewCard(onPressed: onCoach),
-      ],
-    ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const HomeWeightCard(),
+      const SizedBox(height: 14),
+      _CoachReviewCard(onPressed: onCoach),
+    ],
   );
 }
 

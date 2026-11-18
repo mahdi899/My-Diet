@@ -3,6 +3,7 @@
 namespace App\Modules\Plans\Infrastructure;
 
 use App\Modules\Plans\Application\PlanGenerationStore;
+use App\Modules\Plans\Domain\CivilDates;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
@@ -98,7 +99,7 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             $this->db->table('ai_execution_claims')->where('request_id', $requestId)->update(['status' => $status === 'failed' ? 'failed' : 'completed', 'finished_at' => $this->db->raw('current_timestamp(6)'), 'error_code' => $status === 'drafted' ? null : $reason]);
             $this->db->table('request_events')->insert(['id' => Crypto::uuid(), 'request_id' => $requestId, 'kind' => $status === 'drafted' ? 'ai_drafted' : 'ai_skipped', 'detail' => json_encode(['status' => $status], JSON_THROW_ON_ERROR)]);
             if (is_string($request->assigned_specialist_id) && $request->assigned_specialist_id !== '') {
-                $kind = $reason === 'high_risk' ? 'specialist_required' : 'draft_ready';
+                $kind = $status === 'failed' || $reason === 'high_risk' ? 'specialist_required' : 'draft_ready';
                 $this->db->table('notifications')->insert(['id' => Crypto::uuid(), 'user_id' => $request->assigned_specialist_id, 'kind' => $kind, 'payload' => json_encode(['requestId' => $requestId, 'reason' => $reason], JSON_THROW_ON_ERROR)]);
             }
         });
@@ -216,11 +217,27 @@ final class MySqlPlanGeneration implements PlanGenerationStore
         if ($request === null || $version === null) {
             return;
         }
-        $today = \App\Modules\Plans\Domain\CivilDates::today();
-        $week = \App\Modules\Plans\Domain\CivilDates::saturday($today);
+        $today = CivilDates::today();
+        $week = CivilDates::saturday($today);
         $actor = is_string($request->assigned_specialist_id) && $request->assigned_specialist_id !== ''
             ? $request->assigned_specialist_id
             : $request->user_id;
-        app(MySqlPlanEditor::class)->publish($requestId, $version->id, $request->user_id, $actor, $week, $today);
+        $this->db->transaction(function () use ($requestId, $version, $request, $actor, $week, $today): void {
+            $options = $this->db->table('plan_meal_options as o')
+                ->join('plan_meals as m', 'm.id', '=', 'o.meal_id')
+                ->join('plan_days as d', 'd.id', '=', 'm.plan_day_id')
+                ->where('d.plan_version_id', $version->id)
+                ->get(['o.meal_id', 'o.option_uid', 'o.document']);
+            foreach ($options as $option) {
+                $document = json_decode($option->document, true, 512, JSON_THROW_ON_ERROR);
+                $document['approved'] = true;
+                $this->db->table('plan_meal_options')->where('meal_id', $option->meal_id)->where('option_uid', $option->option_uid)->update([
+                    'document' => json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                    'approved_by' => $actor,
+                    'approved_at' => $this->db->raw('current_timestamp(6)'),
+                ]);
+            }
+            app(MySqlPlanEditor::class)->publish($requestId, $version->id, $request->user_id, $actor, $week, $today);
+        });
     }
 }

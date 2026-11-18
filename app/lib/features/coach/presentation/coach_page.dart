@@ -10,6 +10,8 @@ import '../presentation/coach_controller.dart';
 import '../domain/coach_repository.dart';
 import 'coach_header.dart';
 import 'coach_companion.dart';
+import 'coach_welcome.dart';
+import 'conversation_history.dart';
 import 'today_summary.dart';
 import 'composer.dart';
 import 'message_list.dart';
@@ -46,6 +48,7 @@ class _CoachPageState extends State<CoachPage> {
   bool _greeted = false;
   Map<String, dynamic>? _quota;
   bool _wasBusy = false;
+  int _shownConversationVersion = 0;
   Timer? _companionReset;
 
   @override
@@ -70,6 +73,12 @@ class _CoachPageState extends State<CoachPage> {
 
   void _rebuild() {
     if (!mounted) return;
+    if (_shownConversationVersion != _controller.conversationVersion) {
+      _shownConversationVersion = _controller.conversationVersion;
+      _summaryExpanded = false;
+      _companionReset?.cancel();
+      _companionMood = CompanionMood.calm;
+    }
     if (_controller.busy && !_wasBusy) {
       _companionReset?.cancel();
       _companionMood = CompanionMood.calm;
@@ -136,6 +145,13 @@ class _CoachPageState extends State<CoachPage> {
   @override
   Widget build(BuildContext context) {
     final failed = _controller.historyFailed && _controller.messages.isEmpty;
+    final welcome =
+        !_controller.loading &&
+        !_controller.historyFailed &&
+        !_controller.hasMore &&
+        !_controller.busy &&
+        !_controller.typing &&
+        _controller.messages.every((message) => message.type == 'day_brief');
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final store = DemoScope.of(context);
     final mood = _controller.busy || _controller.typing
@@ -152,6 +168,12 @@ class _CoachPageState extends State<CoachPage> {
         .lastOrNull;
     return Scaffold(
       backgroundColor: AppColors.bg,
+      drawer: _controller.conversationRepository == null
+          ? null
+          : CoachConversationHistory(
+              controller: _controller,
+              today: store.today,
+            ),
       body: DecoratedBox(
         decoration: const BoxDecoration(gradient: AppGradients.warmBackground),
         child: SafeArea(
@@ -167,6 +189,67 @@ class _CoachPageState extends State<CoachPage> {
                     ? null
                     : () => _react(CompanionMood.greeting),
               ),
+              if (_controller.conversationRepository != null)
+                Builder(
+                  builder: (context) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          key: const ValueKey('coach-history'),
+                          tooltip: 'تاریخچهٔ گفتگوها',
+                          onPressed: () {
+                            FocusScope.of(context).unfocus();
+                            Scaffold.of(context).openDrawer();
+                            unawaited(_controller.refreshConversations());
+                          },
+                          icon: const Icon(
+                            Icons.history_rounded,
+                            color: AppColors.emeraldDark,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _controller.conversations
+                                    .where(
+                                      (t) => t.id == _controller.conversationId,
+                                    )
+                                    .firstOrNull
+                                    ?.title ??
+                                'گفتگوی جدید',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.inkSoft,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          key: const ValueKey('coach-new-conversation'),
+                          tooltip: 'گفتگوی جدید',
+                          onPressed: _controller.loading
+                              ? null
+                              : () async {
+                                  FocusScope.of(context).unfocus();
+                                  final opened = await _controller
+                                      .newConversation();
+                                  if (!context.mounted) return;
+                                  if (opened) {
+                                    setState(() => _summaryExpanded = false);
+                                  } else {
+                                    Scaffold.of(context).openDrawer();
+                                  }
+                                },
+                          icon: const Icon(
+                            Icons.add_comment_outlined,
+                            color: AppColors.emeraldDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (_quota?['hasQuota'] == true &&
                   _quota?['dailyRemaining'] is num &&
                   _quota?['dailyLimit'] is num)
@@ -183,17 +266,18 @@ class _CoachPageState extends State<CoachPage> {
                   mood: mood,
                   cue: _companionCue,
                 ),
-              CoachTodaySummary(
-                expanded: _summaryExpanded,
-                keyboardOpen: keyboardOpen,
-                brief: brief,
-                onToggle: _toggleSummary,
-                onRing: () async {
-                  await _controller.refreshToday();
-                  if (!context.mounted) return;
-                  showTodayRingSheet(context);
-                },
-              ),
+              if (!welcome || _summaryExpanded)
+                CoachTodaySummary(
+                  expanded: _summaryExpanded,
+                  keyboardOpen: keyboardOpen,
+                  brief: brief,
+                  onToggle: _toggleSummary,
+                  onRing: () async {
+                    await _controller.refreshToday();
+                    if (!context.mounted) return;
+                    showTodayRingSheet(context);
+                  },
+                ),
               if (_controller.budgetNote != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -229,12 +313,19 @@ class _CoachPageState extends State<CoachPage> {
                           child: const Text('تلاش دوباره'),
                         ),
                       )
+                    : welcome
+                    ? CoachWelcome(
+                        key: const ValueKey('coach-welcome'),
+                        mood: mood,
+                        cue: _companionCue,
+                      )
                     : CoachMessageList(
                         controller: _controller,
                         pinnedBriefId: brief?.id,
                       ),
               ),
               CoachComposer(
+                key: ValueKey('composer-${_controller.conversationVersion}'),
                 controller: _controller,
                 onTodayPlan: _toggleSummary,
                 prefill: widget.autoSend == null ? widget.prefill : null,

@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/presentation/screens/splash.dart';
-import 'package:sabzine_flutter/presentation/widgets/brand_mark.dart';
 import 'package:sabzine_flutter/presentation/screens/entry.dart';
 import 'package:sabzine_flutter/presentation/screens/first_login.dart';
 import 'package:sabzine_flutter/presentation/screens/onboarding.dart';
@@ -181,17 +180,16 @@ void main() {
     store.dispose();
   });
 
-  testWidgets('Startup displays only the logo then opens the guest dashboard', (
+  testWidgets('Startup opens login without an extra logo or a forced delay', (
     tester,
   ) async {
     mobile(tester);
     final store = DemoStore();
     await tester.pumpWidget(SabzineApp(store: store));
-    expect(find.byType(SplashScreen), findsOneWidget);
-    expect(find.byType(BrandWordmark), findsOneWidget);
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.byType(FirstLoginScreen), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(EntryScreen), findsNothing);
-    await tester.pump(const Duration(milliseconds: 1400));
     await tester.pumpAndSettle();
     expect(find.byType(FirstLoginScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-tab-bar')), findsNothing);

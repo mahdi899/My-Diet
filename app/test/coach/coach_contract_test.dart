@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sabzine_flutter/data/customer_auth.dart';
 import 'package:sabzine_flutter/features/coach/presentation/coach_controller.dart';
 import 'package:sabzine_flutter/features/coach/data/coach_parse.dart';
@@ -15,6 +16,7 @@ import 'package:sabzine_flutter/features/coach/domain/coach_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test('contract cards adapt for the existing views, unknown stays text', () {
     final meal = parseCoachMessage({
@@ -295,6 +297,11 @@ void main() {
     final client = MockClient((request) async {
       calls.add('${request.method} ${request.url.path}');
       expect(request.headers['authorization'], 'Bearer token');
+      if (request.url.path.endsWith('/threads')) {
+        return http.Response(jsonEncode({'threads': [
+          {'id': 't', 'title': 'chat', 'createdAt': '2026-11-19T08:00:00Z'}
+        ], 'limit': 10}), 200);
+      }
       if (request.url.path.endsWith('/thread')) {
         expect(request.url.queryParameters['before'], '9');
         return http.Response(
