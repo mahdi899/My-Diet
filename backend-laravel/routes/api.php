@@ -313,6 +313,9 @@ Route::match(['GET'], 'go/{slug}', [CampaignController::class, 'open']);
 Route::get('v1/public/config', [AdminDeskController::class, 'config']);
 Route::get('v1/public/daily-message', [AdminDeskController::class, 'daily']);
 Route::put('v1/specialist/profile', [AdminDeskController::class, 'saveProfile'])->middleware('session:specialist');
+Route::get('v1/specialist/members', [AdminDeskController::class, 'ownMembers'])->middleware('session:specialist');
+Route::get('v1/specialist/members/{userId}', [AdminDeskController::class, 'ownMember'])->middleware('session:specialist');
+Route::delete('v1/specialist/members/{userId}', [AdminDeskController::class, 'removeOwnMember'])->middleware('session:specialist');
 Route::middleware('session:user')->controller(CoachController::class)->group(function (): void {
     Route::get('v1/me/coach/thread', 'thread');
     Route::post('v1/me/coach/messages', 'messages');

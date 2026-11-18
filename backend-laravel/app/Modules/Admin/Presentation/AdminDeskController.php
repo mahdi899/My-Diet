@@ -97,12 +97,18 @@ final class AdminDeskController
 
     public function saveProfile(Request $request): array
     {
-        $body = Input::body($request, ['displayName', 'credential', 'bio', 'councilNo']);
+        $body = Input::body($request, ['displayName', 'credential', 'bio', 'councilNo', 'portrait', 'education']);
         $input = array_filter([
             'displayName' => Input::optional($body, 'displayName', 80),
-            'credential' => Input::optional($body, 'credential', 120),
-            'bio' => Input::optional($body, 'bio', 1000),
         ], fn ($value) => $value !== null);
+        foreach (['credential' => 120, 'bio' => 1000, 'education' => 120, 'portrait' => 180000] as $field => $limit) {
+            if (isset($body[$field])) {
+                $input[$field] = $body[$field] === '' ? '' : Input::string($body, $field, $limit);
+            }
+        }
+        if (! empty($input['portrait']) && ! preg_match('/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+\/=]+$/D', $input['portrait'])) {
+            throw new Problem(400, 'validation', 'تصویر باید JPEG یا PNG باشد');
+        }
         if (array_key_exists('councilNo', $body)) {
             if (! is_string($body['councilNo'])) {
                 throw new Problem(400, 'validation', 'شمارهٔ نظام درست نیست');
@@ -111,6 +117,23 @@ final class AdminDeskController
         }
 
         return $this->desk->updateOwnProfile($this->actor($request), $input);
+    }
+
+    public function ownMembers(Request $request): array
+    {
+        return $this->desk->doctorMembers($this->actor($request), $request->query('progress') === '1');
+    }
+
+    public function ownMember(Request $request, string $userId): array
+    {
+        return $this->desk->doctorMember($this->actor($request), Input::uuid($userId));
+    }
+
+    public function removeOwnMember(Request $request, string $userId): array
+    {
+        $actor = $this->actor($request);
+
+        return $this->desk->removeMember($actor, $actor, Input::uuid($userId));
     }
 
     public function members(Request $request, string $id): array

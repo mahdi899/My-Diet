@@ -185,12 +185,66 @@ export async function loadPatientReports(userId: string): Promise<unknown[]> {
 
 // ── Specialist profile ────────────────────────────────────────────────────────
 export async function loadProfile() {
-  if (doctorPreviewEnabled()) return previewProfile;
+  if (doctorPreviewEnabled()) {
+    const saved = sessionStorage.getItem('doctor-preview-profile');
+    return saved ? { ...previewProfile, ...JSON.parse(saved) } as typeof previewProfile : previewProfile;
+  }
   return staff.api<typeof previewProfile>("specialist/profile");
 }
 
 export async function saveProfile(data: Partial<typeof previewProfile>): Promise<void> {
+  if (doctorPreviewEnabled()) {
+    sessionStorage.setItem('doctor-preview-profile', JSON.stringify({ ...await loadProfile(), ...data }));
+    return;
+  }
   await staff.api("specialist/profile", "PUT", data);
+}
+
+export type DoctorMember = {
+  id: string;
+  displayName: string;
+  phone?: string | null;
+  goal?: string | null;
+  track?: string | null;
+  week?: number | null;
+  weightChangeKg?: number | null;
+  refreshedAt?: string;
+};
+
+const previewMembers: DoctorMember[] = previewReviewQueue.map((row, index) => ({
+  id: row.id, displayName: row.displayName, phone: row.phone,
+  track: row.track, week: index + 1, weightChangeKg: index ? 1.2 : null,
+}));
+
+export async function loadMembers(progress = false): Promise<DoctorMember[]> {
+  if (doctorPreviewEnabled()) {
+    const hidden: string[] = JSON.parse(sessionStorage.getItem('doctor-preview-removed') ?? '[]');
+    return previewMembers.filter(row => !hidden.includes(row.id));
+  }
+  return staff.api<DoctorMember[]>('specialist/members' + (progress ? '?progress=1' : ''));
+}
+
+export type MemberDetail = DoctorMember & {
+  age?: number; heightCm?: number; weightKg?: number; targetWeightKg?: number; bmi?: number;
+  allergens?: string[]; conditions?: string[];
+};
+
+export async function loadMember(id: string): Promise<MemberDetail> {
+  if (doctorPreviewEnabled()) {
+    const row = previewMembers.find(item => item.id === id)!;
+    const profile = samplePlanRequest(id).profile;
+    return { ...profile, ...row, targetWeightKg: profile?.targetWeightKg ?? undefined };
+  }
+  return staff.api<MemberDetail>('specialist/members/' + encodeURIComponent(id));
+}
+
+export async function removeMember(id: string): Promise<void> {
+  if (doctorPreviewEnabled()) {
+    const hidden: string[] = JSON.parse(sessionStorage.getItem('doctor-preview-removed') ?? '[]');
+    sessionStorage.setItem('doctor-preview-removed', JSON.stringify([...hidden, id]));
+    return;
+  }
+  await staff.api('specialist/members/' + encodeURIComponent(id), 'DELETE');
 }
 
 // ── SLA helpers ───────────────────────────────────────────────────────────────

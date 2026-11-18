@@ -147,6 +147,6 @@ final class PlanQueries
             throw new Problem(400, 'validation', 'دستهٔ صف شناخته نشد');
         }
 
-        return array_map(fn ($row) => ['id' => $row['id'], 'status' => $row['status'], 'kind' => $row['kind'], 'createdAt' => Crypto::iso($row['created_at']), 'displayName' => $row['display_name']], $this->store->queue($actor, $bucket));
+        return array_map(fn ($row) => ['id' => $row['id'], 'status' => $row['status'], 'kind' => $row['kind'], 'createdAt' => Crypto::iso($row['created_at']), 'displayName' => $row['display_name'], 'phone' => $row['phone_e164'] ?? null, 'goal' => $row['goal'] ?? null, 'track' => $row['track'] ?? null], $this->store->queue($actor, $bucket));
     }
 }

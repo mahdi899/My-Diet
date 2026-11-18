@@ -12,6 +12,7 @@ use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cache;
 
 final class MySqlAdminDesk
 {
@@ -98,11 +99,62 @@ final class MySqlAdminDesk
             'bio' => $input['bio'] ?? $current->bio,
             'medical_council_no' => $council,
             'verification_status' => $verification,
+            'portrait' => $input['portrait'] ?? $current->portrait,
+            'education' => $input['education'] ?? $current->education,
         ];
         $this->db->table('specialist_profiles')->where('user_id', $id)->update($next);
         $this->audit($id, 'specialist_profile_updated', 'user', $id, ['councilChanged' => array_key_exists('councilNo', $input) && $input['councilNo'] !== $current->medical_council_no, 'verificationStatus' => $verification]);
 
-        return ['displayName' => $next['display_name'], 'credential' => $next['credential'], 'bio' => $next['bio'], 'councilNo' => $council, 'verificationStatus' => $verification, 'active' => (bool) (int) $current->active];
+        return ['displayName' => $next['display_name'], 'credential' => $next['credential'], 'bio' => $next['bio'], 'councilNo' => $council, 'verificationStatus' => $verification, 'active' => (bool) (int) $current->active, 'portrait' => $next['portrait'], 'education' => $next['education']];
+    }
+
+    private function memberQuery(string $specialist): \Illuminate\Database\Query\Builder
+    {
+        return $this->db->table('specialist_members as m')
+            ->join('users as u', 'u.id', '=', 'm.user_id')
+            ->leftJoin('nutrition_profiles as p', 'p.user_id', '=', 'u.id')
+            ->where('m.specialist_id', $specialist)->where('u.status', '<>', 'deleted');
+    }
+
+    public function doctorMembers(string $specialist, bool $progress): array
+    {
+        return $this->memberQuery($specialist)->orderBy('u.display_name')->orderBy('u.id')
+            ->get(['u.id', 'u.display_name as displayName', 'u.phone_e164 as phone', 'p.track', 'p.goal'])
+            ->map(fn ($row) => (array) $row + ($progress ? $this->dailyProgress($row->id) : []))->all();
+    }
+
+    public function doctorMember(string $specialist, string $user): array
+    {
+        $row = $this->memberQuery($specialist)->where('u.id', $user)->first([
+            'u.id', 'u.display_name as displayName', 'u.phone_e164 as phone', 'p.goal', 'p.track', 'p.age',
+            'p.height_cm as heightCm', 'p.weight_kg as weightKg', 'p.target_weight_kg as targetWeightKg',
+            'p.bmi', 'p.allergens', 'p.conditions',
+        ]);
+        if ($row === null) {
+            throw new Problem(404, 'not_found', 'این کاربر زیرمجموعهٔ این پزشک نیست');
+        }
+        foreach (['allergens', 'conditions'] as $field) {
+            $row->{$field} = json_decode($row->{$field} ?? '[]', true) ?: [];
+        }
+
+        return (array) $row;
+    }
+
+    private function dailyProgress(string $user): array
+    {
+        return Cache::remember('doctor-member-progress:'.$user, 86400, function () use ($user): array {
+            $start = $this->db->table('plan_requests')->where('user_id', $user)->where('status', 'published')
+                ->where('week_start', '<=', CivilDates::today())->min('week_start');
+            $weights = $this->db->table('weight_entries')->where('user_id', $user)->where('civil_date', '<=', CivilDates::today());
+            $first = (clone $weights)->orderBy('civil_date')->first(['civil_date', 'kilograms']);
+            $latest = $weights->orderByDesc('civil_date')->first(['civil_date', 'kilograms']);
+            $days = $start === null ? null : (new \DateTimeImmutable((string) $start))->diff(new \DateTimeImmutable(CivilDates::today()))->days;
+
+            return ['week' => $days === null ? null : intdiv((int) $days, 7) + 1,
+                'weightChangeKg' => $first === null || $latest === null || $first->civil_date === $latest->civil_date
+                    ? null : round((float) $latest->kilograms - (float) $first->kilograms, 1),
+                'refreshedAt' => now()->toISOString()];
+        });
     }
 
     public function setVerification(string $actor, string $id, string $status): array
@@ -125,7 +177,8 @@ final class MySqlAdminDesk
             ? "select u.id, u.phone_e164, u.display_name, pd.details_encrypted from users u left join user_personal_details pd on pd.user_id=u.id where u.role='user' and u.status<>'deleted' and not exists (select 1 from specialist_members sm where sm.user_id=u.id) order by u.display_name, u.phone_e164 limit 300"
             : "select u.id, u.phone_e164, u.display_name, pd.details_encrypted from specialist_members sm join users u on u.id=sm.user_id left join user_personal_details pd on pd.user_id=u.id where sm.specialist_id=? and u.status<>'deleted' order by u.display_name, u.phone_e164";
 
-        return array_map(fn ($row) => ['id' => $row->id, 'phone' => $row->phone_e164, 'displayName' => $this->nameOf($row) ?: $row->phone_e164, 'photo' => $this->photoOf($row->details_encrypted)], $this->db->select($sql, $available ? [] : [$id]));
+        return array_map(fn ($row) => ['id' => $row->id, 'phone' => $row->phone_e164, 'displayName' => $this->nameOf($row) ?: $row->phone_e164, 'photo' => $this->photoOf($row->details_encrypted)]
+            + ($available ? [] : $this->dailyProgress($row->id)), $this->db->select($sql, $available ? [] : [$id]));
     }
 
     public function addMember(string $actor, string $specialist, string $user): array

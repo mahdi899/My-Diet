@@ -82,6 +82,6 @@ final class MySqlAdminQueries implements AdminQueries
             throw new Problem(404, 'not_found', 'پروندهٔ متخصص پیدا نشد');
         }
 
-        return ['displayName' => $row->display_name, 'credential' => $row->credential, 'bio' => $row->bio, 'councilNo' => $row->medical_council_no, 'verificationStatus' => $row->verification_status, 'active' => (bool) $row->active];
+        return ['displayName' => $row->display_name, 'credential' => $row->credential, 'bio' => $row->bio, 'councilNo' => $row->medical_council_no, 'verificationStatus' => $row->verification_status, 'active' => (bool) $row->active, 'portrait' => $row->portrait, 'education' => $row->education];
     }
 }

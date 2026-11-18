@@ -57,8 +57,9 @@ function SpecialistMembers({ id, preview, onChanged }: { id: string; preview: bo
   const path = `admin/specialists/${encodeURIComponent(id)}/members`
   const members = useQuery({
     queryKey: [...key, available],
+    refetchInterval: !available && !preview ? 86_400_000 : false,
     queryFn: async () => preview
-      ? [{ id: 'preview-member', displayName: 'سارا آزمایشی', phone: '۰۹۱۲۰۰۰۰۰۰۰' }]
+      ? [{ id: 'preview-member', displayName: 'سارا آزمایشی', phone: '۰۹۱۲۰۰۰۰۰۰۰', week: 2, weightChangeKg: -1.2 }]
       : asRows(await staff.api(path + (available ? '?available=1' : ''))),
   })
   async function change(userId: string) {
@@ -90,7 +91,11 @@ function SpecialistMembers({ id, preview, onChanged }: { id: string; preview: bo
     </div> : members.data.length ? <ul className="specialist-members-list">{members.data.map(member => {
       const name = String(member.displayName || 'بدون نام')
       const action = available ? 'افزودن' : 'حذف'
+      const week = member.week == null ? 'برنامه شروع نشده' : 'هفتهٔ ' + Number(member.week).toLocaleString('fa-IR')
+      const weight = member.weightChangeKg == null ? 'ثبت وزن کافی نیست' :
+        'تغییر وزن ' + Number(member.weightChangeKg).toLocaleString('fa-IR', { signDisplay: 'exceptZero' }) + ' کیلوگرم'
       return <li key={String(member.id)}><div><strong>{name}</strong><bdi dir="ltr">{String(member.phone || '—')}</bdi></div>
+        {!available && <small>{week} · {weight}</small>}
         <button type="button" className="secondary" disabled={busy || preview} aria-label={`${action} ${name}`} onClick={() => void change(String(member.id))}>{action}</button>
       </li>
     })}</ul> : <p>{available ? 'کاربری برای افزودن پیدا نشد.' : 'هنوز زیرمجموعه‌ای ثبت نشده است.'}</p>}
