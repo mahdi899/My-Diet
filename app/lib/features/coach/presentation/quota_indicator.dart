@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import '../../../core/format/digits.dart';
 
 /// Remaining coach messages, shown above the thread when the server reports a quota.
 class QuotaIndicator extends StatelessWidget {
@@ -26,18 +27,20 @@ class QuotaIndicator extends StatelessWidget {
         children: [
           Icon(Icons.chat_bubble_outline, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(
-            '$dailyRemaining از $dailyLimit پیام امروز',
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: urgent ? FontWeight.bold : FontWeight.normal,
+          Flexible(
+            child: Text(
+              '${faNumber(dailyRemaining)} از ${faNumber(dailyLimit)} پیام امروز باقی مونده',
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: urgent ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 8),
           if (periodRemaining < dailyLimit)
             Text(
-              '$periodRemaining باقی‌مانده در دوره',
+              '${faNumber(periodRemaining)} در دوره',
               style: TextStyle(fontSize: 11, color: Colors.grey[600]),
             ),
           if (urgent && onBuyMore != null) ...[

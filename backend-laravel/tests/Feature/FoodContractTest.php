@@ -30,9 +30,19 @@ final class FoodContractTest extends MySqlTestCase
         $this->postJson('/v1/admin/foods', $this->food())->assertStatus(409);
         $this->getJson('/v1/admin/foods?q=آزم')->assertOk()->assertJsonCount(1, 'items');
         $this->putJson('/v1/admin/foods/test_food', [...$this->food(), 'nameFa' => 'غذای ویرایش شده'])->assertOk()->assertJsonPath('nameFa', 'غذای ویرایش شده')->assertJsonPath('image', '/v1/public/food-images/test_food.jpg');
+        $specialist = $this->actor('specialist');
+        $this->getJson('/v1/catalog/food-bank?q=test_food&meal=lunch')->assertOk()->assertJsonPath('items.0.slug', 'test_food');
+        $this->getJson('/v1/catalog/food-bank?q=test_food&meal=breakfast')->assertOk()->assertJsonCount(0, 'items');
+        $this->getJson('/v1/catalog/food-bank/test_food')->assertOk()->assertJsonPath('servingG', 200)->assertJsonPath('ingredients.0.name', 'عدس');
+        $this->withToken($admin['token']);
         $this->postJson('/v1/catalog/compose', ['kind' => 'specialist_alternative', 'items' => [['slug' => 'test_food', 'servings' => 1.5]], 'note' => 'نوش جان'])->assertCreated()
             ->assertJsonPath('macros.kcal', 465)->assertJsonPath('macros.proteinG', 22)->assertJsonPath('option.ingredients.0.quantity', 120)->assertJsonPath('option.approved', false);
         $this->postJson('/v1/admin/foods/test_food/active', ['active' => false])->assertCreated()->assertJsonPath('active', false);
+        $this->withToken($specialist['token']);
+        $this->getJson('/v1/catalog/food-bank/test_food')->assertOk()->assertJsonPath('active', false);
+        $this->getJson('/v1/catalog/food-bank?q=test_food&active=false')->assertOk()->assertJsonPath('items.0.slug', 'test_food');
+        $this->getJson('/v1/catalog/foods?q=test_food')->assertOk()->assertJsonCount(0, 'items');
+        $this->withToken($admin['token']);
         $this->postJson('/v1/catalog/compose', ['kind' => 'primary', 'items' => [['slug' => 'test_food', 'servings' => 1]]])->assertStatus(409)->assertJsonPath('code', 'food_inactive');
         $this->putJson('/v1/admin/foods/test_food', [...$this->food(), 'imageData' => null, 'image' => '/v1/public/food-images/test_food.jpg'])->assertOk()->assertJsonPath('image', null);
         $this->get('/v1/public/food-images/test_food.jpg')->assertNotFound();
@@ -40,6 +50,8 @@ final class FoodContractTest extends MySqlTestCase
         $this->actor();
         $this->getJson('/v1/admin/foods')->assertForbidden();
         $this->getJson('/v1/catalog/foods')->assertForbidden();
+        $this->getJson('/v1/catalog/food-bank')->assertForbidden();
+        $this->getJson('/v1/catalog/food-bank/test_food')->assertForbidden();
     }
 
     public function test_csv_round_trip_validation_and_atomic_import(): void

@@ -11,11 +11,15 @@ import '../domain/coach_events.dart';
 import '../domain/coach_conversation.dart';
 import '../domain/coach_message.dart';
 import '../domain/coach_repository.dart';
+import '../domain/coach_workspace.dart';
 import 'coach_parse.dart';
 
 /// Local Persian coach used when there is no customer API.
 class MockCoachRepository
-    implements CoachRepository, CoachConversationRepository {
+    implements
+        CoachRepository,
+        CoachConversationRepository,
+        CoachWorkspaceRepository {
   MockCoachRepository({
     this.store,
     this.charDelay = const Duration(milliseconds: 12),
@@ -82,6 +86,77 @@ class MockCoachRepository
   final _threads = <String, Map<String, dynamic>>{};
   String get _threadsKey =>
       'rejime_man.coach.threads.v2.${store?.sessionPhone ?? "demo"}';
+  @override
+  String get workspaceOwner => 'demo.${store?.sessionPhone ?? "demo"}';
+  @override
+  Future<Map<String, dynamic>> searchMessages(
+    String query, {
+    String? before,
+  }) async {
+    await _initialize();
+    final term = query.trim().toLowerCase();
+    final items = <Map<String, dynamic>>[];
+    if (term.isNotEmpty) {
+      for (final thread in _threads.values) {
+        final messages = asMapList(thread['messages']);
+        for (final m in messages) {
+          final text = asString(m['fallback_text']);
+          if (text.toLowerCase().contains(term) ||
+              (m['id'] == messages.first['id'] &&
+                  asString(thread['title']).toLowerCase().contains(term))) {
+            items.add({
+              'messageId': m['id'],
+              'threadId': thread['id'],
+              'title': thread['title'],
+              'text': text,
+              'createdAt': m['created_at'],
+            });
+          }
+        }
+      }
+    }
+    items.sort(
+      (a, b) => asString(b['createdAt']).compareTo(asString(a['createdAt'])),
+    );
+    return {'items': items, 'nextCursor': null};
+  }
+
+  Future<List<Map<String, dynamic>>> _memoryRows() async {
+    final raw = (await _prefs())?.getString('coach.memory.$workspaceOwner');
+    return raw == null ? [] : asMapList(jsonDecode(raw));
+  }
+
+  @override
+  Future<Map<String, dynamic>> memory() async {
+    await _initialize();
+    final old = asMapList(_threads[_conversationId]?['messages']);
+    return {
+      'summary': old
+          .take((old.length - 7).clamp(0, old.length))
+          .map(
+            (m) =>
+                '${m['role'] == 'user' ? 'کاربر' : 'مربی'}: ${m['fallback_text']}',
+          )
+          .join('\n'),
+      'preferences': await _memoryRows(),
+    };
+  }
+
+  @override
+  Future<void> editMemory(String id, String? value) async {
+    final rows = await _memoryRows();
+    if (value == null) {
+      rows.removeWhere((e) => e['id'] == id);
+    } else {
+      for (final row in rows) {
+        if (row['id'] == id) row['value'] = value;
+      }
+    }
+    await (await _prefs())?.setString(
+      'coach.memory.$workspaceOwner',
+      jsonEncode(rows),
+    );
+  }
 
   @override
   String? get conversationId => _conversationId;
@@ -152,11 +227,14 @@ class MockCoachRepository
               asMapList(row['messages']).lastOrNull?['fallback_text'] ?? '',
         }),
     ];
-    result.sort(
-      (a, b) => (b.lastMessageAt ?? b.createdAt).compareTo(
+    result.sort((a, b) {
+      final activity = (b.lastMessageAt ?? b.createdAt).compareTo(
         a.lastMessageAt ?? a.createdAt,
-      ),
-    );
+      );
+      if (activity != 0) return activity;
+      final created = b.createdAt.compareTo(a.createdAt);
+      return created != 0 ? created : b.id.compareTo(a.id);
+    });
     return result;
   }
 
@@ -191,10 +269,9 @@ class MockCoachRepository
     final ready = messages.where((m) => !m.pending && !m.failed).toList();
     if (!ready.any((m) => m.isUser)) return;
     if (_conversationId == null) {
-      if (_threads.length >= 10) {
-        throw const CoachTransportException(
-          '۱۰ گفتگو ذخیره داری. ابتدا یکی را حذف کن.',
-        );
+      while (_threads.length >= kCoachConversationLimit) {
+        final oldest = (await listConversations()).last;
+        _threads.remove(oldest.id);
       }
       _conversationId = CoachSendRequest.text('').clientMessageId;
     }

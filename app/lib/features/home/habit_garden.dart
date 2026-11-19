@@ -10,10 +10,9 @@ import '../../presentation/widgets/brand_scene.dart';
 import 'water_log.dart';
 
 class HabitGarden extends StatefulWidget {
-  const HabitGarden({super.key, this.log, this.today, this.onContinue});
+  const HabitGarden({super.key, this.log, this.today});
   final WaterRepository? log;
   final DateTime? today;
-  final VoidCallback? onContinue;
   @override
   State<HabitGarden> createState() => _HabitGardenState();
 }
@@ -208,15 +207,17 @@ class _HabitGardenState extends State<HabitGarden> {
                   key: ValueKey('${dateKey(selected)}-$meals-$water'),
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      persianDate(selected),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.emeraldDark,
+                    if (active || _failed) ...[
+                      Text(
+                        persianDate(selected),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.emeraldDark,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
+                      const SizedBox(height: 4),
+                    ],
                     Text(
                       _failed && store.waterGlassesOn(selected) == null
                           ? '${fa(meals)} ثبت وعده · اطلاعات آب خوانده نشد'
@@ -224,7 +225,7 @@ class _HabitGardenState extends State<HabitGarden> {
                           ? '${fa(meals)} ثبت وعده · ${fa(water)} لیوان آب'
                           : _failed
                           ? 'اطلاعات آب خوانده نشد؛ ثبت‌های وعده نمایش داده می‌شوند.'
-                          : 'ثبتی برای این روز نداری؛ هر روز فرصت تازه‌ای است.',
+                          : 'ثبتی برای این روز نداری',
                       key: const ValueKey('habit-day-detail'),
                       style: const TextStyle(
                         fontSize: 12,
@@ -241,31 +242,6 @@ class _HabitGardenState extends State<HabitGarden> {
               onPressed: _reload,
               child: const Text('خواندن دوبارهٔ ثبت‌های آب'),
             ),
-          if (!active)
-            Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: TextButton.icon(
-                key: const ValueKey('habit-continue-today'),
-                onPressed: () {
-                  setState(() {
-                    _week = 0;
-                    _selected = today;
-                  });
-                  widget.onContinue?.call();
-                },
-                icon: const Icon(Icons.arrow_back_rounded, size: 17),
-                label: const Text('ادامه از امروز'),
-              ),
-            ),
-          const SizedBox(height: 8),
-          const Text(
-            'هر جوانه یعنی حداقل یک ثبت وعده یا آب؛ معیار کامل‌بودن رژیم نیست.',
-            style: TextStyle(
-              fontSize: 10,
-              height: 1.7,
-              color: AppColors.inkSoft,
-            ),
-          ),
         ],
       ),
     );

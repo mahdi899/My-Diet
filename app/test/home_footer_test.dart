@@ -148,7 +148,7 @@ void main() {
   });
 
   testWidgets(
-    'explained streak counts completed days rather than logins or weights',
+    'streak counts completed days without extra explanatory copy',
     (tester) async {
       final store = DemoStore(clock: () => DateTime(2026, 11, 17))
         ..loginDemoUser();
@@ -161,7 +161,7 @@ void main() {
       expect(tester.widget<JourneyPath>(find.byType(JourneyPath)).completed, 0);
       expect(
         find.text('با ثبت همهٔ وعده‌ها، یک روز کامل می‌شود.'),
-        findsOneWidget,
+        findsNothing,
       );
       store.addWeight(74);
       await store.setMealEaten(store.today, 0, true);

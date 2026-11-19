@@ -53,7 +53,7 @@ class StreakChip extends StatelessWidget {
                 Text(
                   published
                       ? '${fa(days)} روز پیاپی'
-                      : 'با آماده‌شدن برنامه شروع می‌شود',
+                      : 'هنوز شروع نشده',
                   style: TextStyle(
                     color: const Color(0xFF07543A),
                     fontSize: published ? 24 : 14,
@@ -83,19 +83,10 @@ class StreakChip extends StatelessWidget {
                   const SizedBox(height: 8),
                   path,
                 ],
-                const SizedBox(height: 8),
-                const Text(
-                  'با ثبت همهٔ وعده‌ها، یک روز کامل می‌شود.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.8,
-                    color: Color(0xFF48653F),
-                  ),
-                ),
                 if (reward) ...[
                   const SizedBox(height: 6),
                   const Text(
-                    'پاداش تکمیل برنامه آماده است.',
+                    'پاداش آماده است',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.emeraldDark,

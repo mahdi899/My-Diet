@@ -30,7 +30,7 @@ Map<String, dynamic> issued({String role = 'user', DateTime? expiry}) => {
 
 void main() {
   test(
-    'server expiry is preserved and only refresh material is persisted',
+    'server expiry and login phone survive restore without persisting the access token',
     () async {
       final memory = TokenMemory(),
           expiry = DateTime.now().add(const Duration(days: 8));
@@ -43,6 +43,8 @@ void main() {
       );
       await auth.verify('09123456789', '123456');
       expect(auth.session!.expiresAt, expiry.toUtc());
+      expect(auth.session!.phone, '09123456789');
+      expect(jsonDecode(memory.value!)['phone'], '09123456789');
       expect(memory.value, isNot(contains('server-access')));
       final restarted = CustomerAuth(
         baseUrl: 'https://example.test',
@@ -55,6 +57,7 @@ void main() {
       );
       await restarted.restore();
       expect(restarted.session!.expiresAt, expiry.toUtc());
+      expect(restarted.session!.phone, '09123456789');
       auth.dispose();
       restarted.dispose();
     },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/connection.dart';
 import '../../core/theme/theme.dart';
+import '../screens/splash.dart';
 import 'brand_mark.dart';
 import 'brand_scene.dart';
 
@@ -14,11 +15,15 @@ class ConnectionGate extends StatelessWidget {
     return ListenableBuilder(
       listenable: link,
       builder: (context, child) {
-        final blocked = link.fault != null || (link.checking && !link.ready);
+        final initialCheck = !link.ready;
+        final blocked = link.fault != null || initialCheck;
         return Stack(
           children: [
             Offstage(offstage: blocked, child: child!),
-            if (blocked) Positioned.fill(child: ConnectionScreen(link: link)),
+            if (initialCheck)
+              const Positioned.fill(child: SplashScreen())
+            else if (blocked)
+              Positioned.fill(child: ConnectionScreen(link: link)),
           ],
         );
       },

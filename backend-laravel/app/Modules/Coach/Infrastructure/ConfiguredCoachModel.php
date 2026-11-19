@@ -58,6 +58,7 @@ TEXT;
     {
         $contextBuilder = app(CoachContextBuilder::class);
         $context = $contextBuilder->buildForChat($userId, $userMessage);
+        $context['preferences'] = app(PreferenceService::class)->summary($userId);
         $intent = $this->intentParser->parse($userMessage);
         $messages = $this->addressUser(
             $this->pools->promptMessages('coach_system', ['context' => '', 'input' => $userMessage]),
@@ -65,6 +66,7 @@ TEXT;
             $contextBuilder->recentDialogue($userId, $userMessage, $threadId),
             $this->spokenContext($context),
         );
+        $messages[] = ['role' => 'system', 'content' => 'ترجیحات فعال در زمینه، آخرین وضعیت معتبرند. ترجیحی را فقط از گزیده قدیمی قطعی فرض نکن. اگر ترجیح قدیمی دیگر فعال نیست، پیش از استفاده دوباره از کاربر بپرس.'];
         if ($intent['intent'] === 'check_progress') {
             $messages[] = ['role' => 'system', 'content' => 'این پیام دربارهٔ نرسیدن به کاهش وزن است. فقط از progress در زمینه استفاده کن: memberSince تاریخ عضویت، history وزن‌ها به کیلوگرم، changeKg و direction. عدد تازه‌ای نساز. اگر history خالی است بگو وزن ثبت نشده. کوتاه، همدل و بدون سرزنش جواب بده.'];
         }
@@ -300,6 +302,14 @@ TEXT;
 
     private function formatPreferences(array $prefs): string
     {
+        if (isset($prefs['dislikes'])) {
+            return implode("\n", array_filter([
+                $prefs['dislikes'] === [] ? '' : 'دوست نداره: '.implode('، ', $prefs['dislikes']),
+                $prefs['likes'] === [] ? '' : 'دوست داره: '.implode('، ', $prefs['likes']),
+                $prefs['patterns'] === [] ? '' : 'عادت‌ها: '.implode('، ', $prefs['patterns']),
+                $prefs['specialistNotes'] === [] ? '' : 'یادداشت متخصص: '.implode('؛ ', $prefs['specialistNotes']),
+            ])) ?: 'ترجیح فعال دیگری ثبت نشده.';
+        }
         if (empty($prefs)) {
             return 'هنوز ترجیحی ثبت نشده.';
         }

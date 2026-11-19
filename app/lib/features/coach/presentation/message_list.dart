@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/motion/motion.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
 import '../../../domain/common/day.dart';
@@ -30,6 +31,29 @@ class CoachMessageList extends StatefulWidget {
 class _CoachMessageListState extends State<CoachMessageList> {
   final _scroll = ScrollController();
   bool _away = false;
+  final _messageKeys = <String, GlobalKey>{};
+  String? _focused;
+
+  Future<void> _showTarget(String id) async {
+    _away = true;
+    for (
+      var step = 0;
+      step < 120 && mounted && widget.controller.highlightedMessageId == id;
+      step++
+    ) {
+      final target = _messageKeys[id]?.currentContext;
+      if (target != null && target.mounted) {
+        await Scrollable.ensureVisible(target, alignment: .35);
+        return;
+      }
+      if (!_scroll.hasClients) return;
+      final next = (_scroll.offset + _scroll.position.viewportDimension * .7)
+          .clamp(0.0, _scroll.position.maxScrollExtent);
+      if (next == _scroll.offset) return;
+      _scroll.jumpTo(next);
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -47,9 +71,21 @@ class _CoachMessageListState extends State<CoachMessageList> {
       if (away != _away) setState(() => _away = away);
     });
     widget.controller.addListener(_stick);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _stick();
+    });
   }
 
   void _stick() {
+    final target = widget.controller.highlightedMessageId;
+    if (target == null) _focused = null;
+    if (target != null && target != _focused) {
+      _focused = target;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showTarget(target);
+      });
+      return;
+    }
     if (!_scroll.hasClients || _away) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) _scroll.jumpTo(0);
@@ -103,7 +139,16 @@ class _CoachMessageListState extends State<CoachMessageList> {
       rows.add(
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Reveal(child: _tile(context, controller, message)),
+          key: _messageKeys.putIfAbsent(message.id, () => GlobalKey()),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: controller.highlightedMessageId == message.id
+                  ? AppColors.mint
+                  : null,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Reveal(child: _messageTools(context, controller, message)),
+          ),
         ),
       );
     }
@@ -127,7 +172,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
         ),
       );
     }
-    if (controller.canRetry) {
+    if (controller.canRetry && !controller.messages.any((m) => m.failed)) {
       rows.add(
         Align(
           alignment: Alignment.centerRight,
@@ -282,6 +327,146 @@ class _CoachMessageListState extends State<CoachMessageList> {
       foodDetailRoute<void>(
         MealDetailPage(date: day, index: hits.single, heroes: false),
         reduced: Motion.reduced(context),
+      ),
+    );
+  }
+
+  Future<void> _menu(
+    BuildContext context,
+    CoachController controller,
+    CoachMessage message,
+  ) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (message.text.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('کپی متن'),
+                onTap: () => Navigator.pop(context, 'copy'),
+              ),
+            if (!message.pending && !message.failed)
+              ListTile(
+                leading: const Icon(Icons.reply_rounded),
+                title: const Text('پاسخ به همین پیام'),
+                onTap: () => Navigator.pop(context, 'reply'),
+              ),
+            if (message.text.isNotEmpty && !message.pending && !message.failed)
+              ListTile(
+                leading: const Icon(Icons.bookmark_add_outlined),
+                title: const Text('ذخیره در نشان‌شده‌ها'),
+                onTap: () => Navigator.pop(context, 'save'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    if (action == 'copy') {
+      await Clipboard.setData(ClipboardData(text: message.text));
+    } else if (action == 'reply') {
+      controller.setReply(message);
+    } else if (action == 'save') {
+      try {
+        final title =
+            controller.conversations
+                .where((t) => t.id == controller.conversationId)
+                .firstOrNull
+                ?.title ??
+            'گفتگو';
+        await controller.notebook.bookmark(
+          message,
+          controller.conversationId,
+          title,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('در نشان‌شده‌های این دستگاه ذخیره شد.'),
+            ),
+          );
+        }
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ذخیره پیام انجام نشد. دوباره تلاش کن.'),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _messageTools(
+    BuildContext context,
+    CoachController controller,
+    CoachMessage message,
+  ) {
+    final quote = asMap(message.payload['replyTo']);
+    return GestureDetector(
+      onLongPress: () => _menu(context, controller, message),
+      child: Column(
+        crossAxisAlignment: message.isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          if (quote.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.all(10),
+              constraints: const BoxConstraints(maxWidth: 280),
+              decoration: BoxDecoration(
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'در پاسخ به: ${asString(quote['text'])}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, height: 1.8),
+              ),
+            ),
+          _tile(context, controller, message),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (message.isUser)
+                Text(
+                  message.pending
+                      ? 'در حال ارسال…'
+                      : message.payload['deliveryUnknown'] == true
+                      ? 'در انتظار تأیید سرور'
+                      : message.failed
+                      ? 'ارسال نشد'
+                      : 'ارسال شد',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: message.failed
+                        ? AppColors.danger
+                        : AppColors.inkSoft,
+                  ),
+                ),
+              if (message.failed && message.clientMessageId != null)
+                TextButton(
+                  onPressed: controller.busy
+                      ? null
+                      : () => controller.retrySend(message.clientMessageId),
+                  child: const Text('تلاش دوباره'),
+                ),
+              IconButton(
+                tooltip: 'گزینه‌های پیام',
+                onPressed: () => _menu(context, controller, message),
+                icon: const Icon(Icons.more_horiz_rounded, size: 18),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -75,39 +75,49 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('all ten conversations stay reachable with large Persian text', (
-    t,
-  ) async {
-    t.view.physicalSize = const Size(320, 568);
-    t.view.devicePixelRatio = 1;
-    addTearDown(t.view.reset);
-    final controller = CoachController(repository: _SelectedHistory());
-    addTearDown(controller.dispose);
-    controller.conversations = [
-      for (var i = 0; i < 10; i++)
-        CoachConversation(
-          id: '$i',
-          title: 'گفتگویی دربارهٔ برنامهٔ غذایی و وعده‌های روزانه $i',
-          preview: 'برای انتخاب وعده‌های مناسب امروز با هم صحبت کردیم.',
-          createdAt: DateTime(2026, 11, 19, 10, 30 - i),
+  testWidgets(
+    'all fifty conversations stay reachable with large Persian text',
+    (t) async {
+      t.view.physicalSize = const Size(320, 568);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      final controller = CoachController(repository: _SelectedHistory());
+      addTearDown(controller.dispose);
+      controller.conversations = [
+        for (var i = 0; i < 50; i++)
+          CoachConversation(
+            id: '$i',
+            title: 'گفتگویی دربارهٔ برنامهٔ غذایی و وعده‌های روزانه $i',
+            preview: 'برای انتخاب وعده‌های مناسب امروز با هم صحبت کردیم.',
+            createdAt: _today.subtract(Duration(minutes: i)),
+          ),
+      ];
+      await t.pumpWidget(_host(controller, scale: 1.8));
+      expect(find.text('۵۰ از ۵۰ گفتگو'), findsOneWidget);
+      expect(
+        find.text(
+          'با ارسال اولین پیام در گفتگوی جدید، قدیمی‌ترین گفتگو حذف می‌شود.',
         ),
-    ];
-    await t.pumpWidget(_host(controller, scale: 1.8));
-    expect(t.takeException(), isNull);
-    await t.scrollUntilVisible(
-      find.byKey(const ValueKey('coach-history-9')),
-      260,
-    );
-    expect(find.byKey(const ValueKey('coach-history-9')), findsOneWidget);
-    await t.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey('coach-history-9')),
+        findsOneWidget,
+      );
+      expect(t.takeException(), isNull);
+      await t.scrollUntilVisible(
+        find.byKey(const ValueKey('coach-history-49')),
+        500,
+        maxScrolls: 100,
+      );
+      expect(find.byKey(const ValueKey('coach-history-49')), findsOneWidget);
+      final menu = find.descendant(
+        of: find.byKey(const ValueKey('coach-history-49')),
         matching: find.byTooltip('گزینه‌های گفتگو'),
-      ),
-    );
-    await t.pumpAndSettle();
-    expect(find.text('تغییر نام'), findsOneWidget);
-    expect(find.text('حذف گفتگو'), findsOneWidget);
-    expect(t.takeException(), isNull);
-  });
+      );
+      await t.ensureVisible(menu);
+      await t.pumpAndSettle();
+      await t.tap(menu);
+      await t.pumpAndSettle();
+      expect(find.text('تغییر نام'), findsOneWidget);
+      expect(find.text('حذف گفتگو'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    },
+  );
 }

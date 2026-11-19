@@ -112,7 +112,12 @@ class _SignedIn extends StatelessWidget {
       children: [
         Row(
           children: [
-            PersonAvatar(name, size: 64, color: AppColors.mint),
+            PersonAvatar(
+              name,
+              size: 64,
+              color: AppColors.mint,
+              photo: store.profilePhoto,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -120,9 +125,14 @@ class _SignedIn extends StatelessWidget {
                 children: [
                   Text(name, style: Theme.of(context).textTheme.titleLarge),
                   Text(
-                    store.questionnaireComplete
+                    store.sessionPhone.isNotEmpty
+                        ? fa(store.sessionPhone)
+                        : store.questionnaireComplete
                         ? 'اطلاعات تکمیل شده'
                         : 'حساب نمایشی',
+                    textDirection: store.sessionPhone.isNotEmpty
+                        ? TextDirection.ltr
+                        : TextDirection.rtl,
                     style: const TextStyle(color: AppColors.muted, height: 1.6),
                   ),
                 ],

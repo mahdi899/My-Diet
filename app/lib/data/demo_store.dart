@@ -2111,7 +2111,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     _userAuthenticated = true;
     sessionIssuedAt = today;
     sessionExpiresAt = session.expiresAt;
-    if (phone != null) sessionPhone = phone;
+    sessionPhone = phone ?? session.phone ?? sessionPhone;
     sessionError = null;
     role = selectedRole = AppRole.user;
     entryStage = EntryStage.home;

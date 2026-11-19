@@ -106,27 +106,54 @@ void main() {
   );
 
   test(
-    'the eleventh conversation requires deletion and an empty welcome uses no slot',
+    'the fifty-first conversation replaces the oldest only on first send',
     () async {
       final session = CoachSession(
         repository: MockCoachRepository(charDelay: Duration.zero),
       );
       addTearDown(session.close);
       await session.start();
-      for (var i = 0; i < 10; i++) {
+      final ids = <String>[];
+      for (var i = 0; i < 50; i++) {
         expect(await session.newConversation(), isTrue);
         await session.sendText('پرسش $i');
+        ids.add(session.conversationId!);
       }
       await session.refreshConversations();
-      final ids = session.conversations.map((t) => t.id).toSet();
-      expect(ids.length, 10);
-      expect(await session.newConversation(), isFalse);
-      expect(session.conversations.map((t) => t.id).toSet(), ids);
-      expect(session.conversationsError, contains('۱۰'));
-      await session.deleteConversation(session.conversations.first.id);
+      expect(session.conversations.length, 50);
+      await session.selectConversation(ids.first);
+      await session.sendText('ادامه گفتگوی قدیمی');
+      expect(await session.newConversation(), isTrue);
       expect(await session.newConversation(), isTrue);
       await session.refreshConversations();
-      expect(session.conversations.length, 9);
+      expect(session.conversations.map((t) => t.id).toSet(), ids.toSet());
+      expect(session.conversationsError, isNull);
+      await session.sendText('پرسش پنجاه و یکم');
+      final newest = session.conversationId!;
+      await session.refreshConversations();
+      expect(session.conversations.length, 50);
+      expect(session.conversations.map((t) => t.id).toSet(), {
+        ...ids.where((id) => id != ids[1]),
+        newest,
+      });
+      final reopened = MockCoachRepository();
+      expect((await reopened.listConversations()).length, 50);
+      expect(reopened.conversationId, newest);
+      await expectLater(
+        reopened.selectConversation(ids[1]),
+        throwsA(isA<CoachTransportException>()),
+      );
+      await reopened.selectConversation(ids.first);
+      expect(
+        (await reopened.loadThread()).messages.any(
+          (m) => m.text == 'ادامه گفتگوی قدیمی',
+        ),
+        isTrue,
+      );
+      await session.sendText('ادامه');
+      await session.refreshConversations();
+      expect(session.conversations.length, 50);
+      expect(session.conversations.any((t) => t.id == ids[2]), isTrue);
     },
   );
 

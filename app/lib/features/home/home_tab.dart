@@ -132,20 +132,7 @@ class _HomeTabState extends State<HomeTab> with WidgetsBindingObserver {
           goal: waterGoalFrom(store.questionnaire.water),
         ).rise(index: 3),
         const SizedBox(height: AppSpacing.lg),
-        HabitGarden(
-          today: store.today,
-          log: widget.waterLog,
-          onContinue: () {
-            final target = _waterKey.currentContext;
-            if (target != null) {
-              Scrollable.ensureVisible(
-                target,
-                duration: Motion.of(context, Motion.base),
-                curve: Motion.curve,
-              );
-            }
-          },
-        ).rise(index: 4),
+        HabitGarden(today: store.today, log: widget.waterLog).rise(index: 4),
         const SizedBox(height: AppSpacing.xl),
         HomeJourneyFooter(
           key: const ValueKey('home-journey-footer'),

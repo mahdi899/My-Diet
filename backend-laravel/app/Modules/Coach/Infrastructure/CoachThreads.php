@@ -9,17 +9,22 @@ use Illuminate\Support\Carbon;
 
 final class CoachThreads
 {
-    public const LIMIT = 10;
+    public const LIMIT = 50;
 
     public function __construct(private ConnectionInterface $db) {}
 
     public function listing(string $user): array
     {
         $threads = $this->db->table('coach_threads as t')->where('t.user_id', $user)
+            ->select('t.*')
+            ->selectSub(fn ($q) => $q->from('coach_messages as m')->select('m.fallback_text')
+                ->whereColumn('m.thread_id', 't.id')->where('m.role', 'user')->orderBy('m.seq')->limit(1), 'first_text')
+            ->selectSub(fn ($q) => $q->from('coach_messages as m')->select('m.fallback_text')
+                ->whereColumn('m.thread_id', 't.id')->where('m.type', '<>', 'day_brief')->orderByDesc('m.seq')->limit(1), 'last_text')
             ->whereExists(fn ($q) => $q->selectRaw('1')->from('coach_messages as m')->whereColumn('m.thread_id', 't.id')->where('m.role', 'user'))
-            ->orderByDesc('t.last_message_at')->orderByDesc('t.created_at')->orderByDesc('t.id')->get();
+            ->orderByRaw('coalesce(t.last_message_at, t.created_at) desc')->orderByDesc('t.created_at')->orderByDesc('t.id')->get();
 
-        return ['threads' => $threads->map(fn ($t) => $this->describe($t))->all(), 'limit' => self::LIMIT];
+        return ['threads' => $threads->map(fn ($t) => $this->description($t, $t->first_text, $t->last_text))->all(), 'limit' => self::LIMIT];
     }
 
     public function owned(string $user, string $id): object
@@ -45,8 +50,14 @@ final class CoachThreads
             if ($empty !== null) {
                 return $this->describe($empty);
             }
-            if ($this->db->table('coach_threads')->where('user_id', $user)->count() >= self::LIMIT) {
-                throw new Problem(409, 'coach_thread_limit', '۱۰ گفتگو ذخیره داری. برای شروع گفتگوی جدید، یکی از گفتگوهای قبلی را حذف کن.');
+            $count = $this->db->table('coach_threads')->where('user_id', $user)->count();
+            if ($count >= self::LIMIT) {
+                $oldest = $this->db->table('coach_threads')->where('user_id', $user)
+                    ->orderByRaw('coalesce(last_message_at, created_at)')->orderBy('created_at')->orderBy('id')
+                    ->limit($count - self::LIMIT + 1)->pluck('id');
+                foreach ($oldest as $oldId) {
+                    $this->remove($oldId);
+                }
             }
             $id ??= Crypto::uuid();
             $this->db->table('coach_threads')->insert(['id' => $id, 'user_id' => $user]);
@@ -81,11 +92,16 @@ final class CoachThreads
     {
         $this->locked($user, fn () => $this->db->transaction(function () use ($user, $id): void {
             $this->owned($user, $id);
-            $this->db->table('coach_food_entries')->where('thread_id', $id)->update(['thread_id' => null, 'message_id' => null]);
-            $this->db->table('coach_messages')->where('thread_id', $id)->update(['reply_to' => null]);
-            $this->db->table('coach_messages')->where('thread_id', $id)->delete();
-            $this->db->table('coach_threads')->where('id', $id)->delete();
+            $this->remove($id);
         }));
+    }
+
+    private function remove(string $id): void
+    {
+        $this->db->table('coach_food_entries')->where('thread_id', $id)->update(['thread_id' => null, 'message_id' => null]);
+        $this->db->table('coach_messages')->where('thread_id', $id)->update(['reply_to' => null]);
+        $this->db->table('coach_messages')->where('thread_id', $id)->delete();
+        $this->db->table('coach_threads')->where('id', $id)->delete();
     }
 
     public function touch(string $id, string $firstText = ''): void
@@ -102,6 +118,11 @@ final class CoachThreads
         $first = $this->db->table('coach_messages')->where('thread_id', $thread->id)->where('role', 'user')->orderBy('seq')->value('fallback_text');
         $last = $this->db->table('coach_messages')->where('thread_id', $thread->id)->where('type', '<>', 'day_brief')->orderByDesc('seq')->value('fallback_text');
 
+        return $this->description($thread, $first, $last);
+    }
+
+    private function description(object $thread, ?string $first, ?string $last): array
+    {
         return ['id' => $thread->id, 'title' => $thread->title ?? (trim((string) $first) === '' ? 'گفتگوی جدید' : mb_substr((string) $first, 0, 60)),
             'preview' => mb_substr((string) $last, 0, 120), 'createdAt' => Carbon::parse($thread->created_at, 'UTC')->toISOString(), 'lastMessageAt' => $thread->last_message_at === null ? null : Carbon::parse($thread->last_message_at, 'UTC')->toISOString()];
     }

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/coach_conversation.dart';
+import '../domain/coach_workspace.dart';
 
 import '../../../data/customer_auth.dart';
 import '../domain/coach_events.dart';
@@ -17,7 +18,10 @@ import 'coach_wire.dart';
 
 /// Live coach client. JSON and SSE both use [http.Client.send] and the session bearer token.
 class HttpCoachRepository
-    implements CoachRepository, CoachConversationRepository {
+    implements
+        CoachRepository,
+        CoachConversationRepository,
+        CoachWorkspaceRepository {
   HttpCoachRepository({required this.auth, http.Client? client})
     : _client = client ?? http.Client(),
       _ownsClient = client == null;
@@ -34,6 +38,31 @@ class HttpCoachRepository
   @override
   String? get conversationId => _conversationId;
   String get _selectionKey => 'rejime_man.coach.selected.${auth.userId}';
+  @override
+  String get workspaceOwner => 'account.${auth.userId}';
+  @override
+  Future<Map<String, dynamic>> searchMessages(
+    String query, {
+    String? before,
+  }) async => asMap(
+    await _json(
+      'search?${Uri(queryParameters: {'q': query, 'before': ?before}).query}',
+    ),
+  );
+  @override
+  Future<Map<String, dynamic>> memory() async => asMap(
+    await _json(
+      'memory${_conversationId == null ? "" : "?threadId=$_conversationId"}',
+    ),
+  );
+  @override
+  Future<void> editMemory(String id, String? value) async {
+    await _json(
+      'memory/${Uri.encodeComponent(id)}',
+      method: value == null ? 'DELETE' : 'PATCH',
+      body: value == null ? null : {'value': value},
+    );
+  }
 
   @override
   Future<List<CoachConversation>> listConversations() async {

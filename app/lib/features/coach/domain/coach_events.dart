@@ -53,7 +53,7 @@ class CoachSendRequest {
   final Map<String, dynamic> data;
 
   String get displayText => switch (kind) {
-    'photo' => 'عکس وعده',
+    'photo' => (text ?? '').trim().isEmpty ? 'عکس وعده' : text!.trim(),
     _ => (text ?? '').trim(),
   };
 }
