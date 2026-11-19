@@ -108,6 +108,7 @@ export function VerifyStage() {
     }
     if (localPreview) {
       setError('')
+      audience.registered()
       wizard.setPhone(phone)
       setMode('otp')
       return
@@ -162,6 +163,7 @@ export function VerifyStage() {
         wizard.setToken(token)
         writeCheckoutSession({ token, submissionId: wizard.submissionId, plan: wizard.plan })
       }
+      audience.verified()
       setOtpSuccess(true)
       const successHold = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 350 : 1450
       await new Promise((resolve) => window.setTimeout(resolve, successHold))

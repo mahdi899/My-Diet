@@ -51,7 +51,7 @@ final class WebIntakeService
         }
         $this->onboarding->importDemo($user);
         if ($journey !== null) {
-            $this->store->linkJourney($journey, $user, $phone);
+            $this->store->linkJourney($journey, $user, $phone, $id);
         }
 
         return ['verified' => true];

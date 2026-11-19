@@ -25,7 +25,7 @@ export const adminNav: StaffNavItem[] = [
   { id: 'specialist-reports', title: 'گزارش متخصصان', icon: 'medical', group: 'گزارش‌ها' },
   { id: 'journeys', title: 'مسیر کاربران', icon: 'history', group: 'گزارش‌ها' },
   { id: 'campaign-links', title: 'لینک‌های تبلیغاتی', icon: 'history', group: 'گزارش‌ها' },
-  { id: 'web-analytics', title: 'رهگیری سایت دمو', icon: 'history', group: 'گزارش‌ها' },
+  { id: 'web-analytics', title: 'رهگیری آنبوردینگ', icon: 'history', group: 'گزارش‌ها' },
 ]
 
 const paths: Record<string, string> = {

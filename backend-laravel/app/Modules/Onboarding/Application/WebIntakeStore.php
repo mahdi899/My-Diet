@@ -16,5 +16,5 @@ interface WebIntakeStore
 
     public function phone(string $user): ?string;
 
-    public function linkJourney(string $id, string $user, string $phone): void;
+    public function linkJourney(string $id, string $user, string $phone, string $submission): void;
 }

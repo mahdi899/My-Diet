@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Modules\Ai\Infrastructure\FixedAiCatalog;
 use App\Shared\Domain\LegacyCrypto as Crypto;
+use Illuminate\Support\Str;
 use Tests\MySqlTestCase;
 
 final class ReplacementContractTest extends MySqlTestCase
@@ -92,6 +93,67 @@ final class ReplacementContractTest extends MySqlTestCase
         self::assertSame(1, $report['goals'][0]['clicks']);
         self::assertSame('telegram', $report['sources'][0]['source']);
         self::assertNotEmpty($report['daily']);
+    }
+
+    public function test_campaign_funnel_tracks_exact_departures_and_server_confirmed_payments(): void
+    {
+        $admin = $this->actor('admin');
+        $website = Crypto::uuid();
+        config(['analytics.url' => getenv('MYSQL_TEST_URL'), 'analytics.website_id' => $website]);
+        $campaign = 'funnel-'.Crypto::uuid();
+        $otherCampaign = 'other-'.Crypto::uuid();
+        foreach ([$campaign, $otherCampaign] as $slug) {
+            $this->withToken($admin['token'])->postJson('/v1/admin/campaign-links', ['name' => 'تست قیف', 'slug' => $slug, 'source' => 'telegram'])->assertCreated();
+            $this->get('/go/'.$slug)->assertRedirect('/onboarding/?utm_source=telegram&utm_medium=campaign&utm_campaign='.$slug);
+        }
+
+        $intro = Crypto::uuid();
+        $question = Crypto::uuid();
+        $unpaid = Crypto::uuid();
+        $paid = Crypto::uuid();
+        $other = Crypto::uuid();
+        $base = '/v1/public/onboarding/telemetry';
+        $record = function (string $id, string $slug, string $step, string $name = 'step_view', ?string $goal = null) use ($base): void {
+            $this->postJson($base, ['journey' => $id, 'campaign' => $slug, 'page' => '/onboarding/', 'step' => $step, 'name' => $name, 'goal' => $goal])->assertNoContent();
+        };
+        $record($intro, $campaign, 'intro');
+        $record($question, $campaign, 'goals', 'goal_selected', 'weight_loss');
+        $record($question, $campaign, 'goals', 'goal_selected', 'weight_loss');
+        $record($question, $campaign, 'question:weight_loss:3');
+        $record($other, $otherCampaign, 'goals', 'goal_selected', 'detox');
+        $record($unpaid, $campaign, 'otp', 'phone_registered');
+        $record($unpaid, $campaign, 'payment_gateway');
+        $record($paid, $campaign, 'payment');
+        $this->postJson($base, ['journey' => $unpaid, 'campaign' => $campaign, 'page' => '/onboarding/payment', 'name' => 'step_view', 'step' => 'payment_success'])->assertUnprocessable();
+        $visit = Crypto::uuid();
+        $this->db->table('website_event')->where('website_id', $website)->where('visit_id', $intro)->update(['visit_id' => $visit]);
+        $this->db->table('website_event')->insert(['event_id' => Crypto::uuid(), 'website_id' => $website, 'session_id' => $intro, 'visit_id' => $visit, 'event_type' => 1, 'event_name' => 'pageview', 'url_path' => '/onboarding/', 'utm_campaign' => $campaign, 'created_at' => now()]);
+        $this->db->table('website_event')->where('website_id', $website)->update(['created_at' => now()->subMinutes(3)]);
+
+        $owner = $this->actor();
+        $submission = (string) Str::uuid();
+        $phone = $this->db->table('users')->where('id', $owner['id'])->value('phone_e164');
+        $this->postJson('/v1/onboarding/submissions', ['id' => $submission, 'phone' => $phone, 'goal' => 'weight_loss', 'campaign' => $campaign, 'answers' => [['key' => 'name', 'question' => 'نام', 'answer' => 'زهره']]])->assertCreated();
+        $this->withToken($owner['token'])->postJson('/v1/onboarding/submissions/'.$submission.'/verify', ['journeyId' => $paid])->assertCreated();
+        $this->postJson('/v1/onboarding/submissions/'.$submission.'/verify', ['journeyId' => $other])->assertCreated();
+        $order = $this->postJson('/v1/me/onboarding-transfers', ['plan' => 'monthly', 'submissionId' => $submission])->assertCreated()->json();
+        $this->withToken($admin['token'])->postJson('/v1/admin/onboarding-transfers/'.$order['id'].'/confirm', ['reference' => 'TEST-'.$submission, 'amountToman' => $order['amount_toman']])->assertCreated();
+
+        $report = $this->getJson('/v1/admin/web-analytics?campaign='.$campaign)->assertOk()->json();
+        $funnel = array_column($report['funnel'], 'visits', 'step');
+        self::assertSame(4, $funnel['entry']);
+        self::assertSame(2, $funnel['payment']);
+        self::assertSame(1, $funnel['paid']);
+        self::assertSame(['intro' => 1, 'payment_gateway' => 1, 'question:weight_loss:3' => 1], array_column($report['exits'], 'visits', 'step'));
+        self::assertSame([['goal' => 'weight_loss', 'clicks' => 2, 'visits' => 1, 'percent' => 100]], $report['goals']);
+        $this->getJson('/v1/admin/web-analytics?campaign='.$otherCampaign)->assertOk()->assertJsonPath('funnel.8.visits', 0)->assertJsonPath('goals.0.goal', 'detox');
+        $result = $this->getJson('/v1/admin/web-analytics/departures?includePaid=1&campaign='.$campaign)->assertOk()->json('sessions');
+        $sessions = array_column($result, null, 'id');
+        self::assertTrue($sessions[$paid]['paid']);
+        self::assertFalse($sessions[$unpaid]['paid']);
+        self::assertTrue($sessions[$unpaid]['reachedPayment']);
+        self::assertSame('question:weight_loss:3', $sessions[$question]['step']);
+        $this->getJson('/v1/admin/web-analytics/departures?campaign='.$campaign)->assertOk()->assertJsonCount(3, 'sessions');
     }
 
     public function test_mysql_performance_indexes_are_used_by_explain(): void

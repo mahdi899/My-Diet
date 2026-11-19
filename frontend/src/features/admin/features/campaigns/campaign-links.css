@@ -28,3 +28,4 @@
   .admin-reference .campaign-footer { align-items: flex-start; flex-direction: column; }
   .admin-reference .campaign-dialog > header, .admin-reference .campaign-dialog form { padding: 16px; }
 }
+.admin-reference .campaign-report-link { display: inline-flex; align-items: center; padding-inline: 8px; color: #215b41; font-weight: 600; text-underline-offset: 4px; }

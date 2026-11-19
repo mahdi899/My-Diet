@@ -1,22 +1,26 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { StaffError } from '@shared/api/staff-session'
 import { asRecord, asRows, formatFaNumber } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { staff } from '../../session'
+import { campaignLinksQuery } from '../campaigns/campaign-links'
 import '../campaigns/campaign-links.css'
 import './web-analytics.css'
 
-type Session = { id: string; page: string; step: string; campaign: string; lastSeen: string; phone: string }
+type Session = { id: string; page: string; step: string; campaign: string; lastSeen: string; phone: string; paid?: boolean; reachedPayment?: boolean }
 type Goal = { goal: string; clicks: number; visits: number; percent: number }
 type Exit = { step: string; visits: number; percent: number }
 type Source = { source: string; campaign: string; visits: number }
-type Report = { visitors: number; visits: number; completed: number; pageviews: number; goals: Goal[]; exits: Exit[]; sources: Source[] }
+type StageTiming = { step: string; views: number; averageSeconds: number }
+type Report = { visits: number; goals: Goal[]; exits: Exit[]; funnel: Exit[]; stages: StageTiming[]; sources: Source[] }
 
 const goals: Record<string, string> = { weight_loss: 'لاغری', weight_gain: 'افزایش وزن', pregnancy: 'بارداری و شیردهی', detox: 'سلامت و پاکسازی' }
 const pages: Record<string, string> = { '/onboarding/': 'شروع', '/onboarding': 'شروع', '/onboarding/goals.html': 'اهداف', '/onboarding/goals': 'اهداف', '/onboarding/quiz.html': 'پرسش‌نامه', '/onboarding/quiz': 'پرسش‌نامه', '/onboarding/payment.html': 'پرداخت', '/onboarding/payment': 'پرداخت' }
 const steps: Record<string, string> = { intro: 'شروع', goals: 'انتخاب هدف', quiz: 'شروع پرسش‌نامه', preparing: 'آماده‌سازی برنامه', specialists: 'انتخاب پزشک', otp: 'وارد کردن کد تأیید', payment_gateway: 'پرداخت آنلاین', payment_transfer: 'کارت‌به‌کارت', payment_success: 'پرداخت تأیید شد', plans: 'انتخاب برنامه', contact: 'ثبت شماره', payment: 'پرداخت' }
-const links = [{ slug: 'hale', name: 'hale' }, { slug: 'telegram', name: 'تلگرام' }, { slug: 'instagram', name: 'اینستا' }]
+const previewLinks = [{ slug: 'hale', name: 'hale' }, { slug: 'telegram', name: 'تلگرام' }, { slug: 'instagram', name: 'اینستا' }]
+const milestones: Record<string, string> = { entry: 'ورود به آنبوردینگ', goals: 'دیدن هدف‌ها', quiz: 'شروع پرسش‌نامه', completed: 'تکمیل پرسش‌نامه', plans: 'دیدن پلن‌ها', contacted: 'ثبت شماره', registered: 'تأیید شماره', payment: 'رسیدن به پرداخت', paid: 'پرداخت تأییدشده' }
 const pageSize = 10
 const fa = (value: number) => formatFaNumber(value)
 
@@ -55,11 +59,16 @@ const liveSessions: Session[] = ([
 }))
 
 const departedSessions: Session[] = liveSessions.map((session, index) => ({
-  ...session, id: `d${session.id.slice(1)}`, campaign: session.campaign || 'hale', lastSeen: new Date(Date.now() - (index + 3) * 3600_000).toISOString(),
+  ...session, id: `d${session.id.slice(1)}`, campaign: session.campaign || 'hale', lastSeen: new Date(Date.now() - (index + 3) * 3600_000).toISOString(), reachedPayment: session.step === 'plans',
 }))
 
 const sampleReport: Report = {
-  visitors: 373, visits: 424, completed: 137, pageviews: 91,
+  visits: 424,
+  stages: [{ step: 'intro', views: 424, averageSeconds: 14 }, { step: 'goals', views: 269, averageSeconds: 8.6 }, { step: 'question:weight_loss:1', views: 132, averageSeconds: 12.3 }],
+  funnel: Object.keys(milestones).map((step, index) => {
+    const visits = [424, 269, 215, 137, 104, 89, 78, 56, 23][index] ?? 0
+    return { step, visits, percent: Math.round(visits / 424 * 1000) / 10 }
+  }),
   goals: [
     { goal: 'weight_loss', clicks: 199, visits: 163, percent: 67.7 },
     { goal: 'detox', clicks: 59, visits: 33, percent: 30.1 },
@@ -86,12 +95,11 @@ function previewReport(campaign: string, days: string): Report {
   const share = (campaign && sampleReport.visits ? matched / sampleReport.visits : 1) * day
   const scale = (value: number) => Math.round(value * share)
   return {
-    visitors: scale(sampleReport.visitors),
     visits: scale(sampleReport.visits),
-    completed: scale(sampleReport.completed),
-    pageviews: scale(sampleReport.pageviews),
+    funnel: sampleReport.funnel.map((row) => ({ ...row, visits: scale(row.visits) })),
     goals: sampleReport.goals.map((goal) => ({ ...goal, clicks: scale(goal.clicks), visits: scale(goal.visits) })),
     exits: sampleReport.exits.map((row) => ({ ...row, visits: scale(row.visits) })),
+    stages: sampleReport.stages.map((row) => ({ ...row, views: scale(row.views) })),
     sources: sources.map((row) => ({ ...row, visits: Math.round(row.visits * day) })),
   }
 }
@@ -100,7 +108,7 @@ function readSessions(payload: unknown): Session[] {
   const sessions = asRows(asRecord(payload)?.sessions)
   return sessions.flatMap((row) => typeof row.id === 'string' ? [{
     id: row.id, page: String(row.page ?? ''), step: String(row.step ?? ''), campaign: String(row.campaign ?? ''),
-    lastSeen: String(row.lastSeen ?? ''), phone: String(row.phone ?? ''),
+    lastSeen: String(row.lastSeen ?? ''), phone: String(row.phone ?? ''), paid: row.paid === true, reachedPayment: row.reachedPayment === true,
   }] : [])
 }
 
@@ -108,10 +116,12 @@ function readReport(payload: unknown): Report {
   const record = asRecord(payload) ?? {}
   const summary = asRecord(record.summary) ?? {}
   const numberOf = (value: unknown) => typeof value === 'number' ? value : 0
+  const readSteps = (value: unknown) => asRows(value).flatMap((row) => typeof row.step === 'string' ? [{ step: row.step, visits: numberOf(row.visits), percent: numberOf(row.percent) }] : [])
   return {
-    visitors: numberOf(summary.visitors), visits: numberOf(summary.visits), completed: numberOf(summary.completed), pageviews: numberOf(summary.pageviews),
+    visits: numberOf(summary.visits), funnel: readSteps(record.funnel),
     goals: asRows(record.goals).flatMap((row) => typeof row.goal === 'string' ? [{ goal: row.goal, clicks: numberOf(row.clicks), visits: numberOf(row.visits), percent: numberOf(row.percent) }] : []),
-    exits: asRows(record.exits).flatMap((row) => typeof row.step === 'string' ? [{ step: row.step, visits: numberOf(row.visits), percent: numberOf(row.percent) }] : []),
+    exits: readSteps(record.exits),
+    stages: asRows(record.stages).flatMap((row) => typeof row.step === 'string' ? [{ step: row.step, views: numberOf(row.views), averageSeconds: numberOf(row.averageSeconds) }] : []),
     sources: asRows(record.sources).flatMap((row) => typeof row.source === 'string' ? [{ source: row.source, campaign: String(row.campaign ?? ''), visits: numberOf(row.visits) }] : []),
   }
 }
@@ -144,12 +154,11 @@ function DataTable({ title, description, searchLabel, headers, rows }: { title: 
   )
 }
 
-function SessionTable({ label, stepHeading, sessions, withDate }: { label: string; stepHeading: string; sessions: Session[]; withDate: boolean }) {
-  const names = new Map(links.map((link) => [link.slug, link.name]))
+function SessionTable({ label, stepHeading, sessions, withDate, names }: { label: string; stepHeading: string; sessions: Session[]; withDate: boolean; names: Map<string, string> }) {
   return (
     <div className="tracking-live-table" role="region" aria-label={label}>
       <table>
-        <thead><tr>{['نشست', 'لینک ورودی', 'صفحه', stepHeading, 'شماره تلفن', 'آخرین فعالیت'].map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead>
+        <thead><tr>{['نشست', 'لینک ورودی', 'صفحه', stepHeading, 'وضعیت پرداخت', 'شماره تلفن', 'آخرین فعالیت'].map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead>
         <tbody>
           {sessions.length ? sessions.map((session) => (
             <tr key={session.id}>
@@ -157,10 +166,11 @@ function SessionTable({ label, stepHeading, sessions, withDate }: { label: strin
               <td>{names.get(session.campaign) || session.campaign || 'مستقیم / نامشخص'}</td>
               <td>{pageLabel(session.page)}</td>
               <td>{stepLabel(session.step)}</td>
+              <td><span className="tracking-payment-status" data-state={session.paid ? 'paid' : session.reachedPayment ? 'pending' : 'none'}>{session.paid ? 'پرداخت شد' : session.reachedPayment ? 'تأیید نشده' : 'به پرداخت نرسید'}</span></td>
               <td className={session.phone ? 'tracking-id' : undefined}>{phoneLabel(session.phone)}</td>
               <td>{seenLabel(session.lastSeen, withDate)}</td>
             </tr>
-          )) : <tr><td colSpan={6}>{label}</td></tr>}
+          )) : <tr><td colSpan={7}>{label}</td></tr>}
         </tbody>
       </table>
     </div>
@@ -190,11 +200,18 @@ function ResetDialog({ preview, close, done }: { preview: boolean; close: () => 
 }
 
 export function WebAnalyticsPage({ preview }: { preview: boolean }) {
-  const [campaign, setCampaign] = useState('')
+  const queryClient = useQueryClient()
+  const [params, setParams] = useSearchParams()
+  const requestedCampaign = params.get('campaign') ?? ''
+  const campaign = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requestedCampaign) && requestedCampaign.length <= 64 ? requestedCampaign : ''
   const [days, setDays] = useState('7')
   const [within, setWithin] = useState('24h')
   const [confirmReset, setConfirmReset] = useState(false)
   const [notice, setNotice] = useState('')
+  const [outcome, setOutcome] = useState('all')
+  const campaigns = useQuery({ ...campaignLinksQuery, enabled: !preview })
+  const links = preview ? previewLinks : campaigns.data ?? []
+  const names = new Map(links.map((link) => [link.slug, link.name]))
   const live = useQuery({
     queryKey: ['web-analytics-live', campaign],
     enabled: !preview,
@@ -205,62 +222,88 @@ export function WebAnalyticsPage({ preview }: { preview: boolean }) {
     queryKey: ['web-analytics-departures', campaign, within],
     enabled: !preview,
     refetchInterval: 15000,
-    queryFn: async () => readSessions(await staff.api(`admin/web-analytics/departures?within=${within}${campaign ? `&campaign=${encodeURIComponent(campaign)}` : ''}`)),
+    queryFn: async () => readSessions(await staff.api(`admin/web-analytics/departures?includePaid=1&within=${within}${campaign ? `&campaign=${encodeURIComponent(campaign)}` : ''}`)),
   })
   const history = useQuery({
     queryKey: ['web-analytics-report', campaign, days],
     enabled: !preview,
+    refetchInterval: 30000,
     queryFn: async () => readReport(await staff.api(`admin/web-analytics?days=${days}${campaign ? `&campaign=${encodeURIComponent(campaign)}` : ''}`)),
   })
   const liveRows = useMemo(() => (preview ? liveSessions : live.data ?? []).filter((session) => !campaign || session.campaign === campaign), [preview, live.data, campaign])
-  const departedRows = useMemo(() => (preview ? departedSessions : departed.data ?? []).filter((session) => !campaign || session.campaign === campaign), [preview, departed.data, campaign])
+  const departedRows = useMemo(() => (preview ? departedSessions : departed.data ?? []).filter((session) => (!campaign || session.campaign === campaign)
+    && (outcome === 'all' || (outcome === 'paid' && session.paid) || (outcome === 'pending' && session.reachedPayment && !session.paid) || (outcome === 'before' && !session.reachedPayment))), [preview, departed.data, campaign, outcome])
   const report = preview ? previewReport(campaign, days) : history.data
-  const rate = report && report.visits ? Math.round(report.completed / report.visits * 1000) / 10 : 0
-  const topClicks = Math.max(0, ...(report?.goals.map((goal) => goal.clicks) ?? [0]))
+  const count = (step: string) => report?.funnel.find((row) => row.step === step)?.visits ?? 0
+  const firstPageExits = report?.exits.find((row) => row.step === 'intro')?.visits ?? 0
+  const topGoal = report?.goals[0]
+
+  function selectCampaign(slug: string) {
+    const next = new URLSearchParams(params)
+    if (slug) next.set('campaign', slug)
+    else next.delete('campaign')
+    setParams(next, { replace: true })
+  }
 
   return (
     <div className="tracking-page">
-      <section className="card tracking-card">
-        <div className="section-head"><div><h2>کاربران آنلاین آنبوردینگ</h2><p>موقعیت هر نشست فعال، با بررسی هر ثانیه</p></div></div>
+      <section className="card tracking-card tracking-overview">
+        <div className="section-head"><div><h2>قیف فروش آنبوردینگ</h2><p>مسیر هر کمپین از ورود تا خرید</p></div></div>
         <div className="tracking-filters">
-          <label>لینک ورودی<select aria-label="لینک ورودی" value={campaign} onChange={(event) => setCampaign(event.target.value)}><option value="">همهٔ لینک‌ها و ورودهای مستقیم</option>{links.map((link) => <option key={link.slug} value={link.slug}>{link.name} · /go/{link.slug}</option>)}</select></label>
-          <p>{campaign ? `https://my-diet.ir/go/${campaign}` : 'همهٔ ورودی‌ها'}</p>
+          <label>لینک ورودی<select aria-label="لینک ورودی" value={campaign} onChange={(event) => selectCampaign(event.target.value)}><option value="">همهٔ لینک‌ها و ورودهای مستقیم</option>{campaign && !names.has(campaign) && <option value={campaign}>{campaign}</option>}{links.map((link) => <option key={link.slug} value={link.slug}>{link.name} · /go/{link.slug}</option>)}</select></label>
+          {campaign && <a href={`${preview ? 'https://my-diet.ir' : window.location.origin}/go/${campaign}`} target="_blank" rel="noreferrer" dir="ltr">/go/{campaign}</a>}
+          <label>بازهٔ گزارش<select aria-label="بازهٔ گزارش" value={days} onChange={(event) => setDays(event.target.value)}>{[['1', '۲۴ ساعت اخیر'], ['7', '۷ روز اخیر'], ['30', '۳۰ روز اخیر'], ['90', '۹۰ روز اخیر']].map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>
         </div>
-        <p className="tracking-status">{preview || !live.isLoading ? `${fa(liveRows.length)} نشست فعال` : 'در حال دریافت نشست‌های فعال…'}</p>
-        {!preview && live.isError && <p className="tracking-status">{live.error instanceof StaffError ? live.error.message : 'دریافت موقعیت زنده کاربران ممکن نشد'}</p>}
-        <SessionTable label={liveRows.length ? 'موقعیت زنده کاربران آنبوردینگ' : 'نشست فعالی برای این انتخاب وجود ندارد.'} stepHeading="مرحلهٔ فعلی" sessions={liveRows} withDate={false} />
+        {campaigns.isError && <p className="tracking-status" role="alert">فهرست لینک‌های کمپین دریافت نشد.</p>}
+        {!preview && history.isLoading && <p className="tracking-status">در حال دریافت قیف فروش…</p>}
+        {!preview && history.isError && <p className="tracking-status" role="alert">{history.error instanceof StaffError ? history.error.message : 'گزارش دریافت نشد.'}</p>}
+        {report && <div className="tracking-overview-body">
+          <div className="tracking-metrics">
+            <section className="tracking-metric"><p>مسیرهای ثبت‌شده</p><strong>{fa(count('entry'))}</strong><span>{fa(firstPageExits)} توقف در صفحهٔ اول</span></section>
+            <section className="tracking-metric"><p>رسیده به پرداخت</p><strong>{fa(count('payment'))}</strong><span>{fa(count('payment') - count('paid'))} پرداخت تأییدنشده</span></section>
+            <section className="tracking-metric" data-highlight="true"><p>پرداخت تأییدشده</p><strong>{fa(count('paid'))}</strong><span>{fa(report.funnel.find((row) => row.step === 'paid')?.percent ?? 0)}٪ از مسیرها</span></section>
+            <section className="tracking-metric"><p>محبوب‌ترین هدف</p><strong>{topGoal ? goals[topGoal.goal] ?? topGoal.goal : '—'}</strong><span>{topGoal ? `${fa(topGoal.visits)} مسیر` : 'هنوز هدفی انتخاب نشده'}</span></section>
+          </div>
+          <ol className="tracking-funnel" aria-label="مراحل قیف فروش">{report.funnel.map((row) => <li key={row.step}>
+            <span>{milestones[row.step] ?? row.step}</span><div className="tracking-funnel-track" aria-hidden="true"><i style={{ inlineSize: `${row.percent}%` }} /></div><b>{fa(row.visits)}</b><small>{fa(row.percent)}٪</small>
+          </li>)}</ol>
+        </div>}
       </section>
       <section className="card tracking-card">
-        <div className="section-head"><div><h2>نتیجهٔ نشست‌ها · آخرین محل ترک</h2><p>حداکثر ۲۰۰ نشست در بازهٔ انتخاب‌شده. پس از ۲ دقیقه بدون رویداد نمایش داده می‌شود.</p></div>
+        <div className="section-head"><div><h2>کاربران آنلاین آنبوردینگ</h2><p>به‌روزرسانی هر ۵ ثانیه</p></div></div>
+        {!live.isError && <p className="tracking-status">{preview || !live.isLoading ? `${fa(liveRows.length)} نشست فعال` : 'در حال دریافت نشست‌های فعال…'}</p>}
+        {!preview && live.isError && <p className="tracking-status">{live.error instanceof StaffError ? live.error.message : 'دریافت موقعیت زنده کاربران ممکن نشد'}</p>}
+        {(preview || live.isSuccess) && <SessionTable label={liveRows.length ? 'موقعیت زنده کاربران آنبوردینگ' : 'نشست فعالی برای این انتخاب وجود ندارد.'} stepHeading="مرحلهٔ فعلی" sessions={liveRows} withDate={false} names={names} />}
+      </section>
+      <section className="card tracking-card">
+        <div className="section-head"><div><h2>نتیجهٔ نشست‌ها</h2><p>پرداخت‌های تأییدشده و آخرین مرحله پس از ۲ دقیقه بدون نشانهٔ حضور</p></div></div>
+        <div className="tracking-filters">
           <label>بازهٔ زمانی<select aria-label="بازهٔ زمانی نتیجهٔ نشست‌ها" value={within} onChange={(event) => setWithin(event.target.value)}>{[['24h', '۲۴ ساعت اخیر'], ['7d', '۷ روز اخیر'], ['30d', '۳۰ روز اخیر']].map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>
+          <label>نتیجه<select value={outcome} onChange={(event) => setOutcome(event.target.value)}><option value="all">همهٔ نتیجه‌ها</option><option value="paid">پرداخت تأییدشده</option><option value="pending">رسیده به پرداخت</option><option value="before">توقف قبل از پرداخت</option></select></label>
         </div>
-        <p className="tracking-status">{preview || !departed.isLoading ? `${fa(departedRows.length)} نشست در نتیجه` : 'در حال دریافت نتیجهٔ نشست‌ها…'}</p>
-        <SessionTable label={departedRows.length ? 'آخرین محل ترک نشست‌ها' : 'نشستی در این بازه ثبت نشده است.'} stepHeading="آخرین مرحله" sessions={departedRows} withDate />
+        <p className="tracking-status">{departed.isError ? 'دریافت نتیجهٔ نشست‌ها ممکن نشد.' : preview || !departed.isLoading ? `${fa(departedRows.length)} نشست · حداکثر ۲۰۰ نشست اخیر` : 'در حال دریافت نتیجهٔ نشست‌ها…'}</p>
+        {(preview || departed.isSuccess) && <SessionTable label={departedRows.length ? 'نتیجهٔ نشست‌ها' : 'نشستی با این فیلتر پیدا نشد.'} stepHeading="آخرین مرحله" sessions={departedRows} withDate names={names} />}
       </section>
       <details className="card tracking-history" open>
-        <summary>{campaign ? 'گزارش تاریخی لینک انتخاب‌شده' : 'گزارش تاریخی همهٔ ورودی‌ها'}</summary>
+        <summary>جزئیات هدف‌ها، ریزش و ورودی‌ها</summary>
         <div className="tracking-history-body">
           <div className="tracking-filters">
-            <label>بازهٔ گزارش<select aria-label="بازهٔ گزارش" value={days} onChange={(event) => setDays(event.target.value)}>{[['1', '۲۴ ساعت اخیر'], ['7', '۷ روز اخیر'], ['30', '۳۰ روز اخیر'], ['90', '۹۰ روز اخیر']].map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>
             <button type="button" className="secondary tracking-reset" onClick={() => setConfirmReset(true)}><Icon name="history" />ریست داده‌ها</button>
           </div>
           {notice && <p className="campaign-notice" role="status">{notice}</p>}
-          {!preview && history.isError && <p>{history.error instanceof StaffError ? history.error.message : 'گزارش دریافت نشد.'}</p>}
           {report && <>
-            <div className="tracking-metrics">
-              <section className="card tracking-metric"><p>بازدیدکنندگان</p><strong>{fa(report.visitors)}</strong><span>شناسه‌های ناشناس در بازهٔ انتخاب‌شده</span></section>
-              <section className="card tracking-metric"><p>نشست‌ها</p><strong>{fa(report.visits)}</strong><span>دفعات مراجعه به دمو</span></section>
-              <section className="card tracking-metric"><p>تکمیل پرسش‌نامه</p><strong>{fa(report.completed)}</strong><span>نشست‌هایی که پرسش‌نامه را کامل کردند</span></section>
-              <section className="card tracking-metric"><p>نرخ تکمیل</p><strong>{fa(rate)}٪</strong><span>{fa(report.pageviews)} بازدید صفحه</span></section>
-            </div>
             {!report.visits && <div className="info-note"><Icon name="info" /><p>هنوز داده‌ای در این بازه ثبت نشده است. آمار فقط از زمان فعال‌سازی رهگیری جمع‌آوری می‌شود.</p></div>}
-            <DataTable title="انتخاب دستهٔ رژیم" description="درصد از مجموع کلیک‌های انتخاب هدف در بازهٔ انتخاب‌شده." searchLabel="جستجو در انتخاب دستهٔ رژیم…" headers={['هدف', 'درصد کلیک', 'کلیک', 'نشست']} rows={report.goals.map((goal) => [`${goals[goal.goal] ?? goal.goal}${goal.clicks === topClicks && goal.clicks ? ' · بیشترین کلیک' : ''}`, `${fa(goal.percent)}٪`, fa(goal.clicks), fa(goal.visits)])} />
-            <DataTable title="ریزش کاربران بر اساس صفحه و سؤال" description="هر مسیر مستقل پس از ۲ دقیقه بی‌فعالیتی؛ مسیرهای ثبت شماره حذف می‌شوند. شروع مسیر جدید، ریزش قبلی را حذف نمی‌کند. سؤال نمایش‌داده‌شدهٔ آخر محاسبه می‌شود؛ بستن مرورگر قطعی نیست." searchLabel="جستجو در ریزش کاربران…" headers={['صفحه / سؤال', 'مسیر ریزش‌کرده', 'سهم از ریزش‌ها']} rows={report.exits.map((row) => [stepLabel(row.step), fa(row.visits), `${fa(row.percent)}٪`])} />
+            <DataTable title="هدف‌های انتخاب‌شده" description="مرتب‌شده بر اساس تعداد مسیرهایی که هر هدف را انتخاب کردند." searchLabel="جستجو در هدف‌ها…" headers={['هدف', 'مسیر', 'تعداد انتخاب', 'سهم از کلیک‌ها']} rows={report.goals.map((goal) => [goals[goal.goal] ?? goal.goal, fa(goal.visits), fa(goal.clicks), `${fa(goal.percent)}٪`])} />
+            <DataTable title="ریزش بر اساس صفحه و سؤال" description="آخرین مرحلهٔ مسیرهای بدون پرداخت تأییدشده، پس از ۲ دقیقه بدون نشانهٔ حضور." searchLabel="جستجو در ریزش کاربران…" headers={['صفحه / سؤال', 'مسیر ریزش‌کرده', 'سهم از ریزش‌ها']} rows={report.exits.map((row) => [stepLabel(row.step), fa(row.visits), `${fa(row.percent)}٪`])} />
+            {report.stages.length > 0 && <DataTable title="زمان صرف‌شده در هر مرحله" description="میانگین زمان فعال ثبت‌شده در صفحه یا سؤال." searchLabel="جستجو در زمان مراحل…" headers={['صفحه / سؤال', 'دفعات نمایش', 'میانگین زمان فعال']} rows={report.stages.map((row) => [stepLabel(row.step), fa(row.views), row.averageSeconds ? `${fa(row.averageSeconds)} ثانیه` : '—'])} />}
             <DataTable title="کانال‌های ورودی" description="تفکیک بر اساس UTM و دامنهٔ ارجاع؛ مستقیم یعنی منبع قابل تشخیص نیست." searchLabel="جستجو در کانال‌های ورودی…" headers={['منبع', 'کمپین', 'نشست']} rows={report.sources.map((row) => [row.source === 'direct' ? 'مستقیم / نامشخص' : row.source, row.campaign || '—', fa(row.visits)])} />
           </>}
         </div>
       </details>
-      {confirmReset && <ResetDialog preview={preview} close={() => setConfirmReset(false)} done={(message) => { setConfirmReset(false); setNotice(message) }} />}
+      {confirmReset && <ResetDialog preview={preview} close={() => setConfirmReset(false)} done={(message) => {
+        setConfirmReset(false); setNotice(message)
+        void queryClient.invalidateQueries({ predicate: ({ queryKey }) => String(queryKey[0]).startsWith('web-analytics-') })
+      }} />}
     </div>
   )
 }

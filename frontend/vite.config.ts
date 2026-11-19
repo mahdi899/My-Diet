@@ -33,6 +33,10 @@ export default defineConfig({
         target: process.env.SABZINE_API_TARGET || 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
+      '/go': {
+        target: process.env.SABZINE_API_TARGET || 'http://127.0.0.1:8000',
+        changeOrigin: false,
+      },
     },
   },
   build: {

@@ -155,6 +155,7 @@ use App\Modules\Questionnaire\Presentation\QuestionnaireController;
 
 Route::get('v1/public/onboarding-questionnaire', [OnboardingWebController::class, 'questionnaires']);
 Route::post('v1/public/onboarding/community-join', [OnboardingWebController::class, 'join']);
+Route::post('v1/public/onboarding/telemetry', [AnalyticsController::class, 'collect']);
 Route::put('v1/admin/onboarding-questionnaire/{goal}', [OnboardingWebController::class, 'configure'])->middleware('session:admin');
 Route::post('v1/onboarding/submissions', [OnboardingWebController::class, 'save']);
 Route::post('v1/onboarding/submissions/{id}/verify', [OnboardingWebController::class, 'verify'])->middleware('session:user');

@@ -6,17 +6,36 @@
 .admin-reference .tracking-filters p { margin: 0; font-size: 13px; }
 .admin-reference .tracking-status { margin: 0; padding: 0 24px 12px; color: #52675b; font-size: 13px; }
 .admin-reference .tracking-live-table { max-height: 55vh; overflow: auto; }
-.admin-reference .tracking-live-table table { min-width: 760px; }
+.admin-reference .tracking-live-table table { min-width: 840px; }
 .admin-reference .tracking-live-table th { position: sticky; top: 0; background: #f4f7f2; }
 .admin-reference .tracking-id { direction: ltr; unicode-bidi: isolate; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 .admin-reference .tracking-history { padding: 0; }
 .admin-reference .tracking-history > summary { padding: 18px 24px; font-weight: 700; cursor: pointer; list-style-position: inside; }
 .admin-reference .tracking-history-body { display: grid; gap: 16px; padding: 0 20px 20px; }
+.admin-reference .tracking-overview-body { display: grid; gap: 24px; padding: 0 24px 24px; }
 .admin-reference .tracking-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.admin-reference .tracking-metric { padding: 22px 18px; text-align: center; }
+.admin-reference .tracking-metric { padding: 16px; background: #f4f7f2; border: 1px solid #dce8df; border-radius: 16px; }
+.admin-reference .tracking-metric[data-highlight] { background: #e1f2e5; border-color: #b0d8be; color: #164c35; }
 .admin-reference .tracking-metric p { font-size: 13px; }
-.admin-reference .tracking-metric strong { display: block; margin: 10px 0 8px; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+.admin-reference .tracking-metric strong { display: block; margin: 8px 0; font-size: clamp(18px, 2.3vw, 29px); font-weight: 700; }
 .admin-reference .tracking-metric span { display: block; color: var(--muted); font-size: 12px; }
+.admin-reference .tracking-funnel { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.admin-reference .tracking-funnel li { display: grid; grid-template-columns: minmax(130px, .6fr) minmax(0, 2fr) minmax(2rem, auto) 4ch; gap: 12px; align-items: center; font-size: 13px; }
+.admin-reference .tracking-funnel b, .admin-reference .tracking-funnel small { text-align: end; }
+.admin-reference .tracking-funnel small { color: #52675b; }
+.admin-reference .tracking-funnel-track { block-size: 8px; background: #edf2ed; border-radius: 99px; overflow: hidden; }
+.admin-reference .tracking-funnel-track i { display: block; height: 100%; background: linear-gradient(to left, #275c44, #8bbf9a); border-radius: inherit; }
+.admin-reference .tracking-payment-status { display: inline-flex; padding: 4px 9px; border-radius: 99px; background: #eef2ee; color: #4a6054; font-size: 12px; white-space: nowrap; }
+.admin-reference .tracking-payment-status[data-state="paid"] { background: #dff3e4; color: #19553a; }
+.admin-reference .tracking-payment-status[data-state="pending"] { background: #fbefcf; color: #614917; }
 .admin-reference .tracking-reset { margin-inline-start: auto; }
 @media (max-width: 1050px) { .admin-reference .tracking-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .admin-reference .tracking-metrics { grid-template-columns: 1fr; } .admin-reference .tracking-reset { margin-inline-start: 0; } }
+@media (max-width: 640px) {
+  .admin-reference .tracking-overview-body { padding-inline: 16px; }
+  .admin-reference .tracking-filters label { flex-wrap: wrap; white-space: normal; }
+  .admin-reference .tracking-filters select { min-width: 0; }
+  .admin-reference .tracking-metrics { gap: 8px; }
+  .admin-reference .tracking-metric { padding: 12px; }
+  .admin-reference .tracking-funnel li { grid-template-columns: minmax(110px, .9fr) minmax(0, 1fr) 2rem 4ch; gap: 8px; }
+  .admin-reference .tracking-reset { margin-inline-start: 0; }
+}

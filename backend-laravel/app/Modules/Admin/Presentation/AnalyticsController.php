@@ -6,6 +6,8 @@ use App\Modules\Admin\Infrastructure\MySqlAnalytics;
 use App\Shared\Domain\Problem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Validator;
 
 final class AnalyticsController
 {
@@ -24,6 +26,27 @@ final class AnalyticsController
     public function live(Request $request): array
     {
         return $this->analytics->live($this->campaign($request));
+    }
+
+    public function collect(Request $request): Response
+    {
+        abort_unless(app()->environment(['local', 'testing']), 404);
+        $validator = Validator::make($request->all(), [
+            'journey' => ['required', 'uuid'],
+            'name' => ['required', 'in:pageview,step_view,step_time,active_heartbeat,presence_end,questionnaire_completed,phone_registered,otp_verified,goal_selected,start_clicked,question_interacted,back_clicked'],
+            'page' => ['required', 'regex:~^/onboarding(?:/(?:goals|quiz|payment)?)?$~D'],
+            'step' => ['required_unless:name,pageview', 'nullable', 'regex:/^(intro|goals|quiz|preparing|specialists|plans|contact|otp|payment|payment_gateway|payment_transfer|question:(weight_loss|weight_gain|pregnancy|detox):\d{1,3})$/D'],
+            'goal' => ['nullable', 'in:weight_loss,weight_gain,pregnancy,detox'],
+            'source' => ['nullable', 'regex:/^[a-zA-Z0-9_.-]{1,80}$/D'],
+            'campaign' => ['nullable', 'max:64', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/D'],
+            'activeMs' => ['nullable', 'integer', 'between:0,30000'],
+        ]);
+        if ($validator->fails()) {
+            throw new Problem(422, 'validation', 'رویداد رهگیری معتبر نیست');
+        }
+        $this->analytics->collectLocal($validator->validated());
+
+        return response()->noContent();
     }
 
     public function departures(Request $request): array
@@ -66,7 +89,7 @@ final class AnalyticsController
             }
         }
 
-        return $this->analytics->departures($this->campaign($request), $since, $until);
+        return $this->analytics->departures($this->campaign($request), $since, $until, $request->boolean('includePaid'));
     }
 
     public function reset(Request $request): JsonResponse

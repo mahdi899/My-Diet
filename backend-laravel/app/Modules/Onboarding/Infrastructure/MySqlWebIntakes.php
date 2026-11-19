@@ -64,8 +64,8 @@ final class MySqlWebIntakes implements WebIntakeStore
         return $this->db->table('users')->where('id', $user)->value('phone_e164');
     }
 
-    public function linkJourney(string $id, string $user, string $phone): void
+    public function linkJourney(string $id, string $user, string $phone, string $submission): void
     {
-        $this->db->statement('insert into onboarding_analytics_journeys(journey_id,user_id,phone_e164) values(?,?,?) as incoming on duplicate key update user_id=incoming.user_id,phone_e164=incoming.phone_e164,verified_at=current_timestamp(6)', [$id, $user, $phone]);
+        $this->db->statement('insert into onboarding_analytics_journeys(journey_id,user_id,phone_e164,submission_id) values(?,?,?,?) as incoming on duplicate key update submission_id=if(onboarding_analytics_journeys.journey_id=incoming.journey_id and onboarding_analytics_journeys.user_id=incoming.user_id, coalesce(onboarding_analytics_journeys.submission_id,incoming.submission_id), onboarding_analytics_journeys.submission_id)', [$id, $user, $phone, $submission]);
     }
 }

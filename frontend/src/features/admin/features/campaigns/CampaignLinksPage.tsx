@@ -1,30 +1,24 @@
 import { FormEvent, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { StaffError } from '@shared/api/staff-session'
-import { asRows, formatFaNumber } from '@shared/utils'
+import { formatFaNumber } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { staff } from '../../session'
+import { campaignLinksQuery, type CampaignLink } from './campaign-links'
 import './campaign-links.css'
 
-type CampaignLink = { id: string; name: string; slug: string; source: string; active: boolean; opens: number }
 type Modal = { kind: 'create' } | { kind: 'toggle'; link: CampaignLink } | { kind: 'delete'; link: CampaignLink } | null
 
 const sources = [['telegram', 'تلگرام'], ['instagram', 'اینستاگرام'], ['whatsapp', 'واتساپ'], ['sms', 'پیامک'], ['other', 'سایر']] as const
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const pageSize = 10
-const queryKey = ['admin-campaign-links']
+const { queryKey } = campaignLinksQuery
 const samples: CampaignLink[] = [
   { id: 'preview-hale', name: 'hale', slug: 'hale', source: 'instagram', active: true, opens: 2088 },
   { id: 'preview-telegram', name: 'تلگرام', slug: 'telegram', source: 'telegram', active: false, opens: 3 },
   { id: 'preview-instagram', name: 'اینستا', slug: 'instagram', source: 'instagram', active: false, opens: 3 },
 ]
-
-function readLinks(payload: unknown): CampaignLink[] {
-  return asRows(payload).flatMap((row) => {
-    if (typeof row.id !== 'string' || typeof row.name !== 'string' || typeof row.slug !== 'string' || typeof row.source !== 'string') return []
-    return [{ id: row.id, name: row.name, slug: row.slug, source: row.source, active: Boolean(row.active), opens: typeof row.opens === 'number' ? row.opens : 0 }]
-  })
-}
 
 function linkUrl(origin: string, slug: string) {
   return `${origin}/go/${slug}`
@@ -51,7 +45,7 @@ function Dialog({ title, icon, close, children }: { title: string; icon: string;
 export function CampaignLinksPage({ preview }: { preview: boolean }) {
   const queryClient = useQueryClient()
   const origin = preview ? 'https://my-diet.ir' : window.location.origin
-  const live = useQuery({ queryKey, queryFn: async () => readLinks(await staff.api('admin/campaign-links')), enabled: !preview })
+  const live = useQuery({ ...campaignLinksQuery, enabled: !preview })
   const [localLinks, setLocalLinks] = useState(samples)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
@@ -148,7 +142,7 @@ export function CampaignLinksPage({ preview }: { preview: boolean }) {
       <section className="campaign-create-bar">
         <button type="button" onClick={() => { setSlug(''); setModal({ kind: 'create' }) }}>ساخت لینک جدید<Icon name="plus" /></button>
       </section>
-      <div className="info-note" role="note"><Icon name="info" /><p>لینک غیرفعال، بازدیدکننده را به دمو نمی‌فرستد. صفحه‌های بازشده قبلی و آدرس عمومی دمو همچنان در دسترس هستند. آمار نشست‌ها را در «رهگیری سایت دمو ← کانال‌های ورودی» بر اساس منبع و کمپین ببینید.</p></div>
+      <div className="info-note" role="note"><Icon name="info" /><p>«گزارش» مسیر کاربران همان لینک را از صفحهٔ اول تا پرداخت نشان می‌دهد.</p></div>
       {notice && <p className="campaign-notice" role="status">{notice}</p>}
       {!preview && live.isLoading && <p>در حال دریافت لینک‌ها</p>}
       {!preview && live.isError && <p>{live.error instanceof StaffError ? live.error.message : 'فهرست لینک‌ها دریافت نشد.'}</p>}
@@ -173,6 +167,7 @@ export function CampaignLinksPage({ preview }: { preview: boolean }) {
                   <td>{formatFaNumber(link.opens)}</td>
                   <td><div className="campaign-row-actions">
                     <button type="button" className="secondary" onClick={() => copy(link)}>کپی لینک</button>
+                    <Link className="campaign-report-link" to={`/admin/web-analytics?campaign=${encodeURIComponent(link.slug)}`}>گزارش</Link>
                     <button type="button" className="secondary" onClick={() => setModal({ kind: 'toggle', link })}>{link.active ? 'غیرفعال کردن' : 'فعال کردن'}</button>
                     <button type="button" className="secondary campaign-delete" onClick={() => setModal({ kind: 'delete', link })}><Icon name="trash" />حذف</button>
                   </div></td>

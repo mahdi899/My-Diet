@@ -65,28 +65,6 @@ export function WizardPage() {
   useEffect(() => { onboarding.installTracking() }, [])
 
   useEffect(() => {
-    if (wizard.stage === 'preparing') {
-      if (!questionnaireCompleted.current) {
-        questionnaireCompleted.current = true
-        audience.complete()
-      }
-      audience.step('preparing')
-      return
-    }
-    if (wizard.stage === 'quiz' && wizard.goal) {
-      const question = wizard.questions[wizard.index]
-      audience.step('question', { goal: wizard.goal.id, question: question?.originalNumber ?? wizard.index + 1 })
-      return
-    }
-    const named = wizard.stage === 'goals' ? 'goals'
-      : wizard.stage === 'specialists' ? 'specialists'
-        : wizard.stage === 'plans' ? 'plans'
-          : wizard.stage === 'checkout' ? 'payment'
-            : wizard.stage === 'intro' ? 'intro' : ''
-    if (named) audience.step(named)
-  }, [wizard.stage, wizard.index, wizard.goal, wizard.questions])
-
-  useEffect(() => {
     if (questionnaireGoals().length) {
       setReady(true)
       return
@@ -97,13 +75,32 @@ export function WizardPage() {
   useEffect(() => {
     if (!ready || booted.current) return
     booted.current = true
+    const entry = new URLSearchParams(location.search)
+    if (entry.has('utm_campaign') && !entry.has('at') && location.pathname.replace(/\/$/, '') === '/onboarding') return
     const saved = readProgress()
     if (!saved) return
     const restored = useWizard.getState().hydrate(saved, questionnaireGoals())
     if (!restored) return
     const next = pathFor(useWizard.getState().stage)
     if (location.pathname.replace(/\/$/, '') !== next) navigate(next, { replace: true })
-  }, [ready, location.pathname, navigate])
+  }, [ready, location.pathname, location.search, navigate])
+
+  useEffect(() => {
+    if (!ready) return
+    const state = useWizard.getState()
+    const goal = state.goal?.id
+    if (state.stage === 'quiz' && goal) {
+      const question = state.questions[state.index]
+      audience.step('question', { goal, question: question?.originalNumber ?? state.index + 1 })
+      return
+    }
+    if (state.stage === 'verify') return
+    audience.step(state.stage === 'checkout' ? 'payment' : state.stage, { goal })
+    if (state.stage === 'preparing' && !questionnaireCompleted.current) {
+      questionnaireCompleted.current = true
+      audience.complete()
+    }
+  }, [ready, wizard.stage, wizard.index, wizard.goal, wizard.questions])
 
   useEffect(() => {
     if (!ready || !booted.current) return

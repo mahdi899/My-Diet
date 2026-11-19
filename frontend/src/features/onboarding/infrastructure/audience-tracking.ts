@@ -1,4 +1,4 @@
-/** Anonymous funnel telemetry for the admin audience report. No answers or input values are sent. */
+import { isLocalOnboardingPreview } from './local-preview'
 
 const GOALS = new Set(['weight_loss', 'weight_gain', 'pregnancy', 'detox'])
 const CAMPAIGN_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const
@@ -13,7 +13,6 @@ interface TrackItem {
 
 interface SavedJourney {
   id?: string
-  page?: string
   attribution?: Record<string, string>
 }
 
@@ -26,6 +25,7 @@ declare global {
       step: (name: string, data?: { goal?: string; question?: number }) => void
       complete: () => void
       registered: () => void
+      verified: () => void
       journeyId: () => string
     }
   }
@@ -62,10 +62,11 @@ export function installAudienceTracking() {
   } catch { /* storage may be blocked */ }
 
   installed = true
+  const localPreview = isLocalOnboardingPreview()
   const queue: TrackItem[] = []
   const page = pageOf(location.pathname)
   const entryParams = new URLSearchParams(location.search)
-  let current = page
+  let current = ''
   let journey = ''
   let attribution: Record<string, string> = {}
   let context: Record<string, unknown> = {}
@@ -75,18 +76,19 @@ export function installAudienceTracking() {
   let hidden = document.hidden
 
   const rememberJourney = () => {
-    try { sessionStorage.setItem(JOURNEY_KEY, JSON.stringify({ id: journey, page, attribution })) } catch { /* ignore */ }
+    try { sessionStorage.setItem(JOURNEY_KEY, JSON.stringify({ id: journey, attribution })) } catch { /* ignore */ }
   }
 
   const selectJourney = () => {
     let saved: SavedJourney | null = null
     try { saved = JSON.parse(sessionStorage.getItem(JOURNEY_KEY) || 'null') as SavedJourney | null } catch { /* ignore */ }
     const valid = Boolean(saved && typeof saved.id === 'string' && /^[0-9a-f-]{36}$/.test(saved.id))
-    const restart = page === 'intro' || (saved?.page === 'quiz' && page !== 'payment')
+    const incomingCampaign = safeToken(entryParams.get('utm_campaign'))
+    const restart = Boolean(incomingCampaign && ((page === 'intro' && !entryParams.has('at')) || incomingCampaign !== saved?.attribution?.utm_campaign))
     journey = valid && !restart && saved?.id ? saved.id : crypto.randomUUID()
     attribution = {}
     for (const key of CAMPAIGN_KEYS) {
-      const value = entryParams.get(key) ?? (valid && page !== 'intro' ? saved?.attribution?.[key] ?? null : null)
+      const value = entryParams.get(key) ?? (valid && !restart ? saved?.attribution?.[key] ?? null : null)
       const safe = safeToken(value)
       if (safe) attribution[key] = safe
     }
@@ -95,7 +97,17 @@ export function installAudienceTracking() {
   selectJourney()
 
   const event = (name: string, data: Record<string, unknown> = {}) => {
+    if (name !== 'pageview' && !current) return
     const item: TrackItem = { name, data: { step: current, journey, ...context, ...data } }
+    if (localPreview) {
+      void fetch('/v1/public/onboarding/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({ ...item.data, name, page: location.pathname, source: attribution.utm_source, campaign: attribution.utm_campaign }),
+      }).catch(() => {})
+      return
+    }
     if (window.umami) {
       try { void Promise.resolve(window.umami.track(item.name, item.data)).catch(() => {}) } catch { /* never block the wizard */ }
     } else if (queue.length < 200) queue.push(item)
@@ -127,6 +139,7 @@ export function installAudienceTracking() {
     },
     complete() { event('questionnaire_completed') },
     registered() { event('phone_registered') },
+    verified() { event('otp_verified') },
     journeyId() { return journey },
   }
 
@@ -159,9 +172,8 @@ export function installAudienceTracking() {
   for (const type of ['pointerdown', 'keydown', 'touchstart', 'scroll'] as const) {
     addEventListener(type, () => { lastActivity = performance.now() }, { passive: true })
   }
-  const heartbeat = () => { if (!document.hidden) event('active_heartbeat') }
+  const heartbeat = () => { if (!document.hidden && performance.now() - lastActivity < 60_000) event('active_heartbeat') }
   window.setInterval(() => { flush(); heartbeat() }, 10000)
-  heartbeat()
   document.addEventListener('visibilitychange', () => { if (document.hidden) event('presence_end'); else heartbeat() })
   addEventListener('pagehide', () => event('presence_end'))
   document.addEventListener('visibilitychange', () => {
@@ -171,7 +183,7 @@ export function installAudienceTracking() {
     if (!hidden) lastActivity = lastTick
   })
   addEventListener('pagehide', flush)
-  event('step_view')
+  if (localPreview) event('pageview')
 
   document.addEventListener('click', (clickEvent) => {
     const target = (clickEvent.target as Element | null)?.closest?.('button,a')
@@ -183,6 +195,7 @@ export function installAudienceTracking() {
     else if (['backToGoalsBtn', 'appLogoHomeBtn', 'scrollPrevAnsweredBtn'].includes(target.id)) event('back_clicked')
   }, true)
 
+  if (localPreview) return
   const script = document.createElement('script')
   script.src = '/insights/script.js'
   script.defer = true
@@ -206,5 +219,6 @@ export const audience = {
   },
   complete() { window.demoTracking?.complete() },
   registered() { window.demoTracking?.registered() },
+  verified() { window.demoTracking?.verified() },
   journeyId() { return window.demoTracking?.journeyId() ?? '' },
 }
