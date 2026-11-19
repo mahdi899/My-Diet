@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { asRecord, asRows, formatFaNumber, toEnglishDigits } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
@@ -25,9 +25,7 @@ export function SubscriptionPricesPage({ preview }: { preview: boolean }) {
     }),
   })
   const save = useMutation({
-    mutationFn: async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      const data = new FormData(event.currentTarget)
+    mutationFn: async (data: FormData) => {
       const raw = toEnglishDigits(String(data.get('amountToman') ?? '')).trim()
       const amountToman = Number(raw)
       if (!/^\d+$/.test(raw) || !Number.isSafeInteger(amountToman) || amountToman < 1 || amountToman > 100_000_000) {
@@ -50,7 +48,7 @@ export function SubscriptionPricesPage({ preview }: { preview: boolean }) {
     <section className="settings-card">
       <header><div><h2>تعرفه اشتراک</h2><p>قیمت پلن‌های ۱۵، ۳۰ و ۹۰ روزه. خرید اپ همین مبلغ را استفاده می‌کند.</p></div>
         <span className="icon-tile tone-green"><Icon name="wallet" /></span></header>
-      <form onSubmit={event => { setError(''); save.mutate(event) }} aria-busy={save.isPending}>
+      <form onSubmit={event => { event.preventDefault(); setError(''); setNotice(''); save.mutate(new FormData(event.currentTarget)) }} aria-busy={save.isPending}>
         <label>پلن<select name="planId" defaultValue="" required>
           <option value="" disabled>یک پلن انتخاب کنید</option>
           {plans.map(plan => <option key={plan.id} value={plan.id}>{plan.title} · {formatFaNumber(plan.days)} روزه · {formatFaNumber(plan.priceToman)} تومان</option>)}

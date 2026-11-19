@@ -29,7 +29,7 @@ final class AdminDeskController
         if (Input::length($display) < 2 || Input::length($display) > 80) {
             throw new Problem(400, 'validation', 'نام پزشک درست نیست');
         }
-        $education = Input::optional($body, 'education', 120) ?? Input::optional($body, 'credential', 120) ?? '';
+        $education = ($body['education'] ?? null) === '' ? '' : (Input::optional($body, 'education', 120) ?? Input::optional($body, 'credential', 120) ?? '');
         $council = ($body['councilNo'] ?? null) === null || $body['councilNo'] === '' ? '' : AdminRules::councilExact(Input::string($body, 'councilNo', 20));
         $phoneRaw = Input::string($body, 'phone', 32);
         $digits = preg_replace('/\D/', '', strtr($phoneRaw, array_combine(preg_split('//u', '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', -1, PREG_SPLIT_NO_EMPTY), str_split('01234567890123456789'))));
@@ -62,7 +62,7 @@ final class AdminDeskController
         }
 
         return response()->json($this->desk->createSpecialist($this->actor($request), [
-            'phone' => Input::phone($digits), 'displayName' => $display, 'credential' => $education, 'bio' => Input::optional($body, 'bio', 500) ?? '',
+            'phone' => Input::phone($digits), 'displayName' => $display, 'credential' => $education, 'bio' => ($body['bio'] ?? null) === '' ? '' : (Input::optional($body, 'bio', 500) ?? ''),
             'capacity' => $capacity, 'councilNo' => $council, 'birthDate' => $birth, 'education' => $education, 'portrait' => $portrait,
             'username' => $username, 'passwordHash' => $hash,
         ]), 201);
@@ -89,8 +89,8 @@ final class AdminDeskController
             'active' => is_bool($body['active'] ?? null) ? $body['active'] : null,
             'capacity' => is_int($body['capacity'] ?? null) ? $body['capacity'] : null,
             'displayName' => Input::optional($body, 'displayName', 80),
-            'credential' => Input::optional($body, 'credential', 120),
-            'bio' => Input::optional($body, 'bio', 500),
+            'credential' => ($body['credential'] ?? null) === '' ? '' : Input::optional($body, 'credential', 120),
+            'bio' => ($body['bio'] ?? null) === '' ? '' : Input::optional($body, 'bio', 500),
             'rating' => $rating,
         ], fn ($value) => $value !== null));
     }
@@ -138,7 +138,7 @@ final class AdminDeskController
 
     public function ownMemberActivity(Request $request, string $userId): array
     {
-        return $this->desk->doctorMemberActivity($this->actor($request), Input::uuid($userId));
+        return $this->desk->doctorMemberActivity($this->actor($request), Input::uuid($userId), $request->query('date'));
     }
 
     public function members(Request $request, string $id): array

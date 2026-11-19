@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { formatFaNumber } from '@shared/utils'
 import { apiError, loadQueue } from '../../data/api'
+import { loadChanges } from '../../data/change-requests'
 import { QueueTable } from './QueueTable'
 import type { QueueRow } from '../../data/samples'
 
@@ -10,7 +11,7 @@ export function DashboardPage({ onNavigate, onPlan, onMeals }: { onNavigate: (se
     queryFn: async () => {
       const [review, changes] = await Promise.all([
         loadQueue('specialist/queue?bucket=awaiting_review'),
-        loadQueue('specialist/queue?bucket=revisions'),
+        loadChanges(),
       ])
       return { review, changes }
     },

@@ -102,6 +102,11 @@ function PersonDetails({ row, review, close, onPlan, onMeals }: {
     queryFn: async () => review ? (await loadPlan(row.id)).profile : loadMember(row.id),
   })
   const profile = detail.data
+  const answers = profile && 'onboardingAnswers' in profile ? profile.onboardingAnswers : []
+  const groupedAnswers = new Map<string, string[]>()
+  for (const { question, answer } of answers ?? []) {
+    groupedAnswers.set(question, [...(groupedAnswers.get(question) ?? []), answer])
+  }
   const fields = [
     ['شماره تلفن', row.phone], ['هدف', goal(row)], ['سن', profile?.age],
     ['قد (سانتی‌متر)', profile?.heightCm], ['وزن ثبت‌شده (کیلوگرم)', profile?.weightKg],
@@ -114,6 +119,14 @@ function PersonDetails({ row, review, close, onPlan, onMeals }: {
     {detail.isSuccess && <dl className="doctor-detail-grid">
       {fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd><bdi>{value || '—'}</bdi></dd></div>)}
     </dl>}
+    {!review && detail.isSuccess && <section className="doctor-intake" aria-label="پاسخ‌های پرسش‌نامهٔ آنبوردینگ">
+      <h3>پاسخ‌های پرسش‌نامهٔ آنبوردینگ</h3>
+      {groupedAnswers.size ? <dl>
+        {Array.from(groupedAnswers, ([question, values]) => <div key={question}>
+          <dt>{question}</dt><dd dir="auto">{values.join('، ')}</dd>
+        </div>)}
+      </dl> : <p>هنوز پاسخ ثبت‌شده‌ای برای این کاربر در دسترس نیست.</p>}
+    </section>}
     {review && <div className="doctor-row-actions">
       <button type="button" onClick={() => onPlan(row.id)}>باز کردن برنامه</button>
       <button className="secondary" type="button" onClick={() => onMeals(row.id)}>جزئیات وعده‌ها</button>

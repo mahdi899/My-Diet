@@ -43,6 +43,10 @@ class SubscriptionPlanCard extends StatelessWidget {
             style: AppTypography.supporting,
           ),
           const SizedBox(height: 16),
+          if (plan.description.trim().isNotEmpty) ...[
+            Text(plan.description, style: AppTypography.supporting),
+            const SizedBox(height: 12),
+          ],
           for (final feature in plan.features)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -171,18 +175,6 @@ class SubscriptionPlanCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 46),
-                  child: Text(
-                    plan.description,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 11,
-                      height: 1.7,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -213,15 +205,6 @@ class SubscriptionPlanCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (selected)
-                  const Text(
-                    'انتخاب شما',
-                    style: TextStyle(
-                      color: Color(0xFF07543A),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
               ],
             ),
           ),

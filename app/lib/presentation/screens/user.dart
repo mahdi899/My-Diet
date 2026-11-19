@@ -17,6 +17,7 @@ import 'shared.dart';
 import 'doctor.dart';
 import 'wallet_flow.dart';
 import 'entry.dart';
+import 'privacy.dart';
 import '../session/live_session.dart';
 
 class UserHome extends StatefulWidget {
@@ -1222,21 +1223,7 @@ class ProfileScreen extends StatelessWidget {
                 MenuRow(
                   'حریم خصوصی',
                   Icons.privacy_tip_outlined,
-                  onTap: () => showDialog<void>(
-                    context: context,
-                    builder: (d) => AlertDialog(
-                      title: const Text('حریم خصوصی نمونه'),
-                      content: const Text(
-                        'پاسخ‌های پرسش‌نامه روی همین دستگاه ذخیره می‌شوند تا دوباره قابل ویرایش باشند. داده‌های دیگر این نسخه نمایشی و موقت‌اند. ارتباطی با سرور برقرار نمی‌شود.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(d),
-                          child: const Text('متوجه شدم'),
-                        ),
-                      ],
-                    ),
-                  ),
+                  onTap: () => pushPage(context, const PrivacyScreen()),
                 ),
               ],
             ),
