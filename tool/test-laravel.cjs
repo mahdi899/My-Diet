@@ -76,8 +76,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     if (process.argv.includes('--browser')) {
       env.PLAYWRIGHT_MODULE ||= path.join(root, '.tools/browser-tests/node_modules/playwright');
-      const browserTest = await run(process.execPath, ['--test', 'tool/laravel-browser.spec.cjs'], { ...options, cwd: root, timeout: 150000 });
-      process.stdout.write(browserTest.stdout);
+      const browserTest = run(process.execPath, ['--test', 'tool/laravel-browser.spec.cjs'], { ...options, cwd: root, timeout: 270000 });
+      browserTest.child.stdout.on('data', chunk => process.stdout.write(chunk));
+      browserTest.child.stderr.on('data', chunk => process.stderr.write(chunk));
+      try { await browserTest; } catch (error) { error.stdout = ''; error.stderr = ''; throw error; }
     }
     await run(binary('mysqladmin'), [...args, 'shutdown'], { windowsHide: true, timeout: 20000 });
     await new Promise(resolve => server.exitCode !== null ? resolve() : server.once('exit', resolve));

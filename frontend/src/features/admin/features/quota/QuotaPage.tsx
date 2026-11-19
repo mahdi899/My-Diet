@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { asRecord, asRows } from '@shared/utils'
 import { staff } from '../../session'
@@ -23,9 +23,7 @@ export function QuotaPage({ preview }: { preview: boolean }) {
     queryFn: async () => asRows(asRecord(await staff.api('admin/coach-quotas'))?.plans) as PlanQuota[],
   })
   const save = useMutation({
-    mutationFn: async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      const data = new FormData(event.currentTarget)
+    mutationFn: async (data: FormData) => {
       const planCode = String(data.get('planCode') ?? '')
       const body = {
         dailyLimit: Number(data.get('dailyLimit')),
@@ -54,7 +52,7 @@ export function QuotaPage({ preview }: { preview: boolean }) {
       {notice && <p className="info-note">{notice}</p>}
       {error && <p className="info-note">{error}</p>}
       {(query.data ?? []).map((plan) => (
-        <form key={plan.plan_code} className="card card-pad stack" onSubmit={(event) => save.mutate(event)}>
+        <form key={plan.plan_code} className="card card-pad stack" onSubmit={(event) => { event.preventDefault(); setError(''); setNotice(''); save.mutate(new FormData(event.currentTarget)) }}>
           <h2>{labels[plan.plan_code] ?? plan.plan_code}</h2>
           <input type="hidden" name="planCode" value={plan.plan_code} />
           <label>سقف روزانه<input name="dailyLimit" type="number" min={1} max={100} defaultValue={plan.daily_msg_limit} required /></label>

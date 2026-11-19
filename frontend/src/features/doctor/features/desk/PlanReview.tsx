@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { formatFaNumber } from '@shared/utils'
 import { StaffError } from '@shared/api/staff-session'
 import { staff } from '../../session'
@@ -9,7 +10,8 @@ import { aiStatusLabels, budgetLabels, dietLabels, mealSlots, optionKinds, setDi
 
 const defaultTime: Record<string, string> = { breakfast: '08:00', lunch: '13:30', dinner: '20:00', snack: '16:30' }
 
-export function PlanReview({ requestId, onBack }: { requestId: string; onBack: () => void }) {
+export function PlanReview({ requestId, changeRequestId, onBack }: { requestId: string; changeRequestId?: string; onBack: () => void }) {
+  const client = useQueryClient()
   const preview = doctorPreviewEnabled()
   const [request, setRequest] = useState<PlanRequest | null>(null)
   const [error, setError] = useState('')
@@ -73,8 +75,10 @@ export function PlanReview({ requestId, onBack }: { requestId: string; onBack: (
         setRequest({ ...request })
         setToast('برنامه در نمونه منتشر شد.')
       } else {
-        await staff.api('specialist/requests/' + encodeURIComponent(requestId) + '/publish', 'POST', undefined, { 'If-Match': String(request.version.lockVersion) })
+        const endpoint = changeRequestId ? 'specialist/plan-changes/' + encodeURIComponent(changeRequestId) + '/approve' : 'specialist/requests/' + encodeURIComponent(requestId) + '/publish'
+        await staff.api(endpoint, 'POST', undefined, { 'If-Match': String(request.version.lockVersion) })
         setRequest(await loadPlan(requestId))
+        await client.invalidateQueries({ queryKey: ['doctor'] })
         setToast('برنامه منتشر شد و برای کاربر فعال شد.')
       }
     } catch (cause) { setToast(apiError(cause)) } finally { setBusy(false) }

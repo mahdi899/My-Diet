@@ -45,7 +45,8 @@ final class OnboardingContractTest extends MySqlTestCase
         $this->postJson('/v1/me/onboarding/submit', ['consent' => true])->assertCreated();
 
         $path = '/v1/specialist/members/'.$user['id'];
-        $this->actor('specialist');
+        $other = $this->actor('specialist');
+        $this->db->table('specialist_profiles')->insert(['user_id' => $other['id'], 'display_name' => 'پزشک دیگر', 'active' => true]);
         $this->getJson($path)->assertNotFound();
 
         $doctor = $this->actor('specialist');

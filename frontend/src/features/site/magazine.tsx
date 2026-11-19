@@ -43,10 +43,14 @@ export function articlePhoto(index: number) {
 }
 
 export async function loadMagazine(): Promise<ArticleItem[]> {
-  const response = await fetch("/magazine.json");
-  if (!response.ok) throw new Error("دریافت مقالات ممکن نشد.");
-  const body = (await response.json()) as { items?: ArticleItem[] };
-  return body.items ?? [];
+  const items: ArticleItem[] = [];
+  for (let page = 1; ; page += 1) {
+    const response = await fetch("/v1/public/articles?pageSize=20&page=" + page);
+    if (!response.ok) throw new Error("دریافت مقالات ممکن نشد.");
+    const body = (await response.json()) as { items: ArticleItem[]; total: number };
+    items.push(...body.items);
+    if (!body.items.length || items.length >= body.total) return items;
+  }
 }
 
 export function useMagazine() {
@@ -54,10 +58,9 @@ export function useMagazine() {
 }
 
 export async function loadArticle(slug: string): Promise<ArticleItem> {
-  const items = await loadMagazine();
-  const found = items.find((item) => item.id === slug);
-  if (found) return found;
-  throw new Error("مقاله پیدا نشد.");
+  const response = await fetch("/v1/public/articles/" + encodeURIComponent(slug));
+  if (!response.ok) throw new Error("مقاله پیدا نشد.");
+  return response.json() as Promise<ArticleItem>;
 }
 
 export function emphasize(text: string): ReactNode[] {

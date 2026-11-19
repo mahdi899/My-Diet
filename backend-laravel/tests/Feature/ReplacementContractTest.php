@@ -13,7 +13,10 @@ final class ReplacementContractTest extends MySqlTestCase
         $admin = $this->actor('admin');
         $user = $this->actor('user');
         $this->withToken($admin['token']);
-        $specialist = $this->postJson('/v1/admin/specialists', ['phone' => '09120000000', 'displayName' => 'دکتر آزمایش'])->assertCreated()->json('id');
+        $specialist = $this->postJson('/v1/admin/specialists', ['phone' => '09120000000', 'displayName' => 'دکتر آزمایش', 'education' => '', 'bio' => ''])->assertCreated()->json('id');
+        $this->patchJson('/v1/admin/specialists/'.$specialist, ['credential' => 'متخصص تغذیه', 'bio' => 'معرفی پزشک'])->assertOk();
+        $this->patchJson('/v1/admin/specialists/'.$specialist, ['credential' => '', 'bio' => ''])->assertOk();
+        $this->getJson('/v1/admin/specialists')->assertOk()->assertJsonFragment(['id' => $specialist, 'credential' => '', 'bio' => '']);
         $this->patchJson('/v1/admin/specialists/'.$specialist, ['capacity' => 12, 'active' => true])->assertOk()->assertJsonPath('ok', true);
         $this->postJson('/v1/admin/specialists/'.$specialist.'/verification', ['status' => 'verified'])->assertCreated();
         $this->postJson('/v1/admin/specialists/'.$specialist.'/members', ['userId' => $user['id']])->assertCreated()->assertJsonPath('ok', true);

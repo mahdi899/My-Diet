@@ -99,6 +99,8 @@ export type PlanRequest = {
 
 export type ChangeRequest = {
   id: string
+  planRequestId?: string
+  answer?: string
   displayName: string
   status: string
   createdAt: string

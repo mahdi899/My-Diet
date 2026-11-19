@@ -201,11 +201,11 @@ final class MySqlAdminDesk
             throw new Problem(404, 'not_found', 'متخصص پیدا نشد');
         }
         $sql = $available
-            ? "select u.id, u.phone_e164, u.display_name, pd.details_encrypted from users u left join user_personal_details pd on pd.user_id=u.id where u.role='user' and u.status<>'deleted' and not exists (select 1 from specialist_members sm where sm.user_id=u.id) order by u.display_name, u.phone_e164 limit 300"
-            : "select u.id, u.phone_e164, u.display_name, pd.details_encrypted from specialist_members sm join users u on u.id=sm.user_id left join user_personal_details pd on pd.user_id=u.id where sm.specialist_id=? and u.status<>'deleted' order by u.display_name, u.phone_e164";
+            ? "select u.id, u.phone_e164, u.display_name, u.created_at, pd.details_encrypted from users u left join user_personal_details pd on pd.user_id=u.id where u.role='user' and u.status<>'deleted' and not exists (select 1 from specialist_members sm where sm.user_id=u.id) order by u.display_name, u.phone_e164 limit 300"
+            : "select u.id, u.phone_e164, u.display_name, u.created_at, pd.details_encrypted from specialist_members sm join users u on u.id=sm.user_id left join user_personal_details pd on pd.user_id=u.id where sm.specialist_id=? and u.status<>'deleted' order by u.display_name, u.phone_e164";
 
         return array_map(fn ($row) => ['id' => $row->id, 'phone' => $row->phone_e164, 'displayName' => $this->nameOf($row) ?: $row->phone_e164, 'photo' => $this->photoOf($row->details_encrypted)]
-            + ($available ? [] : $this->dailyProgress($row->id)), $this->db->select($sql, $available ? [] : [$id]));
+            + ($available ? [] : $this->dailyProgress($row->id, CivilDates::today($row->created_at))), $this->db->select($sql, $available ? [] : [$id]));
     }
 
     public function addMember(string $actor, string $specialist, string $user): array
@@ -747,6 +747,9 @@ final class MySqlAdminDesk
         $questions = [];
         $walk = function (array $nodes) use (&$walk, &$questions): void {
             foreach ($nodes as $node) {
+                if (! is_array($node)) {
+                    continue;
+                }
                 if (isset($node['key'])) {
                     $questions[$node['key']] = $node;
                 }

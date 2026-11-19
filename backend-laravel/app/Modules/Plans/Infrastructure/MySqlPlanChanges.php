@@ -129,7 +129,7 @@ final class MySqlPlanChanges implements PlanChangeStore
         $question = $this->db->selectOne('select id,prompt,answer,status from plan_change_questions where request_id=? order by created_at desc limit 1', [$id]);
         $view = ['id' => $row['id'], 'planRequestId' => $row['plan_request_id'], 'versionId' => $row['version_id'], 'status' => $row['status'], 'substate' => $row['substate'], 'explanation' => $row['explanation'], 'reasons' => $reasons, 'targets' => $targets, 'rejectionExplanation' => $row['rejection_explanation'], 'publishedVersionId' => $row['published_version_id'], 'question' => $question === null ? null : ['id' => $question->id, 'prompt' => $question->prompt, 'answer' => $question->answer, 'status' => $question->status], 'createdAt' => Crypto::iso($row['created_at'])];
         if ($staff) {
-            $view = ['id' => $view['id'], 'userId' => $row['user_id'], ...array_diff_key($view, ['id' => true])];
+            $view = ['id' => $view['id'], 'userId' => $row['user_id'], 'displayName' => $this->db->table('users')->where('id', $row['user_id'])->value('display_name'), ...array_diff_key($view, ['id' => true])];
         }
 
         return $view;

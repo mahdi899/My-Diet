@@ -31,6 +31,7 @@ final class FoodContractTest extends MySqlTestCase
         $this->getJson('/v1/admin/foods?q=آزم')->assertOk()->assertJsonCount(1, 'items');
         $this->putJson('/v1/admin/foods/test_food', [...$this->food(), 'nameFa' => 'غذای ویرایش شده'])->assertOk()->assertJsonPath('nameFa', 'غذای ویرایش شده')->assertJsonPath('image', '/v1/public/food-images/test_food.jpg');
         $specialist = $this->actor('specialist');
+        $this->db->table('specialist_profiles')->insert(['user_id' => $specialist['id'], 'display_name' => 'پزشک کاتالوگ', 'active' => true]);
         $this->getJson('/v1/catalog/food-bank?q=test_food&meal=lunch')->assertOk()->assertJsonPath('items.0.slug', 'test_food');
         $this->getJson('/v1/catalog/food-bank?q=test_food&meal=breakfast')->assertOk()->assertJsonCount(0, 'items');
         $this->getJson('/v1/catalog/food-bank/test_food')->assertOk()->assertJsonPath('servingG', 200)->assertJsonPath('ingredients.0.name', 'عدس');
