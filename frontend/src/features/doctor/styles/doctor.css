@@ -69,6 +69,66 @@
 .doctor-detail-grid > div { padding: 12px; background: #f1f5ee; border-radius: 12px; overflow-wrap: anywhere; }
 .doctor-detail-grid dd { margin: 5px 0 0; font-weight: 600; }
 .doctor-details-dialog .doctor-row-actions { flex-wrap: wrap; }
+.doctor-portal .doctor-food-bank {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface, #fff);
+}
+.doctor-portal .doctor-food-toolbar,
+.doctor-portal .doctor-food-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+}
+.doctor-portal .doctor-food-controls { display: flex; gap: 8px; }
+.doctor-portal .doctor-food-search {
+  display: flex;
+  align-items: center;
+  flex: 1 1 220px;
+  max-width: 420px;
+  gap: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--muted);
+}
+.doctor-portal .doctor-food-search:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
+.doctor-portal .doctor-food-search input {
+  min-height: 44px;
+  min-width: 0;
+  margin: 0;
+  padding-inline: 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.doctor-portal .doctor-food-filters:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.doctor-portal .doctor-food-table { width: 100%; table-layout: auto; border-collapse: collapse; }
+.doctor-portal .doctor-food-table :is(th, td) {
+  padding: 12px clamp(6px, 2vw, 20px);
+  border-top: 1px solid var(--line);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.doctor-portal .doctor-food-table thead { background: var(--bg); }
+.doctor-portal .doctor-food-table small { display: block; font-weight: 400; color: var(--muted); }
+.doctor-portal .doctor-food-bank button { min-height: 44px; }
+.doctor-portal .doctor-food-bank button.icon-button { min-width: 44px; width: auto; padding-inline: 10px; gap: 5px; }
+.doctor-portal .doctor-food-table .doctor-food-message { padding-block: 28px; text-align: center; }
+.doctor-portal .doctor-food-pagination { border-top: 1px solid var(--line); }
+.doctor-food-photo { display: block; width: min(100%, 320px); max-height: 220px; margin-block: 16px; border-radius: 12px; object-fit: cover; }
+.doctor-food-ingredients { list-style: none; padding: 0; }
+.doctor-food-ingredients li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .doctor-portal.admin-reference .login-submit,
 .doctor-portal.admin-reference .login-switch,
 .doctor-portal.admin-reference .login-form-wrap .secondary { width: 100%; justify-content: center; }

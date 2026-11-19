@@ -20,11 +20,17 @@ final class FoodService
         if (! empty($filter['category']) && ! in_array($filter['category'], ['breakfast', 'main', 'side', 'soup', 'salad', 'protein', 'carb', 'dairy', 'fruit', 'snack', 'drink', 'dessert'], true)) {
             throw new Problem(400, 'validation', 'دستهٔ غذا نامعتبر است');
         }
+        if (! empty($filter['meal']) && ! in_array($filter['meal'], ['breakfast', 'lunch', 'dinner', 'snack', 'side'], true)) {
+            throw new Problem(400, 'validation', 'وعدهٔ غذا نامعتبر است');
+        }
         $q = $filter['q'] ?? '';
         preg_match_all('/[\p{L}\p{N}]+/u', \Normalizer::normalize($q, \Normalizer::FORM_KC), $matches);
         $words = array_slice($matches[0], 0, 6);
         $items = array_values(array_filter($this->store->all(), function ($food) use ($filter, $q, $words): bool {
             if (! empty($filter['category']) && $food['category'] !== $filter['category']) {
+                return false;
+            }
+            if (! empty($filter['meal']) && ! in_array($filter['meal'], $food['mealTypes'], true)) {
                 return false;
             }
             if (in_array($filter['active'] ?? null, ['true', 'false'], true) && $food['active'] !== ($filter['active'] === 'true')) {

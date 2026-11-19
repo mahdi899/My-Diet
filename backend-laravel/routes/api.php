@@ -249,8 +249,13 @@ Route::prefix('v1/me/consents')->middleware('session')->controller(PublishingCon
 use Illuminate\Support\Facades\Route;
 
 Route::get('v1/public/food-images/{file}', [FoodController::class, 'image']);
+if (app()->environment('local')) {
+    Route::get('v1/local-preview/food-bank/{slug?}', [FoodController::class, 'localPreview']);
+}
 Route::prefix('v1/catalog')->middleware('session:specialist,admin')->controller(FoodController::class)->group(function (): void {
     Route::get('foods', 'catalog');
+    Route::get('food-bank', 'foodBank');
+    Route::get('food-bank/{slug}', 'catalogFood');
     Route::post('compose', 'compose');
 });
 Route::get('v1/admin/ingredients', [IngredientController::class, 'listing'])->middleware('session:admin');
@@ -315,6 +320,7 @@ Route::get('v1/public/daily-message', [AdminDeskController::class, 'daily']);
 Route::put('v1/specialist/profile', [AdminDeskController::class, 'saveProfile'])->middleware('session:specialist');
 Route::get('v1/specialist/members', [AdminDeskController::class, 'ownMembers'])->middleware('session:specialist');
 Route::get('v1/specialist/members/{userId}', [AdminDeskController::class, 'ownMember'])->middleware('session:specialist');
+Route::get('v1/specialist/members/{userId}/activity', [AdminDeskController::class, 'ownMemberActivity'])->middleware('session:specialist');
 Route::delete('v1/specialist/members/{userId}', [AdminDeskController::class, 'removeOwnMember'])->middleware('session:specialist');
 Route::middleware('session:user')->controller(CoachController::class)->group(function (): void {
     Route::get('v1/me/coach/thread', 'thread');

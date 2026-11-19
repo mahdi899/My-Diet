@@ -8,7 +8,8 @@ export const doctorNav: DoctorNavItem[] = [
   { id: 'patients', title: 'کاربران', icon: 'users', group: 'پرونده‌ها', description: 'کاربران زیرمجموعه و اطلاعات تکمیلی آن‌ها را مشاهده کنید.' },
   { id: 'review', title: 'برنامه‌های منتظر بررسی', icon: 'clipboard', group: 'پرونده‌ها', description: 'شما در این صفحه می‌توانید برنامه‌های منتظر بررسی را مشاهده کنید.' },
   { id: 'changes', title: 'درخواست‌های تغییر برنامه', icon: 'sliders', group: 'پرونده‌ها', description: 'شما در این صفحه می‌توانید درخواست‌های تغییر برنامه را مشاهده کنید.' },
-  { id: 'reports', title: 'گزارش پیشرفت', icon: 'clipboard', group: 'پیگیری', description: 'هفتهٔ برنامه و تغییر وزن کاربران زیرمجموعه را ببینید.' },
+  { id: 'reports', title: 'گزارش پیشرفت', icon: 'clipboard', group: 'پیگیری', description: 'روزهای کامل، تقویم فعالیت و تغییر وزن کاربران زیرمجموعه را ببینید.' },
+  { id: 'food-bank', title: 'بانک غذا', icon: 'clipboard', group: 'منابع', description: 'غذاهای کاتالوگ و ارزش غذایی هر پرس را ببینید.' },
 ]
 
 export function doctorPath(section: string) {
