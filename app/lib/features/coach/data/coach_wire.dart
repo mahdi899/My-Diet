@@ -37,7 +37,14 @@ Map<String, dynamic> coachMessageBody(CoachSendRequest request) {
     };
   }
   final text = _clip((request.text ?? request.displayText).trim(), 8000);
-  return {'clientMessageId': id, 'kind': 'text', 'text': text};
+  final reply = request.data['replyTo'];
+  return {
+    'clientMessageId': id,
+    'kind': 'text',
+    'text': text,
+    if (reply is Map && isCoachUuid(reply['id']))
+      'replyToMessageId': reply['id'],
+  };
 }
 
 /// Strict JSON for `POST /v1/me/coach/actions`.
@@ -56,10 +63,7 @@ Map<String, dynamic> coachActionBody(CoachSendRequest request) {
 }
 
 /// `args` for a local action. Glasses become millilitres; the scale value becomes kilograms.
-Map<String, dynamic> coachActionArgs(
-  String action,
-  Map<String, dynamic> data,
-) {
+Map<String, dynamic> coachActionArgs(String action, Map<String, dynamic> data) {
   switch (action) {
     case 'log_water':
       final raw = data['ml'] ?? (asInt(data['glasses'], 1) * 250);
@@ -68,10 +72,7 @@ Map<String, dynamic> coachActionArgs(
     case 'log_weight':
       final kg = data['kilograms'] ?? data['value'];
       if (kg is! num) return const {};
-      return {
-        'kilograms': kg,
-        if (data['confirm'] == true) 'confirm': true,
-      };
+      return {'kilograms': kg, if (data['confirm'] == true) 'confirm': true};
     case 'confirm_meal':
       final meal = coachMealCode(data['mealType'] ?? data['meal_name']);
       final entry = data['entryId'] ?? data['meal_id'] ?? data['id'];

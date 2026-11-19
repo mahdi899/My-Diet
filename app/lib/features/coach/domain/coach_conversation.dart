@@ -1,3 +1,5 @@
+const kCoachConversationLimit = 50;
+
 /// A saved conversation. Messages are loaded separately with cursor pagination.
 class CoachConversation {
   const CoachConversation({

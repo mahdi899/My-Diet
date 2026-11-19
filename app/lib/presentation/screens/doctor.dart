@@ -1,84 +1,42 @@
 import 'package:flutter/material.dart';
 import '../../data/demo_store.dart';
 import '../../core/theme/theme.dart';
+import '../widgets/doctor_profile.dart';
 import '../widgets/ui.dart';
 
 class DoctorDetailsScreen extends StatelessWidget {
   const DoctorDetailsScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final e = DemoScope.of(context).assignedDoctor;
+    final store = DemoScope.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('مشخصات دکتر')),
-      body: PageBody(
-        children: [
-          if (e == null)
-            const EmptyPanel(
-              'متخصص هنوز مشخص نشده',
-              'اطلاعات پزشک رژیم من اینجا نمایش داده می‌شود.',
-              icon: Icons.person_search_outlined,
-            )
-          else ...[
-            Surface(
-              child: Column(
+      backgroundColor: DoctorProfile.background,
+      appBar: AppBar(
+        title: const Text('مشخصات دکتر'),
+        backgroundColor: DoctorProfile.background,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: AppColors.emeraldDark,
+        titleTextStyle: AppTypography.sectionTitle.copyWith(
+          fontSize: 20,
+          color: AppColors.emeraldDark,
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: store.assignedDoctor == null
+            ? const PageBody(
                 children: [
-                  PersonAvatar(e.name, size: 76),
-                  const SizedBox(height: 14),
-                  Text(e.name, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 5),
-                  Text(e.specialty, style: const TextStyle(color: muted)),
-                  const SizedBox(height: 12),
-                  Tag(
-                    'کد نظام پزشکی: ${e.medicalCode.isEmpty ? 'ثبت نشده' : e.medicalCode}',
+                  EmptyPanel(
+                    'متخصص هنوز مشخص نشده',
+                    'اطلاعات پزشک اینجا نمایش داده می‌شود.',
+                    icon: Icons.person_search_outlined,
                   ),
                 ],
+              )
+            : DoctorProfile(
+                doctor: store.assignedDoctor!,
+                sample: !store.serverAuthEnabled,
               ),
-            ),
-            Surface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Heading('اطلاعات مطب'),
-                  const SizedBox(height: 16),
-                  InfoRows({
-                    'شهر': e.city.isEmpty ? 'ثبت نشده' : e.city,
-                    'آدرس مطب': e.address.isEmpty ? 'ثبت نشده' : e.address,
-                    'تلفن مطب': e.clinicPhone.isEmpty
-                        ? 'ثبت نشده'
-                        : e.clinicPhone,
-                    'ساعت پذیرش': e.hours.isEmpty ? 'ثبت نشده' : e.hours,
-                  }),
-                ],
-              ),
-            ),
-            Surface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Heading('دربارهٔ متخصص'),
-                  const SizedBox(height: 14),
-                  InfoRows({
-                    'مدرک تحصیلی': e.degree.isEmpty ? 'ثبت نشده' : e.degree,
-                    'سابقهٔ کار': e.experience.isEmpty
-                        ? 'ثبت نشده'
-                        : '${fa(e.experience)} سال',
-                  }),
-                  if (e.bio.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      e.bio,
-                      style: const TextStyle(color: muted, height: 1.9),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const Text(
-              'اطلاعات این نسخه نمونهٔ طراحی است.',
-              style: TextStyle(color: muted, fontSize: 11),
-            ),
-          ],
-        ],
       ),
     );
   }

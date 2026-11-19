@@ -319,6 +319,10 @@ Route::delete('v1/specialist/members/{userId}', [AdminDeskController::class, 're
 Route::middleware('session:user')->controller(CoachController::class)->group(function (): void {
     Route::get('v1/me/coach/thread', 'thread');
     Route::get('v1/me/coach/threads', 'threads');
+    Route::get('v1/me/coach/search', 'search');
+    Route::get('v1/me/coach/memory', 'memory');
+    Route::patch('v1/me/coach/memory/{id}', 'editMemory');
+    Route::delete('v1/me/coach/memory/{id}', 'deleteMemory');
     Route::post('v1/me/coach/threads', 'createThread');
     Route::patch('v1/me/coach/threads/{id}', 'renameThread');
     Route::delete('v1/me/coach/threads/{id}', 'deleteThread');

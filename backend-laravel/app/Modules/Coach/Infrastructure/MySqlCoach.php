@@ -38,17 +38,25 @@ final class MySqlCoach implements CoachGateway
         return ['thread' => ['id' => $thread->id, 'dayBriefDate' => $thread->day_brief_date], 'messages' => $page->map(fn ($row) => $this->message($row))->all(), 'nextCursor' => $rows->count() > $limit ? (int) $page->first()->seq : null];
     }
 
-    public function accept(string $user, string $client, string $text, ?callable $emit = null, ?string $threadId = null): array
+    public function accept(string $user, string $client, string $text, ?callable $emit = null, ?string $threadId = null, ?string $replyToMessageId = null): array
     {
-        return $this->serial($user, function () use ($user, $client, $text, $emit, $threadId) {
+        return $this->serial($user, function () use ($user, $client, $text, $emit, $threadId, $replyToMessageId) {
             $thread = $this->ensure($user, $threadId);
             $prior = $this->db->table('coach_messages')->where(['thread_id' => $thread->id, 'client_message_id' => $client])->first();
             if ($prior !== null) {
                 return ['replay' => true, 'metered' => false, 'userMessage' => $this->message($prior), 'replies' => $this->replies($prior->id), 'blocked' => null];
             }
+            $quote = null;
+            if ($replyToMessageId !== null) {
+                $source = $this->db->table('coach_messages')->where(['id' => $replyToMessageId, 'thread_id' => $thread->id, 'user_id' => $user])->first();
+                if ($source === null) {
+                    throw new Problem(404, 'not_found', 'پیام مورد پاسخ پیدا نشد');
+                }
+                $quote = ['id' => $source->id, 'text' => mb_substr($source->fallback_text, 0, 500), 'role' => $source->role];
+            }
             $blocked = $this->blocked();
             $id = Crypto::uuid();
-            $this->db->table('coach_messages')->insert(['id' => $id, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $text, 'client_message_id' => $client, 'payload' => '{}']);
+            $this->db->table('coach_messages')->insert(['id' => $id, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $text, 'client_message_id' => $client, 'payload' => json_encode($quote === null ? new \stdClass : ['replyTo' => $quote], JSON_UNESCAPED_UNICODE)]);
             app(CoachThreads::class)->touch($thread->id, $text);
             $local = $blocked === null ? (CoachSafety::localReply($text) ?? $this->factual($user, $text)) : null;
             if (is_string($local) && preg_match('/اختلال خوردن|گرسنگی شدید|هیچ.?چیز نخورم/u', $text) === 1) {
@@ -100,12 +108,12 @@ final class MySqlCoach implements CoachGateway
         });
     }
 
-    public function photo(string $user, string $client, string $bytes, string $mime, ?string $threadId = null): array
+    public function photo(string $user, string $client, string $bytes, string $mime, ?string $threadId = null, string $caption = '', string $mealType = 'lunch'): array
     {
-        return $this->serial($user, fn () => $this->photoInThread($user, $client, $bytes, $mime, $threadId));
+        return $this->serial($user, fn () => $this->photoInThread($user, $client, $bytes, $mime, $threadId, $caption, $mealType));
     }
 
-    private function photoInThread(string $user, string $client, string $bytes, string $mime, ?string $threadId): array
+    private function photoInThread(string $user, string $client, string $bytes, string $mime, ?string $threadId, string $caption, string $mealType): array
     {
         try {
             $detected = MediaSignature::inspect('image', $mime, $bytes);
@@ -122,18 +130,21 @@ final class MySqlCoach implements CoachGateway
         if ($prior === null) {
             $media = Crypto::uuid();
             $message = Crypto::uuid();
-            $this->db->transaction(function () use ($media, $message, $user, $detected, $bytes, $thread, $client): void {
+            $this->db->transaction(function () use ($media, $message, $user, $detected, $bytes, $thread, $client, $caption, $mealType): void {
                 $this->db->table('coach_media')->insert(['id' => $media, 'user_id' => $user, 'mime' => $detected, 'byte_size' => strlen($bytes), 'content' => $bytes]);
-                $this->db->table('coach_messages')->insert(['id' => $message, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'photo', 'fallback_text' => '', 'client_message_id' => $client, 'payload' => json_encode(['mediaId' => $media])]);
+                $this->db->table('coach_messages')->insert(['id' => $message, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'photo', 'fallback_text' => $caption, 'client_message_id' => $client, 'payload' => json_encode(['mediaId' => $media, 'mealType' => $mealType, 'caption' => $caption], JSON_UNESCAPED_UNICODE)]);
             });
         } else {
             $message = $prior->id;
             $media = json_decode($prior->payload, true)['mediaId'];
+            $stored = json_decode($prior->payload, true);
+            $caption = $stored['caption'] ?? $prior->fallback_text;
+            $mealType = $stored['mealType'] ?? 'lunch';
             $bytes = $this->db->table('coach_media')->where(['id' => $media, 'user_id' => $user])->value('content');
         }
         app(CoachThreads::class)->touch($thread->id, 'عکس غذا');
         try {
-            $analysis = $this->model->analyzePhoto($user, base64_encode($bytes));
+            $analysis = $this->model->analyzePhoto($user, base64_encode($bytes), 'وعده: '.$mealType."\n".$caption);
         } catch (\Throwable $error) {
             Log::error('Coach photo failed', ['type' => $error::class, 'message' => $error->getMessage(), 'file' => $error->getFile(), 'line' => $error->getLine()]);
             throw $error instanceof Problem ? $error : new Problem(503, 'outcome_unknown', 'الان نتوانستم عکس را بخوانم. یک بار دیگر بفرست.');
@@ -152,7 +163,7 @@ final class MySqlCoach implements CoachGateway
         $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $text, 'reply_to' => $message, 'tokens_in' => $analysis['tokensIn'], 'tokens_out' => $analysis['tokensOut'], 'payload' => json_encode(['entryId' => $entry, 'foods' => $foods, 'confidence' => $analysis['confidence'], 'needsConfirmation' => true], JSON_UNESCAPED_UNICODE)]);
         $this->db->table('coach_food_entries')->insert([
             'id' => $entry, 'user_id' => $user, 'thread_id' => $thread->id, 'message_id' => $assistant, 'media_id' => $media,
-            'civil_date' => CivilDates::today(), 'meal_type' => 'lunch', 'title' => $title, 'source' => 'photo',
+            'civil_date' => CivilDates::today(), 'meal_type' => $mealType, 'title' => $title, 'source' => 'photo',
             'items' => json_encode($foods, JSON_UNESCAPED_UNICODE), 'totals' => json_encode(['kcal' => $kcal]),
             'confidence' => max(0, min(1, (float) $analysis['confidence'])), 'status' => 'suggested',
         ]);

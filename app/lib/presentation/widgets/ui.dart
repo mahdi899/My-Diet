@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../core/theme/theme.dart';
 import '../../data/demo_store.dart';
@@ -185,23 +187,40 @@ class Notice extends StatelessWidget {
 }
 
 class PersonAvatar extends StatelessWidget {
-  const PersonAvatar(this.name, {super.key, this.size = 46, this.color = sage});
+  const PersonAvatar(
+    this.name, {
+    super.key,
+    this.size = 46,
+    this.color = sage,
+    this.photo,
+  });
   final String name;
   final double size;
   final Color color;
+  final String? photo;
   @override
-  Widget build(BuildContext context) => CircleAvatar(
-    radius: size / 2,
-    backgroundColor: color,
-    child: Text(
-      name.trim().isEmpty ? 'س' : name.trim().characters.first,
-      style: TextStyle(
-        color: pine,
-        fontWeight: FontWeight.bold,
-        fontSize: size * .35,
+  Widget build(BuildContext context) {
+    Uint8List? bytes;
+    try {
+      if (photo != null) bytes = base64Decode(photo!);
+    } on FormatException {
+      bytes = null;
+    }
+    return CircleAvatar(
+      radius: size / 2,
+      backgroundColor: color,
+      foregroundImage: bytes == null ? null : MemoryImage(bytes),
+      onForegroundImageError: bytes == null ? null : (_, _) {},
+      child: Text(
+        name.trim().isEmpty ? 'س' : name.trim().characters.first,
+        style: TextStyle(
+          color: pine,
+          fontWeight: FontWeight.bold,
+          fontSize: size * .35,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class PrimaryButton extends StatelessWidget {

@@ -10,6 +10,7 @@ import '../../../domain/onboarding/onboarding.dart';
 import '../../../presentation/onboarding/controller.dart';
 import '../../../presentation/onboarding/onboarding_flow.dart';
 import '../../../presentation/session/live_session.dart';
+import 'profile_photo_crop.dart';
 
 class PersonalDetails extends StatefulWidget {
   const PersonalDetails({super.key, required this.store});
@@ -42,6 +43,17 @@ class _PersonalDetailsState extends State<PersonalDetails> {
   ];
   Uint8List? photo;
   bool busy = true;
+  bool choosingPhoto = false;
+
+  void applyFields(List<Object?> values) {
+    for (var i = 0; i < fields.length && i < values.length; i++) {
+      if (i == 2 && widget.store.sessionPhone.isNotEmpty) {
+        fields[i].text = widget.store.sessionPhone;
+      } else if (values[i] != null) {
+        fields[i].text = values[i].toString();
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -57,9 +69,7 @@ class _PersonalDetailsState extends State<PersonalDetails> {
         if (!mounted) return;
         if (response['details'] case final Map details) {
           const names = ['name', 'age', 'contactPhone', 'height', 'weight'];
-          for (var i = 0; i < names.length; i++) {
-            fields[i].text = details[names[i]].toString();
-          }
+          applyFields([for (final name in names) details[name]]);
           if (details['photo'] case final String encoded) {
             photo = base64Decode(encoded);
           }
@@ -83,9 +93,7 @@ class _PersonalDetailsState extends State<PersonalDetails> {
       }
       final data = jsonDecode(saved) as Map<String, dynamic>;
       final values = data['fields'] as List;
-      for (var i = 0; i < fields.length; i++) {
-        fields[i].text = values[i] as String;
-      }
+      applyFields(values.cast<Object?>());
       if (data['photo'] case final String encoded) {
         photo = base64Decode(encoded);
       }
@@ -101,18 +109,27 @@ class _PersonalDetailsState extends State<PersonalDetails> {
   ).showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> choosePhoto() async {
+    if (busy || choosingPhoto) return;
+    setState(() => choosingPhoto = true);
     try {
       final image = await ImagePicker().pickImage(
         source: ImageSource.gallery,
-        maxWidth: 320,
-        maxHeight: 320,
-        imageQuality: 75,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 95,
       );
       if (image == null) return;
       final bytes = await image.readAsBytes();
-      if (mounted) setState(() => photo = bytes);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      final cropped = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(builder: (_) => ProfilePhotoCrop(bytes: bytes)),
+      );
+      if (mounted && cropped != null) setState(() => photo = cropped);
     } catch (_) {
       if (mounted) notice('انتخاب عکس ممکن نشد.');
+    } finally {
+      if (mounted) setState(() => choosingPhoto = false);
     }
   }
 
@@ -192,7 +209,7 @@ class _PersonalDetailsState extends State<PersonalDetails> {
             ),
             Center(
               child: TextButton(
-                onPressed: busy ? null : choosePhoto,
+                onPressed: busy || choosingPhoto ? null : choosePhoto,
                 child: const Text('تغییر عکس پروفایل'),
               ),
             ),
@@ -209,6 +226,9 @@ class _PersonalDetailsState extends State<PersonalDetails> {
                 child: TextFormField(
                   controller: fields[i],
                   enabled: !busy,
+                  readOnly: i == 2,
+                  key: ValueKey('personal-details-field-$i'),
+                  textDirection: i == 2 ? TextDirection.ltr : null,
                   keyboardType: i == 0
                       ? TextInputType.name
                       : i == 2
@@ -216,9 +236,7 @@ class _PersonalDetailsState extends State<PersonalDetails> {
                       : const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: labels[i],
-                    helperText: i == 2
-                        ? 'شمارهٔ تماس، جدا از شمارهٔ ورود'
-                        : null,
+                    suffixIcon: i == 2 ? const Icon(Icons.lock_outline) : null,
                   ),
                   validator: (value) {
                     final text = value?.trim() ?? '';

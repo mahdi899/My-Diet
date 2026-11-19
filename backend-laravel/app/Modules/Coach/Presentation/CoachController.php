@@ -5,6 +5,7 @@ namespace App\Modules\Coach\Presentation;
 use App\Modules\Coach\Application\CoachGateway;
 use App\Modules\Coach\Infrastructure\CoachQuotaService;
 use App\Modules\Coach\Infrastructure\CoachThreads;
+use App\Modules\Coach\Infrastructure\CoachWorkspace;
 use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Shared\Domain\Problem;
 use App\Shared\Presentation\StrictInput as Input;
@@ -26,6 +27,42 @@ final class CoachController
     public function threads(Request $request): array
     {
         return $this->threads->listing($this->actor($request));
+    }
+
+    public function search(Request $request): array
+    {
+        $query = $request->query('q', '');
+        $before = $request->query('before');
+        if (! is_string($query) || mb_strlen($query) > 100 || ($before !== null && (! is_string($before) || ! ctype_digit($before)))) {
+            throw new Problem(400, 'validation', 'عبارت جست‌وجو معتبر نیست');
+        }
+
+        return app(CoachWorkspace::class)->search($this->actor($request), $query, $before === null ? null : (int) $before);
+    }
+
+    public function memory(Request $request): array
+    {
+        $id = $request->query('threadId');
+        if ($id !== null && ! is_string($id)) {
+            throw new Problem(400, 'validation', 'شناسه معتبر نیست');
+        }
+
+        return app(CoachWorkspace::class)->memory($this->actor($request), $id === null ? null : Input::uuid($id));
+    }
+
+    public function editMemory(Request $request, string $id): array
+    {
+        $body = Input::body($request, ['value']);
+        app(CoachWorkspace::class)->editPreference($this->actor($request), Input::uuid($id), Input::string($body, 'value', 200));
+
+        return ['saved' => true];
+    }
+
+    public function deleteMemory(Request $request, string $id): array
+    {
+        app(CoachWorkspace::class)->editPreference($this->actor($request), Input::uuid($id), null);
+
+        return ['deleted' => true];
     }
 
     public function createThread(Request $request): array
@@ -78,7 +115,7 @@ final class CoachController
     {
         $userId = $this->actor($request);
 
-        $body = Input::body($request, ['threadId', 'clientMessageId', 'kind', 'text', 'value', 'label', 'action', 'args', 'sourceMessageId', 'mediaId', 'caption', 'mealType']);
+        $body = Input::body($request, ['threadId', 'clientMessageId', 'kind', 'text', 'value', 'label', 'action', 'args', 'sourceMessageId', 'mediaId', 'caption', 'mealType', 'replyToMessageId']);
         $threadId = $this->threadId($body);
         if ($threadId !== null) {
             $this->threads->owned($userId, $threadId);
@@ -92,13 +129,16 @@ final class CoachController
             : (Input::optional($body, 'text', 8000) ?? Input::optional($body, 'caption', 300) ?? '');
         $client = Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : '');
 
-        return response()->stream(function () use ($userId, $client, $text, $threadId): void {
+        $replyId = Input::optional($body, 'replyToMessageId', 36);
+        $replyId = $replyId === null ? null : Input::uuid($replyId);
+
+        return response()->stream(function () use ($userId, $client, $text, $threadId, $replyId): void {
             $write = function (string $event, array $data): void {
                 echo 'event: '.$event."\n".'data: '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n\n";
                 flush();
             };
             try {
-                $accepted = $this->coach->accept($userId, $client, $text, $write, $threadId);
+                $accepted = $this->coach->accept($userId, $client, $text, $write, $threadId, $replyId);
                 if (empty($accepted['streamed'])) {
                     $write('message', ['message' => $accepted['userMessage']]);
                 }
@@ -129,13 +169,19 @@ final class CoachController
 
         $body = Input::body($request, ['threadId', 'clientMessageId', 'image', 'mime', 'caption', 'mealType']);
         $image = Input::string($body, 'image', 2_800_000);
+        $image = preg_replace('#^data:image/(?:jpeg|png|webp|gif);base64,#', '', $image);
         $bytes = base64_decode($image, true);
         if ($bytes === false) {
             throw new Problem(400, 'invalid_media', 'محتوای فایل با نوع مجاز یکی نیست');
         }
         $mime = Input::optional($body, 'mime', 80) ?? 'image/jpeg';
 
-        $result = $this->coach->photo($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $bytes, $mime, $this->threadId($body));
+        $caption = Input::optional($body, 'caption', 300) ?? '';
+        $meal = Input::optional($body, 'mealType', 20) ?? 'lunch';
+        if (! in_array($meal, ['breakfast', 'lunch', 'dinner', 'snack'], true)) {
+            throw new Problem(400, 'validation', 'وعده معتبر نیست');
+        }
+        $result = $this->coach->photo($userId, Input::uuid(is_string($body['clientMessageId'] ?? null) ? $body['clientMessageId'] : ''), $bytes, $mime, $this->threadId($body), $caption, $meal);
 
         // Consume vision quota after successful analysis
         if (! ($result['replay'] ?? false)) {

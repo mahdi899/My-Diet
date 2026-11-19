@@ -5,6 +5,7 @@ import 'package:sabzine_flutter/app.dart';
 import 'package:sabzine_flutter/data/connection.dart';
 import 'package:sabzine_flutter/data/demo_store.dart';
 import 'package:sabzine_flutter/features/home/home_tab.dart';
+import 'package:sabzine_flutter/presentation/screens/splash.dart';
 
 void main() {
   test(
@@ -33,14 +34,13 @@ void main() {
     await tester.pumpWidget(
       SabzineApp(store: store, link: link, splashDuration: Duration.zero),
     );
-    expect(find.byKey(const ValueKey('connection-screen')), findsOneWidget);
-    expect(find.text('در حال بررسی اتصال'), findsWidgets);
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('connection-screen')), findsNothing);
+    expect(find.text('در حال بررسی اتصال'), findsNothing);
     expect(find.byType(HomeTab), findsNothing);
     expect(
-      tester
-          .widget<FilledButton>(find.byKey(const ValueKey('connection-retry')))
-          .onPressed,
-      isNull,
+      find.text('برنامهٔ ذخیره‌شده به‌صورت آفلاین نمایش داده نمی‌شود.'),
+      findsNothing,
     );
 
     first.complete(LinkFault.offline);
@@ -59,6 +59,42 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('connection-screen')), findsNothing);
     expect(find.byType(HomeTab), findsOneWidget);
+  });
+
+  testWidgets('successful startup never shows a connection error screen', (
+    tester,
+  ) async {
+    final first = Completer<LinkFault?>();
+    final resume = Completer<LinkFault?>();
+    var call = 0;
+    final link = LinkMonitor(
+      probe: () => call++ == 0 ? first.future : resume.future,
+    );
+    final store = DemoStore()..loginDemoUser();
+    await tester.pumpWidget(SabzineApp(store: store, link: link));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('connection-screen')), findsNothing);
+    expect(find.text('در حال بررسی اتصال'), findsNothing);
+
+    first.complete(null);
+    await tester.pumpAndSettle();
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.byType(HomeTab), findsOneWidget);
+    expect(find.byKey(const ValueKey('connection-screen')), findsNothing);
+
+    final checking = link.check();
+    await tester.pump();
+    expect(find.byType(HomeTab), findsOneWidget);
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.byKey(const ValueKey('connection-screen')), findsNothing);
+    resume.complete(null);
+    await checking;
+    await tester.pump();
+    expect(find.byType(HomeTab), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    store.dispose();
+    link.dispose();
   });
 
   testWidgets('a lost connection covers the open plan', (tester) async {

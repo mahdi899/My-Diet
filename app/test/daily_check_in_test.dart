@@ -192,7 +192,8 @@ void main() {
       expect(level(2), 1);
       expect(await log.read(now), 3);
       expect(store.waterGlassesOn(now), 3);
-      expect(find.text('یک لیوان به آب امروزت اضافه شد.'), findsOneWidget);
+      expect(find.text('یک لیوان به آب امروزت اضافه شد.'), findsNothing);
+      expect(find.text('هر لیوان، یک قدم مراقبت از خودت.'), findsOneWidget);
       expect(t.binding.transientCallbackCount, 0);
       expect(find.byKey(const ValueKey('water-undo')), findsNothing);
       await t.tap(find.byKey(const ValueKey('water-remove')));
@@ -271,14 +272,8 @@ void main() {
       await store.recordMeal(now, 0, 'skipped');
       now = DateTime(2026, 11, 9, 12);
       final log = WaterLog(preferences: MemoryWaterPreferences());
-      var continued = false;
       await t.pumpWidget(
-        dailyHost(
-          store,
-          SingleChildScrollView(
-            child: HabitGarden(log: log, onContinue: () => continued = true),
-          ),
-        ),
+        dailyHost(store, SingleChildScrollView(child: HabitGarden(log: log))),
       );
       await t.pumpAndSettle();
       expect(find.text('این هفته · ۱ روز دارای ثبت'), findsOneWidget);
@@ -295,10 +290,10 @@ void main() {
       expect(future.onTap, isNull);
       await t.tap(find.byKey(const ValueKey('habit-day-2026-11-08')));
       await t.pumpAndSettle();
-      expect(find.textContaining('هر روز فرصت تازه‌ای'), findsOneWidget);
-      await t.tap(find.byKey(const ValueKey('habit-continue-today')));
-      await t.pumpAndSettle();
-      expect(continued, isTrue);
+      expect(find.text('ثبتی برای این روز نداری'), findsOneWidget);
+      expect(find.textContaining('هر روز فرصت تازه‌ای'), findsNothing);
+      expect(find.text('ادامه از امروز'), findsNothing);
+      expect(find.textContaining('هر جوانه یعنی'), findsNothing);
       expect(store.mealCheckInsOn(now), 0);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());

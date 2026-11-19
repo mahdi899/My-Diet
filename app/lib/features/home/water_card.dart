@@ -109,9 +109,6 @@ class _WaterCardState extends State<WaterCard> {
       }
       setState(() {
         _glasses = next;
-        _notice = next > previous
-            ? 'یک لیوان به آب امروزت اضافه شد.'
-            : 'یک لیوان از ثبت امروز کم شد.';
       });
       store.rememberWater(date, next);
       Haptics.tick();

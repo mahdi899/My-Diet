@@ -7,6 +7,7 @@ import '../../../data/day.dart';
 import '../domain/coach_conversation.dart';
 import '../domain/coach_events.dart';
 import 'coach_controller.dart';
+import 'workspace_pages.dart';
 
 class CoachConversationHistory extends StatefulWidget {
   const CoachConversationHistory({
@@ -195,7 +196,7 @@ class _CoachConversationHistoryState extends State<CoachConversationHistory> {
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                   child: Text(
-                                    '${faNumber(controller.conversations.length)} از ${faNumber(10)} گفتگو',
+                                    '${faNumber(controller.conversations.length)} از ${faNumber(kCoachConversationLimit)} گفتگو',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       color: AppColors.inkSoft,
@@ -220,6 +221,16 @@ class _CoachConversationHistoryState extends State<CoachConversationHistory> {
                         ],
                       ),
                       const SizedBox(height: 24),
+                      if (controller.workspace != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                openCoachLibrary(context, controller),
+                            icon: const Icon(Icons.search_rounded),
+                            label: const Text('جست‌وجو در همه گفتگوها'),
+                          ),
+                        ),
                       FilledButton.icon(
                         key: const ValueKey('coach-history-new'),
                         onPressed: _working
@@ -252,6 +263,18 @@ class _CoachConversationHistoryState extends State<CoachConversationHistory> {
                         icon: const Icon(Icons.add_comment_outlined, size: 24),
                         label: const Text('گفتگوی جدید'),
                       ),
+                      if (controller.conversations.length >=
+                          kCoachConversationLimit)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text(
+                            'با ارسال اولین پیام در گفتگوی جدید، قدیمی‌ترین گفتگو حذف می‌شود.',
+                            style: TextStyle(
+                              color: AppColors.inkSoft,
+                              height: 1.7,
+                            ),
+                          ),
+                        ),
                       if (error != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 16),

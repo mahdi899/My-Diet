@@ -18,6 +18,7 @@ import 'message_list.dart';
 import 'profile_sheet.dart';
 import 'quota_indicator.dart';
 import 'today_ring_sheet.dart';
+import 'workspace_pages.dart';
 
 class CoachPage extends StatefulWidget {
   const CoachPage({
@@ -48,6 +49,7 @@ class _CoachPageState extends State<CoachPage> {
   bool _greeted = false;
   Map<String, dynamic>? _quota;
   bool _wasBusy = false;
+  int _quotaOperation = 0;
   int _shownConversationVersion = 0;
   Timer? _companionReset;
 
@@ -55,6 +57,9 @@ class _CoachPageState extends State<CoachPage> {
   void initState() {
     super.initState();
     unawaited(_loadQuota());
+    _controller.onQuotaChanged = () {
+      if (mounted) unawaited(_loadQuota());
+    };
     _controller.onToday = (today, {required bool reloadPlan}) {
       if (!mounted) return;
       final store = DemoScope.of(context);
@@ -126,9 +131,10 @@ class _CoachPageState extends State<CoachPage> {
   }
 
   Future<void> _loadQuota() async {
+    final operation = ++_quotaOperation;
     try {
       final quota = await widget.repository.quota();
-      if (!mounted || quota == null) return;
+      if (!mounted || quota == null || operation != _quotaOperation) return;
       setState(() => _quota = quota);
     } catch (_) {}
   }
@@ -246,6 +252,46 @@ class _CoachPageState extends State<CoachPage> {
                             color: AppColors.emeraldDark,
                           ),
                         ),
+                        if (_controller.workspace != null)
+                          PopupMenuButton<String>(
+                            tooltip: 'ابزارهای گفتگو',
+                            icon: const Icon(
+                              Icons.more_vert_rounded,
+                              color: AppColors.emeraldDark,
+                            ),
+                            onSelected: (action) {
+                              FocusScope.of(context).unfocus();
+                              if (action == 'memory') {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => CoachMemoryPage(
+                                      controller: _controller,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                openCoachLibrary(
+                                  context,
+                                  _controller,
+                                  saved: action == 'saved',
+                                );
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'search',
+                                child: Text('جست‌وجو در گفتگوها'),
+                              ),
+                              PopupMenuItem(
+                                value: 'saved',
+                                child: Text('نشان‌شده‌ها'),
+                              ),
+                              PopupMenuItem(
+                                value: 'memory',
+                                child: Text('حافظه مربی'),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),

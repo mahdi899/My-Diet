@@ -115,19 +115,18 @@ class HomeWeightCard extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 10),
-          if (!hasTrend)
-            Text(
-              values.isEmpty
-                  ? 'وزن‌های ثبت‌شده‌ات اینجا به یک نمودار تبدیل می‌شوند.'
-                  : 'با ثبت وزن در روزی دیگر، نمودارت شکل می‌گیرد.',
-              style: const TextStyle(
+          if (values.isEmpty) ...[
+            const SizedBox(height: 10),
+            const Text(
+              'وزن‌های ثبت‌شده‌ات اینجا به یک نمودار تبدیل می‌شوند.',
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.8,
                 color: AppColors.inkSoft,
               ),
-            )
-          else ...[
+            ),
+          ] else if (hasTrend) ...[
+            const SizedBox(height: 10),
             Wrap(
               alignment: WrapAlignment.spaceBetween,
               spacing: 12,

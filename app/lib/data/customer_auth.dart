@@ -30,13 +30,14 @@ class AuthFailure implements Exception {
 }
 
 class CustomerSession {
-  CustomerSession.fromJson(Map<String, dynamic> data)
+  CustomerSession.fromJson(Map<String, dynamic> data, {this.phone})
     : accessToken = data['accessToken'] as String,
       refreshToken = data['refreshToken'] as String?,
       expiresAt = DateTime.parse(data['sessionExpiresAt'] as String),
       role = data['role'] as String;
   final String accessToken, role;
   final String? refreshToken;
+  final String? phone;
   final DateTime expiresAt;
 }
 
@@ -241,11 +242,14 @@ class CustomerAuth {
         'این حساب ورود کارکنان دارد. از سامانه وب استفاده کنید.',
       );
     }
-    return _accept(data);
+    return _accept(data, phone: phone);
   }
 
-  Future<CustomerSession> _accept(Map<String, dynamic> data) async {
-    final next = CustomerSession.fromJson(data);
+  Future<CustomerSession> _accept(
+    Map<String, dynamic> data, {
+    String? phone,
+  }) async {
+    final next = CustomerSession.fromJson(data, phone: phone);
     if (next.role != 'user') {
       // Do not retain a staff session accidentally opened in the customer client.
       try {
@@ -264,6 +268,7 @@ class CustomerAuth {
       jsonEncode({
         if (!kIsWeb) 'refreshToken': next.refreshToken,
         'expiresAt': next.expiresAt.toUtc().toIso8601String(),
+        'phone': ?phone,
       }),
     );
     session = next;
@@ -294,6 +299,7 @@ class CustomerAuth {
         await _post('auth/refresh', {
           if (!kIsWeb) 'refreshToken': saved['refreshToken'],
         }),
+        phone: saved['phone'] as String?,
       );
     } on AuthFailure catch (error) {
       if (error.expired) {

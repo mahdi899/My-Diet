@@ -7,6 +7,8 @@ import '../../../data/demo_store.dart';
 import '../../home/weight_sheet.dart';
 import '../../plan/goal_math.dart';
 import '../presentation/coach_controller.dart';
+import '../data/coach_parse.dart';
+import 'photo_preview.dart';
 
 class CoachComposer extends StatefulWidget {
   const CoachComposer({
@@ -28,11 +30,82 @@ class _CoachComposerState extends State<CoachComposer> {
   late final TextEditingController _text = TextEditingController(
     text: widget.prefill ?? '',
   );
+  String? _draftThread;
+  bool _edited = false;
+  bool _restoring = false;
+  Future<void> _draftWrite = Future<void>.value();
+  Map<String, dynamic>? _lastReply;
 
   @override
   void initState() {
     super.initState();
-    _text.addListener(() => setState(() {}));
+    _draftThread = widget.controller.draftConversationId;
+    _text.addListener(() {
+      if (_restoring) return;
+      _edited = true;
+      _saveDraft();
+      if (mounted) setState(() {});
+    });
+    _restoreDraft();
+  }
+
+  Future<void> _restoreDraft() async {
+    final thread = _draftThread;
+    final saved = await widget.controller.notebook.draft(thread);
+    if (!mounted ||
+        _edited ||
+        thread != _draftThread ||
+        widget.prefill?.isNotEmpty == true) {
+      return;
+    }
+    _restoring = true;
+    _text.text = asString(saved['text']);
+    _restoring = false;
+    final reply = saved['reply'];
+    if (reply is Map) widget.controller.setReply(parseCoachMessage(reply));
+    setState(() {});
+  }
+
+  void _saveDraft() {
+    final thread = _draftThread;
+    final text = _text.text;
+    final reply = widget.controller.replyTo?.toJson();
+    _draftWrite = widget.controller.notebook
+        .saveDraft(thread, text, reply)
+        .catchError((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'ذخیره پیش‌نویس انجام نشد. متن رو قبل از خروج کپی کن.',
+                ),
+              ),
+            );
+          }
+        });
+  }
+
+  @override
+  void didUpdateWidget(covariant CoachComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final current = widget.controller.draftConversationId;
+    if (_draftThread == null && current != null) {
+      final old = _draftThread;
+      _draftThread = current;
+      if (!_edited) {
+        _restoreDraft();
+      } else {
+        _draftWrite = _draftWrite.then(
+          (_) => widget.controller.notebook.saveDraft(old, '', null),
+        );
+        _saveDraft();
+      }
+    }
+    final reply = widget.controller.replyTo?.toJson();
+    if (reply?['id'] != _lastReply?['id']) {
+      _lastReply = reply;
+      _saveDraft();
+    }
   }
 
   @override
@@ -46,8 +119,15 @@ class _CoachComposerState extends State<CoachComposer> {
   void _send() {
     final value = _text.text.trim();
     if (value.isEmpty || widget.controller.busy) return;
+    final sending = widget.controller.sendText(value);
     _text.clear();
-    widget.controller.sendText(value);
+    sending.catchError((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ارسال انجام نشد؛ دوباره تلاش کن.')),
+        );
+      }
+    });
   }
 
   Future<void> _plus() async {
@@ -85,7 +165,32 @@ class _CoachComposerState extends State<CoachComposer> {
       if (file == null || !mounted) return;
       final bytes = await file.readAsBytes();
       if (!mounted) return;
-      await widget.controller.sendPhoto(file.path, bytes);
+      final result = await Navigator.of(context).push<Map<String, dynamic>>(
+        MaterialPageRoute(
+          builder: (_) => CoachPhotoPreview(
+            selection: CoachPhotoSelection(file.path, bytes),
+            replace: () async {
+              final next = await ImagePicker().pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 62,
+                maxWidth: 1280,
+                maxHeight: 1280,
+              );
+              return next == null
+                  ? null
+                  : CoachPhotoSelection(next.path, await next.readAsBytes());
+            },
+          ),
+        ),
+      );
+      if (!mounted || result == null) return;
+      final selected = result['selection'] as CoachPhotoSelection;
+      await widget.controller.sendPhoto(
+        selected.path,
+        selected.bytes,
+        caption: result['caption'] as String,
+        mealType: result['meal'] as String,
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -164,6 +269,34 @@ class _CoachComposerState extends State<CoachComposer> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (controller.replyTo != null)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsetsDirectional.only(start: 12),
+              decoration: BoxDecoration(
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.reply_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      controller.replyTo!.text,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, height: 1.8),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'لغو پاسخ به پیام',
+                    onPressed: () => controller.setReply(null),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
           if (showChips)
             SizedBox(
               height: 48,
@@ -279,8 +412,14 @@ class _CoachComposerState extends State<CoachComposer> {
               const SizedBox(width: 8),
               IconButton.filled(
                 key: const ValueKey('coach-send'),
-                tooltip: controller.busy ? 'در انتظار پاسخ مربی' : 'ارسال پیام',
-                onPressed: canSend ? _send : null,
+                tooltip: controller.busy || controller.typing
+                    ? 'توقف نمایش پاسخ'
+                    : 'ارسال پیام',
+                onPressed: controller.busy || controller.typing
+                    ? controller.stopResponse
+                    : canSend
+                    ? _send
+                    : null,
                 style: IconButton.styleFrom(
                   minimumSize: const Size(48, 48),
                   backgroundColor: AppColors.emeraldDeep,
@@ -289,8 +428,8 @@ class _CoachComposerState extends State<CoachComposer> {
                   disabledForegroundColor: AppColors.muted,
                 ),
                 icon: Icon(
-                  controller.busy
-                      ? Icons.more_horiz_rounded
+                  controller.busy || controller.typing
+                      ? Icons.stop_rounded
                       : Icons.send_rounded,
                   size: 22,
                 ),

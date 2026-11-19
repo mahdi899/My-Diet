@@ -5,6 +5,8 @@ import '../domain/coach_events.dart';
 import '../domain/coach_conversation.dart';
 import '../domain/coach_message.dart';
 import '../domain/coach_repository.dart';
+import '../domain/coach_workspace.dart';
+import '../data/coach_notebook.dart';
 import '../domain/payload_values.dart';
 
 /// Optimistic send, streaming draft, suggestions and thread history.
@@ -18,12 +20,105 @@ class CoachSession {
   void Function()? onChanged;
 
   final CoachRepository repository;
+  CoachWorkspaceRepository? get workspace =>
+      repository is CoachWorkspaceRepository
+      ? repository as CoachWorkspaceRepository
+      : null;
+  CoachNotebook get notebook =>
+      CoachNotebook(workspace?.workspaceOwner ?? 'session');
+  CoachMessage? replyTo;
+  String? highlightedMessageId;
+  int _turnGeneration = 0;
+  void Function()? onQuotaChanged;
+
+  void setReply(CoachMessage? message) {
+    replyTo = message;
+    _notify();
+  }
+
+  Future<void> openSearchResult(String threadId, String messageId) async {
+    await selectConversation(threadId);
+    while (!_disposed &&
+        conversationId == threadId &&
+        !messages.any((m) => m.id == messageId) &&
+        hasMore &&
+        error == null) {
+      await loadMore();
+    }
+    if (conversationId == threadId) {
+      if (messages.any((m) => m.id == messageId)) {
+        highlightedMessageId = messageId;
+      } else {
+        error = 'پیام موردنظر در دسترس نیست.';
+      }
+      _notify();
+    }
+  }
+
+  Future<void> stopResponse() async {
+    if (!busy && !typing) return;
+    ++_turnGeneration;
+    final subscription = _sub;
+    _sub = null;
+    final partial = draftText;
+    final completed = _reveal != null;
+    _finishReveal();
+    _dropAnalyzing();
+    busy = false;
+    typing = false;
+    messages = [
+      for (final m in messages)
+        if (m.pending)
+          m.copyWith(
+            pending: false,
+            payload: {...m.payload, 'deliveryUnknown': true},
+          )
+        else
+          m,
+    ];
+    if (!completed && partial != null && partial.isNotEmpty) {
+      _upsert(
+        CoachMessage(
+          id: 'stopped-${DateTime.now().microsecondsSinceEpoch}',
+          role: 'assistant',
+          type: 'text',
+          payload: {'text': partial, 'stopped': true},
+          fallbackText: partial,
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+    error = 'نمایش پاسخ متوقف شد؛ پردازش سرور ممکن است ادامه داشته باشد.';
+    canRetry = false;
+    if (_pendingTurn?.isCompleted == false) _pendingTurn!.complete();
+    _pendingTurn = null;
+    _notify();
+    unawaited(subscription?.cancel());
+    onQuotaChanged?.call();
+    final version = _conversationVersion;
+    try {
+      await repository.persist(messages);
+      if (!_disposed && version == _conversationVersion) {
+        unawaited(refreshConversations());
+      }
+    } catch (_) {
+      if (!_disposed && version == _conversationVersion) {
+        error =
+            'نمایش متوقف شد؛ ذخیره گفتگو انجام نشد. متن رو قبل از خروج کپی کن.';
+        _notify();
+      }
+    }
+  }
 
   CoachConversationRepository? get conversationRepository =>
       repository is CoachConversationRepository
       ? repository as CoachConversationRepository
       : null;
   String? get conversationId => conversationRepository?.conversationId;
+  bool _selectingConversation = false;
+  String? _nextConversationId;
+  String? get draftConversationId =>
+      _selectingConversation ? _nextConversationId : conversationId;
   List<CoachConversation> conversations = const [];
   bool conversationsLoading = false;
   String? conversationsError;
@@ -59,12 +154,6 @@ class CoachSession {
   Future<bool> newConversation() async {
     await refreshConversations();
     if (_disposed || conversationsError != null) return false;
-    if (conversations.length >= 10) {
-      conversationsError =
-          '۱۰ گفتگو ذخیره داری. برای شروع گفتگوی جدید، یکی از گفتگوهای قبلی را حذف کن.';
-      _notify();
-      return false;
-    }
     await selectConversation(null);
     return true;
   }
@@ -76,6 +165,11 @@ class CoachSession {
       return;
     }
     final version = ++_conversationVersion;
+    _selectingConversation = true;
+    _nextConversationId = id;
+    ++_turnGeneration;
+    replyTo = null;
+    highlightedMessageId = null;
     ++_historyOperation;
     _sub?.cancel();
     _sub = null;
@@ -105,6 +199,7 @@ class CoachSession {
     try {
       await repo.selectConversation(id);
       if (_disposed || version != _conversationVersion) return;
+      _selectingConversation = false;
       if (id == null) {
         loading = false;
         _notify();
@@ -113,6 +208,7 @@ class CoachSession {
       }
     } catch (failure) {
       if (_disposed || version != _conversationVersion) return;
+      _selectingConversation = false;
       loading = false;
       historyFailed = true;
       error = failure is CoachTransportException
@@ -279,11 +375,38 @@ class CoachSession {
   Future<void> sendText(String text) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return Future<void>.value();
-    return _send(CoachSendRequest.text(trimmed));
+    final quoted = replyTo;
+    replyTo = null;
+    return _send(
+      CoachSendRequest(
+        kind: 'text',
+        text: trimmed,
+        data: {
+          if (quoted != null)
+            'replyTo': {
+              'id': quoted.id,
+              'text': quoted.text,
+              'role': quoted.role,
+            },
+        },
+      ),
+    );
   }
 
-  Future<void> sendPhoto(String path, Uint8List bytes) {
-    return _send(CoachSendRequest.photo(path), photoBytes: bytes);
+  Future<void> sendPhoto(
+    String path,
+    Uint8List bytes, {
+    String? caption,
+    String? mealType,
+  }) {
+    return _send(
+      CoachSendRequest(
+        kind: 'photo',
+        text: caption ?? 'عکس وعده',
+        data: {'path': path, 'mealType': ?mealType},
+      ),
+      photoBytes: bytes,
+    );
   }
 
   Future<void> sendAction(
@@ -364,6 +487,7 @@ class CoachSession {
   }) async {
     if (busy || _disposed) return;
     final version = _conversationVersion;
+    final generation = ++_turnGeneration;
     if (_reveal != null) _finishReveal();
     _sent[request.clientMessageId] = request;
     if (photoBytes != null && photoBytes.isNotEmpty) {
@@ -389,6 +513,8 @@ class CoachSession {
         type: request.kind == 'photo' ? 'user_photo' : 'text',
         payload: {
           'text': request.displayText,
+          if (request.data['replyTo'] != null)
+            'replyTo': request.data['replyTo'],
           if (request.kind == 'photo') 'path': request.data['path'],
         },
         fallbackText: request.displayText,
@@ -425,7 +551,11 @@ class CoachSession {
         .send(request, photoBytes: photoBytes)
         .listen(
           (event) {
-            if (_disposed || version != _conversationVersion) return;
+            if (_disposed ||
+                version != _conversationVersion ||
+                generation != _turnGeneration) {
+              return;
+            }
             switch (event) {
               case CoachDelta(text: final text, segment: final next):
                 if (next != segment) {
@@ -505,7 +635,11 @@ class CoachSession {
             _notify();
           },
           onError: (Object error) {
-            if (_disposed || version != _conversationVersion) return;
+            if (_disposed ||
+                version != _conversationVersion ||
+                generation != _turnGeneration) {
+              return;
+            }
             settled = true;
             failure = error is CoachTransportException
                 ? error
@@ -525,7 +659,11 @@ class CoachSession {
             if (!done.isCompleted) done.complete();
           },
           onDone: () {
-            if (_disposed || version != _conversationVersion) return;
+            if (_disposed ||
+                version != _conversationVersion ||
+                generation != _turnGeneration) {
+              return;
+            }
             if (!settled) {
               failure = const CoachTransportException(
                 'ارتباط وسط جواب قطع شد. دوباره بفرست.',
@@ -547,11 +685,16 @@ class CoachSession {
           cancelOnError: true,
         );
     await done.future;
-    if (_disposed || version != _conversationVersion) return;
+    if (_disposed ||
+        version != _conversationVersion ||
+        generation != _turnGeneration) {
+      return;
+    }
     _pendingTurn = null;
     await repository.persist(messages);
     if (_disposed || version != _conversationVersion) return;
     unawaited(refreshConversations());
+    onQuotaChanged?.call();
   }
 
   void _closeTurn({
