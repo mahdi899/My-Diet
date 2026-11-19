@@ -113,7 +113,7 @@ void main() {
     final semantics = t.ensureSemantics();
     for (final mood in CompanionMood.values) {
       await t.pumpWidget(companionHost(mood: mood, reduced: true));
-      expect(find.bySemanticsLabel(RegExp('جوانه')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('مربی')), findsOneWidget);
       expect(t.binding.transientCallbackCount, 0);
     }
     semantics.dispose();

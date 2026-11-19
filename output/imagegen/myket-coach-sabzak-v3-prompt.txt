@@ -1,0 +1,19 @@
+Tool: built-in image_gen
+Screenshot reference: D:/ad/My-Diet/references/flutter-app-review/2026-11-19/chat-food-card/implemented-chat.png
+Mascot reference: D:/ad/My-Diet/app/assets/images/home/sprout_welcome.png
+
+Use case: ads-marketing / compositing.
+Create ONE polished Persian app-store feature poster for Myket, portrait exact 9:16, target 1080x1920. This is a balanced, lively yet clean promotional design for the app «مای دایت». It should have personality and visual depth, not stark empty minimalism. Spotlight ONLY ONE FEATURE: «کوچ و مربی».
+REFERENCE ROLES:
+Image 1 is an actual screenshot of the implemented app's coach conversation screen. Use it as the protected source for the device screen, preserve the actual layout, Persian text, white/mint sections, food photo of lentil soup, chat bubbles, bottom input, app avatar, and colors. It must remain recognizable as this exact real app screen. Fit the full screenshot proportionally without redesigning the app, without adding new UI or inventing interface content. A mostly frontal thin modern phone frame may surround it; no severe perspective or illegible text.
+Image 2 is the app's actual friendly green sprout mascot «سبزک»: two bright green leaves on a stem growing from a rounded ivory planter, emerald rim, happy closed eyes, curved smile, soft pale green cheeks, polished soft 3D texture. Preserve this character identity precisely. Do not substitute a human or a new mascot.
+ART DIRECTION:
+Warm ivory and fresh pale mint backdrop, dark emerald headline, restrained lime accents with just a tiny warm orange accent. A single large pale mint circular or rounded organic color field sits behind the phone and mascot, creating depth and visual rhythm. Soft shadows, premium lighting, bold beautiful Persian type, excellent professional store screenshot art direction.
+LAYOUT:
+Top area: very small «مای دایت» brand name; underneath one large confident readable hero title on two balanced lines: «کوچ و مربی» then a smaller secondary line «همراه تو در مسیر تغذیه». Spacious but visually engaging, no list of features.
+Main area: large real app screenshot inside an elegant thin smartphone frame, mostly straight and positioned slightly to the right, occupying about 63% of image height. The actual screenshot and its visible food suggestion are the product proof.
+Foreground at lower left: the 3D sprout mascot from Image 2, prominent and adorable, around one third of image width, slightly overlapping just the outer lower-left frame of the device without covering the important food card or chat content. It feels like the helpful character has stepped out of the app. Keep its two green leaves and ivory smiling pot intact.
+One small tasteful speech bubble near the mascot containing ONLY «کنارت هستم!». A short subtle curved dotted connection or two tiny sparkles may connect mascot and phone. This is the only decorative accent. Let the pale mint shape, mascot, phone and typography make the picture feel richer than plain text plus screenshot.
+Keep all content safely inside generous 6% canvas margins. Good visual balance, cohesive campaign style, strong focus, no clutter.
+Exact marketing text ONLY: «مای دایت»، «کوچ و مربی»، «همراه تو در مسیر تغذیه»، «کنارت هستم!». All Persian glyphs correctly joined and crisply typeset right-to-left. No other selling points: do not include specialist doctors, 2026, guarantees, food counts, or diet headlines in the promotional typography. Text that already appears inside the screenshot is kept.
+No extra food plates outside the phone, no feature badges, no medical icons, no stock humans, no confetti, no watermarks, no external scene or presentation frame. Output the single finished 9:16 poster.

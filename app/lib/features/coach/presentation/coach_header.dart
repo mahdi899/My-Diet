@@ -29,7 +29,7 @@ class CoachHeader extends StatelessWidget {
       children: [
         IconButton(
           key: const ValueKey('coach-companion-greet'),
-          tooltip: 'سلام به جوانه',
+          tooltip: 'سلام به مربی',
           padding: EdgeInsets.zero,
           onPressed: onGreet,
           icon: ExcludeSemantics(
@@ -54,10 +54,10 @@ class CoachHeader extends StatelessWidget {
                 switch (mood) {
                   CompanionMood.thinking => 'در حال نوشتن…',
                   CompanionMood.celebrate => 'ثبتت انجام شد؛ آفرین به پیگیریت',
-                  CompanionMood.greeting => 'جوانه؛ همراه کوچک تو',
+                  CompanionMood.greeting => 'سلام؛ از امروزت بگو',
                   CompanionMood.reply => 'جوابت اینجاست؛ با هم ادامه بدیم',
                   CompanionMood.support => 'کنارت هستم؛ قدم‌به‌قدم',
-                  CompanionMood.calm => 'جوانه · دستیار هوشمند تغذیه',
+                  CompanionMood.calm => 'دستیار هوشمند تغذیه',
                 },
                 style: const TextStyle(
                   fontSize: 11,
