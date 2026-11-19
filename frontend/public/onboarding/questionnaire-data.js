@@ -1,6 +1,7 @@
 /** Source: پرسشنامه اصلی.docx — grouped like the official questionnaire. */
 (function (global) {
   const O = (label, icon = '•', extra = {}) => ({ label, icon, ...extra });
+  const siteImage = (file) => '/src/assets/images/' + file;
 
   const AGE_RANGE_OPTIONS = [
     O('۱۸ تا ۳۰ سال', '•', { image: 'assets/age-18-30.jpg' }),
@@ -41,7 +42,7 @@
   }
 
   const GENERAL_QUESTIONS = [
-    { category: CAT.general, q: 'اسم شما چیست؟', type: 'text', subtitle: 'متن', placeholder: 'نام و نام خانوادگی' },
+    { category: CAT.general, q: 'اسم شما چیست؟', displayTitle: 'اسمت چیه؟', type: 'text', subtitle: 'متن', placeholder: 'اسمت رو اینجا بنویس' },
     {
       category: CAT.general,
       q: 'چند سال داری؟',
@@ -51,24 +52,33 @@
     {
       category: CAT.general,
       q: 'جنسیتت چیه؟',
+      displayTitle: 'خانم هستید یا آقا؟',
       subtitle: 'یک گزینه را انتخاب کن',
-      options: [O('زن'), O('مرد')],
+      ui: 'gender-cards',
+      options: [
+        O('زن'),
+        O('مرد'),
+      ],
     },
-    { category: CAT.general, q: 'قدت چقدره؟', type: 'number', subtitle: 'سانتی‌متر', placeholder: 'مثلاً ۱۶۵', slider: { min: 120, max: 230, step: 1, default: 165, unit: 'سانتی‌متر' } },
-    { category: CAT.general, q: 'وزن فعلیت چقدره؟', type: 'number', metric: 'current-weight', subtitle: 'کیلوگرم', placeholder: 'مثلاً ۷۲', slider: { min: 35, max: 240, step: 1, default: 68, unit: 'کیلوگرم' } },
+    { category: CAT.general, q: 'قدت چقدره؟', displayTitle: 'قدتون چقدره؟', type: 'number', subtitle: 'سانتی‌متر', placeholder: 'مثلاً ۱۶۵', slider: { min: 120, max: 230, step: 1, default: 165, unit: 'سانتی‌متر' } },
+    { category: CAT.general, q: 'وزن فعلیت چقدره؟', displayTitle: 'وزنتون چنده؟', type: 'number', metric: 'current-weight', subtitle: 'کیلوگرم', placeholder: 'مثلاً ۷۲', slider: { min: 35, max: 240, step: 1, default: 68, unit: 'کیلوگرم' } },
     {
       category: CAT.general,
       q: 'میزان فعالیت روزانه‌ات چقدره؟',
+      displayTitle: 'توی یه روز معمولی چقدر تحرک داری؟',
+      ui: 'activity-level',
       options: [O('خیلی کم'), O('کم'), O('متوسط'), O('زیاد'), O('خیلی زیاد')],
     },
     {
       category: CAT.general,
       q: 'معمولاً چند وعده در روز غذا می‌خوری؟',
+      ui: 'meal-count',
       options: [O('۱ وعده'), O('۲ وعده'), O('۳ وعده'), O('بیشتر')],
     },
     {
       category: CAT.general,
       q: 'به چه غذاهایی حساسیت داری؟',
+      ui: 'allergy-grid',
       multi: true,
       exclusiveLabels: ['بدون حساسیت'],
       options: [O('بدون حساسیت'), O('لبنیات'), O('آجیل'), O('تخم‌مرغ'), O('گلوتن'), O('سایر')],
@@ -80,16 +90,18 @@
     {
       category: CAT.general,
       q: 'سبک تغذیه‌ات چیه؟',
-      ui: 'option-cards',
+      displayTitle: 'معمولاً چه جور غذاهایی می‌خوری؟',
+      ui: 'diet-options',
       options: [
-        O('همه‌چیزخواری', '•', { image: 'assets/diet-normal.jpg', description: 'غذاهای گیاهی و حیوانی' }),
-        O('گیاه‌خواری با لبنیات یا تخم‌مرغ', '•', { image: 'assets/diet-vegetarian.jpg', description: 'بدون گوشت، مرغ و ماهی' }),
-        O('وگان (کاملاً گیاهی)', '•', { image: 'assets/diet-vegan.jpg', description: 'بدون گوشت، لبنیات، تخم‌مرغ و سایر محصولات حیوانی' }),
+        O('همه‌چیزخواری', '•', { displayLabel: 'تغذیهٔ متنوع', description: 'هم غذاهای گیاهی، هم غذاهایی مثل گوشت، مرغ یا ماهی.' }),
+        O('گیاه‌خواری با لبنیات یا تخم‌مرغ', '•', { displayLabel: 'گیاه‌خواری', description: 'بدون گوشت، مرغ و ماهی؛ لبنیات یا تخم‌مرغ می‌خورم.' }),
+        O('وگان (کاملاً گیاهی)', '•', { displayLabel: 'کاملاً گیاهی (وگان)', description: 'فقط خوراکی‌های گیاهی؛ بدون لبنیات، تخم‌مرغ و سایر محصولات حیوانی.' }),
       ],
     },
     {
       category: CAT.general,
       q: 'بیماری خاص یا شرایط پزشکی داری؟',
+      ui: 'condition-grid',
       multi: true,
       exclusiveLabels: ['خیر'],
       options: [
@@ -108,6 +120,7 @@
     {
       category: CAT.general,
       q: 'دارو یا مکمل خاصی مصرف می‌کنی؟',
+      ui: 'medication-choice',
       options: [O('خیر'), O('بله')],
       subtitle: 'در صورت «بله» نام را در کادر بنویس',
       followUpText: true,
@@ -115,6 +128,7 @@
     {
       category: CAT.general,
       q: 'چه غذاهایی را دوست نداری یا نمی‌خوری؟',
+      displayTitle: 'چه غذاهایی دوست نداری یا نمی‌خوری؟',
       type: 'text',
       optional: true,
       subtitle: 'انتخاب یا متن',
@@ -130,44 +144,45 @@
     {
       category: CAT.general,
       q: 'چقدر برای آماده‌کردن غذا وقت داری؟',
+      ui: 'prep-time',
       options: [O('کمتر از ۱۵ دقیقه'), O('۱۵ تا ۳۰ دقیقه'), O('بیشتر')],
     },
     {
       category: CAT.general,
       q: 'بودجه غذایی موردنظرت چقدره؟',
+      displayTitle: 'بودجهٔ غذات چقدره؟',
+      ui: 'food-budget',
       options: [O('اقتصادی'), O('متوسط'), O('بدون محدودیت')],
     },
     {
       category: CAT.general,
       q: 'شغل یا فعالیت روزانه‌ات بیشتر چه شکلیه؟',
-      ui: 'option-cards',
+      displayTitle: 'در طول روز بیشتر نشسته‌ای یا در حال حرکت؟',
+      ui: 'work-activity',
       options: [
-        O('نشسته', '•', { image: 'assets/activity-sedentary.jpg' }),
-        O('ترکیبی', '•', { image: 'assets/activity-mixed.jpg' }),
-        O('سرپا', '•', { image: 'assets/activity-standing.jpg' }),
-        O('کار فیزیکی سنگین', '•', { image: 'assets/activity-heavy.jpg' }),
+        O('نشسته', '•', { displayLabel: 'بیشتر نشسته‌ام', description: 'مثل کار پشت میز یا رانندگی طولانی.' }),
+        O('ترکیبی', '•', { displayLabel: 'هم می‌نشینم، هم حرکت می‌کنم', description: 'در طول روز بین نشستن و راه‌رفتن جابه‌جا می‌شم.' }),
+        O('سرپا', '•', { displayLabel: 'بیشتر سرپا هستم', description: 'مثل فروشندگی یا کاری که ایستادن زیادی داره.' }),
+        O('کار فیزیکی سنگین', '•', { displayLabel: 'کار بدنی سنگین دارم', description: 'مثل حمل بار یا کاری که زور بدنی زیادی می‌خواد.' }),
       ],
     },
     {
       category: CAT.general,
       q: 'هفته‌ای چند روز ورزش می‌کنی؟',
+      ui: 'exercise-days',
       options: [O('ورزش نمی‌کنم'), O('۱ روز'), O('۲ روز'), O('۳ روز'), O('۴ روز'), O('۵ روز'), O('۶ روز'), O('۷ روز')],
     },
     {
       category: CAT.general,
       q: 'هر جلسه تقریباً چقدر ورزش می‌کنی؟',
+      ui: 'exercise-duration',
       options: [O('کمتر از ۳۰ دقیقه'), O('۳۰ تا ۶۰ دقیقه'), O('بیشتر')],
     },
     {
       category: CAT.general,
       q: 'چه نوع ورزشی انجام می‌دی؟',
-      ui: 'option-cards',
-      options: [
-        O('قدرتی', '•', { image: 'assets/sport-strength.jpg' }),
-        O('هوازی', '•', { image: 'assets/sport-cardio.jpg' }),
-        O('ترکیبی', '•', { image: 'assets/sport-combined.jpg' }),
-        O('سایر', '•', { image: 'assets/sport-other.jpg' }),
-      ],
+      ui: 'sport-type',
+      options: [O('قدرتی'), O('هوازی'), O('ترکیبی'), O('سایر')],
     },
   ];
 
@@ -176,18 +191,20 @@
     {
       category: CAT.loss,
       q: 'ترجیح می‌دی با چه سرعتی وزن کم کنی؟',
+      displayTitle: 'چه سرعتی رو ترجیح می‌دی؟',
       ui: 'loss-pace',
       subtitle: 'سرعت ایمن را سیستم بر اساس شرایط تو پیشنهاد می‌دهد',
       options: [
-        O('آهسته و تدریجی', '•', { pace: 'slow' }),
-        O('متعادل و پایدار', '•', { pace: 'balanced' }),
-        O('می‌خوام زودتر به نتیجه برسم', '•', { pace: 'fast' }),
-        O('نمی‌دونم، خود برنامه پیشنهاد بده', '•', { pace: 'auto' }),
+        O('آهسته و تدریجی', '•', { pace: 'slow', displayLabel: 'آهسته' }),
+        O('متعادل و پایدار', '•', { pace: 'balanced', displayLabel: 'متعادل' }),
+        O('می‌خوام زودتر به نتیجه برسم', '•', { pace: 'fast', displayLabel: 'سریع‌تر' }),
+        O('نمی‌دونم، خود برنامه پیشنهاد بده', '•', { pace: 'auto', displayLabel: 'پیشنهاد برنامه' }),
       ],
     },
     {
       category: CAT.loss,
       q: 'بزرگ‌ترین چالشت برای کاهش وزن چیه؟',
+      ui: 'loss-challenges',
       multi: true,
       options: [
         O('ریزه‌خواری در طول روز'),
@@ -201,6 +218,7 @@
     {
       category: CAT.loss,
       q: 'معمولاً چه زمانی بیشتر احساس گرسنگی می‌کنی؟',
+      ui: 'hunger-time',
       options: [O('صبح'), O('ظهر'), O('عصر'), O('شب'), O('در تمام طول روز')],
     },
     {
@@ -216,6 +234,7 @@
     {
       category: CAT.loss,
       q: 'معمولاً در طول روز چقدر احساس گرسنگی یا ولع غذایی داری؟',
+      ui: 'hunger-level',
       options: [O('خیلی کم'), O('متوسط'), O('زیاد'), O('خیلی زیاد')],
     },
     {
@@ -235,6 +254,7 @@
     {
       category: CAT.gain,
       q: 'وضعیت اشتهای خودت را چطور توصیف می‌کنی؟',
+      displayTitle: 'معمولاً اشتها‌ت چطوره؟',
       options: [O('خیلی کم'), O('کم'), O('معمولی'), O('زیاد')],
     },
     {
@@ -251,6 +271,7 @@
     {
       category: CAT.gain,
       q: 'آیا اخیراً بدون اینکه بخواهی وزن کم کردی؟',
+      displayTitle: 'تازگی بدون اینکه بخوای وزن کم کردی؟',
       medicalReviewWhenLabels: ['بله، کمی', 'بله، به مقدار قابل‌توجه'],
       options: [O('خیر'), O('بله، کمی'), O('بله، به مقدار قابل‌توجه')],
     },
@@ -297,6 +318,7 @@
     {
       category: CAT.pregP,
       q: 'در دوران بارداری کدام مشکلات را تجربه می‌کنی؟',
+      displayTitle: 'توی این دوران بارداری کدوم‌ یکی از این مشکلات رو داری؟',
       multi: true,
       exclusiveLabels: ['هیچ‌کدام'],
       options: [O('تهوع'), O('استفراغ'), O('یبوست'), O('سوزش معده'), O('بی‌اشتهایی'), O('هیچ‌کدام')],
@@ -344,6 +366,7 @@
     {
       category: CAT.pregL,
       q: 'وضعیت انرژی و اشتهای خودت را چطور ارزیابی می‌کنی؟',
+      displayTitle: 'این روزها انرژی و اشتها‌ت چطوره؟',
       options: [O('انرژی و اشتهای مناسبی دارم'), O('بیشتر اوقات خسته‌ام'), O('اشتهای زیادی دارم'), O('اشتهای کمی دارم')],
     },
     {
@@ -399,6 +422,7 @@
     {
       category: CAT.health,
       q: 'کیفیت خوابت را چطور ارزیابی می‌کنی؟',
+      displayTitle: 'معمولاً چقدر خوب می‌خوابی؟',
       options: [O('خیلی خوب'), O('خوب'), O('متوسط'), O('ضعیف')],
     },
     {
@@ -439,7 +463,7 @@
       title: 'لاغری',
       badge: 'کاهش وزن',
       icon: '🔥',
-      image: 'assets/goal-loss.jpg',
+      image: siteImage('male_fitness_weight_loss_1794960511652.webp'),
       desc: 'برنامه غذایی متناسب با هدف کاهش وزن و شرایط تو',
       calories: '۱,۴۵۰ کیلوکالری در روز',
       questions: withGeneral(LOSS_QUESTIONS),
@@ -449,7 +473,7 @@
       title: 'افزایش وزن',
       badge: 'افزایش سالم',
       icon: '🥑',
-      image: 'assets/goal-gain-v2.png',
+      image: siteImage('male_fitness_weight_gain_1794960512384.webp'),
       desc: 'رسیدن به وزن سالم با تغذیه متعادل',
       calories: '۲,۶۵۰ کیلوکالری در روز',
       questions: withGeneral(GAIN_QUESTIONS),
@@ -459,7 +483,7 @@
       title: 'بارداری و شیردهی',
       badge: 'ایمن و تخصصی',
       icon: '🤰',
-      image: 'assets/goal-maternal.jpg',
+      image: siteImage('goal_pregnancy_character.webp'),
       desc: 'تغذیه دوران بارداری و شیردهی با توجه به وضعیت پزشکی',
       calories: '۲,۲۵۰ کیلوکالری در روز',
       questions: withGeneral(PREGNANCY_QUESTIONS),
@@ -469,7 +493,7 @@
       title: 'سلامت و پاکسازی بدن',
       badge: 'تعادل و انرژی',
       icon: '🌿',
-      image: 'assets/goal-wellness.jpg',
+      image: siteImage('goal_body_health_character.webp'),
       desc: 'بهبود کیفیت تغذیه، گوارش و انرژی روزانه',
       calories: '۱,۷۵۰ کیلوکالری در روز',
       questions: withGeneral(HEALTH_QUESTIONS),

@@ -22,7 +22,7 @@ export interface OnboardingGateway {
   verifyOtp(phone: string, code: string): Promise<string>
   verifySubmission(id: string, token: string, journeyId: string): Promise<unknown>
   transfer<T>(path: string, body: unknown, token: string): Promise<T>
-  communityCount(): Promise<number | null>
+  communityCount(completionId: string): Promise<number | null>
 }
 
 export interface SmsRequest {

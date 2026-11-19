@@ -89,9 +89,9 @@
 #modalStep2Content .otp-morph-mark{position:absolute;inset:0;margin:auto;display:grid;place-items:center;width:42px;height:42px;color:#fff;opacity:0;pointer-events:none;z-index:5}
 #modalStep2Content .otp-cells-field.is-success .otp-morph-mark{opacity:1}
 #modalStep2Content .otp-morph-mark svg{width:34px;height:34px}
-#modalStep2Content .otp-cells-field.is-success .otp-morph-mark svg{animation:otpCheckPop .5s .22s cubic-bezier(.2,.85,.2,1) both}
+#modalStep2Content .otp-cells-field.is-success .otp-morph-mark svg{animation:otpCheckPop .66s .42s cubic-bezier(.2,.85,.2,1) both}
 #modalStep2Content .otp-morph-mark path{stroke-dasharray:1;stroke-dashoffset:1}
-#modalStep2Content .otp-cells-field.is-success .otp-morph-mark path{animation:otpCheckDraw .42s .3s ease both}
+#modalStep2Content .otp-cells-field.is-success .otp-morph-mark path{animation:otpCheckDraw .62s .5s ease both}
 @keyframes otpCheckPop{0%{transform:scale(.4);opacity:0}65%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
 @keyframes otpCheckDraw{to{stroke-dashoffset:0}}
 #twoStepModalCard[data-verification="success"] #morphConfirmBtn,
@@ -106,7 +106,6 @@
 #modalStep2Content.verify-flow{gap:22px}
 #modalStep2Content .verify-hero{display:flex;justify-content:center;margin-bottom:4px}
 #modalStep2Content .verify-hero-badge{display:grid;place-items:center;width:76px;height:76px;border-radius:24px;color:#2d704c;background:linear-gradient(145deg,#e9f2e3,#f8fbf4);border:1px solid var(--verify-line);box-shadow:0 12px 32px #264b3520,0 0 0 8px #e9f2e344}
-#modalStep2Content .verify-hero-badge--otp{color:#fff;background:linear-gradient(145deg,#3a7a52,#205638);border-color:#1f5239}
 #modalStep2Content .verify-input-shell{max-width:100%}
 #modalStep2Content #morphConfirmBtn{width:100%;box-sizing:border-box}
 #modalStep2Content .verify-privacy-note{margin:12px 0 0;font-size:11px;line-height:1.75;color:#6f826b;text-align:center}

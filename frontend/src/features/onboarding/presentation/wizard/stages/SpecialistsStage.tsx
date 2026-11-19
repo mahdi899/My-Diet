@@ -1,11 +1,24 @@
 import { useEffect, useState } from 'react'
-import { needsMedicalReview, specialists, answerOf } from '../../../domain/questionnaire'
+import { needsMedicalReview, answerOf } from '../../../domain/questionnaire'
 import { onboarding } from '../../../composition'
 import { useWizard } from '../../../application/wizard-store'
+import { StageAction } from '../StageAction'
 
-function portraitStyle(id: string) {
-  const sprite = specialists.find((person) => person.id === id)?.sprite ?? 0
-  return { backgroundPosition: `${(sprite % 5) * 25}% ${sprite < 5 ? 0 : 100}%` }
+const doctorSheets = [
+  { group: 'women', columns: 3, ids: ['sara', 'nazanin', 'maryam', 'elham', 'hanieh', 'niloofar'] },
+  { group: 'men', columns: 2, ids: ['amir', 'reza', 'parsa', 'kian'] },
+]
+
+function doctorPortrait(id: string) {
+  const sheet = doctorSheets.find(({ ids }) => ids.includes(id))
+  if (!sheet) return undefined
+  const at = sheet.ids.indexOf(id)
+  const column = at % sheet.columns
+  return {
+    backgroundImage: `url('/onboarding/assets/specialists-studio-${sheet.group}.jpg')`,
+    backgroundSize: `${sheet.columns * 100}% 200%`,
+    backgroundPosition: `${column * 100 / (sheet.columns - 1)}% ${at >= sheet.columns ? 100 : 0}%`,
+  }
 }
 
 export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
@@ -14,43 +27,29 @@ export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
   const setSpecialist = useWizard((state) => state.setSpecialist)
   const questions = useWizard((state) => state.questions)
   const answers = useWizard((state) => state.answers)
+  const completionId = useWizard((state) => state.communityCompletionId)
   const needsReview = questions.some((question) => needsMedicalReview(question, answerOf(question, answers)))
-  const [memberCount, setMemberCount] = useState(1000)
+  const [memberCount, setMemberCount] = useState<number | null>(null)
 
   useEffect(() => {
-    let target = 1622
-    let timer = 0
     let cancelled = false
-    const started = performance.now()
-    onboarding.communityCount()
+    onboarding.communityCount(completionId)
       .then((count) => {
-        if (count) target = count
+        if (!cancelled) setMemberCount(count)
       })
       .catch(() => {})
-      .finally(() => {
-        if (cancelled) return
-        const span = Math.min(120, Math.max(24, Math.round(target * 0.04)))
-        const from = Math.max(1, target - span)
-        setMemberCount(from)
-        timer = window.setInterval(() => {
-          const t = Math.min(1, (performance.now() - started) / 1400)
-          setMemberCount(Math.round(from + (target - from) * (1 - (1 - t) ** 3)))
-          if (t === 1) window.clearInterval(timer)
-        }, 40)
-      })
     return () => {
       cancelled = true
-      window.clearInterval(timer)
     }
-  }, [])
+  }, [completionId])
 
   return (
     <div id="aiReadyPhase" className="ai-prep-phase ai-prep-phase--ready">
       <div className="community-hero">
-        <p className="community-hero-number" aria-live="polite">{memberCount.toLocaleString('fa-IR')}</p>
+        <p className="community-hero-number" aria-live="polite">{(memberCount ?? 1622).toLocaleString('fa-IR')}</p>
         <p className="community-hero-copy">نفری هستی که عضو<br />جامعه رژیم من میشی</p>
       </div>
-      <p className="matching-section-lead">۲ پروفایل نمونهٔ تغذیه</p>
+      <p className="matching-section-lead">۲ متخصص تغذیه برات اختصاص دادیم، یکیشو انتخاب کن</p>
       {needsReview && (
         <p id="medicalReviewSummary" className="weight-guidance">
           با توجه به کاهش وزن ناخواسته، پیش از دریافت برنامهٔ غذایی به بررسی پزشک نیاز داری. انتخاب پلن جایگزین مشاوره و علت‌یابی پزشکی نیست.
@@ -65,13 +64,16 @@ export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
               type="button"
               className={'specialist-card' + (selected ? ' is-selected' : '')}
               aria-pressed={selected}
-              onClick={() => setSpecialist(person.id)}
+              onClick={() => {
+                setSpecialist(person.id)
+                if (!needsReview) onContinue()
+              }}
             >
               <span className="specialist-portrait-group">
-                <span className="specialist-portrait specialist-portrait--generated" style={portraitStyle(person.id)} aria-hidden="true" />
-                <span className="specialist-rating">
+                <span className="specialist-portrait specialist-portrait--generated" style={doctorPortrait(person.id)} aria-hidden="true" />
+                <span className="specialist-rating" aria-label="امتیاز نمایشی: ۴٫۸ از ۵">
                   <span className="stars" aria-hidden="true"><i /><i /><i /><i /><i className="is-partial" /></span>
-                  <span className="star-score">۴٫۸</span>
+                  <span className="star-score" aria-hidden="true">۴٫۸</span>
                 </span>
               </span>
               <span className="specialist-copy">
@@ -84,10 +86,7 @@ export function SpecialistsStage({ onContinue }: { onContinue: () => void }) {
           )
         })}
       </div>
-      <button id="aiReadyGoBtn" type="button" className="quiz-green-btn w-full" disabled={!specialistId} onClick={onContinue}>
-        <span>انتخاب پلن و ادامه</span>
-        <span aria-hidden="true">←</span>
-      </button>
+      {needsReview && <StageAction id="aiReadyGoBtn" disabled={!specialistId} onClick={onContinue}>انتخاب پلن و ادامه</StageAction>}
     </div>
   )
 }

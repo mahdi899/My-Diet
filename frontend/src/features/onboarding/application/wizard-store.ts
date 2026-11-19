@@ -8,7 +8,7 @@ import {
   type QuizGoal,
   type QuizQuestion,
 } from '../domain/questionnaire'
-import type { Stage } from '../domain/progress'
+import type { SavedProgress, Stage } from '../domain/progress'
 
 export type { Stage }
 
@@ -22,6 +22,7 @@ interface WizardStore {
   maxUnlocked: number
   phone: string
   submissionId: string
+  communityCompletionId: string
   token: string
   specialistId: string
   offered: { id: string; name: string; focus: string }[]
@@ -40,18 +41,7 @@ interface WizardStore {
   setPlan: (plan: WizardStore['plan']) => void
   resetSubmission: (phone: string) => void
   replaceGoal: (goal: QuizGoal, answers: Record<number, AnswerValue | undefined>) => void
-  hydrate: (saved: {
-    goal?: string
-    answersByNumber?: Record<string, unknown>
-    focused?: number
-    unlocked?: number
-    planId?: string | null
-    phone?: string
-    submissionId?: string | null
-    specialistId?: string | null
-    specialistIds?: string[]
-    step?: { stage: string; index: number }
-  }, goals: QuizGoal[]) => boolean
+  hydrate: (saved: SavedProgress, goals: QuizGoal[]) => boolean
   applyHistory: (step: { stage: string; index: number }) => void
 }
 
@@ -65,6 +55,7 @@ export const useWizard = create<WizardStore>((set, get) => ({
   maxUnlocked: 0,
   phone: '',
   submissionId: crypto.randomUUID(),
+  communityCompletionId: crypto.randomUUID(),
   token: '',
   specialistId: '',
   offered: [],
@@ -128,6 +119,7 @@ export const useWizard = create<WizardStore>((set, get) => ({
       plan,
       phone: saved.phone ?? '',
       submissionId: saved.submissionId || crypto.randomUUID(),
+      communityCompletionId: saved.communityCompletionId || saved.submissionId || crypto.randomUUID(),
       specialistId: saved.specialistId ?? '',
       offered: offered.length ? offered : sampleSpecialists(),
       contactMode: saved.step?.stage === 'otp' ? 'otp' : 'phone',

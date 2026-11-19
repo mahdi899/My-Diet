@@ -1,10 +1,10 @@
-import { assetUrl } from '../../../domain/questionnaire'
+import { StageAction } from '../StageAction'
 
 const features = [
-  ['intro-specialist.jpg', 'نظارت متخصص'],
-  ['intro-ai.jpg', 'رژیم هوشمند'],
-  ['intro-support.jpg', 'پشتیبانی همراه'],
-  ['intro-plans.jpg', 'پلن‌های متنوع'],
+  ['home_doctors_meal_design_1794961844022.webp', 'نظارت متخصص'],
+  ['bmi_result_body_analysis_1794962102772.webp', 'رژیم هوشمند'],
+  ['home_coach_live_support_1794961838974.webp', 'پشتیبانی همراه'],
+  ['hero_persian_healthy_bowl_1794952764202.webp', 'پلن‌های متنوع'],
 ] as const
 
 export function IntroStage({ onStart }: { onStart: () => void }) {
@@ -20,16 +20,12 @@ export function IntroStage({ onStart }: { onStart: () => void }) {
       <div id="heroFeatureStrip" className="grid grid-cols-2 sm:grid-cols-4">
         {features.map(([file, label]) => (
           <div key={label} className="hero-feature-card">
-            <img className="hero-feature-photo" src={assetUrl('assets/' + file)} alt="" width={840} height={560} />
+            <img className="hero-feature-photo" src={'/src/assets/images/' + file} alt="" width={960} height={716} />
             <span className="hero-feature-text">{label}</span>
           </div>
         ))}
       </div>
-      <div id="letsGoBtnWrapper" className="w-full flex flex-col items-center gap-3">
-        <button id="letsGoBtn" type="button" className="w-full" onClick={onStart}>
-          <span>بزن بریم</span>
-        </button>
-      </div>
+      <StageAction id="letsGoBtn" onClick={onStart}>بزن بریم</StageAction>
     </div>
   )
 }

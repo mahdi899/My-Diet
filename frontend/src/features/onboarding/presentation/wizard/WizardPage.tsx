@@ -13,6 +13,7 @@ import { PreparingStage } from './stages/PreparingStage'
 import { QuizStage } from './stages/QuizStage'
 import { SpecialistsStage } from './stages/SpecialistsStage'
 import { VerifyStage } from './stages/VerifyStage'
+import { useActionViewport } from './StageAction'
 import '../../styles/onboarding.css'
 
 export function WizardPage() {
@@ -24,6 +25,39 @@ export function WizardPage() {
   const questionnaireCompleted = useRef(false)
   const booted = useRef(false)
   const applyingHistory = useRef(false)
+  const leavingEntry = useRef(false)
+  const entry = useRef<HTMLElement>(null)
+  useActionViewport()
+
+  async function leaveEntry(advance: () => void) {
+    if (leavingEntry.current) return
+    const content = entry.current
+    if (!content?.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      advance()
+      return
+    }
+    leavingEntry.current = true
+    const stage = wizard.stage
+    const action = document.getElementById('letsGoBtn')
+    const exit = content.animate(
+      [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: 'translateX(24px)' }],
+      { duration: 190, easing: 'ease-in', fill: 'forwards' },
+    )
+    const buttonExit = action?.animate(
+      [{ opacity: 1 }, { opacity: 0, transform: 'translateY(10px)' }],
+      { duration: 150, easing: 'ease-in', fill: 'forwards' },
+    )
+    try {
+      const finished = await exit.finished.then(() => true, () => false)
+      if (finished && entry.current === content && useWizard.getState().stage === stage) advance()
+    } finally {
+      leavingEntry.current = false
+      exit.cancel()
+      buttonExit?.cancel()
+    }
+  }
+
+  useEffect(() => { window.scrollTo(0, 0) }, [wizard.stage, wizard.index])
   const showPreparing = useCallback(() => {
     if (useWizard.getState().stage === 'preparing') useWizard.getState().setStage('specialists')
   }, [])
@@ -83,6 +117,7 @@ export function WizardPage() {
       planId: state.plan,
       phone: state.phone,
       submissionId: state.submissionId,
+      communityCompletionId: state.communityCompletionId,
       specialistId: state.specialistId,
       specialistIds: state.offered.map((person) => person.id),
       step,
@@ -144,9 +179,15 @@ export function WizardPage() {
   }
 
   return (
-    <div className="onboarding-shell" dir="rtl">
+    <div className="onboarding-shell" data-stage={wizard.stage} dir="rtl">
       <div className="ambient-orb" style={{ width: 320, height: 320, top: -64, right: -64 }} />
       <div className="ambient-orb" style={{ width: 380, height: 380, bottom: -96, left: -80, animationDelay: '-5s' }} />
+      {(wizard.stage === 'intro' || wizard.stage === 'goals' || wizard.stage === 'quiz') && (
+        <div className="quiz-lights" data-position={wizard.stage === 'quiz' ? wizard.index % 4 : wizard.stage === 'goals' ? 3 : 2} aria-hidden="true">
+          <span />
+          <span />
+        </div>
+      )}
       {wizard.stage !== 'plans' && wizard.stage !== 'verify' && wizard.stage !== 'checkout' && <header>
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <button id="appLogoHomeBtn" type="button" className="header-logo-btn" onClick={() => { wizard.setStage('intro'); navigate('/onboarding') }}>
@@ -154,17 +195,17 @@ export function WizardPage() {
             <span><BrandLogo variant="wordmark" size={30} /></span>
           </button>
           <div id="headerQuizProgress" aria-label="پیشرفت پرسشنامه">
-            <span id="headerQuestionChip">{wizard.stage === 'quiz' && wizard.questions.length ? `${faDigits(wizard.index + 1)} / ${faDigits(wizard.questions.length)}` : 'شروع'}</span>
-            <div className="header-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+            <span id="headerQuestionChip">{wizard.stage === 'quiz' && wizard.questions.length ? `${faDigits(wizard.index + 1)} از ${faDigits(wizard.questions.length)}` : 'شروع'}</span>
+            <div className="header-progress-track" role="progressbar" aria-label="پیشرفت پرسشنامه" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
               <div id="headerProgressFill" style={{ width: progress + '%' }} />
             </div>
           </div>
           <div id="headerQuizActions">
-            <button id="scrollPrevAnsweredBtn" type="button" aria-label="سوال قبلی" disabled={wizard.index === 0} onClick={() => wizard.setIndex(wizard.index - 1)}>
+            <button id="scrollPrevAnsweredBtn" type="button" aria-label={wizard.index === 0 ? 'بازگشت به انتخاب هدف' : 'سؤال قبلی'} onClick={() => {
+              if (wizard.index > 0) wizard.setIndex(wizard.index - 1)
+              else { wizard.setStage('goals'); navigate('/onboarding/goals') }
+            }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
-            </button>
-            <button id="scrollNextUnlockedBtn" type="button" aria-label="سوال بعدی" disabled={wizard.index >= wizard.maxUnlocked} onClick={() => wizard.setIndex(wizard.index + 1)}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
           </div>
         </div>
@@ -177,10 +218,14 @@ export function WizardPage() {
         }
       >
         {(wizard.stage === 'intro' || wizard.stage === 'goals') && (
-          <section id="page1Container" className="min-h-[78vh] flex flex-col justify-center items-center">
+          <section key={wizard.stage} ref={entry} id="page1Container" className="min-h-[78vh] flex flex-col justify-center items-center">
             {wizard.stage === 'intro'
-              ? <IntroStage onStart={() => { wizard.setStage('goals'); navigate('/onboarding/goals') }} />
-              : <GoalsStage />}
+              ? <IntroStage onStart={() => void leaveEntry(() => { wizard.setStage('goals'); navigate('/onboarding/goals') })} />
+              : <GoalsStage onSelect={(goal) => void leaveEntry(() => {
+                if (goal.id === wizard.goal?.id) wizard.setStage('quiz')
+                else wizard.chooseGoal(goal)
+                navigate('/onboarding/quiz?goal=' + goal.id)
+              })} />}
           </section>
         )}
         {wizard.stage === 'quiz' && (

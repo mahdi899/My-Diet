@@ -8,7 +8,7 @@ interface WebIntakeStore
 
     public function saveQuestionnaire(string $goal, array $document): void;
 
-    public function joinCommunity(): int;
+    public function joinCommunity(string $completionId): int;
 
     public function saveLead(array $lead): bool;
 

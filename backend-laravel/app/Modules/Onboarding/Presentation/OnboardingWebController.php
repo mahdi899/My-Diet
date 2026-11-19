@@ -35,9 +35,12 @@ final class OnboardingWebController
         return $this->service->saveQuestionnaire($goal, WebIntakeRules::questionnaire($goal, $this->body($request)));
     }
 
-    public function join(): JsonResponse
+    public function join(Request $request): JsonResponse
     {
-        return response()->json($this->service->joinCommunity(), 201)->header('Cache-Control', 'no-store');
+        $body = Input::body($request, ['completionId']);
+        $completionId = Input::uuid(Input::string($body, 'completionId', 36));
+
+        return response()->json($this->service->joinCommunity($completionId), 201)->header('Cache-Control', 'no-store');
     }
 
     public function save(Request $request): JsonResponse

@@ -1,49 +1,74 @@
 import { useEffect, useState } from 'react'
-import { faDigits } from '../../../domain/questionnaire'
+import { Check, ClipboardCheck, Target, Utensils } from 'lucide-react'
 import { BrandLogo } from '@shared/ui/BrandLogo'
+import { useWizard } from '../../../application/wizard-store'
+import { answerOf, faDigits, isAnswered } from '../../../domain/questionnaire'
+
+const preparationDuration = 10_000
+const phases = [
+  { label: 'هدف تو', icon: Target },
+  { label: 'سبک تغذیه', icon: Utensils },
+  { label: 'جمع‌بندی', icon: ClipboardCheck },
+] as const
 
 export function PreparingStage({ onDone }: { onDone: () => void }) {
   const [progress, setProgress] = useState(0)
-  const phases = ['شناخت هدف و شرایط تو', 'بررسی عادت‌های غذایی', 'آماده‌سازی پیشنهاد متخصص']
-  const phase = Math.min(2, Math.floor(progress / 34))
+  const goalTitle = useWizard((state) => state.goal?.title)
+  const questions = useWizard((state) => state.questions)
+  const answers = useWizard((state) => state.answers)
+  const dietQuestion = questions.find((question) => question.ui === 'diet-options')
+  const dietAnswer = dietQuestion ? answerOf(dietQuestion, answers) : undefined
+  const diet = typeof dietAnswer === 'number' ? dietQuestion?.options?.[dietAnswer] : undefined
+  const answered = questions.filter((question) => {
+    const answer = answerOf(question, answers)
+    return answer !== '__skipped__' && isAnswered(question, answer)
+  }).length
+  const phase = progress < 34 ? 0 : progress < 67 ? 1 : 2
+  const details = [goalTitle, diet?.displayLabel ?? diet?.label, answered ? `${faDigits(answered)} پاسخ` : undefined]
+  const CurrentIcon = phases[phase].icon
 
   useEffect(() => {
     const started = performance.now()
-    const timer = window.setInterval(() => {
-      setProgress(Math.min(100, Math.floor((performance.now() - started) / 80)))
+    const ticker = window.setInterval(() => {
+      setProgress(Math.min(99, Math.floor((performance.now() - started) / preparationDuration * 100)))
     }, 80)
-    const done = window.setTimeout(onDone, 8000)
+    const done = window.setTimeout(() => {
+      window.clearInterval(ticker)
+      setProgress(100)
+      onDone()
+    }, preparationDuration)
     return () => {
-      window.clearInterval(timer)
+      window.clearInterval(ticker)
       window.clearTimeout(done)
     }
   }, [onDone])
 
   return (
-    <div id="aiPreparingPhase" className="ai-prep-phase">
-      <div className="analysis-visual" aria-hidden="true">
-        <span className="analysis-orbit analysis-orbit--outer"><span className="analysis-ring ring-outer" /></span>
-        <span className="analysis-orbit analysis-orbit--inner"><span className="analysis-ring ring-inner" /></span>
-        <span className="analysis-spark spark-outer">
-          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.2 13.7 8.8 21.6 12 13.7 15.2 12 22.8 10.3 15.2 2.4 12 10.3 8.8Z" /></svg>
-        </span>
-        <span className="analysis-spark analysis-spark--sm spark-inner">
-          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.2 13.7 8.8 21.6 12 13.7 15.2 12 22.8 10.3 15.2 2.4 12 10.3 8.8Z" /></svg>
-        </span>
-        <span className="analysis-core"><BrandLogo variant="symbol" size={58} decorative /></span>
-      </div>
-      <h2 className="ai-prep-title">اطلاعات شما<br />در حال آنالیز است</h2>
-      <p id="analysisPercent">{faDigits(progress)}٪</p>
-      <p id="analysisStatus">{phases[phase] ?? phases[2]}</p>
-      <div className="analysis-steps">
-        {phases.map((label, index) => (
-          <span key={label} className={index === phase ? 'is-active' : index < phase ? 'is-done' : undefined}>{label}</span>
+    <div id="aiPreparingPhase" className="prep-screen">
+      <div className="prep-radar" role="progressbar" aria-label="پیشرفت آماده‌سازی" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+        <div className="prep-radar-sweep" aria-hidden="true" />
+        <svg className="prep-radar-grid" viewBox="0 0 280 280" fill="none" aria-hidden="true">
+          <circle cx="140" cy="140" r="128" />
+          <circle cx="140" cy="140" r="106" strokeDasharray="2 5" />
+          <circle cx="140" cy="140" r="80" />
+          <path d="M12 140h256M140 12v256" strokeDasharray="2 6" />
+          <circle className="prep-radar-progress" cx="140" cy="140" r="128" pathLength={100} strokeDasharray="100" strokeDashoffset={100 - progress} transform="rotate(-90 140 140)" />
+        </svg>
+        <span className="prep-radar-brand"><BrandLogo variant="symbol" size={54} decorative /></span>
+        {phases.map(({ label, icon: Icon }, index) => (
+          <span className="prep-radar-node" data-node={index} data-status={index < phase ? 'done' : index === phase ? 'active' : 'pending'} key={label} aria-hidden="true">
+            {index < phase ? <Check size={18} /> : <Icon size={18} />}
+          </span>
         ))}
+        <span className="prep-percent" aria-hidden="true">{faDigits(progress)}٪</span>
       </div>
-      <div className="ai-prep-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="پیشرفت آنالیز">
-        <div id="aiPrepProgressFill" className="ai-prep-progress-fill" style={{ width: progress + '%' }} />
+      <h2 className="prep-title">داریم پاسخ‌هات رو مرور می‌کنیم</h2>
+      <div className="prep-status" role="status" aria-atomic="true">
+        <div className="prep-status-inner" key={phase}>
+          <span className="prep-status-label"><CurrentIcon size={15} aria-hidden="true" />{phases[phase].label}</span>
+          {details[phase] && <strong>{details[phase]}</strong>}
+        </div>
       </div>
-      <p className="analysis-wait-hint">صبر کنید</p>
     </div>
   )
 }
