@@ -1,98 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { questionnaireGoals } from '../../composition'
-import { bmiGuidance, faDigits, type AnswerValue, type QuizQuestion } from '../../domain/questionnaire'
-import { useWizard } from '../../application/wizard-store'
+import { useMemo, useRef, useState } from 'react'
+import { faDigits } from '../../domain/questionnaire'
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
-}
-
-export function HeightRuler({
-  min,
-  max,
-  value,
-  onChange,
-  onContinue,
-}: {
-  min: number
-  max: number
-  value: number
-  onChange: (value: number) => void
-  onContinue: () => void
-}) {
-  const scroller = useRef<HTMLDivElement>(null)
-  const fromScroll = useRef(false)
-  const ticks = useMemo(() => Array.from({ length: max - min + 1 }, (_, index) => min + index), [min, max])
-
-  useEffect(() => {
-    const element = scroller.current
-    const tick = element?.querySelector<HTMLElement>('.height-ruler-tick')
-    if (!element || !tick || fromScroll.current) {
-      fromScroll.current = false
-      return
-    }
-    element.scrollTop = (value - min) * tick.offsetHeight
-  }, [value, min])
-
-  function read(element: HTMLDivElement) {
-    const tick = element.querySelector<HTMLElement>('.height-ruler-tick')
-    if (!tick?.offsetHeight) return value
-    return clamp(min + Math.round(element.scrollTop / tick.offsetHeight), min, max)
-  }
-
-  return (
-    <div className="metric-slider-card height-ruler-card">
-      <div className="height-ruler" data-min={min} data-max={max} data-value={value}>
-        <div className="height-ruler-scale">
-          <div
-            ref={scroller}
-            className="height-ruler-scroller"
-            tabIndex={0}
-            role="slider"
-            aria-label="قد به سانتی‌متر"
-            aria-valuemin={min}
-            aria-valuemax={max}
-            aria-valuenow={value}
-            aria-valuetext={`${faDigits(value)} سانتی‌متر`}
-            aria-orientation="vertical"
-            onScroll={(event) => {
-              const next = read(event.currentTarget)
-              if (next === value) return
-              fromScroll.current = true
-              onChange(next)
-            }}
-            onKeyDown={(event) => {
-              const next = event.key === 'ArrowDown' || event.key === 'ArrowLeft' ? value + 1
-                : event.key === 'ArrowUp' || event.key === 'ArrowRight' ? value - 1
-                  : event.key === 'PageDown' ? value + 5
-                    : event.key === 'PageUp' ? value - 5
-                      : event.key === 'Home' ? min
-                        : event.key === 'End' ? max
-                          : null
-              if (next == null) return
-              event.preventDefault()
-              onChange(clamp(next, min, max))
-            }}
-          >
-            <div className="height-ruler-pad" aria-hidden="true" />
-            {ticks.map((centimeter) => (
-              <div key={centimeter} className={'height-ruler-tick' + (centimeter % 5 === 0 ? ' height-ruler-tick--major' : '') + (centimeter === value ? ' is-active' : '')} dir="ltr" data-cm={centimeter}>
-                <span className="height-ruler-mark" />
-                <span className="height-ruler-num" dir="ltr">{faDigits(centimeter)}</span>
-              </div>
-            ))}
-            <div className="height-ruler-pad" aria-hidden="true" />
-          </div>
-          <div className="height-ruler-indicator" aria-hidden="true" />
-        </div>
-        <div className="height-ruler-readout">
-          <span className="height-ruler-value">{faDigits(value)}</span>
-          <span className="height-ruler-unit">سانتی‌متر</span>
-        </div>
-      </div>
-      <button type="button" data-field-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={onContinue}>ثبت و ادامه</button>
-    </div>
-  )
 }
 
 const gauge = { vbW: 340, vbH: 154, cx: 170, cy: 304, rArc: 256, rTick: 256, rLabel: 204, degPerKg: 1.6, needle: -90, arc0: -126, arc1: -54 }
@@ -107,13 +17,11 @@ export function WeightGauge({
   max,
   value,
   onChange,
-  onContinue,
 }: {
   min: number
   max: number
   value: number
   onChange: (value: number) => void
-  onContinue: () => void
 }) {
   const svg = useRef<SVGSVGElement>(null)
   const drag = useRef<{ x: number; value: number } | null>(null)
@@ -166,7 +74,7 @@ export function WeightGauge({
   }
 
   return (
-    <div className="metric-slider-card weight-gauge-card">
+    <div className="weight-gauge-layout">
       <div
         className={'weight-gauge' + (dragging ? ' is-dragging' : '')}
         dir="ltr"
@@ -219,53 +127,6 @@ export function WeightGauge({
           <span className="weight-gauge-unit">کیلوگرم</span>
         </div>
       </div>
-      <button type="button" data-field-submit="" className="quiz-green-btn w-full py-3 rounded-xl font-bold text-sm mt-4" onClick={onContinue}>ثبت و ادامه</button>
     </div>
-  )
-}
-
-export function WeightGuidance({ question, questions, answers, value }: {
-  question: QuizQuestion
-  questions: QuizQuestion[]
-  answers: Record<number, AnswerValue | undefined>
-  value: number
-}) {
-  const goal = useWizard((state) => state.goal)
-  const replaceGoal = useWizard((state) => state.replaceGoal)
-  const stored = useWizard((state) => state.answers)
-  if (!goal || goal.id === 'pregnancy') return null
-  if (question.metric !== 'current-weight' && !question.metric?.startsWith('target-')) return null
-  const height = questions.find((item) => item.originalNumber === 4)
-  const current = questions.find((item) => item.metric === 'current-weight')
-  const heightValue = height ? answers[height.originalNumber ?? -1] : undefined
-  const weightValue = question.metric === 'current-weight' ? value : current ? answers[current.originalNumber ?? -1] : undefined
-  const guide = bmiGuidance(heightValue, weightValue, goal.id)
-  if (!guide) return null
-  const format = (amount: number) => amount.toLocaleString('fa-IR', { maximumFractionDigits: 1 })
-  return (
-    <section className="weight-guidance" aria-label="شاخص تودهٔ بدنی و بازهٔ وزن سالم">
-      <div className="weight-guidance-heading"><strong>BMI شما: {format(guide.bmi)}</strong><span>{guide.category}</span></div>
-      <p>بازهٔ تقریبی وزن سالم برای قد شما: <strong>{format(guide.low)} تا {format(guide.high)} کیلوگرم</strong></p>
-      {question.metric !== 'current-weight' && <p>وزن فعلی شما: {format(guide.weight)} کیلوگرم.{goal.id === 'weight_gain' ? ' برای افزایش وزن، هدفی بالاتر از وزن فعلی انتخاب کن.' : ''}</p>}
-      {guide.suggestGain && (
-        <div className="weight-guidance-suggestion">
-          <p>BMI شما در محدودهٔ کمبود وزن است. پیشنهاد ما تغییر هدف به افزایش وزن و بررسی وزن هدف با متخصص است.</p>
-          <button
-            type="button"
-            className="quiz-green-btn"
-            onClick={() => {
-              const next = questionnaireGoals().find((item) => item.id === 'weight_gain')
-              if (!next) return
-              const kept = { ...stored }
-              if (current?.originalNumber) kept[current.originalNumber] = String(guide.weight)
-              replaceGoal(next, kept)
-            }}
-          >
-            تغییر هدف به افزایش وزن
-          </button>
-        </div>
-      )}
-      <small>این بازه برآورد عمومی برای بزرگسالان است، نه وزن هدف قطعی.</small>
-    </section>
   )
 }

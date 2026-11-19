@@ -6,6 +6,8 @@
 @import './legacy/verification.css';
 @import './legacy/plans.css';
 @import './legacy/payment-card.css';
+@import './wizard-flow.css';
+@import './preparing.css';
 
 .onboarding-shell {
   min-height: 100vh;

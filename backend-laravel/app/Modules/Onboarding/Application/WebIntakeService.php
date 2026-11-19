@@ -22,9 +22,9 @@ final class WebIntakeService
         return $document;
     }
 
-    public function joinCommunity(): array
+    public function joinCommunity(string $completionId): array
     {
-        return ['count' => $this->store->joinCommunity()];
+        return ['count' => $this->store->joinCommunity($completionId)];
     }
 
     public function save(array $input): array

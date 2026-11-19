@@ -14,6 +14,6 @@ export const onboarding = {
   readTransfer: (token: string, id: string) => readTransfer(onboardingApi, token, id),
   startGateway: (token: string, id: string) => startGateway(onboardingApi, token, id),
   refreshToken: (token: string) => onboardingApi.refreshToken(token),
-  communityCount: () => onboardingApi.communityCount(),
+  communityCount: (completionId: string) => onboardingApi.communityCount(completionId),
   installTracking: () => audience.install(),
 }

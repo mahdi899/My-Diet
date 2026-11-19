@@ -56,10 +56,11 @@ export class OnboardingApi implements OnboardingGateway {
     }
   }
 
-  async communityCount() {
+  async communityCount(completionId: string) {
     const response = await fetch('/v1/public/onboarding/community-join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completionId }),
     })
     if (!response.ok) return null
     const data = await response.json() as { count?: number }

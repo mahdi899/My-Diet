@@ -1,9 +1,12 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { ClipboardCheck, Download, ShoppingBag, Sparkles } from 'lucide-react'
+import { BrandLogo } from '@shared/ui/BrandLogo'
 import type { TransferOrder } from '../../../application/ports'
 import { plans, type PlanId } from '../../../domain/questionnaire'
 import { audience, onboarding, readCheckoutSession, writeCheckoutSession } from '../../../composition'
 import { useWizard } from '../../../application/wizard-store'
+import { isLocalOnboardingPreview } from '../../../infrastructure/local-preview'
 
 function clock(seconds: number) {
   const left = Math.max(0, seconds)
@@ -11,6 +14,80 @@ function clock(seconds: number) {
 }
 
 export function CheckoutStage() {
+  return isLocalOnboardingPreview() ? <LocalCheckoutPreview /> : <LiveCheckoutStage />
+}
+
+function LocalCheckoutPreview() {
+  const planId = useWizard((state) => state.plan)
+  const plan = plans.find((item) => item.id === planId) ?? plans[1]
+  return <PaymentSuccess planId={plan.id} price={plan.price + ' تومان'} />
+}
+
+function PaymentSuccess({ planId, price }: { planId: PlanId; price: string }) {
+  const selected = plans.find((item) => item.id === planId)
+  const [directDownload, setDirectDownload] = useState(() => downloadUrl(import.meta.env.VITE_APP_DIRECT_DOWNLOAD_URL))
+  const bazaarDownload = downloadUrl(import.meta.env.VITE_APP_BAZAAR_URL, 'cafebazaar.ir')
+
+  useEffect(() => {
+    if (directDownload) return
+    const request = new AbortController()
+    void fetch('/v1/public/config', { signal: request.signal })
+      .then(async (response) => {
+        if (!response.ok) return
+        const config = await response.json() as { download?: { status?: string; url?: string } }
+        if (!request.signal.aborted && config.download?.status === 'released') setDirectDownload(downloadUrl(config.download.url))
+      })
+      .catch(() => {})
+    return () => request.abort()
+  }, [directDownload])
+
+  return (
+    <div className="checkout-page checkout-success-page">
+      <section className="checkout-success" aria-labelledby="checkout-success-title">
+        <div className="checkout-success-intro">
+          <div className="checkout-success-emblem" aria-hidden="true">
+            <span className="checkout-success-orbit" />
+            <span className="checkout-app-icon"><BrandLogo variant="symbol" size={49} decorative /></span>
+            <span className="checkout-success-mark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m5 12 4 4L19 6" pathLength={1} />
+              </svg>
+            </span>
+          </div>
+          <h1 id="checkout-success-title" role="status">پرداخت موفق بود</h1>
+          <p>{selected?.title} · {selected?.days} · {price}</p>
+        </div>
+        <ol className="checkout-success-steps" aria-label="قدم‌های بعدی">
+          <li><span className="checkout-step-icon"><Sparkles size={17} aria-hidden="true" /></span><span><strong>آماده‌سازی برنامهٔ رژیم</strong><small>بر اساس پاسخ‌ها و هدف خودت</small></span></li>
+          <li><span className="checkout-step-icon"><ClipboardCheck size={17} aria-hidden="true" /></span><span><strong>بررسی متخصص تغذیه</strong><small>قبل از انتشار برنامه در اپ</small></span></li>
+        </ol>
+        <div className="checkout-app">
+          <div className="checkout-app-heading"><h2>ادامه در اپ رژیم من</h2><p>با همین شماره وارد شو.</p></div>
+          <div className="checkout-app-links" data-direct-only={!bazaarDownload && Boolean(directDownload)}>
+            {bazaarDownload ? <a href={bazaarDownload}><ShoppingBag size={16} aria-hidden="true" /> دانلود از بازار</a>
+              : <button type="button" disabled><ShoppingBag size={16} aria-hidden="true" /> دانلود از بازار</button>}
+            {directDownload ? <a href={directDownload}><Download size={16} aria-hidden="true" /> دانلود مستقیم</a>
+              : <button type="button" disabled><Download size={16} aria-hidden="true" /> دانلود مستقیم</button>}
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function downloadUrl(value: unknown, expectedHost?: string) {
+  if (typeof value !== 'string') return ''
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:' || url.username || url.password) return ''
+    if (expectedHost && url.hostname !== expectedHost) return ''
+    return url.href
+  } catch {
+    return ''
+  }
+}
+
+function LiveCheckoutStage() {
   const wizard = useWizard()
   const [params] = useSearchParams()
   const [order, setOrder] = useState<TransferOrder | null>(null)
@@ -75,9 +152,8 @@ export function CheckoutStage() {
   }, [order, method])
 
   useEffect(() => {
-    if (!order) return
-    if (order.confirmed_at) setStatus('پرداخت شما تأیید شد.')
-    else if (gatewayResult === 'cancelled') setStatus('پرداخت آنلاین تکمیل نشد. می‌توانید دوباره به درگاه بروید.')
+    if (!order || order.confirmed_at) return
+    if (gatewayResult === 'cancelled') setStatus('پرداخت آنلاین تکمیل نشد. می‌توانید دوباره به درگاه بروید.')
     else if (gatewayResult === 'pending') setStatus('پرداخت هنوز تأیید نشده است. اگر مبلغ کسر شده، به پشتیبانی پیام دهید.')
     else if (order.gateway_started) setStatus('منتظر تکمیل پرداخت در زیبال')
     else if (remaining && method === 'transfer') setStatus('منتظر واریز و بررسی پشتیبانی')
@@ -139,6 +215,8 @@ export function CheckoutStage() {
     )
   }
 
+  if (order.confirmed_at) return <PaymentSuccess planId={order.plan} price={price} />
+
   return (
     <main className="checkout-page">
       <section className="checkout-panel">
@@ -162,7 +240,9 @@ export function CheckoutStage() {
         <div id="checkout-gateway" hidden={!payable || (!order.gateway_started && method !== 'gateway')}>
           <p className="checkout-total"><span>مبلغ پرداخت</span><strong>{price}</strong></p>
           <p><strong>قبل از ورود به درگاه VPN خود را خاموش کنید.</strong></p>
-          <button type="button" className="checkout-action" disabled={busy} onClick={payOnline}>{busy ? 'در حال اتصال به درگاه…' : 'پرداخت'}</button>
+          {payable && (order.gateway_started || method === 'gateway') && (
+            <StageAction disabled={busy} onClick={payOnline}>{busy ? 'در حال اتصال به درگاه…' : 'پرداخت'}</StageAction>
+          )}
           <p className="gateway-status" hidden={!gatewayNote}>{gatewayNote}</p>
         </div>
         <div id="checkout-transfer" hidden={!payable || Boolean(order.gateway_started) || method !== 'transfer'}>
@@ -195,3 +275,4 @@ export function CheckoutStage() {
     </main>
   )
 }
+import { StageAction } from '../StageAction'

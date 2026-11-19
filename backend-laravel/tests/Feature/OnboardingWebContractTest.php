@@ -100,8 +100,13 @@ final class OnboardingWebContractTest extends MySqlTestCase
         $this->putJson('/v1/admin/onboarding-questionnaire/weight_loss', [...$document, 'questions' => [['id' => 101, 'q' => 'عنوان', 'type' => 'choice', 'options' => ['فقط یکی']]]])->assertStatus(400);
         $this->putJson('/v1/admin/onboarding-questionnaire/weight_loss', [...$document, 'title' => '<script>'])->assertStatus(400)->assertJsonPath('code', 'unsafe_content');
         $this->db->table('app_settings')->where('key', 'demo.community_join_counter')->delete();
-        $this->postJson('/v1/public/onboarding/community-join')->assertCreated()->assertExactJson(['count' => 1621]);
-        $this->postJson('/v1/public/onboarding/community-join')->assertCreated()->assertExactJson(['count' => 1622]);
+        $this->postJson('/v1/public/onboarding/community-join', [])->assertStatus(400);
+        $firstCompletion = Crypto::uuid();
+        $secondCompletion = Crypto::uuid();
+        $this->postJson('/v1/public/onboarding/community-join', ['completionId' => $firstCompletion])->assertCreated()->assertExactJson(['count' => 1622]);
+        $this->postJson('/v1/public/onboarding/community-join', ['completionId' => $firstCompletion])->assertCreated()->assertExactJson(['count' => 1622]);
+        $this->postJson('/v1/public/onboarding/community-join', ['completionId' => $secondCompletion])->assertCreated()->assertExactJson(['count' => 1623]);
+        $this->postJson('/v1/public/onboarding/community-join', ['completionId' => $firstCompletion])->assertCreated()->assertExactJson(['count' => 1623]);
         self::assertSame(2, $this->db->table('app_settings')->where('key', 'demo.community_join_counter')->value('version'));
         $this->postJson('/v1/onboarding/submissions', ['id' => Crypto::uuid(), 'phone' => '09120000000', 'goal' => 'detox', 'answers' => [['question' => 'نام', 'answer' => 'تست']]])->assertStatus(400);
         $this->postJson('/v1/onboarding/submissions', ['id' => $this->leadId(), 'phone' => '09120000000', 'goal' => 'detox', 'answers' => [['question' => 'نام', 'answer' => 'تست', 'codes' => [null]]]])->assertStatus(400);

@@ -13,6 +13,7 @@ export interface SavedProgress {
   planId?: string | null
   phone?: string
   submissionId?: string | null
+  communityCompletionId?: string
   specialistId?: string | null
   specialistIds?: string[]
   step?: HistoryStep

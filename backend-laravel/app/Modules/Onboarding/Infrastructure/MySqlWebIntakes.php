@@ -24,10 +24,13 @@ final class MySqlWebIntakes implements WebIntakeStore
         $this->db->table('demo_questionnaire_settings')->upsert(['goal' => $goal, 'document' => json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)], ['goal'], ['document']);
     }
 
-    public function joinCommunity(): int
+    public function joinCommunity(string $completionId): int
     {
-        return $this->db->transaction(function (): int {
-            $this->db->statement("insert into app_settings (`key`,value) values ('demo.community_join_counter','1621') as incoming on duplicate key update value=cast(cast(app_settings.value as unsigned)+1 as json),version=app_settings.version+1,updated_at=current_timestamp(6)");
+        return $this->db->transaction(function () use ($completionId): int {
+            $inserted = $this->db->table('onboarding_community_completions')->insertOrIgnore(['completion_id' => $completionId]);
+            if ($inserted > 0) {
+                $this->db->statement("insert into app_settings (`key`,value) values ('demo.community_join_counter','1622') as incoming on duplicate key update value=cast(cast(app_settings.value as unsigned)+1 as json),version=app_settings.version+1,updated_at=current_timestamp(6)");
+            }
 
             return (int) $this->db->table('app_settings')->where('key', 'demo.community_join_counter')->value('value');
         });

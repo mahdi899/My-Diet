@@ -8,6 +8,8 @@ export interface SliderConfig {
 
 export interface QuizOption {
   label: string
+  displayLabel?: string
+  description?: string
   icon?: string
   image?: string
   pace?: string
@@ -15,6 +17,7 @@ export interface QuizOption {
 
 export interface QuizQuestion {
   q: string
+  displayTitle?: string
   type?: 'text' | 'number'
   ui?: string
   multi?: boolean
@@ -50,6 +53,16 @@ export type AnswerValue =
   | { choice: number; detail?: string }
   | { choices: number[]; detail?: string }
   | { sleep: number; wake: number }
+
+export const AGE_MIN = 18
+export const AGE_MAX = 100
+const legacyAgeDefaults = [24, 35, 45, 55]
+
+export function ageForPicker(answer: AnswerValue | undefined) {
+  if (typeof answer === 'number') return legacyAgeDefaults[answer] ?? 30
+  const age = typeof answer === 'string' ? Number(answer) : 0
+  return Number.isInteger(age) && age >= AGE_MIN && age <= AGE_MAX ? age : 30
+}
 
 export function assetUrl(path?: string) {
   if (!path) return ''
@@ -141,8 +154,15 @@ export function needsMedicalReview(question: QuizQuestion, answer: AnswerValue |
   return (question.medicalReviewWhenLabels ?? []).includes(label ?? '')
 }
 
+export function isPersianName(value: string) {
+  return /^(?=\p{L})(?:(?=[\p{L}\p{M}])\p{Script_Extensions=Arabic}|[ \u200c-])+$/u.test(value.trim())
+}
+
 export function isAnswered(question: QuizQuestion, answer: AnswerValue | undefined) {
   if (answer == null) return false
+  if (question.type === 'text' && question.originalNumber === 1) {
+    return typeof answer === 'string' && isPersianName(answer)
+  }
   if (question.multi) {
     if (!answer || typeof answer !== 'object' || !('choices' in answer) || answer.choices.length === 0) return false
     const needsDetail = answer.choices.some((index) => followUpRequired(question, index))
@@ -162,6 +182,7 @@ export function isAnswered(question: QuizQuestion, answer: AnswerValue | undefin
 
 export function answerLabel(question: QuizQuestion, answer: AnswerValue | undefined) {
   if (answer == null) return 'ثبت نشده'
+  if (question.ui === 'age-range' && typeof answer === 'string') return faDigits(answer)
   if (question.ui === 'sleep-wake' && typeof answer === 'object' && 'sleep' in answer) {
     return `خواب ${faDigits(answer.sleep)} — بیداری ${faDigits(answer.wake)}`
   }
@@ -191,7 +212,7 @@ function numeric(value: unknown) {
 }
 
 export function lossPaceText(pace: string | undefined, questions: QuizQuestion[], answers: Record<number, AnswerValue | undefined>) {
-  if (!pace || !(pace in LOSS_RATES)) return ''
+  if (!pace || pace === 'auto' || !(pace in LOSS_RATES)) return ''
   const read = (predicate: (question: QuizQuestion) => boolean) => {
     const question = questions.find(predicate)
     return question ? answers[question.originalNumber ?? -1] : undefined
@@ -201,18 +222,17 @@ export function lossPaceText(pace: string | undefined, questions: QuizQuestion[]
   const height = numeric(read((question) => question.originalNumber === 4))
   const rate = LOSS_RATES[pace] ?? 0
   if (!Number.isFinite(weight) || !Number.isFinite(target) || weight <= 0 || target <= 0 || target >= weight) {
-    return 'زمان مناسب پس از بررسی قد، وزن و وزن هدف مشخص می‌شود'
+    return 'زمان بعد از بررسی مشخص می‌شه'
   }
   if (Number.isFinite(height) && height > 0 && target / (height / 100) ** 2 < 18.5) {
-    return 'زمان مناسب پس از بررسی قد، وزن و وزن هدف مشخص می‌شود'
+    return 'زمان بعد از بررسی مشخص می‌شه'
   }
   const weekly = Math.min(rate, weight * 0.01)
   const months = (weight - target) / weekly / (365.25 / 12 / 7)
   const min = Math.floor(months)
   const max = Math.ceil(months)
   const format = (value: number) => value.toLocaleString('fa-IR', { maximumFractionDigits: 2 })
-  const duration = max <= 1 ? 'حدود ۱ ماه یا کمتر' : min === max ? `حدود ${format(max)} ماه` : `حدود ${format(min)} تا ${format(max)} ماه`
-  return `${duration} · با سرعت اولیهٔ حدود ${format(weekly)} کیلوگرم در هفته`
+  return max <= 1 ? 'حدود ۱ ماه یا کمتر' : min === max ? `حدود ${format(max)} ماه` : `حدود ${format(min)} تا ${format(max)} ماه`
 }
 
 export const specialists = [
@@ -298,34 +318,26 @@ export function metricConfig(question: QuizQuestion, answers: Record<number, Ans
   const subtitle = (question.subtitle ?? '').trim()
   const weightQuestion = questions.find((item) => item.metric === 'current-weight')
   const weight = weightQuestion ? numeric(answers[weightQuestion.originalNumber ?? -1]) : Number.NaN
-  if (subtitle.includes('کیلو') || question.q.includes('وزن')) {
-    return {
-      min: question.metric === 'target-gain' && Number.isFinite(weight) ? weight : 35,
-      max: question.metric === 'target-loss' && Number.isFinite(weight) ? weight - 1 : question.metric === 'target-gain' ? 300 : 240,
-      step: 1,
-      default: question.metric === 'target-gain' && Number.isFinite(weight) ? weight : 68,
-      unit: 'کیلوگرم',
-    }
+  const losing = question.metric === 'target-loss'
+  const gaining = question.metric === 'target-gain'
+  if (losing || gaining) {
+    const hasWeight = Number.isFinite(weight) && weight > 0
+    const min = gaining && hasWeight ? Math.floor(weight) + 1 : 35
+    const max = losing && hasWeight ? Math.ceil(weight) - 1 : 240
+    const heightQuestion = questions.find(isHeightQuestion)
+    const height = heightQuestion ? numeric(answerOf(heightQuestion, answers)) : Number.NaN
+    const area = (height / 100) ** 2
+    const nearestChange = losing ? max : min
+    const bmiBoundary = losing ? Math.floor(24.9 * area) : Math.ceil(18.5 * area)
+    const startingWeight = !hasWeight ? 68 : Number.isFinite(height) && height > 0
+      ? losing ? Math.min(nearestChange, bmiBoundary) : Math.max(nearestChange, bmiBoundary)
+      : nearestChange
+    return { min, max, step: 1, default: Math.min(max, Math.max(min, startingWeight)), unit: 'کیلوگرم' }
   }
+  if (isWeightQuestion(question)) return { min: 35, max: 240, step: 1, default: 68, unit: 'کیلوگرم' }
   if (isHeightQuestion(question)) return { min: 120, max: 230, step: 1, default: 165, unit: 'سانتی‌متر' }
   if (question.q.includes('سال')) return { min: 15, max: 90, step: 1, default: 28, unit: 'سال' }
   if (subtitle.includes('هفته') || question.q.includes('هفته')) return { min: 4, max: 42, step: 1, default: 12, unit: 'هفته' }
   if (question.q.includes('ماه') || subtitle.includes('ماه')) return { min: 0, max: 24, step: 1, default: 4, unit: 'ماه' }
   return { min: 0, max: 100, step: 1, default: 50, unit: subtitle || 'عدد' }
-}
-
-export function bmiGuidance(height: unknown, weight: unknown, goalId: string) {
-  const centimeters = numeric(height)
-  const kilograms = numeric(weight)
-  if (goalId === 'pregnancy' || !Number.isFinite(centimeters) || !Number.isFinite(kilograms) || centimeters <= 0 || kilograms <= 0) return null
-  const squared = (centimeters / 100) ** 2
-  const bmi = kilograms / squared
-  return {
-    bmi,
-    weight: kilograms,
-    low: Math.ceil(18.5 * squared * 10) / 10,
-    high: Math.floor(24.9 * squared * 10) / 10,
-    category: bmi < 18.5 ? 'کمبود وزن' : bmi < 25 ? 'محدودهٔ سالم' : bmi < 30 ? 'اضافه‌وزن' : 'چاقی',
-    suggestGain: goalId === 'weight_loss' && bmi < 18.5,
-  }
 }

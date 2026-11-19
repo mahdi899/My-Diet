@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useWizard } from '../../../application/wizard-store'
 import { answerLabel, answerOf, faDigits, iranianMobile, otpCode, plans } from '../../../domain/questionnaire'
 import { audience, canonicalAnswer, onboarding, writeCheckoutSession } from '../../../composition'
+import { StageAction } from '../StageAction'
+import { StageBack } from '../StageBack'
+import { isLocalOnboardingPreview, localOtpCode } from '../../../infrastructure/local-preview'
 
 const OTP_LENGTH = 6
 
@@ -32,7 +35,7 @@ function OtpCellField({
   const cells = Array.from({ length: OTP_LENGTH }, (_, index) => digits[index] ?? '')
 
   useEffect(() => {
-    if (!success && !disabled) inputRef.current?.focus()
+    if (!success && !disabled) inputRef.current?.focus({ preventScroll: true })
   }, [success, disabled])
 
   return (
@@ -88,6 +91,7 @@ export function VerifyStage() {
   const [otpSuccess, setOtpSuccess] = useState(false)
   const [otpShake, setOtpShake] = useState(false)
   const plan = plans.find((item) => item.id === wizard.plan) ?? plans[1]
+  const localPreview = isLocalOnboardingPreview()
 
   useEffect(() => {
     if (useWizard.getState().contactMode !== mode) useWizard.getState().setContactMode(mode)
@@ -100,6 +104,12 @@ export function VerifyStage() {
     const phone = iranianMobile(wizard.phone)
     if (!phone) {
       setError('لطفاً یک شماره موبایل معتبر ۱۱ رقمی (شروع با ۰۹) وارد کنید.')
+      return
+    }
+    if (localPreview) {
+      setError('')
+      wizard.setPhone(phone)
+      setMode('otp')
       return
     }
     setBusy(true)
@@ -140,16 +150,21 @@ export function VerifyStage() {
     setBusy(true)
     setError('')
     try {
-      const token = await onboarding.confirmSms({
-        phone: wizard.phone,
-        code: value,
-        submissionId: wizard.submissionId,
-        journeyId: audience.journeyId(),
-      })
-      wizard.setToken(token)
-      writeCheckoutSession({ token, submissionId: wizard.submissionId, plan: wizard.plan })
+      if (localPreview) {
+        if (value !== localOtpCode) throw new Error('کد آزمایشی درست نیست.')
+      } else {
+        const token = await onboarding.confirmSms({
+          phone: wizard.phone,
+          code: value,
+          submissionId: wizard.submissionId,
+          journeyId: audience.journeyId(),
+        })
+        wizard.setToken(token)
+        writeCheckoutSession({ token, submissionId: wizard.submissionId, plan: wizard.plan })
+      }
       setOtpSuccess(true)
-      await new Promise((resolve) => window.setTimeout(resolve, 920))
+      const successHold = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 350 : 1450
+      await new Promise((resolve) => window.setTimeout(resolve, successHold))
       wizard.setStage('checkout')
       navigate('/onboarding/payment')
     } catch (cause) {
@@ -164,28 +179,25 @@ export function VerifyStage() {
     <div id="twoStepModalBackdrop" className="flex">
       <div id="twoStepModalCard" data-plan={wizard.plan} data-verification={otpSuccess ? 'success' : undefined}>
         <div className="modal-topbar verify-topbar">
-          <button
+          <StageBack
             id="modalBackToPlansBtn"
-            type="button"
-            className="modal-back-plans-btn verify-back-btn"
+            label="بازگشت به پلن‌ها"
             onClick={() => wizard.setStage('plans')}
-          >
-            بازگشت به پلن‌ها
-          </button>
-          <span id="modalHeaderTitle">تأیید شماره</span>
+          />
         </div>
         <div className="modal-scroll-body">
           <form id="modalStep2Content" className="verify-flow" onSubmit={mode === 'phone' ? sendPhone : verifyCode}>
             <div className="verify-hero" aria-hidden="true">
-              <span className={`verify-hero-badge${mode === 'otp' ? ' verify-hero-badge--otp' : ''}`}>
+              <span className="verify-hero-badge">
                 {mode === 'phone' ? (
                   <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.6">
                     <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
                     <path d="M11 18.5h2" strokeLinecap="round" />
                   </svg>
                 ) : (
-                  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                    <rect x="5" y="2.5" width="14" height="19" rx="3" />
+                    <path d="M9 8h6m-6 4h.01m2.99 0h.01m2.99 0h.01m-6.01 4h.01m2.99 0h.01m2.99 0h.01" />
                   </svg>
                 )}
               </span>
@@ -194,11 +206,7 @@ export function VerifyStage() {
               <label id="morphInputLabel" htmlFor={mode === 'phone' ? 'morphPhoneInput' : 'morphOtpInput'}>
                 <span id="morphInputLabelText">{mode === 'phone' ? 'شماره همراهت' : 'کد تأیید پیامکی'}</span>
               </label>
-              <p id="morphInputSubtitle">
-                {mode === 'phone'
-                  ? 'برای ذخیرهٔ پاسخ‌ها و ادامهٔ خرید، یک‌بار کد تأیید برایت می‌فرستیم.'
-                  : `کد شش‌رقمی به ${faDigits(wizard.phone)} ارسال شد.`}
-              </p>
+              <div className="verify-field-slot" data-mode={mode}>
               {mode === 'phone' ? (
                 <input
                   id="morphPhoneInput"
@@ -220,28 +228,27 @@ export function VerifyStage() {
                   shake={otpShake}
                 />
               )}
-              {error && <p id="morphErrorText">{error}</p>}
-              <button id="morphConfirmBtn" type="submit" className="w-full" disabled={busy || otpSuccess}>
+              </div>
+              <div className="verify-field-meta">
+                {error && <p id="morphErrorText" role="alert">{error}</p>}
+                {mode === 'otp' && !error && <p id="morphInputSubtitle">{localPreview ? `کد آزمایشی: ${faDigits(localOtpCode)}` : `کد به ${faDigits(wizard.phone)} ارسال شد.`}</p>}
+                {mode === 'otp' && (
+                  <button id="editPhoneInOtpModeBtn" type="button" disabled={otpSuccess} onClick={() => { setMode('phone'); setCode(''); setError(''); setOtpSuccess(false) }}>
+                    ویرایش شماره
+                  </button>
+                )}
+              </div>
+              <StageAction id="morphConfirmBtn" type="submit" form="modalStep2Content" disabled={busy || otpSuccess}>
                 <span id="morphConfirmBtnText">
                   {otpSuccess ? 'تأیید شد' : busy ? 'در حال ارسال…' : mode === 'phone' ? 'دریافت کد تأیید' : 'تأیید و ادامه به پرداخت'}
                 </span>
-              </button>
-              {mode === 'phone' && <p className="verify-privacy-note">شمارهٔ تو فقط برای ذخیرهٔ پرونده و پشتیبانی استفاده می‌شود.</p>}
-              {mode === 'otp' && (
-                <button id="editPhoneInOtpModeBtn" type="button" disabled={otpSuccess} onClick={() => { setMode('phone'); setCode(''); setError(''); setOtpSuccess(false) }}>
-                  ویرایش شماره
-                </button>
-              )}
+              </StageAction>
             </div>
-            <div className="modal-plan-line verify-plan-pill">
-              <p className="modal-plan-summary-inline">
-                <strong>{plan.title}</strong>
-                <span className="modal-plan-sep">·</span>
-                <span>{plan.days}</span>
-                <span className="modal-plan-sep">·</span>
-                <span id="step2PlanPrice">{plan.price} تومان</span>
-              </p>
-            </div>
+            <p className="verify-plan-summary">
+              <strong>{plan.title}</strong>
+              <span>{plan.days}</span>
+              <span id="step2PlanPrice">{plan.price} تومان</span>
+            </p>
           </form>
         </div>
       </div>
