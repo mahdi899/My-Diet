@@ -45,6 +45,26 @@ class OnboardingController extends ChangeNotifier {
   int index = 0;
   int _version = 0;
   bool gapsOnly = false;
+  Set<String>? _editKeys;
+
+  /// Limit profile edits to the selected answer and its dependent questions.
+  void editQuestions(Set<String> keys) {
+    _editKeys = {...keys};
+    // Include conditional follow-ups, even when this edit reveals them later.
+    bool expanded;
+    do {
+      expanded = false;
+      for (final q in spec.questions) {
+        if (_editKeys!.contains(q.showIf?.key) && _editKeys!.add(q.key)) {
+          expanded = true;
+        }
+      }
+    } while (expanded);
+    steps = _buildSteps();
+    index = 0;
+    notifyListeners();
+  }
+
   bool submitting = false;
   String? syncError;
   String? submitError;
@@ -70,6 +90,12 @@ class OnboardingController extends ChangeNotifier {
   List<FlowStep> _buildSteps() {
     if (track == null) return const [TrackStep()];
     final questions = spec.active(track!, answers);
+    if (_editKeys != null) {
+      return [
+        for (final q in questions)
+          if (_editKeys!.contains(q.key)) QuestionStep(q),
+      ];
+    }
     final out = <FlowStep>[];
     if (gapsOnly) {
       final gaps = <String>{...spec.missing(track!, answers), ...state.missing};
@@ -138,6 +164,7 @@ class OnboardingController extends ChangeNotifier {
 
   void setTrack(String id) {
     if (track == id) return;
+    _editKeys = null;
     submitError = null;
     track = id;
     _rebuild(keep: '_track');
@@ -222,7 +249,7 @@ class OnboardingController extends ChangeNotifier {
     if (!hasUnsynced && !_stepDirty) return true;
     _flushing = true;
     final patch = Map<String, Object?>.from(_pending);
-    final step = current.id;
+    final step = steps.isEmpty ? '_track' : current.id;
     try {
       _version = await repository.saveDraft(
         track: track,

@@ -288,7 +288,7 @@ class _ChangeGoalState extends State<ChangeGoal> {
       state: OnboardingState(
         nextStep: NextStep.start,
         claimedFromDemo: false,
-        track: null,
+        track: state.track ?? state.profile?.track,
         missing: const [],
         draft: state.draft,
         profile: state.profile,
@@ -308,7 +308,6 @@ class _ChangeGoalState extends State<ChangeGoal> {
     if (active != null) {
       return OnboardingFlow(
         controller: active,
-        exitBeforeTrack: true,
         onExit: () => setState(() => controller = null),
         onDone: (profile) async {
           await refreshLive(widget.store, profile: profile);
@@ -332,6 +331,21 @@ class _ChangeGoalState extends State<ChangeGoal> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              const ListTile(title: Text('کدام مورد را می‌خواهی تغییر بدهی؟')),
+              if (flow.track != null)
+                for (final question in flow.spec.active(
+                  flow.track!,
+                  flow.answers,
+                ))
+                  ListTile(
+                    title: Text(question.title),
+                    trailing: const Icon(Icons.edit_outlined),
+                    onTap: () {
+                      flow.editQuestions({question.key});
+                      setState(() => controller = flow);
+                    },
+                  ),
+              const ListTile(title: Text('تغییر نوع هدف')),
               for (final goal in flow.spec.tracks)
                 ListTile(
                   leading: const Icon(Icons.flag_outlined),
@@ -344,7 +358,25 @@ class _ChangeGoalState extends State<ChangeGoal> {
                       ? null
                       : () {
                           flow.setTrack(goal.id);
-                          flow.next();
+                          final questions = flow.spec.active(
+                            goal.id,
+                            flow.answers,
+                          );
+                          flow.editQuestions({
+                            for (final q in questions)
+                              if (q.tracks != null ||
+                                  (q.required &&
+                                      !flow.spec.isAnswered(q, flow.answers)))
+                                q.key,
+                          });
+                          if (flow.steps.isEmpty) {
+                            flow.submit().then((profile) async {
+                              if (profile == null) return;
+                              await refreshLive(widget.store, profile: profile);
+                              if (context.mounted) Navigator.pop(context);
+                            });
+                            return;
+                          }
                           setState(() => controller = flow);
                         },
                 ),

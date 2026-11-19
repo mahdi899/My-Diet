@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../data/demo_store.dart';
 import '../../../presentation/screens/doctor.dart';
-import '../../../presentation/screens/messaging.dart';
-import '../../../presentation/screens/shared.dart';
+import '../../../presentation/screens/privacy.dart';
 import '../../../presentation/screens/wallet_flow.dart';
 import '../../../presentation/screens/weekly_feedback.dart';
 import '../../../presentation/widgets/kit/kit.dart';
@@ -90,6 +89,12 @@ class _GuestBlock extends StatelessWidget {
             Navigator.pop(context);
             store.openUserLogin();
           },
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+          ),
+          child: const Text('حریم خصوصی'),
         ),
       ],
     );
@@ -224,34 +229,9 @@ class _SignedIn extends StatelessWidget {
                 onTap: () => _open(context, const WeeklyFeedbackScreen()),
               ),
               MenuRow(
-                'گفت‌وگو با متخصص انسانی',
-                Icons.support_agent,
-                subtitle: 'پشتیبانی و پیام متخصص',
-                onTap: () => _open(
-                  context,
-                  store.serverAuthEnabled
-                      ? const LiveConversationsScreen()
-                      : const MessagesScreen(),
-                ),
-              ),
-              MenuRow(
                 'حریم خصوصی',
                 Icons.privacy_tip_outlined,
-                onTap: () => showDialog<void>(
-                  context: context,
-                  builder: (dialog) => AlertDialog(
-                    title: const Text('حریم خصوصی'),
-                    content: const Text(
-                      'پاسخ‌های پرسش‌نامه روی همین دستگاه می‌مانند تا قابل ویرایش باشند. گفت‌وگو با مربی در حالت نمایشی هم روی دستگاه ذخیره می‌شود. ارسال دادهٔ سلامت به مدل زبانی فقط با ورود به حساب واقعی انجام می‌شود.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialog),
-                        child: const Text('متوجه شدم'),
-                      ),
-                    ],
-                  ),
-                ),
+                onTap: () => _open(context, const PrivacyScreen()),
               ),
             ],
           ),

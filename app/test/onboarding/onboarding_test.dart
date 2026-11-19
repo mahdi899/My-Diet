@@ -149,11 +149,43 @@ OnboardingController make(FakeOnboarding repo, {OnboardingState? state}) =>
     );
 
 void main() {
+  test(
+    'profile edit asks only the selected question and preserves answers',
+    () {
+      final c = make(FakeOnboarding());
+      addTearDown(c.dispose);
+      c.setTrack('lose');
+      c.setAnswer('weight', 80);
+      c.setAnswer('target_weight', 70);
+      c.editQuestions({'target_weight'});
+      expect(c.steps.map((s) => s.id), ['target_weight']);
+      c.setAnswer('target_weight', 68);
+      expect(c.isLast, isTrue);
+      expect(c.answer('weight'), 80);
+    },
+  );
+
+  test('profile edit reveals only related conditional questions', () {
+    final c = make(FakeOnboarding());
+    addTearDown(c.dispose);
+    c.setTrack('lose');
+    c.setAnswer('conditions', ['none']);
+    c.editQuestions({'conditions'});
+    expect(c.steps.map((s) => s.id), ['conditions']);
+    c.setAnswer('conditions', ['diabetes']);
+    expect(c.steps.map((s) => s.id), ['conditions', 'insulin']);
+    c.setAnswer('conditions', ['none']);
+    expect(c.steps.map((s) => s.id), ['conditions']);
+  });
+
   group('Jalali', () {
     test('converts known dates', () {
       expect(jalali(DateTime(2026, 11, 8)), (1405, 8, 17));
       expect(jalali(DateTime(2026, 3, 21)), (1405, 1, 1));
-      expect(persianDate(DateTime(2026, 11, 8), year: true), contains('۱۷ آبان ۱۴۰۵'));
+      expect(
+        persianDate(DateTime(2026, 11, 8), year: true),
+        contains('۱۷ آبان ۱۴۰۵'),
+      );
     });
 
     test('week index is Saturday first', () {

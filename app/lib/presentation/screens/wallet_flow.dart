@@ -161,7 +161,7 @@ class SubscriptionSummaryCard extends StatelessWidget {
         const SizedBox(height: 8),
         if (subscription == null)
           const Text(
-            'هنوز اشتراک فعالی نداری. با انتخاب و پرداخت پلن، اشتراکت فعال می‌شود.',
+            'هنوز اشتراک فعالی نداری.',
             style: TextStyle(
               color: Color(0xFFE7EFD8),
               height: 1.8,
@@ -496,7 +496,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                   if (loading)
                     const OperationStatus(
                       title: 'در حال دریافت پلن‌ها',
-                      message: 'قیمت و جزئیات پلن‌ها از سرور دریافت می‌شود.',
+                      message: 'کمی صبر کن…',
                       icon: Icons.cloud_download_outlined,
                     ),
                   if (processing)
@@ -504,15 +504,11 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                       key: _waitingAnchor,
                       child: const OperationStatus(
                         key: ValueKey('payment-processing'),
-                        title: 'منتظر نتیجهٔ پرداخت هستیم',
-                        message:
-                            'اگر درگاه را باز کرده‌ای، پرداخت را آنجا کامل کن. فعال‌سازی فقط پس از تأیید نتیجه انجام می‌شود.',
+                        title: 'در انتظار تأیید پرداخت',
+                        message: 'پرداخت را در درگاه کامل کن.',
                         icon: Icons.payments_outlined,
                         child: OperationPath(
-                          labels: [
-                            'درخواست و انجام پرداخت',
-                            'تأیید نتیجه و فعال‌سازی',
-                          ],
+                          labels: ['پرداخت', 'فعال‌سازی'],
                           current: 0,
                         ),
                       ),
@@ -520,7 +516,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                   const SubscriptionSummaryCard(),
                   const Heading(
                     'پلن مناسب تو',
-                    subtitle: 'برنامه پس از بررسی و تأیید متخصص منتشر می‌شود.',
+                    subtitle: 'انتشار برنامه پس از تأیید متخصص',
                   ),
                   for (final plan
                       in catalogReady
@@ -555,7 +551,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                       title: offer.title,
                       subtitle: offer.subtitle,
                       price: included(store, offer)
-                          ? 'شامل اشتراک فعال شما'
+                          ? 'شامل اشتراک'
                           : formatToman(offer.priceToman),
                       icon: offer.icon,
                       selected: selected?.id == offer.id,
@@ -567,9 +563,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                             },
                     ),
                   if (!eligible)
-                    const Notice(
-                      'برای تغییر برنامه، ابتدا پلن برنامهٔ غذایی را فعال کن.',
-                    ),
+                    const Notice('برای تغییر برنامه، اشتراک را فعال کن.'),
                   if (error != null)
                     KeyedSubtree(
                       key: _errorAnchor,
@@ -623,7 +617,7 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                   children: [
                     if (selected == null)
                       const Text(
-                        'برای ادامه یک پلن انتخاب کن.',
+                        'یک پلن انتخاب کن.',
                         key: ValueKey('payable-amount'),
                         style: TextStyle(
                           color: AppColors.inkSoft,

@@ -7,6 +7,7 @@ import '../widgets/clinic_food_art.dart';
 import 'expert.dart';
 import 'shared.dart';
 import 'doctor.dart';
+import 'privacy.dart';
 
 class ClinicStatus extends StatelessWidget {
   const ClinicStatus(this.request, {super.key});
@@ -1053,21 +1054,7 @@ class _ClinicProfileState extends State<ClinicProfile> {
                 'شمارهٔ همراه شخصی برای کاربران نمایش داده نمی‌شود.',
           }),
           TextButton.icon(
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (d) => AlertDialog(
-                title: const Text('حریم خصوصی'),
-                content: const Text(
-                  'اطلاعات این نسخه نمایشی و محلی است. شمارهٔ همراه شخصی پزشک در پروفایل عمومی نمایش داده نمی‌شود.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(d),
-                    child: const Text('بستن'),
-                  ),
-                ],
-              ),
-            ),
+            onPressed: () => pushPage(context, const PrivacyScreen()),
             icon: const Icon(Icons.privacy_tip_outlined, size: 17),
             label: const Text('حریم خصوصی', style: TextStyle(fontSize: 12)),
           ),
