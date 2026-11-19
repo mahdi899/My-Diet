@@ -136,6 +136,11 @@ final class AdminDeskController
         return $this->desk->removeMember($actor, $actor, Input::uuid($userId));
     }
 
+    public function ownMemberActivity(Request $request, string $userId): array
+    {
+        return $this->desk->doctorMemberActivity($this->actor($request), Input::uuid($userId));
+    }
+
     public function members(Request $request, string $id): array
     {
         $available = $request->query('available');

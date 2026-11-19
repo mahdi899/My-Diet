@@ -209,6 +209,7 @@ export type DoctorMember = {
   week?: number | null;
   weightChangeKg?: number | null;
   refreshedAt?: string;
+  completedDays?: number;
 };
 
 const previewMembers: DoctorMember[] = previewReviewQueue.map((row, index) => ({
@@ -219,7 +220,7 @@ const previewMembers: DoctorMember[] = previewReviewQueue.map((row, index) => ({
 export async function loadMembers(progress = false): Promise<DoctorMember[]> {
   if (doctorPreviewEnabled()) {
     const hidden: string[] = JSON.parse(sessionStorage.getItem('doctor-preview-removed') ?? '[]');
-    return previewMembers.filter(row => !hidden.includes(row.id));
+    return previewMembers.filter(row => !hidden.includes(row.id)).map(row => progress ? { ...row, completedDays: 2 } : row);
   }
   return staff.api<DoctorMember[]>('specialist/members' + (progress ? '?progress=1' : ''));
 }
@@ -236,6 +237,33 @@ export async function loadMember(id: string): Promise<MemberDetail> {
     return { ...profile, ...row, targetWeightKg: profile?.targetWeightKg ?? undefined };
   }
   return staff.api<MemberDetail>('specialist/members/' + encodeURIComponent(id));
+}
+
+export type ActivityDay = {
+  planned: number; recorded: number; mealStates: Record<string, number>;
+  foods: string[]; waterMl: number | null; weightKg: number | null;
+};
+
+export type MemberActivity = {
+  displayName: string; registeredOn: string; today: string;
+  completedDays: number; days: Record<string, ActivityDay>;
+};
+
+export async function loadMemberActivity(id: string): Promise<MemberActivity> {
+  if (doctorPreviewEnabled()) {
+    const today = new Intl.DateTimeFormat('sv-SE', { dateStyle: 'short', timeZone: 'Asia/Tehran' }).format(new Date());
+    const shift = (days: number) => new Date(Date.parse(today) + days * 86_400_000).toISOString().slice(0, 10);
+    return {
+      displayName: previewMembers.find(row => row.id === id)?.displayName ?? '',
+      registeredOn: shift(-12), today, completedDays: 2,
+      days: {
+        [shift(-2)]: { planned: 3, recorded: 3, mealStates: { as_planned: 3 }, foods: [], waterMl: 1500, weightKg: 74.5 },
+        [shift(-1)]: { planned: 3, recorded: 3, mealStates: { as_planned: 2, less: 1 }, foods: [], waterMl: 1800, weightKg: null },
+        [today]: { planned: 3, recorded: 1, mealStates: { as_planned: 1 }, foods: ['ماست و گردو'], waterMl: 500, weightKg: null },
+      },
+    };
+  }
+  return staff.api<MemberActivity>('specialist/members/' + encodeURIComponent(id) + '/activity');
 }
 
 export async function removeMember(id: string): Promise<void> {

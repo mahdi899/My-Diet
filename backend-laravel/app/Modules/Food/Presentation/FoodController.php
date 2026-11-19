@@ -38,6 +38,28 @@ final class FoodController
         return $this->service->listing([...$request->only(['q', 'category', 'cursor', 'limit']), 'active' => 'true']);
     }
 
+    public function catalogFood(string $slug): array
+    {
+        $food = $this->service->get($slug);
+        unset($food['recipe']['sourceMarkdown']);
+
+        return $food;
+    }
+
+    public function foodBank(Request $request): array
+    {
+        return $this->service->listing($request->only(['q', 'category', 'meal', 'active', 'cursor', 'limit']));
+    }
+
+    public function localPreview(Request $request, ?string $slug = null): array
+    {
+        abort_unless(app()->environment('local')
+            && in_array($request->server('REMOTE_ADDR'), ['127.0.0.1', '::1'], true)
+            && in_array($request->getHost(), ['127.0.0.1', 'localhost', '[::1]'], true), 404);
+
+        return $slug === null ? $this->foodBank($request) : $this->catalogFood($slug);
+    }
+
     public function compose(Request $request): JsonResponse
     {
         return response()->json($this->service->compose($this->body($request)), 201);

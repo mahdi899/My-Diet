@@ -1,0 +1,24 @@
+.doctor-progress { display: grid; gap: 16px; }
+.doctor-progress .progress-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.doctor-progress :is(h2, h3, p, dl) { margin: 0; }
+.doctor-progress .progress-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 36px; }
+.doctor-progress .progress-overview div { display: grid; gap: 4px; }
+.doctor-progress .progress-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.doctor-progress .progress-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-block: 16px; }
+.doctor-progress .progress-weekday { text-align: center; padding-block: 6px; font-size: clamp(.58rem, 1.4vw, .85rem); }
+.doctor-portal .doctor-progress button.progress-date { display: grid; place-content: center; gap: 0; min-width: 0; min-height: 48px; padding: 3px; background: #f3f5f1; color: #35483d; border: 1px solid transparent; border-radius: 8px; }
+.doctor-portal .doctor-progress button.progress-date[data-status="complete"] { background: #e0f0e4; color: #215238; }
+.doctor-portal .doctor-progress button.progress-date[data-status="partial"] { background: #fff0d6; color: #70480b; }
+.doctor-portal .doctor-progress button.progress-date[data-status="activity"] { background: #e7eef4; color: #27495f; }
+.doctor-portal .doctor-progress button.progress-date[aria-pressed="true"] { border-color: currentColor; box-shadow: inset 0 0 0 1px currentColor; }
+.doctor-portal .doctor-progress button.progress-date:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+.doctor-portal .doctor-progress button.progress-date:disabled { opacity: .4; }
+.doctor-progress .progress-legend { font-size: .85rem; }
+.doctor-progress .progress-day { display: grid; gap: 10px; }
+.doctor-progress .progress-status { font-weight: 700; }
+.doctor-progress .progress-day dl > div { display: flex; justify-content: space-between; gap: 12px; padding-block: 9px; border-block-start: 1px solid var(--line, #dbe4d6); }
+.doctor-progress .progress-day dd { margin: 0; text-align: end; }
+.doctor-progress .progress-day ul { margin: 0; padding-inline-start: 18px; }
+@media (max-width: 800px) {
+  .doctor-progress .progress-columns { grid-template-columns: minmax(0, 1fr); }
+}

@@ -11,12 +11,13 @@ use App\Shared\Domain\Amount;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 
 final class MySqlAdminDesk
 {
-    public function __construct(private ConnectionInterface $db, private IdentitySettings $settings, private WorkerStore $worker) {}
+    public function __construct(private ConnectionInterface $db, private IdentitySettings $settings, private WorkerStore $worker, private DoctorActivity $activity) {}
 
     public function createSpecialist(string $actor, array $input): array
     {
@@ -108,7 +109,7 @@ final class MySqlAdminDesk
         return ['displayName' => $next['display_name'], 'credential' => $next['credential'], 'bio' => $next['bio'], 'councilNo' => $council, 'verificationStatus' => $verification, 'active' => (bool) (int) $current->active, 'portrait' => $next['portrait'], 'education' => $next['education']];
     }
 
-    private function memberQuery(string $specialist): \Illuminate\Database\Query\Builder
+    private function memberQuery(string $specialist): Builder
     {
         return $this->db->table('specialist_members as m')
             ->join('users as u', 'u.id', '=', 'm.user_id')
@@ -119,8 +120,27 @@ final class MySqlAdminDesk
     public function doctorMembers(string $specialist, bool $progress): array
     {
         return $this->memberQuery($specialist)->orderBy('u.display_name')->orderBy('u.id')
-            ->get(['u.id', 'u.display_name as displayName', 'u.phone_e164 as phone', 'p.track', 'p.goal'])
-            ->map(fn ($row) => (array) $row + ($progress ? $this->dailyProgress($row->id) : []))->all();
+            ->get(['u.id', 'u.display_name as displayName', 'u.phone_e164 as phone', 'p.track', 'p.goal', 'u.created_at as registeredAt'])
+            ->map(function ($row) use ($progress): array {
+                $member = (array) $row;
+                unset($member['registeredAt']);
+
+                return $member + ($progress ? $this->dailyProgress($row->id, CivilDates::today($row->registeredAt)) : []);
+            })->all();
+    }
+
+    public function doctorMemberActivity(string $specialist, string $user): array
+    {
+        $row = $this->memberQuery($specialist)->where('u.id', $user)->first(['u.created_at', 'u.display_name']);
+        if ($row === null) {
+            throw new Problem(404, 'not_found', 'این کاربر زیرمجموعهٔ این پزشک نیست');
+        }
+        $registeredOn = CivilDates::today($row->created_at);
+        $today = CivilDates::today();
+        $days = $this->activity->days($user, $registeredOn, $today, true);
+
+        return ['displayName' => $row->display_name, 'registeredOn' => $registeredOn, 'today' => $today,
+            'completedDays' => $this->activity->completed($days), 'days' => (object) $days];
     }
 
     public function doctorMember(string $specialist, string $user): array
@@ -140,7 +160,7 @@ final class MySqlAdminDesk
         return (array) $row;
     }
 
-    private function dailyProgress(string $user): array
+    private function dailyProgress(string $user, string $registeredOn): array
     {
         return Cache::remember('doctor-member-progress:'.$user, 86400, function () use ($user): array {
             $start = $this->db->table('plan_requests')->where('user_id', $user)->where('status', 'published')
@@ -154,7 +174,7 @@ final class MySqlAdminDesk
                 'weightChangeKg' => $first === null || $latest === null || $first->civil_date === $latest->civil_date
                     ? null : round((float) $latest->kilograms - (float) $first->kilograms, 1),
                 'refreshedAt' => now()->toISOString()];
-        });
+        }) + ['completedDays' => $this->activity->completed($this->activity->days($user, $registeredOn, CivilDates::today()))];
     }
 
     public function setVerification(string $actor, string $id, string $status): array

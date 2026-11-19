@@ -13,8 +13,8 @@ function goal(row: Person) {
   return trackLabels[row.goal ?? ''] || trackLabels[row.track ?? ''] || row.goal || '—'
 }
 
-export function PeoplePage({ mode, onPlan, onMeals }: {
-  mode: Mode; onPlan: (id: string) => void; onMeals: (id: string) => void
+export function PeoplePage({ mode, onPlan, onMeals, onActivity }: {
+  mode: Mode; onPlan: (id: string) => void; onMeals: (id: string) => void; onActivity: (id: string) => void
 }) {
   const queryClient = useQueryClient()
   const [detail, setDetail] = useState<Person | null>(null)
@@ -36,19 +36,21 @@ export function PeoplePage({ mode, onPlan, onMeals }: {
   if (list.isPending) return <p role="status">در حال دریافت اطلاعات…</p>
   if (list.isError) return <p role="alert">{apiError(list.error)}</p>
   return <>
-    {reports && <p className="workspace-note">هفته از شروع نخستین برنامه و تغییر وزن از اولین تا آخرین ثبت محاسبه می‌شود. گزارش تا ۲۴ ساعت پس از آخرین محاسبه معتبر است.</p>}
+    {reports && <p className="workspace-note">روز کامل یعنی همهٔ وعده‌های برنامه در آن روز ثبت شده‌اند. هفتهٔ برنامه و تغییر وزن هر ۲۴ ساعت محاسبه می‌شوند.</p>}
     <section className="card table-wrap">
       <table>
         <thead><tr><th>نام کاربر</th><th>شماره تلفن</th>{review && <th>تاریخ ثبت</th>}<th>هدف</th>
-          {reports ? <><th>هفتهٔ برنامه</th><th>تغییر وزن</th><th>آخرین محاسبه</th></> : <th>عملیات</th>}
+          {reports ? <><th>هفتهٔ برنامه</th><th>تغییر وزن</th><th>آخرین محاسبه</th><th>روزهای کامل</th><th>عملیات</th></> : <th>عملیات</th>}
         </tr></thead>
         <tbody>
-          {list.data.length === 0 && <tr><td colSpan={reports ? 6 : review ? 5 : 4}>هنوز موردی ثبت نشده است.</td></tr>}
+          {list.data.length === 0 && <tr><td colSpan={reports ? 8 : review ? 5 : 4}>هنوز موردی ثبت نشده است.</td></tr>}
           {list.data.map(row => <tr key={row.id}>
             <td>{row.displayName || '—'}</td><td><bdi>{row.phone || '—'}</bdi></td>
             {review && <td>{formatFaDay((row as QueueRow).createdAt)}</td>}
             <td>{goal(row)}</td>
-            {reports ? <ProgressCells row={row as DoctorMember} /> : <td><div className="doctor-row-actions">
+            {reports ? <><ProgressCells row={row as DoctorMember} /><td><div className="doctor-row-actions">
+              <button className="secondary icon-button" type="button" aria-label={`مشاهدهٔ تقویم فعالیت ${row.displayName}`} title="مشاهدهٔ تقویم فعالیت" onClick={() => onActivity(row.id)}><Icon name="eye" /></button>
+            </div></td></> : <td><div className="doctor-row-actions">
               <button className="secondary icon-button" type="button" aria-label={`مشاهدهٔ اطلاعات ${row.displayName}`} onClick={() => setDetail(row)}><Icon name="eye" /></button>
               {!review && <button className="secondary icon-button" type="button" aria-label={`حذف عضویت ${row.displayName}`}
                 onClick={() => { removal.reset(); setRemoving(row) }}><Icon name="trash" /></button>}
@@ -72,10 +74,11 @@ function ProgressCells({ row }: { row: DoctorMember }) {
     <td>{row.week == null ? 'شروع نشده' : formatFaNumber(row.week)}</td>
     <td>{change == null ? 'ثبت وزن کافی نیست' : change === 0 ? 'بدون تغییر' : `${formatFaNumber(Math.abs(change))} کیلوگرم ${change < 0 ? 'کاهش' : 'افزایش'}`}</td>
     <td>{row.refreshedAt ? formatFaDay(row.refreshedAt) : '—'}</td>
+    <td>{row.completedDays == null ? '—' : formatFaNumber(row.completedDays)}</td>
   </>
 }
 
-function DoctorDialog({ title, close, busy = false, children }: {
+export function DoctorDialog({ title, close, busy = false, children }: {
   title: string; close: () => void; busy?: boolean; children: ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)

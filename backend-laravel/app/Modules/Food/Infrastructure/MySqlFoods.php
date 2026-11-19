@@ -21,7 +21,7 @@ final class MySqlFoods implements FoodStore
         $columns = ['id', 'slug', 'name_fa', 'category', 'meal_types', 'serving_label', 'serving_g', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g', 'allergens', 'tags', 'regions', 'seasons', 'cost_tier', 'prep_minutes', 'ingredients', 'image', 'active', 'source', 'nutrition', 'nutrition_status'];
         foreach ($columns as $column) {
             $key = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $column))));
-            $value = $row->$column;
+            $value = $column === 'nutrition_status' ? ($row->nutrition_status ?? null) : $row->$column;
             if ($value !== null && in_array($column, ['meal_types', 'allergens', 'tags', 'regions', 'seasons', 'ingredients', 'nutrition'], true)) {
                 $value = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
             } elseif (in_array($column, ['protein_g', 'carbs_g', 'fat_g', 'fiber_g'], true)) {
