@@ -68,6 +68,12 @@
 .doctor-details-dialog header h2 { margin: 0; }
 .doctor-detail-grid > div { padding: 12px; background: #f1f5ee; border-radius: 12px; overflow-wrap: anywhere; }
 .doctor-detail-grid dd { margin: 5px 0 0; font-weight: 600; }
+.doctor-intake { margin-block-start: 24px; border: 1px solid var(--line, #dbe4d6); border-radius: 14px; overflow: hidden; }
+.doctor-intake h3 { margin: 0; padding: 14px 16px; background: #eef4ec; font-size: 1rem; }
+.doctor-intake p { margin: 0; padding: 14px 16px; }
+.doctor-intake dl { margin: 0; }
+.doctor-intake dl > div { display: grid; gap: 4px; padding: 12px 16px; border-block-start: 1px solid var(--line, #dbe4d6); overflow-wrap: anywhere; }
+.doctor-intake dd { margin: 0; font-weight: 600; text-align: right; white-space: pre-wrap; }
 .doctor-details-dialog .doctor-row-actions { flex-wrap: wrap; }
 .doctor-portal .doctor-food-bank {
   min-width: 0;

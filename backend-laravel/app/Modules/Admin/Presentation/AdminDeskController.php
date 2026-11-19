@@ -138,7 +138,7 @@ final class AdminDeskController
 
     public function ownMemberActivity(Request $request, string $userId): array
     {
-        return $this->desk->doctorMemberActivity($this->actor($request), Input::uuid($userId));
+        return $this->desk->doctorMemberActivity($this->actor($request), Input::uuid($userId), $request->query('date'));
     }
 
     public function members(Request $request, string $id): array

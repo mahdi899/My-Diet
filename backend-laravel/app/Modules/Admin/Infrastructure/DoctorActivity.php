@@ -2,13 +2,86 @@
 
 namespace App\Modules\Admin\Infrastructure;
 
+use App\Modules\Plans\Application\PlanQueries;
 use App\Modules\Plans\Domain\CivilDates;
 use App\Modules\Rewards\Domain\StreakRules;
 use Illuminate\Database\ConnectionInterface;
 
 final class DoctorActivity
 {
-    public function __construct(private ConnectionInterface $db) {}
+    public function __construct(private ConnectionInterface $db, private PlanQueries $plans) {}
+
+    public function nutrition(string $user, string $date): array
+    {
+        $until = (new \DateTimeImmutable(CivilDates::add($date, 1), new \DateTimeZone('Asia/Tehran')))
+            ->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+        $target = $this->db->table('nutrition_profile_history')->where('user_id', $user)->where('created_at', '<', $until)
+            ->orderByDesc('created_at')->orderByDesc('id')->value('target_kcal');
+        $target ??= $this->db->table('nutrition_profiles')->where('user_id', $user)->where('updated_at', '<', $until)->value('target_kcal');
+
+        $meals = [];
+        $known = [];
+        $hasUnknown = false;
+        $plan = $this->plans->day($user, $date);
+        foreach ($plan['meals'] as $meal) {
+            $options = array_map(fn ($option) => $this->foodOption($option), $meal['options']);
+            if ($options === []) {
+                $options[] = ['id' => null, 'kind' => 'primary', 'title' => $meal['title'], 'kcal' => $meal['calories']];
+            }
+            $log = $meal['consumption'];
+            $state = $meal['consumptionState'];
+            $consumed = null;
+            $calories = $log['consumedCalories'] ?? null;
+            if (in_array($state, ['as_planned', 'less', 'more'], true)) {
+                $optionId = $log['optionId'] ?? null;
+                if ($optionId !== null && ($log['versionId'] ?? null) !== $plan['versionId']) {
+                    $document = $this->db->table('plan_meal_options as o')->join('plan_meals as m', 'm.id', '=', 'o.meal_id')
+                        ->join('plan_days as d', 'd.id', '=', 'm.plan_day_id')
+                        ->where('d.plan_version_id', $log['versionId'])->where('d.civil_date', $date)
+                        ->where('m.meal_uid', $meal['mealUid'])->where('o.option_uid', $optionId)->value('o.document');
+                    $consumed = $document === null ? null : $this->foodOption(json_decode($document, true));
+                } else {
+                    foreach ($options as $option) {
+                        if ($optionId === null ? $option['kind'] === 'primary' : $option['id'] === $optionId) {
+                            $consumed = $option;
+                            break;
+                        }
+                    }
+                }
+                if ($state === 'as_planned') {
+                    $calories ??= $consumed['kcal'] ?? null;
+                }
+            }
+            $calories = $state === 'skipped' ? 0 : $calories;
+            if ($calories !== null) {
+                $known[] = $calories;
+            } elseif ($state !== 'unrecorded') {
+                $hasUnknown = true;
+            }
+            $meals[] = ['id' => $meal['mealUid'], 'type' => $meal['mealType'], 'state' => $state, 'options' => $options,
+                'consumed' => $consumed, 'otherFood' => $state === 'different' ? ($log['foodName'] ?? null) : null,
+                'consumedKcal' => $calories];
+        }
+
+        foreach ($this->db->table('coach_food_entries')->where(['user_id' => $user, 'civil_date' => $date, 'status' => 'logged'])->pluck('totals') as $totals) {
+            $kcal = json_decode($totals, true)['kcal'] ?? null;
+            if (is_numeric($kcal)) {
+                $known[] = (float) $kcal;
+            } else {
+                $hasUnknown = true;
+            }
+        }
+
+        return ['targetKcal' => $target === null ? null : (int) $target,
+            'consumedKcal' => $known === [] ? null : (int) round(array_sum($known)),
+            'hasUnknownCalories' => $hasUnknown, 'meals' => $meals];
+    }
+
+    private function foodOption(array $option): array
+    {
+        return ['id' => $option['optionId'] ?? null, 'kind' => $option['kind'], 'title' => $option['title'],
+            'kcal' => $option['calories'] ?? null];
+    }
 
     public function days(string $user, string $from, string $to, bool $details = false): array
     {

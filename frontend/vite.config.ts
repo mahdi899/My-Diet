@@ -1,12 +1,25 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('.', import.meta.url))
 
+function copySiteImages(): Plugin {
+  return {
+    name: 'copy-site-src-assets',
+    apply: 'build',
+    closeBundle() {
+      const srcAssets = resolve(root, 'src/assets')
+      const distAssets = resolve(root, 'dist/src/assets')
+      if (fs.existsSync(srcAssets)) fs.cpSync(srcAssets, distAssets, { recursive: true, force: true })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), copySiteImages()],
   resolve: {
     alias: {
       '@shared': resolve(root, 'src/shared'),
