@@ -1,0 +1,93 @@
+Tool: built-in image_gen
+Style reference: D:/ad/My-Diet/output/imagegen/myket-coach-sabzak-v3.png
+Mascot reference: D:/ad/My-Diet/app/assets/images/home/sprout_welcome.png
+
+02-specialist
+Screenshot: D:\ad\My-Diet\references\flutter-app-review\2026-11-19\doctor-profile\implemented.png
+Use case: ads-marketing / compositing. Create ONE finished Persian Myket app-store feature poster. Portrait EXACT 9:16, ideally 1080x1920. This is part of an approved coherent campaign, not a new style exploration.
+INPUT ROLES: Image 1 is the APPROVED CAMPAIGN POSTER: match its cream/ivory background, large pale mint circular field, dark emerald bold Persian typography, tiny lime underline and orange rays, small mint top brand capsule, polished near-frontal graphite phone on the right, smiling 3D sprout planter mascot at lower left, soft floor shadow, clean friendly visual richness. Use it ONLY as art direction and composition reference. Replace its headline, subtitle, speech-bubble copy and screen with the assigned content below. Do not retain the coach headline or coach chat screen from this reference.
+Image 2 is the EXACT REAL IMPLEMENTED APP SCREENSHOT for this new poster. Treat it as a protected flat insert, preserving its Persian text, images, layout, colors, controls, and original proportions. Put this real screenshot inside the phone without inventing a different interface. Keep important screen content readable. Do not fabricate a doctor's portrait, change credentials, add new UI, or draw charts not in the screenshot.
+Image 3 is the exact green mascot «سبزک»: two fresh green leaves on a stem growing from a smiling rounded ivory planter with emerald rim, happy closed eyes, pale mint cheeks, realistic polished soft 3D texture. Preserve its identity. Keep it in the lower-left foreground, slightly overlapping the phone's outer border but not key app content.
+COMPOSITION LOCK: same general placements, phone scale, palette, lighting and typography as approved campaign. Top brand capsule «مای دایت» with tiny sprout. One large single-feature headline in the top quarter, one smaller subtitle, phone in middle/lower right occupying about 63% poster height, mascot bottom left, one small friendly speech bubble above mascot. One pale mint circle behind product and mascot. Enough breathing room, moderate detail, no clutter. 6% safe margin. Full phone bottom and full mascot pot visible. Correct connected Persian lettering and right-to-left layout.
+No extra marketing points, no English, no testimonials, no before-after bodies, no weight-loss promises or percentages, no money-back claims, no watermarks, no external presentation scene. Only assigned marketing copy; keep the existing app's internal text as screenshot content.
+
+ASSIGNED POSTER: 02-specialist
+Exact headline: «دکتر متخصص تغذیه».
+Exact subtitle: «برنامه‌ات، زیر نظر متخصص».
+Exact speech bubble: «با هم بررسی می‌کنیم».
+Brand: «مای دایت».
+Specific scene direction: Fit the headline over TWO balanced lines: «دکتر متخصص» then «تغذیه». Real phone screen shows the specialist profile from Image 2, including the existing placeholder avatar, existing qualifications and sample-data footer. No invented portrait. A small ivory-and-emerald clipboard beside the mascot reinforces review and expertise; do not dress the mascot as a doctor or add a human.
+Output just this one poster, never a collage of multiple posters.
+
+
+03-balanced-diet
+Screenshot: D:\ad\My-Diet\references\flutter-app-review\2026-11-16\design-system\after\meal.png
+Use case: ads-marketing / compositing. Create ONE finished Persian Myket app-store feature poster. Portrait EXACT 9:16, ideally 1080x1920. This is part of an approved coherent campaign, not a new style exploration.
+INPUT ROLES: Image 1 is the APPROVED CAMPAIGN POSTER: match its cream/ivory background, large pale mint circular field, dark emerald bold Persian typography, tiny lime underline and orange rays, small mint top brand capsule, polished near-frontal graphite phone on the right, smiling 3D sprout planter mascot at lower left, soft floor shadow, clean friendly visual richness. Use it ONLY as art direction and composition reference. Replace its headline, subtitle, speech-bubble copy and screen with the assigned content below. Do not retain the coach headline or coach chat screen from this reference.
+Image 2 is the EXACT REAL IMPLEMENTED APP SCREENSHOT for this new poster. Treat it as a protected flat insert, preserving its Persian text, images, layout, colors, controls, and original proportions. Put this real screenshot inside the phone without inventing a different interface. Keep important screen content readable. Do not fabricate a doctor's portrait, change credentials, add new UI, or draw charts not in the screenshot.
+Image 3 is the exact green mascot «سبزک»: two fresh green leaves on a stem growing from a smiling rounded ivory planter with emerald rim, happy closed eyes, pale mint cheeks, realistic polished soft 3D texture. Preserve its identity. Keep it in the lower-left foreground, slightly overlapping the phone's outer border but not key app content.
+COMPOSITION LOCK: same general placements, phone scale, palette, lighting and typography as approved campaign. Top brand capsule «مای دایت» with tiny sprout. One large single-feature headline in the top quarter, one smaller subtitle, phone in middle/lower right occupying about 63% poster height, mascot bottom left, one small friendly speech bubble above mascot. One pale mint circle behind product and mascot. Enough breathing room, moderate detail, no clutter. 6% safe margin. Full phone bottom and full mascot pot visible. Correct connected Persian lettering and right-to-left layout.
+No extra marketing points, no English, no testimonials, no before-after bodies, no weight-loss promises or percentages, no money-back claims, no watermarks, no external presentation scene. Only assigned marketing copy; keep the existing app's internal text as screenshot content.
+
+ASSIGNED POSTER: 03-balanced-diet
+Exact headline: «رژیم اصولی».
+Exact subtitle: «برنامه‌ای برای سبک زندگی تو».
+Exact speech bubble: «قدم‌به‌قدم با هم».
+Brand: «مای دایت».
+Specific scene direction: Headline «رژیم اصولی» large and bold on one line. The phone shows the real meal-detail screenshot with fish, rice, portions, calories and ingredients exactly as supplied. The mascot may have one small meal checklist beside its pot. Keep food photography inside the actual screenshot; no giant separate food plates.
+Output just this one poster, never a collage of multiple posters.
+
+
+04-method-2026
+Screenshot: D:\ad\My-Diet\references\flutter-app-review\2026-11-18\botanical-footer\weight-history.png
+Use case: ads-marketing / compositing. Create ONE finished Persian Myket app-store feature poster. Portrait EXACT 9:16, ideally 1080x1920. This is part of an approved coherent campaign, not a new style exploration.
+INPUT ROLES: Image 1 is the APPROVED CAMPAIGN POSTER: match its cream/ivory background, large pale mint circular field, dark emerald bold Persian typography, tiny lime underline and orange rays, small mint top brand capsule, polished near-frontal graphite phone on the right, smiling 3D sprout planter mascot at lower left, soft floor shadow, clean friendly visual richness. Use it ONLY as art direction and composition reference. Replace its headline, subtitle, speech-bubble copy and screen with the assigned content below. Do not retain the coach headline or coach chat screen from this reference.
+Image 2 is the EXACT REAL IMPLEMENTED APP SCREENSHOT for this new poster. Treat it as a protected flat insert, preserving its Persian text, images, layout, colors, controls, and original proportions. Put this real screenshot inside the phone without inventing a different interface. Keep important screen content readable. Do not fabricate a doctor's portrait, change credentials, add new UI, or draw charts not in the screenshot.
+Image 3 is the exact green mascot «سبزک»: two fresh green leaves on a stem growing from a smiling rounded ivory planter with emerald rim, happy closed eyes, pale mint cheeks, realistic polished soft 3D texture. Preserve its identity. Keep it in the lower-left foreground, slightly overlapping the phone's outer border but not key app content.
+COMPOSITION LOCK: same general placements, phone scale, palette, lighting and typography as approved campaign. Top brand capsule «مای دایت» with tiny sprout. One large single-feature headline in the top quarter, one smaller subtitle, phone in middle/lower right occupying about 63% poster height, mascot bottom left, one small friendly speech bubble above mascot. One pale mint circle behind product and mascot. Enough breathing room, moderate detail, no clutter. 6% safe margin. Full phone bottom and full mascot pot visible. Correct connected Persian lettering and right-to-left layout.
+No extra marketing points, no English, no testimonials, no before-after bodies, no weight-loss promises or percentages, no money-back claims, no watermarks, no external presentation scene. Only assigned marketing copy; keep the existing app's internal text as screenshot content.
+
+ASSIGNED POSTER: 04-method-2026
+Exact headline: «متد ۲۰۲۶».
+Exact subtitle: «برنامه، پیگیری، همراهی».
+Exact speech bubble: «هر روز، یک قدم».
+Brand: «مای دایت».
+Specific scene direction: Hero title EXACT «متد ۲۰۲۶», very clear Persian year digits ۲ ۰ ۲ ۶; no Latin digits and do not confuse ۶ with ۴. Phone displays the supplied real tracking screen, including its original in-app weight chart. Existing chart is sample app data, do not add before-after comparison or promise a result. A tiny calendar icon on a cream tile beside the mascot can evoke a daily method; no science claims or invented technologies.
+Output just this one poster, never a collage of multiple posters.
+
+
+05-guaranteed
+Screenshot: D:\ad\My-Diet\references\flutter-app-review\2026-11-17\brand-illustrations\implemented\published.png
+Use case: ads-marketing / compositing. Create ONE finished Persian Myket app-store feature poster. Portrait EXACT 9:16, ideally 1080x1920. This is part of an approved coherent campaign, not a new style exploration.
+INPUT ROLES: Image 1 is the APPROVED CAMPAIGN POSTER: match its cream/ivory background, large pale mint circular field, dark emerald bold Persian typography, tiny lime underline and orange rays, small mint top brand capsule, polished near-frontal graphite phone on the right, smiling 3D sprout planter mascot at lower left, soft floor shadow, clean friendly visual richness. Use it ONLY as art direction and composition reference. Replace its headline, subtitle, speech-bubble copy and screen with the assigned content below. Do not retain the coach headline or coach chat screen from this reference.
+Image 2 is the EXACT REAL IMPLEMENTED APP SCREENSHOT for this new poster. Treat it as a protected flat insert, preserving its Persian text, images, layout, colors, controls, and original proportions. Put this real screenshot inside the phone without inventing a different interface. Keep important screen content readable. Do not fabricate a doctor's portrait, change credentials, add new UI, or draw charts not in the screenshot.
+Image 3 is the exact green mascot «سبزک»: two fresh green leaves on a stem growing from a smiling rounded ivory planter with emerald rim, happy closed eyes, pale mint cheeks, realistic polished soft 3D texture. Preserve its identity. Keep it in the lower-left foreground, slightly overlapping the phone's outer border but not key app content.
+COMPOSITION LOCK: same general placements, phone scale, palette, lighting and typography as approved campaign. Top brand capsule «مای دایت» with tiny sprout. One large single-feature headline in the top quarter, one smaller subtitle, phone in middle/lower right occupying about 63% poster height, mascot bottom left, one small friendly speech bubble above mascot. One pale mint circle behind product and mascot. Enough breathing room, moderate detail, no clutter. 6% safe margin. Full phone bottom and full mascot pot visible. Correct connected Persian lettering and right-to-left layout.
+No extra marketing points, no English, no testimonials, no before-after bodies, no weight-loss promises or percentages, no money-back claims, no watermarks, no external presentation scene. Only assigned marketing copy; keep the existing app's internal text as screenshot content.
+
+ASSIGNED POSTER: 05-guaranteed
+Exact headline: «تضمینی».
+Exact subtitle: «همراهت در مسیر تغذیه».
+Exact speech bubble: «کنارت هستم!».
+Brand: «مای دایت».
+Specific scene direction: Headline EXACT «تضمینی». Use a single tasteful emerald checkmark shield beside the mascot as the visual cue. The phone shows the supplied real approved/published meal-plan screen with the existing «برنامه‌ات آماده است» panel and original nutrition breakdown. No money-back language, no guaranteed weight amount, no guarantee terms, no fake certificate, no new medical claims. Only the user's requested standalone headline.
+Output just this one poster, never a collage of multiple posters.
+
+
+06-1000-foods
+Screenshot: D:\ad\My-Diet\references\flutter-app-review\2026-11-17\weekly-swap-proposal\current\weekly-days.png
+Use case: ads-marketing / compositing. Create ONE finished Persian Myket app-store feature poster. Portrait EXACT 9:16, ideally 1080x1920. This is part of an approved coherent campaign, not a new style exploration.
+INPUT ROLES: Image 1 is the APPROVED CAMPAIGN POSTER: match its cream/ivory background, large pale mint circular field, dark emerald bold Persian typography, tiny lime underline and orange rays, small mint top brand capsule, polished near-frontal graphite phone on the right, smiling 3D sprout planter mascot at lower left, soft floor shadow, clean friendly visual richness. Use it ONLY as art direction and composition reference. Replace its headline, subtitle, speech-bubble copy and screen with the assigned content below. Do not retain the coach headline or coach chat screen from this reference.
+Image 2 is the EXACT REAL IMPLEMENTED APP SCREENSHOT for this new poster. Treat it as a protected flat insert, preserving its Persian text, images, layout, colors, controls, and original proportions. Put this real screenshot inside the phone without inventing a different interface. Keep important screen content readable. Do not fabricate a doctor's portrait, change credentials, add new UI, or draw charts not in the screenshot.
+Image 3 is the exact green mascot «سبزک»: two fresh green leaves on a stem growing from a smiling rounded ivory planter with emerald rim, happy closed eyes, pale mint cheeks, realistic polished soft 3D texture. Preserve its identity. Keep it in the lower-left foreground, slightly overlapping the phone's outer border but not key app content.
+COMPOSITION LOCK: same general placements, phone scale, palette, lighting and typography as approved campaign. Top brand capsule «مای دایت» with tiny sprout. One large single-feature headline in the top quarter, one smaller subtitle, phone in middle/lower right occupying about 63% poster height, mascot bottom left, one small friendly speech bubble above mascot. One pale mint circle behind product and mascot. Enough breathing room, moderate detail, no clutter. 6% safe margin. Full phone bottom and full mascot pot visible. Correct connected Persian lettering and right-to-left layout.
+No extra marketing points, no English, no testimonials, no before-after bodies, no weight-loss promises or percentages, no money-back claims, no watermarks, no external presentation scene. Only assigned marketing copy; keep the existing app's internal text as screenshot content.
+
+ASSIGNED POSTER: 06-1000-foods
+Exact headline: «+۱۰۰۰ غذا».
+Exact subtitle: «تنوع خوش‌طعم برای هر روز».
+Exact speech bubble: «امروز چی میل داری؟».
+Brand: «مای دایت».
+Specific scene direction: Hero headline exact «+۱۰۰۰ غذا» with Persian digits, plus sign visibly adjacent to and before ۱۰۰۰. This is the ONE featured selling point. The real phone screenshot shows the supplied app weekly meal cards with real breakfast and fish-rice photos and the app's bottom navigation. Preserve its content rather than inventing a food catalog UI. Next to mascot, two tiny rounded photographic thumbnail tiles may repeat crops of the actual two food photos present in the supplied screenshot, suggesting variety while staying restrained. No unrelated feature badges.
+Output just this one poster, never a collage of multiple posters.
+
