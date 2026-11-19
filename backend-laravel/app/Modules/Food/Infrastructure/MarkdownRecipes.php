@@ -2,6 +2,8 @@
 
 namespace App\Modules\Food\Infrastructure;
 
+use App\Modules\Food\Domain\RecipeTitle;
+
 final class MarkdownRecipes
 {
     /**
@@ -54,7 +56,7 @@ final class MarkdownRecipes
             };
             $recipes[] = ['code' => $code, 'fields' => $fields, 'servings' => $servings, 'ingredients' => $ingredients,
                 'instructions' => trim($instructions[1]), 'markdown' => $block[0],
-                'food' => ['slug' => strtolower(str_replace('-', '_', $code)), 'name_fa' => trim($block[2]), 'category' => $category,
+                'food' => ['slug' => strtolower(str_replace('-', '_', $code)), 'name_fa' => RecipeTitle::normalize($block[2]), 'category' => $category,
                     'meal_types' => $tokens('وعده‌های مناسب'), 'serving_label' => $fields['اندازه یک پرس'] ?? '',
                     'serving_g' => (int) round($this->number($fields['وزن هر پرس — گرم'] ?? '')),
                     'kcal' => (int) round($this->number($fields['کیلوکالری هر پرس'] ?? '')),
