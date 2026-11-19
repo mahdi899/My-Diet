@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formatFaNumber } from '@shared/utils'
-import { apiError, loadMemberActivity, type ActivityDay, type MemberActivity } from '../../data/api'
+import { apiError, loadActivityNutrition, loadMemberActivity, type ActivityDay, type ActivityNutrition, type MemberActivity } from '../../data/api'
 import { formatFaDay } from '../../data/labels'
 import './progress-calendar.css'
 
@@ -39,11 +39,11 @@ export function ProgressCalendar({ userId, onBack }: { userId: string; onBack: (
     </header>
     {query.isPending && <p role="status">در حال دریافت فعالیت‌ها…</p>}
     {query.isError && <div role="alert"><p>{apiError(query.error)}</p><button type="button" className="secondary" onClick={() => void query.refetch()}>تلاش دوباره</button></div>}
-    {query.data && <Calendar key={userId} report={query.data} />}
+    {query.data && <Calendar key={userId} userId={userId} report={query.data} />}
   </section>
 }
 
-function Calendar({ report }: { report: MemberActivity }) {
+function Calendar({ userId, report }: { userId: string; report: MemberActivity }) {
   const [selected, setSelected] = useState(report.today)
   const label = month(selected)
   let start = selected
@@ -86,6 +86,7 @@ function Calendar({ report }: { report: MemberActivity }) {
         <span>خلاصهٔ روز</span>
         <h3>{formatFaDay(selected)}</h3>
         <p className="progress-status">{statusLabels[status(day)]}</p>
+        <DayNutrition userId={userId} date={selected} />
         <dl>
           <div><dt>وعده‌های برنامه</dt><dd>{day?.planned ? `${formatFaNumber(day.recorded)} از ${formatFaNumber(day.planned)} ثبت شده` : 'بدون برنامه'}</dd></div>
           {Object.entries(day?.mealStates ?? {}).map(([state, count]) => <div key={state}><dt>{mealLabels[state] ?? 'وضعیت دیگر'}</dt><dd>{formatFaNumber(count)} وعده</dd></div>)}
@@ -96,4 +97,56 @@ function Calendar({ report }: { report: MemberActivity }) {
       </section>
     </div>
   </>
+}
+
+const mealTypes: Record<string, string> = { breakfast: 'صبحانه', lunch: 'ناهار', dinner: 'شام', snack: 'میان‌وعده', side: 'کنار غذا' }
+const kcal = (value: number) => `${formatFaNumber(value)} کیلوکالری`
+
+function DayNutrition({ userId, date }: { userId: string; date: string }) {
+  const day = useQuery({
+    queryKey: ['doctor', 'activity-nutrition', userId, date],
+    queryFn: () => loadActivityNutrition(userId, date),
+  })
+  if (day.isPending) return <p role="status">در حال دریافت وعده‌ها و کالری…</p>
+  if (day.isError) return <div role="alert"><p>{apiError(day.error)}</p><button type="button" className="secondary" onClick={() => void day.refetch()}>تلاش دوباره</button></div>
+  const { targetKcal, consumedKcal, hasUnknownCalories, meals } = day.data
+  return <>
+    <section className="progress-energy">
+      <h4>کالری روز</h4>
+      <div className="progress-energy-values">
+        <div><span>دریافت ثبت‌شده</span><strong>{consumedKcal == null ? 'نامشخص' : kcal(consumedKcal)}</strong></div>
+        <div><span>هدف روزانه</span><strong>{targetKcal == null ? 'تعیین نشده' : kcal(targetKcal)}</strong></div>
+      </div>
+      {targetKcal != null && targetKcal > 0 && consumedKcal != null && <>
+        <progress aria-label="دریافت ثبت‌شده نسبت به هدف" max={targetKcal} value={Math.min(consumedKcal, targetKcal)} />
+        <small>{formatFaNumber(Math.round(consumedKcal / targetKcal * 100))}٪ از هدف روزانه</small>
+      </>}
+      {hasUnknownCalories && <small>کالری بعضی از غذاهای ثبت‌شده مشخص نیست.</small>}
+    </section>
+    <section className="progress-meals">
+      <h4>وعده‌های برنامه</h4>
+      {meals.length ? meals.map(meal => <MealCard key={meal.id} meal={meal} />) : <p>برای این روز برنامهٔ غذایی منتشرشده‌ای وجود ندارد.</p>}
+    </section>
+  </>
+}
+
+function MealCard({ meal }: { meal: ActivityNutrition['meals'][number] }) {
+  const eatenHere = meal.consumed && meal.options.some(option =>
+    option.id === meal.consumed?.id && option.kind === meal.consumed.kind && option.title === meal.consumed.title)
+  return <article className="progress-meal">
+    <header><h5>{mealTypes[meal.type] ?? 'وعدهٔ غذایی'}</h5><span>{mealLabels[meal.state] ?? 'مصرف ثبت نشده'}</span></header>
+    <div className="progress-options">
+      {meal.options.map((option, index) => {
+        const eaten = eatenHere && option.id === meal.consumed?.id && option.kind === meal.consumed.kind
+        return <div key={option.id ?? index} data-eaten={Boolean(eaten)}>
+          <span>{option.kind === 'primary' ? 'غذای اصلی' : 'غذای جایگزین'}{eaten && ' · مصرف‌شده'}</span>
+          <strong>{option.title}</strong>
+          {option.kcal != null && <small>{kcal(option.kcal)}</small>}
+        </div>
+      })}
+    </div>
+    {meal.consumed && !eatenHere && <p>مصرف از نسخهٔ قبلی برنامه ({meal.consumed.kind === 'primary' ? 'اصلی' : 'جایگزین'}) · {meal.consumed.title}</p>}
+    {meal.otherFood && <p>غذای مصرف‌شده · {meal.otherFood}</p>}
+    {meal.consumedKcal != null && <p>کالری مصرفی · {kcal(meal.consumedKcal)}</p>}
+  </article>
 }

@@ -228,13 +228,22 @@ export async function loadMembers(progress = false): Promise<DoctorMember[]> {
 export type MemberDetail = DoctorMember & {
   age?: number; heightCm?: number; weightKg?: number; targetWeightKg?: number; bmi?: number;
   allergens?: string[]; conditions?: string[];
+  onboardingAnswers: { question: string; answer: string }[];
 };
 
 export async function loadMember(id: string): Promise<MemberDetail> {
   if (doctorPreviewEnabled()) {
     const row = previewMembers.find(item => item.id === id)!;
     const profile = samplePlanRequest(id).profile;
-    return { ...profile, ...row, targetWeightKg: profile?.targetWeightKg ?? undefined };
+    return {
+      ...profile, ...row, targetWeightKg: profile?.targetWeightKg ?? undefined,
+      onboardingAnswers: [
+        { question: 'اسم شما چیست؟', answer: row.displayName },
+        { question: 'میزان فعالیت روزانه‌ات چقدره؟', answer: 'متوسط' },
+        { question: 'معمولاً چند وعده در روز غذا می‌خوری؟', answer: '۳ وعده' },
+        { question: 'چه غذاهایی را دوست نداری یا نمی‌خوری؟', answer: 'بادمجان' },
+      ],
+    };
   }
   return staff.api<MemberDetail>('specialist/members/' + encodeURIComponent(id));
 }
@@ -248,6 +257,37 @@ export type MemberActivity = {
   displayName: string; registeredOn: string; today: string;
   completedDays: number; days: Record<string, ActivityDay>;
 };
+
+export type ActivityFood = { id: string | null; kind: string; title: string; kcal: number | null };
+export type ActivityNutrition = {
+  targetKcal: number | null; consumedKcal: number | null; hasUnknownCalories: boolean;
+  meals: {
+    id: string; type: string; state: string; options: ActivityFood[];
+    consumed: ActivityFood | null; otherFood: string | null; consumedKcal: number | null;
+  }[];
+};
+
+export async function loadActivityNutrition(id: string, date: string): Promise<ActivityNutrition> {
+  if (doctorPreviewEnabled()) {
+    const report = await loadMemberActivity(id);
+    const day = report.days[date];
+    const samples = [
+      ['breakfast', 'نان و پنیر و گردو', 'املت گوجه', 420, 390],
+      ['lunch', 'مرغ و برنج', 'عدس‌پلو', 650, 610],
+      ['dinner', 'سوپ جو', 'خوراک لوبیا', 490, 520],
+    ] as const;
+    const meals = day?.planned ? samples.map(([type, primary, alternative, first, second], index) => {
+      const options = [
+        { id: type + '-main', kind: 'primary', title: primary, kcal: first },
+        { id: type + '-alt', kind: 'alternative', title: alternative, kcal: second },
+      ];
+      const consumed = index < day.recorded ? options[index === 1 ? 1 : 0] ?? null : null;
+      return { id: type, type, options, consumed, state: consumed ? 'as_planned' : 'unrecorded', consumedKcal: consumed?.kcal ?? null, otherFood: null };
+    }) : [];
+    return { targetKcal: 1800, consumedKcal: day?.recorded ? meals.reduce((sum, meal) => sum + (meal.consumedKcal ?? 0), 0) : null, hasUnknownCalories: false, meals };
+  }
+  return staff.api<ActivityNutrition>('specialist/members/' + encodeURIComponent(id) + '/activity?' + new URLSearchParams({ date }));
+}
 
 export async function loadMemberActivity(id: string): Promise<MemberActivity> {
   if (doctorPreviewEnabled()) {

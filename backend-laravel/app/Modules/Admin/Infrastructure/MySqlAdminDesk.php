@@ -129,7 +129,7 @@ final class MySqlAdminDesk
             })->all();
     }
 
-    public function doctorMemberActivity(string $specialist, string $user): array
+    public function doctorMemberActivity(string $specialist, string $user, mixed $date = null): array
     {
         $row = $this->memberQuery($specialist)->where('u.id', $user)->first(['u.created_at', 'u.display_name']);
         if ($row === null) {
@@ -137,6 +137,13 @@ final class MySqlAdminDesk
         }
         $registeredOn = CivilDates::today($row->created_at);
         $today = CivilDates::today();
+        if ($date !== null) {
+            if (! is_string($date) || ! CivilDates::valid($date) || $date < $registeredOn || $date > $today) {
+                throw new Problem(400, 'validation', 'تاریخ خارج از بازهٔ فعالیت کاربر است');
+            }
+
+            return $this->activity->nutrition($user, $date);
+        }
         $days = $this->activity->days($user, $registeredOn, $today, true);
 
         return ['displayName' => $row->display_name, 'registeredOn' => $registeredOn, 'today' => $today,
@@ -157,7 +164,7 @@ final class MySqlAdminDesk
             $row->{$field} = json_decode($row->{$field} ?? '[]', true) ?: [];
         }
 
-        return (array) $row;
+        return (array) $row + ['onboardingAnswers' => $this->intake($user)['answers'] ?? []];
     }
 
     private function dailyProgress(string $user, string $registeredOn): array
@@ -615,11 +622,16 @@ final class MySqlAdminDesk
             return null;
         }
         $questions = $this->questions();
+        $tracks = $this->tracks();
+        $extraLabels = ['track' => 'هدف انتخاب‌شده', 'sleep_hour' => 'ساعت خواب', 'wake_hour' => 'ساعت بیداری'];
         $answers = [];
         foreach ($this->db->table('onboarding_answer_facts')->where('submission_id', $profile->submission_id)->orderBy('question_key')->get() as $fact) {
             $question = $questions[$fact->question_key] ?? null;
-            $label = $question['title'] ?? $fact->question_key;
+            $label = $question['title'] ?? $extraLabels[$fact->question_key] ?? $fact->question_key;
             $answer = $fact->value_num;
+            if ($fact->question_key === 'track') {
+                $answer = $tracks[$fact->value_code] ?? $fact->value_code;
+            }
             if ($answer === null && $question !== null) {
                 foreach ($question['options'] ?? [] as $option) {
                     if (($option['code'] ?? null) === $fact->value_code) {
@@ -629,7 +641,25 @@ final class MySqlAdminDesk
             }
             $answers[] = ['question' => $label, 'answer' => (string) ($answer ?? $fact->value_code)];
         }
-        $tracks = $this->tracks();
+        $stored = $this->db->table('questionnaire_submissions')
+            ->where('id', $profile->submission_id)->where('user_id', $id)->value('answers');
+        $textAnswers = json_decode($stored ?? '{}', true);
+        foreach (['name', 'dislikes'] as $key) {
+            $answer = $textAnswers[$key] ?? null;
+            if (! is_string($answer) || trim($answer) === '') {
+                continue;
+            }
+            if ($key === 'dislikes') {
+                try {
+                    $answer = Crypto::decrypt($answer, $this->settings->fieldKey);
+                } catch (\Throwable) {
+                    continue;
+                }
+            }
+            if (trim($answer) !== '' && isset($questions[$key]['title'])) {
+                $answers[] = ['question' => $questions[$key]['title'], 'answer' => $answer];
+            }
+        }
 
         return ['displayName' => null, 'trackId' => $profile->track, 'trackLabel' => $tracks[$profile->track] ?? $profile->track, 'source' => $profile->source === 'demo' ? 'demo' : 'app', 'answers' => $answers];
     }

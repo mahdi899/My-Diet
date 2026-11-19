@@ -37,6 +37,25 @@ final class OnboardingContractTest extends MySqlTestCase
         }
     }
 
+    public function test_only_the_assigned_specialist_can_read_member_onboarding_answers(): void
+    {
+        $user = $this->actor();
+        $case = json_decode(file_get_contents(__DIR__.'/../Fixtures/node-onboarding.json'), true)['canonical'][0];
+        $this->putJson('/v1/me/onboarding/draft', ['track' => $case['track'], 'patch' => $case['answers']])->assertOk();
+        $this->postJson('/v1/me/onboarding/submit', ['consent' => true])->assertCreated();
+
+        $path = '/v1/specialist/members/'.$user['id'];
+        $this->actor('specialist');
+        $this->getJson($path)->assertNotFound();
+
+        $doctor = $this->actor('specialist');
+        $this->db->table('specialist_profiles')->insert(['user_id' => $doctor['id'], 'display_name' => 'پزشک آزمایش']);
+        $this->db->table('specialist_members')->insert(['user_id' => $user['id'], 'specialist_id' => $doctor['id']]);
+        $this->getJson($path)->assertOk()->assertJsonFragment([
+            'question' => 'اسم شما چیست؟', 'answer' => $case['answers']['name'],
+        ]);
+    }
+
     public function test_incomplete_inputs_legacy_profile_backfill_and_consent_are_authorized(): void
     {
         $user = $this->actor();
