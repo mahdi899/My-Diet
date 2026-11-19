@@ -44,27 +44,17 @@ class MealCardView extends StatelessWidget {
       preparationMinutes: payload['preparation_minutes'] is num
           ? asInt(payload['preparation_minutes'])
           : null,
-      subtitle: 'پیشنهاد مربی؛ قبل از ثبت بررسی کن',
       primaryLabel: 'بررسی و ثبت',
       onOpen: onReview,
       onSwap: onSwap,
-      extra: payload.containsKey('protein_g')
-          ? ExpansionTile(
-              title: const Text(
-                'اطلاعات تغذیه',
-                style: TextStyle(fontSize: 12),
-              ),
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: const EdgeInsets.only(bottom: 8),
-              children: [
-                _Macros(
-                  protein: asInt(payload['protein_g']),
-                  carbs: asInt(payload['carbs_g']),
-                  fat: asInt(payload['fat_g']),
-                ),
-              ],
-            )
-          : null,
+      nutrients: {
+        for (final (label, field) in [
+          ('پروتئین', 'protein_g'),
+          ('کربوهیدرات', 'carbs_g'),
+          ('چربی', 'fat_g'),
+        ])
+          if (payload[field] is num) label: asInt(payload[field]),
+      },
     );
   }
 }
@@ -91,7 +81,6 @@ class PlanMealView extends StatelessWidget {
       preparationMinutes: payload['preparation_minutes'] is num
           ? asInt(payload['preparation_minutes'])
           : null,
-      subtitle: 'یک وعده از برنامهٔ مخصوص تو',
       onOpen: onOpen,
       onSwap: onSwap,
     );
@@ -453,10 +442,10 @@ class _ChatMealCard extends StatelessWidget {
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: bubbleWidth),
               child: AppCard(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                  child: Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Column(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
@@ -471,11 +460,7 @@ class _ChatMealCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       for (final item in items)
-                        _FactRow(
-                          item: item,
-                          kind: 'meals',
-                          onOpen: onOpenMeal,
-                        ),
+                        _FactRow(item: item, kind: 'meals', onOpen: onOpenMeal),
                       Align(
                         alignment: Alignment.bottomLeft,
                         child: Padding(
@@ -496,10 +481,10 @@ class _ChatMealCard extends StatelessWidget {
                 ),
               ),
             ),
-            ],
-          ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -640,11 +625,16 @@ class DayBriefView extends StatelessWidget {
               children: [
                 for (final option in options)
                   ActionChip(
-                    label: Text(asString(option['label'], asString(option['value']))),
+                    label: Text(
+                      asString(option['label'], asString(option['value'])),
+                    ),
                     onPressed: onPick == null
                         ? null
                         : () => onPick!(
-                            asString(option['label'], asString(option['value'])),
+                            asString(
+                              option['label'],
+                              asString(option['value']),
+                            ),
                           ),
                   ),
               ],
@@ -867,52 +857,6 @@ class _SwapOption extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Macros extends StatelessWidget {
-  const _Macros({
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-  });
-  final int protein, carbs, fat;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _Macro('پروتئین', protein, AppColors.coral),
-        _Macro('کربو', carbs, AppColors.amber),
-        _Macro('چربی', fat, AppColors.sky),
-      ],
-    );
-  }
-}
-
-class _Macro extends StatelessWidget {
-  const _Macro(this.label, this.grams, this.color);
-  final String label;
-  final int grams;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 11, color: AppColors.muted),
-          ),
-          Text(
-            '${fa(grams)} گ',
-            style: TextStyle(fontWeight: FontWeight.w800, color: color),
-          ),
-        ],
       ),
     );
   }
