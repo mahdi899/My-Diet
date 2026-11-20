@@ -915,6 +915,22 @@
           "identity": ""
         },
         {
+          "name": "price_in_micros_per_m",
+          "type": "bigint",
+          "required": true,
+          "default": "0",
+          "generated": "",
+          "identity": ""
+        },
+        {
+          "name": "price_out_micros_per_m",
+          "type": "bigint",
+          "required": true,
+          "default": "0",
+          "generated": "",
+          "identity": ""
+        },
+        {
           "name": "created_at",
           "type": "timestamp with time zone",
           "required": true,
@@ -924,6 +940,16 @@
         }
       ],
       "constraints": [
+        {
+          "name": "ai_pool_members_price_in_micros_per_m_check",
+          "type": "c",
+          "definition": "CHECK ((price_in_micros_per_m >= 0))"
+        },
+        {
+          "name": "ai_pool_members_price_out_micros_per_m_check",
+          "type": "c",
+          "definition": "CHECK ((price_out_micros_per_m >= 0))"
+        },
         {
           "name": "ai_pool_members_weight_check",
           "type": "c",
@@ -968,6 +994,16 @@
           "name": "ai_pool_members_position_not_null",
           "type": "n",
           "definition": "NOT NULL \"position\""
+        },
+        {
+          "name": "ai_pool_members_price_in_micros_per_m_not_null",
+          "type": "n",
+          "definition": "NOT NULL price_in_micros_per_m"
+        },
+        {
+          "name": "ai_pool_members_price_out_micros_per_m_not_null",
+          "type": "n",
+          "definition": "NOT NULL price_out_micros_per_m"
         },
         {
           "name": "ai_pool_members_provider_id_not_null",
@@ -4305,6 +4341,60 @@
         {
           "name": "demo_lead_unclaimed",
           "definition": "CREATE INDEX demo_lead_unclaimed ON public.demo_lead_submissions USING btree (phone_hash, created_at DESC) WHERE (claimed_user_id IS NULL)"
+        }
+      ]
+    },
+    {
+      "name": "demo_match_counter",
+      "columns": [
+        {
+          "name": "singleton",
+          "type": "boolean",
+          "required": true,
+          "default": null,
+          "generated": "",
+          "identity": ""
+        },
+        {
+          "name": "visits",
+          "type": "bigint",
+          "required": true,
+          "default": null,
+          "generated": "",
+          "identity": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "demo_match_counter_singleton_check",
+          "type": "c",
+          "definition": "CHECK (singleton)"
+        },
+        {
+          "name": "demo_match_counter_visits_check",
+          "type": "c",
+          "definition": "CHECK ((visits >= 0))"
+        },
+        {
+          "name": "demo_match_counter_singleton_not_null",
+          "type": "n",
+          "definition": "NOT NULL singleton"
+        },
+        {
+          "name": "demo_match_counter_visits_not_null",
+          "type": "n",
+          "definition": "NOT NULL visits"
+        },
+        {
+          "name": "demo_match_counter_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (singleton)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "demo_match_counter_pkey",
+          "definition": "CREATE UNIQUE INDEX demo_match_counter_pkey ON public.demo_match_counter USING btree (singleton)"
         }
       ]
     },
@@ -7933,6 +8023,50 @@
         {
           "name": "onboarding_analytics_journeys_user_idx",
           "definition": "CREATE INDEX onboarding_analytics_journeys_user_idx ON public.onboarding_analytics_journeys USING btree (user_id)"
+        }
+      ]
+    },
+    {
+      "name": "onboarding_analytics_names",
+      "columns": [
+        {
+          "name": "journey_id",
+          "type": "uuid",
+          "required": true,
+          "default": null,
+          "generated": "",
+          "identity": ""
+        },
+        {
+          "name": "name_encrypted",
+          "type": "text",
+          "required": true,
+          "default": null,
+          "generated": "",
+          "identity": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_analytics_names_journey_id_not_null",
+          "type": "n",
+          "definition": "NOT NULL journey_id"
+        },
+        {
+          "name": "onboarding_analytics_names_name_encrypted_not_null",
+          "type": "n",
+          "definition": "NOT NULL name_encrypted"
+        },
+        {
+          "name": "onboarding_analytics_names_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (journey_id)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "onboarding_analytics_names_pkey",
+          "definition": "CREATE UNIQUE INDEX onboarding_analytics_names_pkey ON public.onboarding_analytics_names USING btree (journey_id)"
         }
       ]
     },

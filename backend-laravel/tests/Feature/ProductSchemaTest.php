@@ -11,7 +11,7 @@ final class ProductSchemaTest extends MySqlTestCase
     public function test_every_source_table_and_column_has_a_mysql_destination(): void
     {
         $catalog = json_decode(file_get_contents(base_path('contracts/postgres-schema.json')), true);
-        self::assertCount(117, $catalog['tables']);
+        self::assertCount(119, $catalog['tables']);
         foreach ($catalog['tables'] as $table) {
             self::assertTrue($this->db->getSchemaBuilder()->hasTable($table['name']), $table['name']);
             $actual = $this->db->getSchemaBuilder()->getColumnListing($table['name']);

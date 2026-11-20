@@ -7,8 +7,8 @@ RUN npm run build
 
 FROM php:8.4-fpm AS api
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip libsodium-dev libonig-dev libcurl4-openssl-dev \
-    && docker-php-ext-install pdo_mysql sodium mbstring curl pcntl opcache \
+    && apt-get install -y --no-install-recommends git unzip libsodium-dev libonig-dev libcurl4-openssl-dev libpq-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql sodium mbstring curl pcntl opcache \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/backend-laravel

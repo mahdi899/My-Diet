@@ -1,5 +1,5 @@
 {
-  "sourceTables": 117,
+  "sourceTables": 119,
   "tables": [
     {
       "name": "active_plan_versions",
@@ -27,7 +27,7 @@
     },
     {
       "name": "ai_pool_members",
-      "sql": "create table `ai_pool_members` (\n`id` char(36) not null,\n`pool_id` char(36) not null,\n`provider_id` char(36) not null,\n`model` varchar(255) not null,\n`position` smallint not null default 0,\n`weight` smallint not null default 1,\n`enabled` tinyint not null default 1,\n`created_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
+      "sql": "create table `ai_pool_members` (\n`id` char(36) not null,\n`pool_id` char(36) not null,\n`provider_id` char(36) not null,\n`model` varchar(255) not null,\n`position` smallint not null default 0,\n`weight` smallint not null default 1,\n`enabled` tinyint not null default 1,\n`price_in_micros_per_m` bigint not null default 0,\n`price_out_micros_per_m` bigint not null default 0,\n`created_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
     {
       "name": "ai_pools",
@@ -116,6 +116,10 @@
     {
       "name": "demo_lead_submissions",
       "sql": "create table `demo_lead_submissions` (\n`id` char(36) not null,\n`phone_hash` varchar(255) not null,\n`phone_encrypted` longtext not null,\n`goal` longtext not null,\n`answers_encrypted` longtext not null,\n`phone_verified` tinyint not null default 0,\n`created_at` datetime(6) not null default current_timestamp(6),\n`claimed_user_id` char(36) null,\n`claimed_at` datetime(6) null,\n`spec_version` smallint null,\n`campaign_slug` varchar(64) null,\nPRIMARY KEY (`id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
+    },
+    {
+      "name": "demo_match_counter",
+      "sql": "create table `demo_match_counter` (\n`singleton` tinyint not null,\n`visits` bigint not null,\nPRIMARY KEY (`singleton`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
     {
       "name": "demo_questionnaire_settings",
@@ -228,6 +232,10 @@
     {
       "name": "onboarding_analytics_journeys",
       "sql": "create table `onboarding_analytics_journeys` (\n`journey_id` char(36) not null,\n`user_id` char(36) not null,\n`phone_e164` longtext not null,\n`verified_at` datetime(6) not null default current_timestamp(6),\nPRIMARY KEY (`journey_id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
+    },
+    {
+      "name": "onboarding_analytics_names",
+      "sql": "create table `onboarding_analytics_names` (\n`journey_id` char(36) not null,\n`name_encrypted` longtext not null,\nPRIMARY KEY (`journey_id`)\n) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_0900_bin"
     },
     {
       "name": "onboarding_answer_facts",
@@ -503,6 +511,16 @@
       "table": "ai_pool_health",
       "name": "ai_pool_health_member_id_fkey",
       "sql": "alter table `ai_pool_health` add constraint `ai_pool_health_member_id_fkey` FOREIGN KEY (`member_id`) REFERENCES `ai_pool_members`(`id`) ON DELETE CASCADE"
+    },
+    {
+      "table": "ai_pool_members",
+      "name": "ai_pool_members_price_in_micros_per_m_check",
+      "sql": "alter table `ai_pool_members` add constraint `ai_pool_members_price_in_micros_per_m_check` CHECK ((`price_in_micros_per_m` >= 0))"
+    },
+    {
+      "table": "ai_pool_members",
+      "name": "ai_pool_members_price_out_micros_per_m_check",
+      "sql": "alter table `ai_pool_members` add constraint `ai_pool_members_price_out_micros_per_m_check` CHECK ((`price_out_micros_per_m` >= 0))"
     },
     {
       "table": "ai_pool_members",
@@ -863,6 +881,16 @@
       "table": "demo_lead_submissions",
       "name": "demo_lead_submissions_claimed_user_id_fkey",
       "sql": "alter table `demo_lead_submissions` add constraint `demo_lead_submissions_claimed_user_id_fkey` FOREIGN KEY (`claimed_user_id`) REFERENCES `users`(`id`)"
+    },
+    {
+      "table": "demo_match_counter",
+      "name": "demo_match_counter_singleton_check",
+      "sql": "alter table `demo_match_counter` add constraint `demo_match_counter_singleton_check` CHECK ((`singleton` = 1))"
+    },
+    {
+      "table": "demo_match_counter",
+      "name": "demo_match_counter_visits_check",
+      "sql": "alter table `demo_match_counter` add constraint `demo_match_counter_visits_check` CHECK ((`visits` >= 0))"
     },
     {
       "table": "devices",
