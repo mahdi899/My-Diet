@@ -149,6 +149,10 @@ export function VerifyStage() {
       window.setTimeout(() => setOtpShake(false), 450)
       return
     }
+    if (!localPreview && !consent) {
+      setError('برای ساخت برنامه، موافقت با پردازش پاسخ‌ها را تأیید کن.')
+      return
+    }
     setBusy(true)
     setError('')
     try {

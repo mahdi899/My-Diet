@@ -101,8 +101,8 @@ final class TransferService
                 return $confirmed;
             });
             if ($updated) {
+                $this->deliver($updated['userId'], $row['id']);
                 $this->sendConfirmation($row['id'], $updated['phone']);
-                $this->deliver($updated['userId']);
             }
 
             return $url;
@@ -137,16 +137,16 @@ final class TransferService
             return $updated;
         });
 
+        $this->deliver($row['userId'], $id);
         $sms = $this->sendConfirmation($id, $row['phone']);
-        $this->deliver($row['userId']);
 
         return ['confirmed' => true, 'smsStatus' => $sms];
     }
 
-    private function deliver(string $user): void
+    private function deliver(string $user, string $id): void
     {
         try {
-            $this->delivery->sync($user);
+            $this->delivery->sync($user, $id);
         } catch (\Throwable $error) {
             report($error);
         }
