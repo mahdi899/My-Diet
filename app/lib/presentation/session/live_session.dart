@@ -22,6 +22,15 @@ void bindLiveReports(DemoStore store) {
   store.reportShopping = (name, status) => _flagShopping(store, name, status);
 }
 
+/// Recovers paid delivery or retries a failed draft without another purchase.
+Future<void> recoverLivePlan(DemoStore store) async {
+  await CustomerApiClient(store.customerAuth!).post('me/plan/recover');
+  await refreshLive(store);
+  if (store.liveNotice != null) {
+    throw AppFailure(store.liveNotice!);
+  }
+}
+
 String _plain(String value) => value
     .replaceAll('ي', 'ی')
     .replaceAll('ك', 'ک')

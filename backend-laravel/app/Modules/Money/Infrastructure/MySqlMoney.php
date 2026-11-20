@@ -8,6 +8,7 @@ use App\Shared\Domain\Amount;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Collection;
 
 final class MySqlMoney implements MoneyStore
 {
@@ -68,7 +69,7 @@ final class MySqlMoney implements MoneyStore
 
     public function activateSubscription(string $user, string $service, int $days): void
     {
-        $this->db->statement('insert into user_service_access (user_id, service_code, ends_at) values (?, ?, date_add(current_timestamp(6), interval ? day)) as incoming on duplicate key update service_code=incoming.service_code, ends_at=incoming.ends_at, updated_at=current_timestamp(6)', [$user, $service, $days]);
+        $this->db->statement('insert into user_service_access (user_id, service_code, ends_at) values (?, ?, date_add(current_timestamp(6), interval ? day)) as incoming on duplicate key update service_code=incoming.service_code, ends_at=date_add(greatest(user_service_access.ends_at, current_timestamp(6)), interval ? day), updated_at=current_timestamp(6)', [$user, $service, $days, $days]);
     }
 
     public function orders(string $user): array
@@ -85,11 +86,11 @@ final class MySqlMoney implements MoneyStore
         $access = $this->db->table('user_service_access as a')->join('services as s', 's.code', '=', 'a.service_code')->where('a.user_id', $user)->select('a.service_code', 's.title_fa', 'a.ends_at', 'a.updated_at')->first();
         $order = $this->db->table('orders as o')->join('services as s', 's.code', '=', 'o.service_code')->join('plan_requests as r', 'r.order_id', '=', 'o.id')->where('o.user_id', $user)->where('o.service_code', 'new_plan')->where('o.status', 'paid')->where('r.status', '<>', 'cancelled')->orderByDesc('o.created_at')->select('o.*', 's.title_fa', 'r.status as request_status')->first();
         if ($access !== null) {
-            $checkout = $this->db->table('plan_checkouts')->where('user_id', $user)->where('status', 'paid')->whereNotNull('plan_code')->orderByDesc('paid_at')->first();
+            $checkout = $this->db->table('plan_checkouts')->where('user_id', $user)->where('status', 'paid')->whereNotNull('plan_code')->orderByDesc('paid_at')->orderByDesc('created_at')->first();
             $access->title_fa = SubscriptionPlans::ALL[$checkout->plan_code ?? '']['title'] ?? $access->title_fa;
             $active = new \DateTimeImmutable($access->ends_at, new \DateTimeZone('UTC')) > new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
             if ($active || $order === null || $order->created_at <= $access->updated_at) {
-                return ['serviceCode' => $access->service_code, 'title' => $access->title_fa, 'status' => $active ? 'active' : 'expired', 'endsAt' => Crypto::iso($access->ends_at)];
+                return ['serviceCode' => $access->service_code, 'planId' => $checkout->plan_code ?? null, 'title' => $access->title_fa, 'status' => $active ? 'active' : 'expired', 'endsAt' => Crypto::iso($access->ends_at)];
             }
         }
         if ($order !== null) {
@@ -236,7 +237,7 @@ final class MySqlMoney implements MoneyStore
         return $this->leastLoaded($matched);
     }
 
-    private function leastLoaded(\Illuminate\Support\Collection $people): ?string
+    private function leastLoaded(Collection $people): ?string
     {
         $chosen = null;
         $least = INF;

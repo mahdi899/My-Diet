@@ -13,6 +13,27 @@ use Tests\MySqlTestCase;
 
 final class CoachWorkspaceTest extends MySqlTestCase
 {
+    public function test_message_times_are_explicit_utc_in_history_search_and_acknowledgments(): void
+    {
+        ['id' => $user] = $this->actor();
+        $thread = $this->conversation($user, ['ساعت پیام آزمایشی']);
+        $this->db->table('coach_messages')->where('thread_id', $thread)->update(['created_at' => '2026-11-21 20:45:32.123456']);
+        $expected = '2026-11-21T20:45:32.123456Z';
+        $this->getJson('/v1/me/coach/thread?threadId='.$thread)->assertOk()->assertJsonPath('messages.0.created_at', $expected);
+        $this->getJson('/v1/me/coach/search?q='.urlencode('آزمایشی'))->assertOk()->assertJsonPath('items.0.createdAt', $expected);
+
+        $client = Crypto::uuid();
+        $coach = app(CoachGateway::class);
+        $sent = $coach->action($user, $client, 'log_water', ['ml' => 250], null, $thread);
+        foreach ([$sent['userMessage'], ...$sent['messages']] as $message) {
+            self::assertMatchesRegularExpression('/T\d{2}:\d{2}:\d{2}\.\d{6}Z$/', $message['created_at']);
+        }
+        $history = collect($coach->thread($user, null, 50, $thread)['messages'])->keyBy('id');
+        self::assertSame($sent['userMessage']['created_at'], $history[$sent['userMessage']['id']]['created_at']);
+        $retried = $coach->action($user, $client, 'log_water', ['ml' => 250], null, $thread);
+        self::assertSame($sent['userMessage']['created_at'], $retried['userMessage']['created_at']);
+    }
+
     public function test_search_covers_old_messages_and_titles_and_is_owner_scoped(): void
     {
         ['id' => $other] = $this->actor();

@@ -184,6 +184,34 @@ final class IdentityContractTest extends TestCase
         self::assertNotNull($this->db->table('sessions')->where('user_id', $id)->value('revoked_at'));
     }
 
+    public function test_photo_can_be_saved_before_personal_details_and_preserves_the_display_name(): void
+    {
+        $issued = $this->customer();
+        $this->withToken($issued['accessToken']);
+        $this->patchJson('/v1/me', ['displayName' => 'سارا'])->assertOk();
+        $photo = base64_encode(hex2bin('89504e470d0a1a0a').'portrait');
+        $this->patchJson('/v1/me/personal-details', ['photo' => $photo])->assertOk()->assertJsonPath('details.photo', $photo);
+        $this->getJson('/v1/me')->assertOk()->assertJsonPath('displayName', 'سارا');
+        $this->getJson('/v1/me/personal-details')->assertOk()->assertExactJson(['details' => ['photo' => $photo]]);
+        $this->patchJson('/v1/me/personal-details', ['photo' => 'invalid'])->assertStatus(400);
+        $this->getJson('/v1/me/personal-details')->assertOk()->assertJsonPath('details.photo', $photo);
+    }
+
+    public function test_photo_only_updates_preserve_existing_personal_details(): void
+    {
+        $issued = $this->customer();
+        $this->withToken($issued['accessToken']);
+        $details = ['name' => 'سارا', 'age' => 30, 'height' => 165, 'weight' => 60, 'contactPhone' => '09120000001', 'photo' => null];
+        $this->patchJson('/v1/me/personal-details', $details)->assertOk();
+        $photo = base64_encode(hex2bin('89504e470d0a1a0a').'portrait');
+        $this->patchJson('/v1/me/personal-details', ['photo' => $photo])->assertOk();
+        $details['photo'] = $photo;
+        $details['contactPhone'] = '+989120000001';
+        $this->getJson('/v1/me/personal-details')->assertOk()->assertExactJson(['details' => $details]);
+        $this->patchJson('/v1/me/personal-details', ['photo' => null])->assertOk()->assertJsonPath('details.photo', null)->assertJsonPath('details.age', 30);
+        $this->getJson('/v1/me')->assertOk()->assertJsonPath('displayName', 'سارا');
+    }
+
     public function test_profile_encryption_session_listing_and_scoped_revocation(): void
     {
         $issued = $this->customer();

@@ -197,10 +197,12 @@ final class MySqlIdentityStore implements IdentityStore
         return $this->one('select details_encrypted from user_personal_details where user_id=?', [$userId])['details_encrypted'] ?? null;
     }
 
-    public function savePersonalDetails(string $userId, string $name, string $encrypted): void
+    public function savePersonalDetails(string $userId, ?string $name, string $encrypted): void
     {
         $this->transaction(function () use ($userId, $name, $encrypted): void {
-            $this->rename($userId, $name);
+            if ($name !== null) {
+                $this->rename($userId, $name);
+            }
             $this->db->insert('insert into user_personal_details(user_id,details_encrypted) values(?,?) as incoming on duplicate key update details_encrypted=incoming.details_encrypted', [$userId, $encrypted]);
         });
     }

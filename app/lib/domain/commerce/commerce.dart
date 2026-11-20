@@ -75,10 +75,12 @@ class PlanSubscription {
   const PlanSubscription({
     required this.title,
     required this.status,
+    this.planId,
     this.endsAt,
     this.includedChanges = false,
   });
   final String title, status;
+  final String? planId;
   final DateTime? endsAt;
   final bool includedChanges;
   bool activeAt(DateTime now) =>

@@ -16,6 +16,7 @@ class CheckoutApiStub implements ApiClient {
       'me/subscription' => {
         'subscription': {
           'title': 'همراه',
+          'planId': 'monthly',
           'status': 'active',
           'endsAt': '2026-12-15T00:00:00Z',
           'includedChanges': true,
@@ -116,6 +117,7 @@ void main() {
       expect(api.checkoutHeaders, {'Idempotency-Key': 'same-attempt'});
       final subscription = await commerce.subscription();
       expect(subscription!.title, 'همراه');
+      expect(subscription.planId, 'monthly');
       expect(subscription.activeAt(DateTime.utc(2026, 11, 15)), isTrue);
       expect(subscription.activeAt(DateTime.utc(2026, 12, 15)), isFalse);
       expect(subscription.includedChanges, isTrue);

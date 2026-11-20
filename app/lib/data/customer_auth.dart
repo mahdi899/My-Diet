@@ -5,13 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'auth_http_client.dart';
 import 'connection.dart';
 
-const debugLoginPhones = {'09145416413', '09367018089'};
-
-/// Debug builds accept 12345 or 123456 for the two local test numbers.
+/// Debug builds accept a fixed code for the two local test numbers.
+/// The literals sit inside [kDebugMode] so release builds tree-shake them.
 bool debugLoginOtp(String phone, String code) {
-  if (!kDebugMode) return false;
-  return debugLoginPhones.contains(phone) &&
-      (code == '12345' || code == '123456');
+  if (kDebugMode) {
+    const phones = {'09145416413', '09367018089'};
+    return phones.contains(phone) && (code == '12345' || code == '123456');
+  }
+  return false;
 }
 
 class AuthFailure implements Exception {

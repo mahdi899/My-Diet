@@ -131,8 +131,9 @@ DayNutrition nutritionOn(NutritionSource store, DateTime date) {
       'fatG',
     ].every(meal.nutrition.containsKey);
     MacroGrams macros(int kcal) {
-      if (!hasNutrition || meal.calories <= 0)
+      if (!hasNutrition || meal.calories <= 0) {
         return macrosFor(kcal, meal.name);
+      }
       final ratio = kcal / meal.calories;
       return MacroGrams(
         (meal.nutrition['proteinG']! * ratio).round(),

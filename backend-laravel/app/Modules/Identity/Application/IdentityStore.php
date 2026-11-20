@@ -58,5 +58,5 @@ interface IdentityStore
 
     public function personalDetails(string $userId): ?string;
 
-    public function savePersonalDetails(string $userId, string $name, string $encrypted): void;
+    public function savePersonalDetails(string $userId, ?string $name, string $encrypted): void;
 }

@@ -275,6 +275,16 @@ final class IdentityService
         return ['details' => $details];
     }
 
+    public function saveProfilePhoto(string $userId, ?string $photo): array
+    {
+        $details = (array) ($this->personalDetails($userId)['details'] ?? []);
+        $details['photo'] = $photo;
+        $encrypted = Crypto::encrypt(json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), $this->settings->fieldKey);
+        $this->store->savePersonalDetails($userId, null, $encrypted);
+
+        return ['details' => $details];
+    }
+
     private function otpHmac(string $id, string $code): string
     {
         return hash_hmac('sha256', $id.':'.$code, $this->settings->otpPepper);

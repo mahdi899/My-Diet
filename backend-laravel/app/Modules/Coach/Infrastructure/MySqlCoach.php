@@ -13,6 +13,7 @@ use App\Modules\Tracking\Application\TrackingService;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 final class MySqlCoach implements CoachGateway
@@ -58,7 +59,7 @@ final class MySqlCoach implements CoachGateway
             $id = Crypto::uuid();
             $this->db->table('coach_messages')->insert(['id' => $id, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $text, 'client_message_id' => $client, 'payload' => json_encode($quote === null ? new \stdClass : ['replyTo' => $quote], JSON_UNESCAPED_UNICODE)]);
             app(CoachThreads::class)->touch($thread->id, $text);
-            $local = $blocked === null ? (CoachSafety::localReply($text) ?? $this->factual($user, $text)) : null;
+            $local = $blocked === null ? (CoachSafety::localReply($text) ?? $this->photoReply($user, $thread->id, $text, $replyToMessageId) ?? $this->factual($user, $text)) : null;
             if (is_string($local) && preg_match('/اختلال خوردن|گرسنگی شدید|هیچ.?چیز نخورم/u', $text) === 1) {
                 $this->alertSpecialist($user, 'eating_risk');
             }
@@ -157,7 +158,9 @@ final class MySqlCoach implements CoachGateway
         $entry = $foods === [] ? null : Crypto::uuid();
         $text = $entry === null
             ? 'غذا را با اطمینان تشخیص ندادم. اسم غذا و مقدار تقریبی‌اش را بنویس یا یک عکس واضح‌تر بفرست.'
-            : 'از روی عکس مقدار را تخمین زدم. سهم و نوع وعده را بررسی کن و بعد ثبت کن.';
+            : 'در عکس '.implode(' و ', array_column($foods, 'name')).' می‌بینم.'."\n".
+                implode("\n", array_map(fn ($food) => $food['name'].'؛ '.($food['servingLabel'] ?? 'سهم تقریبی').'، حدود '.$this->faDigits((int) ($food['kcal'] ?? 0)).' کالری', $foods)).
+                "\nمقدار و کالری از روی عکس تخمینی‌اند.";
         $questions = array_values(array_filter($analysis['questions'] ?? [], 'is_string'));
         if ($questions !== []) {
             $text .= "\n".mb_substr($questions[0], 0, 180);
@@ -166,9 +169,22 @@ final class MySqlCoach implements CoachGateway
         $title = mb_substr($title, 0, 120);
         $items = array_map(fn ($food, $index) => [...$food, 'servings' => 1, 'lineIndex' => $index], $foods, array_keys($foods));
         $totals = ['kcal' => $kcal];
-        $payload = ['entryId' => $entry, 'mediaId' => $media, 'title' => $title, 'mealType' => $mealType, 'items' => $items, 'totals' => $totals, 'status' => 'suggested', 'confidence' => $analysis['confidence'], 'needsConfirmation' => true, 'questions' => $questions, 'estimated' => true];
+        $proposal = null;
+        if ($entry !== null && (float) $analysis['confidence'] >= .6) {
+            try {
+                $proposal = app(CoachPhotoPlan::class)->preview($user, $items, $mealType);
+                $text .= "\n\n".$this->photoPlanQuestion($proposal);
+            } catch (Problem $error) {
+                $text .= "\n\n".$error->messageFa;
+            }
+        } elseif ($entry !== null) {
+            $text .= "\nبرای اضافه‌کردن به برنامه، اول نام غذا را تأیید کن یا عکس واضح‌تری بفرست.";
+        }
+        $payload = ['entryId' => $entry, 'mediaId' => $media, 'title' => $title, 'mealType' => $mealType, 'items' => $items, 'totals' => $totals, 'status' => 'suggested', 'confidence' => $analysis['confidence'], 'needsConfirmation' => $proposal !== null, 'questions' => $questions, 'estimated' => true,
+            'prompt' => $text, 'planProposal' => $proposal, 'planDecision' => $proposal === null ? 'unavailable' : 'pending',
+            'options' => $proposal === null ? [] : $this->photoPlanOptions($entry)];
         $this->db->transaction(function () use ($assistant, $thread, $user, $entry, $message, $media, $analysis, $text, $payload, $mealType, $title, $items, $totals): void {
-            $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => $entry === null ? 'text' : 'meal_card', 'fallback_text' => $text, 'reply_to' => $message, 'tokens_in' => $analysis['tokensIn'], 'tokens_out' => $analysis['tokensOut'], 'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+            $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => $payload['planProposal'] === null ? 'text' : 'quick_replies', 'fallback_text' => $text, 'reply_to' => $message, 'tokens_in' => $analysis['tokensIn'], 'tokens_out' => $analysis['tokensOut'], 'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
             if ($entry !== null) {
                 $this->db->table('coach_food_entries')->insert([
                     'id' => $entry, 'user_id' => $user, 'thread_id' => $thread->id, 'message_id' => $assistant, 'media_id' => $media,
@@ -253,6 +269,7 @@ final class MySqlCoach implements CoachGateway
                 return ['userMessage' => $this->message($prior), 'messages' => $this->replies($prior->id), 'today' => $this->today($user)];
             }
             $local = match ($action) {
+                'confirm_photo_plan', 'dismiss_photo_plan' => $this->decidePhotoPlan($user, $thread->id, (string) ($args['entryId'] ?? ''), $action === 'confirm_photo_plan'),
                 'log_weight' => $this->weightAction($user, $args),
                 'log_water' => $this->waterAction($user, $args),
                 'mood' => $this->moodAction($user, $args),
@@ -266,7 +283,7 @@ final class MySqlCoach implements CoachGateway
                 $userMessage = Crypto::uuid();
                 $assistant = Crypto::uuid();
                 $this->db->table('coach_messages')->insert(['id' => $userMessage, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'user', 'type' => 'text', 'fallback_text' => $userText, 'client_message_id' => $client, 'payload' => '{}']);
-                $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $local['text'], 'reply_to' => $userMessage, 'payload' => '{}']);
+                $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => $local['type'] ?? 'text', 'fallback_text' => $local['text'], 'reply_to' => $userMessage, 'payload' => json_encode($local['payload'] ?? new \stdClass, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
 
                 app(CoachThreads::class)->touch($thread->id, $userText);
 
@@ -306,6 +323,82 @@ final class MySqlCoach implements CoachGateway
         }
 
         return ['entry' => ['id' => $entry, 'title' => $title], 'today' => $this->today($user)];
+    }
+
+    private function photoPlanOptions(string $entry): array
+    {
+        return [
+            ['label' => 'بله، به برنامه اضافه کن', 'action' => 'confirm_photo_plan', 'args' => ['entryId' => $entry]],
+            ['label' => 'نه، اضافه نکن', 'action' => 'dismiss_photo_plan', 'args' => ['entryId' => $entry]],
+        ];
+    }
+
+    private function photoPlanQuestion(array $proposal): string
+    {
+        $meal = ['breakfast' => 'صبحانه', 'lunch' => 'ناهار', 'dinner' => 'شام', 'snack' => 'میان‌وعده'][$proposal['mealType']];
+
+        return 'با برنامهٔ امروزت بررسی کردم. سهم پیشنهادی: '.$this->faDigits($proposal['snapshot']['servingDisplay']).'؛ '.$this->faDigits($proposal['kcal']).' کالری.'.
+            "\nمی‌خوای این رو به برنامهٔ غذاییت اضافه کنم؟ با تأییدت، جای «".$proposal['oldTitle'].'» در '.$meal.' امروز قرار می‌گیرد و به‌عنوان غذای خورده‌شده ثبت نمی‌شود.';
+    }
+
+    private function photoReply(string $user, string $thread, string $text, ?string $replyTo): ?array
+    {
+        $answer = trim(preg_replace('/[،,.!؟?\s]+/u', ' ', str_replace("\u{200c}", ' ', $text)));
+        $yes = in_array($answer, ['بله', 'آره', 'اره', 'باشه', 'بله اضافه کن', 'اضافه کن', 'بله به برنامه اضافه کن'], true);
+        $no = in_array($answer, ['نه', 'خیر', 'نه ممنون', 'نه اضافه نکن', 'اضافه نکن'], true);
+        if (! $yes && ! $no) {
+            return null;
+        }
+        $message = $this->db->table('coach_messages')->where(['user_id' => $user, 'thread_id' => $thread, 'role' => 'assistant'])
+            ->when($replyTo !== null, fn ($query) => $query->where('id', $replyTo))->orderByDesc('seq')->first();
+        $payload = $message === null ? [] : (json_decode($message->payload, true) ?: []);
+        if (($payload['planDecision'] ?? null) !== 'pending' || ! is_string($payload['entryId'] ?? null)) {
+            return null;
+        }
+
+        return $this->decidePhotoPlan($user, $thread, $payload['entryId'], $yes);
+    }
+
+    private function decidePhotoPlan(string $user, string $thread, string $entryId, bool $accept): array
+    {
+        return $this->db->transaction(function () use ($user, $thread, $entryId, $accept): array {
+            $entry = $this->db->table('coach_food_entries')->where(['id' => $entryId, 'user_id' => $user, 'thread_id' => $thread, 'source' => 'photo'])->lockForUpdate()->first();
+            if ($entry === null) {
+                throw new Problem(404, 'not_found', 'پیشنهاد عکس در این گفتگو پیدا نشد.');
+            }
+            $source = $this->db->table('coach_messages')->where('id', $entry->message_id)->lockForUpdate()->first();
+            $payload = $source === null ? [] : (json_decode($source->payload, true) ?: []);
+            $result = ['userText' => $accept ? 'بله، به برنامه اضافه کن' : 'نه، اضافه نکن'];
+            if (($payload['planDecision'] ?? null) !== 'pending') {
+                return [...$result, 'text' => ($payload['planDecision'] ?? null) === 'added' ? 'این غذا قبلاً به برنامه اضافه شده است.' : 'این پیشنهاد برای اضافه‌شدن فعال نیست.'];
+            }
+            $decision = 'declined';
+            $text = 'باشه، چیزی به برنامه اضافه نکردم.';
+            if ($accept) {
+                if ($entry->civil_date !== CivilDates::today()) {
+                    return [...$result, 'text' => 'این پیشنهاد برای روز قبل است؛ عکس را برای بررسی با برنامهٔ امروز دوباره بفرست.'];
+                }
+                try {
+                    $proposal = app(CoachPhotoPlan::class)->preview($user, json_decode($entry->items, true), $entry->meal_type);
+                } catch (Problem $error) {
+                    return [...$result, 'text' => $error->messageFa];
+                }
+                if (($payload['planProposal']['checkKey'] ?? null) !== $proposal['checkKey']) {
+                    $text = 'برنامه یا اطلاعات غذا تغییر کرده؛ دوباره بررسی کردم.'."\n".$this->photoPlanQuestion($proposal);
+                    $payload = [...$payload, 'planProposal' => $proposal, 'prompt' => $text, 'options' => $this->photoPlanOptions($entryId)];
+                    $this->db->table('coach_messages')->where('id', $source->id)->update(['payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+
+                    return [...$result, 'type' => 'quick_replies', 'text' => $text, 'payload' => $payload];
+                }
+                app(CoachPhotoPlan::class)->apply($user, $proposal);
+                $decision = 'added';
+                $text = '«'.$proposal['title'].'» با سهم بررسی‌شده به برنامهٔ امروزت اضافه شد و جای «'.$proposal['oldTitle'].'» قرار گرفت. در تب برنامه می‌بینی؛ مصرفش را بعد از خوردن ثبت کن.';
+            }
+            $payload = [...$payload, 'planDecision' => $decision, 'needsConfirmation' => false, 'options' => []];
+            $this->db->table('coach_messages')->where('id', $source->id)->update(['payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+
+            return [...$result, 'text' => $text, 'payload' => ['text' => $text, 'planChanged' => $accept, 'photoEntryId' => $entryId]];
+        });
     }
 
     private function savePhoto(string $user, string $entryId, ?string $title = null, ?string $mealType = null, ?array $edited = null): array
@@ -691,7 +784,7 @@ final class MySqlCoach implements CoachGateway
             'payload' => $payload,
             'fallback_text' => $text,
             'client_message_id' => $row->client_message_id,
-            'created_at' => $row->created_at,
+            'created_at' => Carbon::parse($row->created_at, 'UTC')->toISOString(),
         ];
     }
 }

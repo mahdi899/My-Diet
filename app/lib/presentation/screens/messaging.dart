@@ -729,9 +729,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
   }
 
   Widget messageBubble(ConversationMessage m) => Align(
-    alignment: m.mine
-        ? AlignmentDirectional.centerEnd
-        : AlignmentDirectional.centerStart,
+    alignment: m.mine ? Alignment.centerRight : Alignment.centerLeft,
     child: Container(
       constraints: BoxConstraints(
         maxWidth: MediaQuery.sizeOf(context).width * .82,

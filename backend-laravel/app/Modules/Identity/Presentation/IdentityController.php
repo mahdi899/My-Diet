@@ -169,9 +169,7 @@ final class IdentityController
         $photo = $body['photo'] ?? null;
         $number = fn (mixed $v): bool => (is_int($v) || is_float($v)) && is_finite((float) $v);
         $invalid = fn (): Problem => new Problem(400, 'validation', 'اطلاعات فردی معتبر نیست.');
-        if (! $number($age) || floor($age) !== (float) $age || $age < 1 || $age > 130 ||
-            ! $number($height) || $height <= 0 || $height > 300 || ! $number($weight) || $weight <= 0 || $weight > 700 ||
-            ! array_key_exists('photo', $body)) {
+        if (! array_key_exists('photo', $body)) {
             throw $invalid();
         }
         if ($photo !== null) {
@@ -182,6 +180,14 @@ final class IdentityController
             if (! str_starts_with($bytes, hex2bin('ffd8ff')) && ! str_starts_with($bytes, hex2bin('89504e470d0a1a0a'))) {
                 throw $invalid();
             }
+        }
+
+        if (array_keys($body) === ['photo']) {
+            return $this->identity->saveProfilePhoto($request->attributes->get('actor')['id'], $photo);
+        }
+        if (! $number($age) || floor($age) !== (float) $age || $age < 1 || $age > 130 ||
+            ! $number($height) || $height <= 0 || $height > 300 || ! $number($weight) || $weight <= 0 || $weight > 700) {
+            throw $invalid();
         }
 
         return $this->identity->savePersonalDetails($request->attributes->get('actor')['id'], [

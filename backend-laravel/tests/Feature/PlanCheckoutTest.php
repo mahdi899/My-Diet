@@ -142,7 +142,7 @@ final class PlanCheckoutTest extends MySqlTestCase
             $this->postJson('/v1/me/checkouts', [...$body, 'expectedPriceToman' => 1], ['Idempotency-Key' => 'tier-'.$code])->assertStatus(409)->assertJsonPath('code', 'price_changed');
             $payment = $this->postJson('/v1/me/checkouts', $body, ['Idempotency-Key' => 'tier-'.$code])->assertCreated()->json();
             $this->postJson('/v1/me/checkouts/'.$payment['paymentId'].'/sandbox', ['success' => true])->assertOk();
-            $subscription = $this->getJson('/v1/me/subscription')->assertOk()->assertJsonPath('subscription.status', 'active')->assertJsonPath('subscription.title', $title)->assertJsonPath('subscription.includedChanges', $code !== 'weekly')->json('subscription');
+            $subscription = $this->getJson('/v1/me/subscription')->assertOk()->assertJsonPath('subscription.status', 'active')->assertJsonPath('subscription.planId', $code)->assertJsonPath('subscription.title', $title)->assertJsonPath('subscription.includedChanges', $code !== 'weekly')->json('subscription');
             $seconds = (new \DateTimeImmutable($subscription['endsAt']))->getTimestamp() - time();
             self::assertEqualsWithDelta($days * 86400, $seconds, 10);
             $this->getJson('/v1/me/orders')->assertOk()->assertJsonPath('0.title', $title)->assertJsonPath('0.priceToman', $price);
@@ -155,6 +155,24 @@ final class PlanCheckoutTest extends MySqlTestCase
             }
             $this->db->table('user_service_access')->where('user_id', $user['id'])->update(['ends_at' => '2000-01-01 00:00:00']);
             $this->getJson('/v1/me/subscription')->assertOk()->assertJsonPath('subscription.status', 'expired')->assertJsonPath('subscription.includedChanges', false);
+        }
+    }
+
+    public function test_renewal_and_upgrade_keep_remaining_days_and_payment_retry_never_extends_twice(): void
+    {
+        [$user] = $this->prepareCheckout();
+        $this->db->table('user_service_access')->insert(['user_id' => $user['id'], 'service_code' => 'new_plan', 'ends_at' => '2099-01-01 00:00:00']);
+        $expectedEnd = new \DateTimeImmutable('2099-01-01T00:00:00Z');
+        foreach ([['weekly', 15, 1290000], ['monthly', 30, 1990000]] as [$code, $days, $price]) {
+            $body = ['serviceCode' => 'new_plan', 'planId' => $code, 'expectedPriceToman' => $price];
+            $payment = $this->postJson('/v1/me/checkouts', $body, ['Idempotency-Key' => 'renew-'.$code])->assertCreated()->json();
+            $this->postJson('/v1/me/checkouts/'.$payment['paymentId'].'/sandbox', ['success' => true])->assertOk();
+            $this->postJson('/v1/me/checkouts/'.$payment['paymentId'].'/sandbox', ['success' => true])->assertOk();
+            $expectedEnd = $expectedEnd->modify('+'.$days.' days');
+            $this->getJson('/v1/me/subscription')->assertOk()
+                ->assertJsonPath('subscription.planId', $code)
+                ->assertJsonPath('subscription.endsAt', $expectedEnd->format('Y-m-d\TH:i:s.000\Z'));
+            $this->db->table('plan_requests')->where('user_id', $user['id'])->update(['status' => 'published']);
         }
     }
 }

@@ -73,6 +73,25 @@ class _PersonalDetailsState extends State<PersonalDetails> {
           if (details['photo'] case final String encoded) {
             photo = base64Decode(encoded);
           }
+          if (details['age'] == null ||
+              details['height'] == null ||
+              details['weight'] == null) {
+            final profile = (await ensureLiveServices(
+              widget.store,
+            ).onboarding.state()).profile;
+            if (!mounted) return;
+            if (profile != null) {
+              if (details['age'] == null) {
+                fields[1].text = profile.age.toString();
+              }
+              if (details['height'] == null) {
+                fields[3].text = profile.heightCm.toString();
+              }
+              if (details['weight'] == null) {
+                fields[4].text = profile.weightKg.toString();
+              }
+            }
+          }
           return;
         }
       }
@@ -92,8 +111,9 @@ class _PersonalDetailsState extends State<PersonalDetails> {
         return;
       }
       final data = jsonDecode(saved) as Map<String, dynamic>;
-      final values = data['fields'] as List;
-      applyFields(values.cast<Object?>());
+      if (data['fields'] case final List values) {
+        applyFields(values.cast<Object?>());
+      }
       if (data['photo'] case final String encoded) {
         photo = base64Decode(encoded);
       }

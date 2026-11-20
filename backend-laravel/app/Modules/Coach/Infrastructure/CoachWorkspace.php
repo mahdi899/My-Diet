@@ -4,6 +4,7 @@ namespace App\Modules\Coach\Infrastructure;
 
 use App\Shared\Domain\Problem;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Carbon;
 
 class CoachWorkspace
 {
@@ -25,7 +26,7 @@ class CoachWorkspace
             ->orderByDesc('m.seq')->limit(51)->get(['m.id', 'm.seq', 'm.thread_id', 'm.fallback_text', 'm.created_at', 't.title']);
 
         return ['items' => $rows->take(50)->map(fn ($m) => ['messageId' => $m->id, 'threadId' => $m->thread_id,
-            'title' => $m->title ?? 'گفتگو', 'text' => $m->fallback_text, 'createdAt' => $m->created_at])->all(),
+            'title' => $m->title ?? 'گفتگو', 'text' => $m->fallback_text, 'createdAt' => Carbon::parse($m->created_at, 'UTC')->toISOString()])->all(),
             'nextCursor' => $rows->count() > 50 ? (int) $rows[49]->seq : null];
     }
 

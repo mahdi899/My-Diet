@@ -12,12 +12,11 @@ import 'coach_header.dart';
 import 'coach_companion.dart';
 import 'coach_welcome.dart';
 import 'conversation_history.dart';
-import 'today_summary.dart';
 import 'composer.dart';
 import 'message_list.dart';
 import 'profile_sheet.dart';
 import 'quota_indicator.dart';
-import 'today_ring_sheet.dart';
+import 'today_ring_sheet.dart' show closeCoachToHome;
 import 'workspace_pages.dart';
 
 class CoachPage extends StatefulWidget {
@@ -43,7 +42,6 @@ class _CoachPageState extends State<CoachPage> {
     repository: widget.repository,
   );
   bool _endingSession = false;
-  bool _summaryExpanded = false;
   int _companionCue = 0;
   CompanionMood _companionMood = CompanionMood.calm;
   bool _greeted = false;
@@ -80,7 +78,6 @@ class _CoachPageState extends State<CoachPage> {
     if (!mounted) return;
     if (_shownConversationVersion != _controller.conversationVersion) {
       _shownConversationVersion = _controller.conversationVersion;
-      _summaryExpanded = false;
       _companionReset?.cancel();
       _companionMood = CompanionMood.calm;
     }
@@ -139,15 +136,6 @@ class _CoachPageState extends State<CoachPage> {
     } catch (_) {}
   }
 
-  void _toggleSummary() {
-    if (MediaQuery.viewInsetsOf(context).bottom > 0) {
-      FocusScope.of(context).unfocus();
-      setState(() => _summaryExpanded = true);
-    } else {
-      setState(() => _summaryExpanded = !_summaryExpanded);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final failed = _controller.historyFailed && _controller.messages.isEmpty;
@@ -172,7 +160,7 @@ class _CoachPageState extends State<CoachPage> {
               dateKey(m.createdAt.toLocal()) == dateKey(store.today),
         )
         .lastOrNull;
-    return Scaffold(
+    final page = Scaffold(
       backgroundColor: AppColors.bg,
       drawer: _controller.conversationRepository == null
           ? null
@@ -195,115 +183,148 @@ class _CoachPageState extends State<CoachPage> {
                     ? null
                     : () => _react(CompanionMood.greeting),
               ),
-              if (_controller.conversationRepository != null)
-                Builder(
-                  builder: (context) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          key: const ValueKey('coach-history'),
-                          tooltip: 'تاریخچهٔ گفتگوها',
-                          onPressed: () {
-                            FocusScope.of(context).unfocus();
-                            Scaffold.of(context).openDrawer();
-                            unawaited(_controller.refreshConversations());
-                          },
-                          icon: const Icon(
-                            Icons.history_rounded,
-                            color: AppColors.emeraldDark,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            _controller.conversations
-                                    .where(
-                                      (t) => t.id == _controller.conversationId,
-                                    )
-                                    .firstOrNull
-                                    ?.title ??
-                                'گفتگوی جدید',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.inkSoft,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          key: const ValueKey('coach-new-conversation'),
-                          tooltip: 'گفتگوی جدید',
-                          onPressed: _controller.loading
-                              ? null
-                              : () async {
-                                  FocusScope.of(context).unfocus();
-                                  final opened = await _controller
-                                      .newConversation();
-                                  if (!context.mounted) return;
-                                  if (opened) {
-                                    setState(() => _summaryExpanded = false);
-                                  } else {
-                                    Scaffold.of(context).openDrawer();
-                                  }
-                                },
-                          icon: const Icon(
-                            Icons.add_comment_outlined,
-                            color: AppColors.emeraldDark,
-                          ),
-                        ),
-                        if (_controller.workspace != null)
-                          PopupMenuButton<String>(
-                            tooltip: 'ابزارهای گفتگو',
-                            icon: const Icon(
-                              Icons.more_vert_rounded,
-                              color: AppColors.emeraldDark,
-                            ),
-                            onSelected: (action) {
-                              FocusScope.of(context).unfocus();
-                              if (action == 'memory') {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => CoachMemoryPage(
-                                      controller: _controller,
+              if (_controller.conversationRepository != null ||
+                  _quota?['hasQuota'] == true)
+                Container(
+                  key: const ValueKey('coach-conversation-panel'),
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.mint,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.selectedLine),
+                    boxShadow: AppShadows.soft,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_controller.conversationRepository != null)
+                        Builder(
+                          builder: (context) => Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Row(
+                              children: [
+                                IconButton.filledTonal(
+                                  key: const ValueKey('coach-history'),
+                                  tooltip: 'تاریخچهٔ گفتگوها',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: AppColors.surface,
+                                    side: const BorderSide(
+                                      color: AppColors.selectedLine,
                                     ),
                                   ),
-                                );
-                              } else {
-                                openCoachLibrary(
-                                  context,
-                                  _controller,
-                                  saved: action == 'saved',
-                                );
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'search',
-                                child: Text('جست‌وجو در گفتگوها'),
-                              ),
-                              PopupMenuItem(
-                                value: 'saved',
-                                child: Text('نشان‌شده‌ها'),
-                              ),
-                              PopupMenuItem(
-                                value: 'memory',
-                                child: Text('حافظه مربی'),
-                              ),
-                            ],
+                                  onPressed: () {
+                                    FocusScope.of(context).unfocus();
+                                    Scaffold.of(context).openDrawer();
+                                    unawaited(
+                                      _controller.refreshConversations(),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.history_rounded,
+                                    color: AppColors.emeraldDark,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    _controller.conversations
+                                            .where(
+                                              (t) =>
+                                                  t.id ==
+                                                  _controller.conversationId,
+                                            )
+                                            .firstOrNull
+                                            ?.title ??
+                                        'گفتگوی جدید',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.emeraldDark,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  key: const ValueKey('coach-new-conversation'),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: AppColors.emeraldDark,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  tooltip: 'گفتگوی جدید',
+                                  onPressed: _controller.loading
+                                      ? null
+                                      : () async {
+                                          FocusScope.of(context).unfocus();
+                                          final opened = await _controller
+                                              .newConversation();
+                                          if (!context.mounted) return;
+                                          if (!opened) {
+                                            Scaffold.of(context).openDrawer();
+                                          }
+                                        },
+                                  icon: const Icon(
+                                    Icons.add_comment_outlined,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                if (_controller.workspace != null)
+                                  PopupMenuButton<String>(
+                                    tooltip: 'ابزارهای گفتگو',
+                                    icon: const Icon(
+                                      Icons.more_vert_rounded,
+                                      color: AppColors.emeraldDark,
+                                    ),
+                                    onSelected: (action) {
+                                      FocusScope.of(context).unfocus();
+                                      if (action == 'memory') {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute<void>(
+                                            builder: (_) => CoachMemoryPage(
+                                              controller: _controller,
+                                            ),
+                                          ),
+                                        );
+                                      } else {
+                                        openCoachLibrary(
+                                          context,
+                                          _controller,
+                                          saved: action == 'saved',
+                                        );
+                                      }
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(
+                                        value: 'search',
+                                        child: Text('جست‌وجو در گفتگوها'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'saved',
+                                        child: Text('نشان‌شده‌ها'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'memory',
+                                        child: Text('حافظه مربی'),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
-                      ],
-                    ),
+                        ),
+                      if (_quota?['hasQuota'] == true &&
+                          _quota?['dailyRemaining'] is num &&
+                          _quota?['dailyLimit'] is num)
+                        QuotaIndicator(
+                          dailyRemaining: (_quota!['dailyRemaining'] as num)
+                              .toInt(),
+                          dailyLimit: (_quota!['dailyLimit'] as num).toInt(),
+                          periodRemaining:
+                              (_quota!['periodRemaining'] as num?)?.toInt() ??
+                              0,
+                        ),
+                    ],
                   ),
-                ),
-              if (_quota?['hasQuota'] == true &&
-                  _quota?['dailyRemaining'] is num &&
-                  _quota?['dailyLimit'] is num)
-                QuotaIndicator(
-                  dailyRemaining: (_quota!['dailyRemaining'] as num).toInt(),
-                  dailyLimit: (_quota!['dailyLimit'] as num).toInt(),
-                  periodRemaining:
-                      (_quota!['periodRemaining'] as num?)?.toInt() ?? 0,
                 ),
               if (!keyboardOpen && mood == CompanionMood.celebrate)
                 CoachCompanionNote(
@@ -311,18 +332,6 @@ class _CoachPageState extends State<CoachPage> {
                   celebrated: mood == CompanionMood.celebrate,
                   mood: mood,
                   cue: _companionCue,
-                ),
-              if (!welcome || _summaryExpanded)
-                CoachTodaySummary(
-                  expanded: _summaryExpanded,
-                  keyboardOpen: keyboardOpen,
-                  brief: brief,
-                  onToggle: _toggleSummary,
-                  onRing: () async {
-                    await _controller.refreshToday();
-                    if (!context.mounted) return;
-                    showTodayRingSheet(context);
-                  },
                 ),
               if (_controller.budgetNote != null)
                 Padding(
@@ -373,13 +382,26 @@ class _CoachPageState extends State<CoachPage> {
               CoachComposer(
                 key: ValueKey('composer-${_controller.conversationVersion}'),
                 controller: _controller,
-                onTodayPlan: _toggleSummary,
+                onTodayPlan: () => _controller.sendText('برنامه امروز من چیه؟'),
                 prefill: widget.autoSend == null ? widget.prefill : null,
               ),
             ],
           ),
         ),
       ),
+    );
+    if (widget.onClose != null) return page;
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (ModalRoute.of(context)?.willHandlePopInternally == true) {
+          Navigator.of(context).pop();
+        } else {
+          closeCoachToHome(context);
+        }
+      },
+      child: page,
     );
   }
 }

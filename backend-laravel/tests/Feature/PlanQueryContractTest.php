@@ -58,4 +58,55 @@ final class PlanQueryContractTest extends MySqlTestCase
         $this->actor('admin');
         $this->getJson('/v1/specialist/queue')->assertOk()->assertExactJson([]);
     }
+
+    public function test_customer_retries_empty_failed_plan_once_without_buying_or_answering_again(): void
+    {
+        $user = $this->actor();
+        $plan = $this->planFixture($user['id']);
+        $this->db->table('plan_meal_items')->where('meal_id', $plan['meal'])->delete();
+        $this->db->table('plan_meal_options')->where('meal_id', $plan['meal'])->delete();
+        $this->db->table('plan_meals')->where('id', $plan['meal'])->delete();
+        $this->db->table('ai_generations')->insert([
+            'id' => Crypto::uuid(), 'request_id' => $plan['request'], 'provider' => 'pool',
+            'status' => 'failed', 'skipped_reason' => 'provider_error',
+        ]);
+
+        for ($i = 0; $i < 2; $i++) {
+            $this->postJson('/v1/me/plan/recover')->assertOk()
+                ->assertJsonPath('id', $plan['request'])->assertJsonPath('status', 'generating');
+        }
+
+        self::assertSame(1, $this->db->table('orders')->where('user_id', $user['id'])->count());
+        self::assertSame(1, $this->db->table('plan_requests')->where('user_id', $user['id'])->count());
+        self::assertSame($plan['submission'], $this->db->table('plan_requests')->where('id', $plan['request'])->value('submission_id'));
+        self::assertSame('{}', $this->db->table('questionnaire_submissions')->where('id', $plan['submission'])->value('answers'));
+        $events = $this->db->table('outbox_events')->where('topic', 'plan.generate')->where('aggregate_id', $plan['request'])->get();
+        self::assertCount(1, $events);
+        self::assertSame(['requestId' => $plan['request'], 'regenerate' => true], json_decode($events[0]->payload, true));
+    }
+
+    public function test_recovery_preserves_existing_draft_and_published_meals(): void
+    {
+        foreach ([false, true] as $published) {
+            $user = $this->actor();
+            $plan = $this->planFixture($user['id'], $published);
+            $this->db->table('ai_generations')->insert([
+                'id' => Crypto::uuid(), 'request_id' => $plan['request'], 'provider' => 'pool',
+                'status' => 'failed', 'skipped_reason' => 'invalid_draft',
+            ]);
+            $this->postJson('/v1/me/plan/recover')->assertOk()->assertJsonPath('id', $plan['request']);
+            self::assertSame(0, $this->db->table('outbox_events')->where('aggregate_id', $plan['request'])->count());
+            self::assertSame('عدسی', $this->db->table('plan_meals')->where('id', $plan['meal'])->value('title'));
+        }
+    }
+
+    public function test_recovery_without_a_purchase_never_creates_a_request_or_exposes_another_user(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->planFixture($owner['id']);
+        $this->actor();
+        self::assertSame('', $this->postJson('/v1/me/plan/recover')->assertOk()->getContent());
+        self::assertSame('in_review', $this->db->table('plan_requests')->where('id', $plan['request'])->value('status'));
+        self::assertSame(0, $this->db->table('outbox_events')->where('aggregate_id', $plan['request'])->count());
+    }
 }

@@ -37,11 +37,9 @@ class ConnectionScreen extends StatelessWidget {
   final LinkMonitor link;
 
   String get title => switch (link.fault) {
-    null => 'در حال بررسی اتصال',
-    LinkFault.offline => 'ارتباط برقرار نیست',
-    LinkFault.unavailable => 'سرویس موقتاً در دسترس نیست',
-    LinkFault.timeout => 'پاسخ سرور به‌موقع نرسید',
-    LinkFault.expired => 'نشست پایان یافته',
+    null => 'یه لحظه صبر کن…',
+    LinkFault.expired => 'برای ادامه، دوباره وارد شو',
+    _ => 'یه لحظه گیر کردیم',
   };
 
   @override
@@ -52,47 +50,35 @@ class ConnectionScreen extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: const BoxConstraints(maxWidth: 360),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(28),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SabzineMark(size: 72),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'رژیم من',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: pine,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   if (link.fault != null && link.fault != LinkFault.expired)
                     const BrandScene(
                       kind: BrandSceneKind.connectionProblem,
-                      height: 150,
-                    ),
+                      height: 120,
+                    )
+                  else
+                    const SabzineMark(size: 48),
+                  const SizedBox(height: 16),
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, color: ink),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: ink,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    link.fault == LinkFault.expired
-                        ? 'برای ادامه دوباره وارد شو. برنامهٔ ذخیره‌شده به‌صورت آفلاین باز نمی‌شود.'
-                        : 'برنامهٔ ذخیره‌شده به‌صورت آفلاین نمایش داده نمی‌شود.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: muted),
-                  ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 18),
                   FilledButton(
                     key: const ValueKey('connection-retry'),
                     onPressed: link.checking ? null : link.check,
                     child: Text(
-                      link.checking ? 'در حال بررسی اتصال' : 'تلاش دوباره',
+                      link.checking ? 'یه لحظه…' : 'دوباره امتحان کن',
                     ),
                   ),
                 ],

@@ -20,6 +20,7 @@ class HttpCommerceRepository
     return PlanSubscription(
       title: data['title'] as String,
       status: data['status'] as String,
+      planId: data['planId'] as String?,
       endsAt: DateTime.tryParse(data['endsAt'] as String? ?? ''),
       includedChanges: data['includedChanges'] == true,
     );

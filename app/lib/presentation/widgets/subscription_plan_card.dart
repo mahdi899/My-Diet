@@ -13,10 +13,12 @@ class SubscriptionPlanCard extends StatelessWidget {
     required this.plan,
     required this.selected,
     required this.onSelect,
+    this.membershipLabel,
   });
   final SubscriptionPlanOffer plan;
   final bool selected;
   final VoidCallback? onSelect;
+  final String? membershipLabel;
 
   DietIconKind get _icon => switch (plan.id) {
     'monthly' => DietIconKind.leaf,
@@ -108,6 +110,14 @@ class SubscriptionPlanCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (membershipLabel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      membershipLabel!,
+                      style: AppTypography.supporting,
+                    ),
+                  ),
                 Row(
                   children: [
                     ExcludeSemantics(

@@ -265,10 +265,12 @@ class QuickRepliesView extends StatelessWidget {
     super.key,
     required this.message,
     required this.onPick,
+    this.enabled = true,
   });
 
   final CoachMessage message;
   final ValueChanged<Map<String, dynamic>> onPick;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +293,7 @@ class QuickRepliesView extends StatelessWidget {
                   label: Text(
                     asString(option['label'], asString(option['value'])),
                   ),
-                  onPressed: () => onPick(option),
+                  onPressed: enabled ? () => onPick(option) : null,
                 ),
             ],
           ),

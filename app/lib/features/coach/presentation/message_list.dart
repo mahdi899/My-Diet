@@ -241,6 +241,11 @@ class _CoachMessageListState extends State<CoachMessageList> {
       ),
       'quick_replies' => QuickRepliesView(
         message: message,
+        enabled:
+            !controller.busy &&
+            !controller.answered.contains(message.id) &&
+            (message.payload['planDecision'] == null ||
+                message.payload['planDecision'] == 'pending'),
         onPick: controller.answered.contains(message.id)
             ? (_) {}
             : (option) {
@@ -411,6 +416,7 @@ class _CoachMessageListState extends State<CoachMessageList> {
     return GestureDetector(
       onLongPress: () => _menu(context, controller, message),
       child: Column(
+        textDirection: TextDirection.ltr,
         crossAxisAlignment: message.isUser
             ? CrossAxisAlignment.end
             : CrossAxisAlignment.start,

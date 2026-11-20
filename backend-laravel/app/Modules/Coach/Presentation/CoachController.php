@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class CoachController
 {
-    private const ACTIONS = ['confirm_meal', 'dismiss', 'confirm_swap', 'log_as_planned', 'log_water', 'log_weight', 'mood', 'undo_meal', 'show_ring'];
+    private const ACTIONS = ['confirm_meal', 'dismiss', 'confirm_swap', 'confirm_photo_plan', 'dismiss_photo_plan', 'log_as_planned', 'log_water', 'log_weight', 'mood', 'undo_meal', 'show_ring'];
 
     public function __construct(
         private CoachGateway $coach,

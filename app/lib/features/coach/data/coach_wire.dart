@@ -6,6 +6,8 @@ const kCoachServerActions = <String>{
   'confirm_meal',
   'dismiss',
   'confirm_swap',
+  'confirm_photo_plan',
+  'dismiss_photo_plan',
   'log_as_planned',
   'log_water',
   'log_weight',

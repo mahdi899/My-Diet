@@ -2,8 +2,10 @@
 
 namespace App\Modules\Plans\Presentation;
 
+use App\Modules\Onboarding\Application\WebPlanDelivery;
 use App\Modules\Plans\Application\PlanQueries;
 use App\Modules\Plans\Infrastructure\MySqlPlanDelivery;
+use App\Modules\Plans\Infrastructure\MySqlPlanGeneration;
 use App\Shared\Presentation\StrictInput;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -42,6 +44,15 @@ final class PlanQueryController
         $plan = $this->queries->latest($this->actor($request));
 
         return $plan === null ? response('', 200) : response()->json($plan);
+    }
+
+    public function recover(Request $request, MySqlPlanGeneration $generation, WebPlanDelivery $webDelivery): Response
+    {
+        $user = $this->actor($request);
+        $webDelivery->sync($user);
+        $generation->retryForUser($user);
+
+        return $this->latest($request);
     }
 
     public function requests(Request $request): array

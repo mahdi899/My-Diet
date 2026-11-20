@@ -281,19 +281,20 @@ class _SummaryHeader extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 10),
-            _CalorieRail(day: day),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             Text(
               day.targetKcal > 0
                   ? 'از ${fa(day.targetKcal)} کالری برنامه'
                   : 'مجموع ثبت‌های امروز',
+              textAlign: TextAlign.right,
               style: const TextStyle(
                 fontSize: 11,
                 height: 1.4,
                 color: _paleMint,
               ),
             ),
+            const SizedBox(height: 6),
+            _CalorieRail(day: day),
             if (day.unknown)
               const Text(
                 'بعضی ثبت‌ها کالری مشخص ندارند.',

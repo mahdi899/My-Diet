@@ -45,16 +45,16 @@ void main() {
 
     first.complete(LinkFault.offline);
     await tester.pump();
-    expect(find.text('ارتباط برقرار نیست'), findsOneWidget);
+    expect(find.text('یه لحظه گیر کردیم'), findsOneWidget);
     expect(
       find.text('برنامهٔ ذخیره‌شده به‌صورت آفلاین نمایش داده نمی‌شود.'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.byType(HomeTab), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('connection-retry')));
     await tester.pump();
-    expect(find.text('در حال بررسی اتصال'), findsWidgets);
+    expect(find.text('یه لحظه…'), findsOneWidget);
     retry.complete(null);
     await tester.pump();
     expect(find.byKey(const ValueKey('connection-screen')), findsNothing);
@@ -107,14 +107,15 @@ void main() {
     expect(find.byType(HomeTab), findsOneWidget);
     link.report(LinkFault.timeout);
     await tester.pump();
-    expect(find.text('پاسخ سرور به‌موقع نرسید'), findsOneWidget);
+    expect(find.text('یه لحظه گیر کردیم'), findsOneWidget);
+    expect(find.text('پاسخ سرور به‌موقع نرسید'), findsNothing);
     expect(find.byType(HomeTab), findsNothing);
     link.report(LinkFault.unavailable);
     await tester.pump();
-    expect(find.text('سرویس موقتاً در دسترس نیست'), findsOneWidget);
+    expect(find.text('یه لحظه گیر کردیم'), findsOneWidget);
     link.report(LinkFault.expired);
     await tester.pump();
-    expect(find.text('نشست پایان یافته'), findsOneWidget);
+    expect(find.text('برای ادامه، دوباره وارد شو'), findsOneWidget);
     expect(find.text('برنامهٔ غذایی من'), findsNothing);
   });
 }

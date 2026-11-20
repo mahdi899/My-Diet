@@ -32,6 +32,7 @@ import '../domain/commerce/commerce.dart';
 import '../domain/plan/plan.dart';
 import 'session/services.dart';
 import 'session/live_entry_cache.dart';
+import 'profile_photo_storage.dart';
 
 enum AppRole { user, expert, admin }
 
@@ -1939,10 +1940,15 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     );
     if (serviceId == 'new-plan') {
       final plan = subscriptionById(planId);
+      final current = planSubscription;
+      final startsAt = current?.activeAt(today) == true
+          ? current!.endsAt ?? today
+          : today;
       planSubscription = PlanSubscription(
         title: offer.title,
         status: 'active',
-        endsAt: plan == null ? null : today.add(Duration(days: plan.days)),
+        planId: plan?.id,
+        endsAt: plan == null ? null : startsAt.add(Duration(days: plan.days)),
       );
       submitQuestionnaire();
     } else {
@@ -2058,7 +2064,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   late final WaterRepository waterLog = PreferencesWaterLog();
 
   @override
-  bool get canLoadProfilePhoto => userSignedIn && customerAuth != null;
+  bool get canLoadProfilePhoto => userSignedIn;
 
   @override
   PlanOverview get planOverview => PlanOverview(
@@ -2070,17 +2076,25 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   @override
   Future<void> loadHomePhoto() async {
     final auth = customerAuth;
-    if (!userSignedIn || auth == null) return;
+    if (!userSignedIn) return;
+    final owner = feedbackOwner;
     final previous = profilePhoto;
-    final response = await auth.api('me/personal-details');
-    if (_disposed || !userSignedIn || previous != profilePhoto) return;
-    final photo = response is Map && response['details'] is Map
-        ? response['details']['photo']
+    final response = auth == null
+        ? null
+        : await auth.api('me/personal-details');
+    final photo = auth == null
+        ? await ProfilePhotoStorage.read(owner)
+        : response is Map && response['details'] is Map
+        ? response['details']['photo'] as String?
         : null;
-    if (photo is String) {
-      profilePhoto = photo;
-      update();
+    if (_disposed ||
+        !userSignedIn ||
+        owner != feedbackOwner ||
+        previous != profilePhoto) {
+      return;
     }
+    profilePhoto = photo;
+    update();
   }
 
   @override
@@ -2093,11 +2107,14 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
 
   Future<void> verifyLoginCode(String phone, String code) async {
     if (customerAuth == null) {
-      if (code != '123456' && !debugLoginOtp(phone, code)) {
-        throw const AuthFailure('کد نمونه ۱۲۳۴۵۶ است.');
+      if (kDebugMode) {
+        if (code != '123456' && !debugLoginOtp(phone, code)) {
+          throw const AuthFailure('کد نمونه ۱۲۳۴۵۶ است.');
+        }
+        login(AppRole.user, phone: phone);
+        return;
       }
-      login(AppRole.user, phone: phone);
-      return;
+      throw const AuthFailure('سرویس ورود در دسترس نیست.');
     }
     final session = await customerAuth!.verify(phone, code);
     _applyServerSession(session, phone: phone);
@@ -2221,7 +2238,13 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
     }
     if (!questionnaireComplete) {
       role = AppRole.user;
-      entryStage = EntryStage.onboarding;
+      if (serverAuthEnabled) {
+        liveReady = false;
+        liveEntryCache = null;
+        entryStage = EntryStage.home;
+      } else {
+        entryStage = EntryStage.onboarding;
+      }
       update();
     }
   }

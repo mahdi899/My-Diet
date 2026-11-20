@@ -21,6 +21,17 @@ class _SpyCoach extends MockCoachRepository {
   }
 }
 
+class _QuotaCoach extends _SpyCoach {
+  _QuotaCoach(super.store);
+  @override
+  Future<Map<String, dynamic>?> quota() async => {
+    'hasQuota': true,
+    'dailyRemaining': 8,
+    'dailyLimit': 10,
+    'periodRemaining': 40,
+  };
+}
+
 class _InlineCoach extends _SpyCoach {
   _InlineCoach(super.store);
   @override
@@ -100,101 +111,29 @@ void main() {
         .load();
   });
 
-  testWidgets('summary expands into actual plan and can collapse again', (
+  testWidgets('chat has a clear conversation panel without the today summary', (
     tester,
   ) async {
     phone(tester);
     final store = ready();
-    await tester.pumpWidget(host(store, _SpyCoach(store)));
+    final repo = _QuotaCoach(store);
+    await tester.pumpWidget(host(store, repo));
     await tester.pumpAndSettle();
-    final summary = find.byType(CoachTodaySummary);
-    final breakfast = store.mealsOn(store.today).first.title;
+    expect(find.byType(CoachTodaySummary), findsNothing);
     expect(
-      find.descendant(of: summary, matching: find.textContaining(breakfast)),
-      findsNothing,
-    );
-    await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
-    await tester.pumpAndSettle();
-    expect(
-      find.descendant(of: summary, matching: find.textContaining(breakfast)),
+      find.byKey(const ValueKey('coach-conversation-panel')),
       findsOneWidget,
     );
-    await tester.tap(find.byKey(const ValueKey('coach-summary-toggle')));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('coach-history')), findsOneWidget);
     expect(
-      find.descendant(of: summary, matching: find.textContaining(breakfast)),
-      findsNothing,
-    );
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-    store.dispose();
-  });
-
-  testWidgets('summary progress and next meal follow actual registrations', (
-    tester,
-  ) async {
-    phone(tester);
-    final store = ready();
-    await tester.pumpWidget(host(store, _SpyCoach(store)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
-    await tester.pumpAndSettle();
-    final summary = find.byType(CoachTodaySummary);
-    Finder inSummary(Finder matching) =>
-        find.descendant(of: summary, matching: matching);
-    expect(inSummary(find.text('۰ از ۴ وعده')), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('coach-summary-meal-0')),
-        matching: find.text('وعده بعدی'),
-      ),
+      find.byKey(const ValueKey('coach-new-conversation')),
       findsOneWidget,
     );
-
-    await store.setMealEaten(store.today, 0, true);
-    await tester.pumpAndSettle();
-    expect(inSummary(find.text('۱ از ۴ وعده')), findsOneWidget);
-    expect(inSummary(find.text('انجام شد')), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('coach-summary-meal-1')),
-        matching: find.text('وعده بعدی'),
-      ),
-      findsOneWidget,
-    );
-    for (var i = 1; i < store.mealsOn(store.today).length; i++) {
-      await store.setMealEaten(store.today, i, true);
-    }
-    await tester.pumpAndSettle();
-    expect(inSummary(find.text('۴ از ۴ وعده')), findsOneWidget);
-    expect(inSummary(find.text('وعده بعدی')), findsNothing);
-    expect(
-      tester
-          .widget<LinearProgressIndicator>(
-            inSummary(find.byType(LinearProgressIndicator)),
-          )
-          .value,
-      1,
-    );
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-    store.dispose();
-  });
-
-  testWidgets('summary meal cards open their actual meal details', (
-    tester,
-  ) async {
-    phone(tester);
-    final store = ready();
-    await tester.pumpWidget(host(store, _SpyCoach(store)));
-    await tester.pumpAndSettle();
+    expect(find.text('۸ از ۱۰ پیام امروز باقی مونده'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('coach-summary-meal-1')));
-    await tester.pumpAndSettle();
-    final detail = tester.widget<MealDetailPage>(find.byType(MealDetailPage));
-    expect(detail.index, 1);
-    expect(detail.date, store.today);
+    expect(repo.sent.single.text, 'برنامه امروز من چیه؟');
+    expect(find.byType(CoachTodaySummary), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     store.dispose();
@@ -277,12 +216,12 @@ void main() {
     },
   );
 
-  testWidgets('narrow layout and expanded summary survive the keyboard', (
+  testWidgets('conversation panel survives narrow layout and keyboard', (
     tester,
   ) async {
     phone(tester, width: 320, height: 740);
     final store = ready();
-    final repo = _SpyCoach(store);
+    final repo = _QuotaCoach(store);
     await tester.pumpWidget(host(store, repo, scale: 1.35));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('coach-quick-plan')));
@@ -292,18 +231,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('coach-input')), findsOneWidget);
-    final summary = find.byType(CoachTodaySummary);
-    final breakfast = store.mealsOn(store.today).first.title;
+    expect(find.byType(CoachTodaySummary), findsNothing);
     expect(
-      find.descendant(of: summary, matching: find.textContaining(breakfast)),
-      findsNothing,
+      find.byKey(const ValueKey('coach-conversation-panel')),
+      findsOneWidget,
     );
     await tester.pumpWidget(host(store, repo, scale: 1.35));
     await tester.pumpAndSettle();
-    expect(
-      find.descendant(of: summary, matching: find.textContaining(breakfast)),
-      findsOneWidget,
-    );
+    expect(find.byType(CoachTodaySummary), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     store.dispose();

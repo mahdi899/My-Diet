@@ -9,6 +9,7 @@ import '../../domain/commerce/commerce.dart';
 import '../../core/theme/theme.dart';
 import '../session/live_session.dart';
 import '../widgets/operation_status.dart';
+import '../widgets/kit/pill_button.dart';
 import '../widgets/ui.dart';
 import '../widgets/brand_scene.dart';
 import '../widgets/subscription_plan_card.dart';
@@ -23,13 +24,36 @@ Future<void> openPlanServices(
   bool browseOnly = false,
 }) async {
   final store = DemoScope.of(context);
+  if (store.walletPricingOpen) return;
   if (!store.userSignedIn || (!browseOnly && !store.questionnaireComplete)) {
     Navigator.of(context).popUntil((route) => route.isFirst);
     store.startPlanAcquisition();
     return;
   }
   store.pendingPlanAcquisition = false;
-  if (store.walletPricingOpen) return;
+  if (!browseOnly &&
+      store.serverAuthEnabled &&
+      (!store.hasUserRequest || !store.userRequest.isPublished)) {
+    store.walletPricingOpen = true;
+    try {
+      await recoverLivePlan(store);
+      if (!context.mounted || !store.userSignedIn) return;
+      if (store.hasUserRequest || store.pendingWebPlanDelivery) return;
+    } on AppFailure catch (failure) {
+      if (failure.expired) await store.signOutCustomer();
+      store.liveNotice = failure.message;
+      store.update();
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure.message)));
+      }
+      return;
+    } finally {
+      store.walletPricingOpen = false;
+    }
+  }
+  if (!context.mounted) return;
   store.journey.record('plan_purchase_started', {
     'serviceId': store.selectedPlanServiceId ?? 'unspecified',
   });
@@ -45,6 +69,35 @@ Future<void> openPlanServices(
   } finally {
     store.walletPricingOpen = false;
   }
+}
+
+class ReceivePlanButton extends StatefulWidget {
+  const ReceivePlanButton({super.key});
+
+  @override
+  State<ReceivePlanButton> createState() => _ReceivePlanButtonState();
+}
+
+class _ReceivePlanButtonState extends State<ReceivePlanButton> {
+  bool busy = false;
+
+  Future<void> receive() async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await openPlanServices(context);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PillButton(
+    label: busy ? 'در حال دریافت برنامه…' : 'دریافت برنامه',
+    icon: Icons.restaurant_menu_outlined,
+    loading: busy,
+    onPressed: busy ? null : receive,
+  );
 }
 
 class PlanSubscriptionChip extends StatelessWidget {
@@ -274,6 +327,71 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
       ? store.subscriptionServiceById(store.selectedSubscriptionPlanId)
       : store.serviceById(store.selectedPlanServiceId);
 
+  SubscriptionPlanOffer? currentPlan(DemoStore store) {
+    final subscription = store.planSubscription;
+    if (subscription == null) return null;
+    return store.subscriptionById(subscription.planId) ??
+        store.subscriptionOffers
+            .where(
+              (plan) =>
+                  subscription.title == plan.title ||
+                  subscription.title == 'پلن ${plan.title}',
+            )
+            .firstOrNull;
+  }
+
+  String purchaseAction(DemoStore store, SubscriptionPlanOffer? plan) {
+    if (store.planSubscription == null || plan == null) {
+      return 'فعال‌سازی پلن';
+    }
+    final current = currentPlan(store);
+    if (store.planSubscription!.activeAt(store.today) &&
+        current != null &&
+        plan.days > current.days) {
+      return 'تمدید و ارتقا به پلن ${plan.title}';
+    }
+    return current?.id == plan.id
+        ? 'تمدید پلن ${plan.title}'
+        : 'تمدید با پلن ${plan.title}';
+  }
+
+  Future<bool> confirmRenewal(
+    DemoStore store,
+    SubscriptionPlanOffer plan,
+  ) async {
+    final subscription = store.planSubscription!;
+    final active = subscription.activeAt(store.today);
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialog) => AlertDialog(
+            title: Text(purchaseAction(store, plan)),
+            content: SingleChildScrollView(
+              child: Text(
+                '${active ? 'در حال حاضر' : 'اشتراک قبلی تو'} پلن ${subscription.title.replaceFirst('پلن ', '')}${active ? ' فعال است.' : ' بوده است.'}'
+                '${subscription.endsAt == null ? '' : '\nاعتبار ${active ? 'فعلی' : 'قبلی'} تا ${persianDate(subscription.endsAt!.toUtc().add(const Duration(hours: 3, minutes: 30)), year: true)}'}'
+                '\nاین پرداخت برای ${purchaseAction(store, plan)} است.'
+                '\n${active && subscription.endsAt != null ? '${fa(plan.days)} روز به اعتبار باقی‌مانده اضافه می‌شود.' : 'دورهٔ ${fa(plan.days)} روزه پس از تأیید پرداخت شروع می‌شود.'}'
+                '\nامکانات پلن ${plan.title} پس از پرداخت جایگزین امکانات پلن قبلی می‌شود.'
+                '\nمبلغ کامل پلن: ${formatToman(plan.priceToman)}'
+                '\nادامه می‌دهی؟',
+                style: const TextStyle(height: 1.8),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('انصراف'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('تأیید و ادامهٔ پرداخت'),
+              ),
+            ],
+          ),
+        ) ==
+        true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -320,6 +438,10 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     final store = DemoScope.of(context);
     final offer = selectedOffer(store);
     if (offer == null) return;
+    final plan = offer.id == 'new-plan'
+        ? store.subscriptionById(store.selectedSubscriptionPlanId)
+        : null;
+    final renewing = plan != null && store.planSubscription != null;
     if (!store.userSignedIn || !store.questionnaireComplete) {
       Navigator.of(context).popUntil((route) => route.isFirst);
       store.startPlanAcquisition();
@@ -344,6 +466,9 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     });
     _reveal(_waitingAnchor);
     try {
+      if (renewing && store.liveOrderKey == null) {
+        if (!await confirmRenewal(store, plan) || !mounted) return;
+      }
       if (offer.id == 'new-plan') {
         await store.restoreWeeklyFeedback();
         if (!mounted) return;
@@ -399,7 +524,9 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
           canPop: false,
           child: AlertDialog(
             icon: const Icon(Icons.check_circle_rounded, color: pine, size: 44),
-            title: const Text('پلن با موفقیت فعال شد'),
+            title: Text(
+              renewing ? 'اشتراک با موفقیت تمدید شد' : 'پلن با موفقیت فعال شد',
+            ),
             content: Text(
               '${offer.successLine}\n${store.hasUserRequest && store.userRequest.isPublished ? 'برنامهٔ تأییدشده در تب برنامه در دسترس است.' : 'فعال‌شدن پلن به معنی تأیید برنامهٔ غذایی نیست؛ وضعیت بررسی و انتشار را در تب برنامه ببین.'}\n${store.liveNotice ?? 'جزئیات اشتراکت در پروفایل در دسترس است.'}',
               style: const TextStyle(height: 1.8),
@@ -455,6 +582,14 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
     final selectedPlan = store.subscriptionOffers
         .where((p) => p.id == store.selectedSubscriptionPlanId)
         .firstOrNull;
+    final subscription = store.planSubscription;
+    final active = subscription?.activeAt(store.today) == true;
+    final current = currentPlan(store);
+    final higherPlans =
+        store.subscriptionOffers
+            .where((plan) => current != null && plan.days > current.days)
+            .toList()
+          ..sort((a, b) => a.days.compareTo(b.days));
     return PopScope(
       canPop: !processing,
       child: Scaffold(
@@ -514,8 +649,47 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                       ),
                     ),
                   const SubscriptionSummaryCard(),
-                  const Heading(
-                    'پلن مناسب تو',
+                  if (subscription != null)
+                    Surface(
+                      key: const ValueKey('subscription-renewal-notice'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            active
+                                ? higherPlans.isNotEmpty
+                                      ? 'پلن فعال داری؛ می‌خواهی تمدید کنی یا پلن بالاتر بگیری؟'
+                                      : 'پلن فعال داری؛ می‌خواهی اشتراکت را تمدید کنی؟'
+                                : 'اشتراکت تمام شده؛ برای ادامه تمدیدش کن.',
+                            style: AppTypography.body,
+                          ),
+                          if (active && subscription.endsAt != null) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'روزهای خرید جدید به اعتبار باقی‌مانده اضافه می‌شود.',
+                            ),
+                          ],
+                          if (active && higherPlans.isNotEmpty)
+                            TextButton(
+                              onPressed: selectionLocked
+                                  ? null
+                                  : () {
+                                      store.selectedPlanServiceId = 'new-plan';
+                                      store.selectedSubscriptionPlanId =
+                                          higherPlans.first.id;
+                                      store.update();
+                                    },
+                              child: Text(
+                                'ارتقا به پلن ${higherPlans.first.title}',
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  Heading(
+                    subscription == null
+                        ? 'پلن مناسب تو'
+                        : 'تمدید یا تغییر پلن',
                     subtitle: 'انتشار برنامه پس از تأیید متخصص',
                   ),
                   for (final plan
@@ -525,6 +699,13 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                     SubscriptionPlanCard(
                       key: ValueKey('plan-${plan.id}'),
                       plan: plan,
+                      membershipLabel: active && current?.id == plan.id
+                          ? 'پلن فعلی تو · تمدید'
+                          : active &&
+                                current != null &&
+                                plan.days > current.days
+                          ? 'تمدید با پلن بالاتر'
+                          : null,
                       selected:
                           store.selectedPlanServiceId == 'new-plan' &&
                           store.selectedSubscriptionPlanId == plan.id,
@@ -680,6 +861,8 @@ class _PlanServicesScreenState extends State<PlanServicesScreen> {
                             ? 'بررسی نتیجهٔ پرداخت'
                             : covered
                             ? 'استفاده از اشتراک'
+                            : selected?.id == 'new-plan' && subscription != null
+                            ? 'پرداخت و ${purchaseAction(store, selectedPlan)}'
                             : 'پرداخت و فعال‌سازی پلن',
                         onPressed:
                             selected == null ||

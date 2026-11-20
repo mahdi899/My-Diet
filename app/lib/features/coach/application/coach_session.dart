@@ -542,6 +542,7 @@ class CoachSession {
         request.action == 'confirm_meal' ||
         request.action == 'log_as_planned' ||
         request.action == 'confirm_swap' ||
+        request.action == 'confirm_photo_plan' ||
         request.action == 'undo_meal';
     var replayed = false;
     CoachTransportException? failure;
@@ -571,6 +572,18 @@ class CoachSession {
               case CoachToolEvent():
                 typing = true;
               case CoachMessageEvent(:final message):
+                if (message.payload['planChanged'] == true) {
+                  refresh = true;
+                  reloadPlan = true;
+                }
+                final photoEntry = message.payload['photoEntryId'];
+                if (photoEntry is String) {
+                  for (final previous in messages) {
+                    if (previous.payload['entryId'] == photoEntry) {
+                      answered.add(previous.id);
+                    }
+                  }
+                }
                 if (message.payload['analyzing'] == true) {
                   _upsert(message);
                   break;
@@ -817,6 +830,7 @@ class CoachSession {
       action == 'log_water' ||
       action == 'log_weight' ||
       action == 'confirm_swap' ||
+      action == 'confirm_photo_plan' ||
       action == 'undo_meal' ||
       action == 'show_ring';
 

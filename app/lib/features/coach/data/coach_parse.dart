@@ -45,9 +45,7 @@ CoachMessage parseCoachMessage(Map<dynamic, dynamic> json) {
       .firstWhere((value) => value.trim().isNotEmpty, orElse: () => '');
   final client = json['client_message_id'] ?? json['clientMessageId'];
   final createdRaw = json['created_at'] ?? json['createdAt'];
-  final created = createdRaw is String
-      ? DateTime.tryParse(createdRaw)?.toLocal()
-      : null;
+  final created = _messageTimestamp(createdRaw);
   final idRaw = json['id'];
   final id = idRaw == null || '$idRaw'.isEmpty
       ? 'm-${DateTime.now().microsecondsSinceEpoch}'
@@ -63,6 +61,28 @@ CoachMessage parseCoachMessage(Map<dynamic, dynamic> json) {
     clientMessageId: client is String && client.isNotEmpty ? client : null,
     createdAt: created ?? DateTime.now(),
   );
+}
+
+DateTime? _messageTimestamp(Object? value) {
+  if (value is! String) return null;
+  final timestamp = value.trim();
+  // Older API responses contain MySQL UTC timestamps without a zone suffix.
+  final parsed =
+      DateTime.tryParse('${timestamp}Z') ?? DateTime.tryParse(timestamp);
+  if (parsed == null) return null;
+  final utc = parsed.isUtc
+      ? parsed
+      : DateTime.utc(
+          parsed.year,
+          parsed.month,
+          parsed.day,
+          parsed.hour,
+          parsed.minute,
+          parsed.second,
+          parsed.millisecond,
+          parsed.microsecond,
+        );
+  return utc.toLocal();
 }
 
 /// Fills the fields the existing cards already read, without dropping contract keys.
@@ -350,7 +370,10 @@ CoachProblem classifyCoachProblem({int? status, String? code}) {
 String coachProblemText(CoachProblem problem, String? serverText) {
   final server = serverText?.trim() ?? '';
   return switch (problem) {
-    CoachProblem.budget => server.isNotEmpty ? server : 'سهمیه پیام‌های مربی پر شده است. می‌توانید یک بسته اضافی خریداری کنید.',
+    CoachProblem.budget =>
+      server.isNotEmpty
+          ? server
+          : 'سهمیه پیام‌های مربی پر شده است. می‌توانید یک بسته اضافی خریداری کنید.',
     CoachProblem.expired => 'نشست پایان یافته؛ دوباره وارد شو.',
     CoachProblem.offline => 'ارتباط قطع شد. وقتی آنلاین شدی، دوباره بفرست.',
     CoachProblem.safety =>

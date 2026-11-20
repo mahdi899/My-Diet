@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/customer_auth.dart';
@@ -146,7 +147,9 @@ class _LoginScreenState extends State<LoginScreen> {
         subtitle: codeStep
             ? (server
                   ? 'کد ارسال‌شده به شماره‌ات را وارد کن.'
-                  : 'کد نمونه: ۱۲۳۴۵۶')
+                  : (kDebugMode
+                        ? 'کد نمونه: ۱۲۳۴۵۶'
+                        : 'کد ارسال‌شده به شماره‌ات را وارد کن.'))
             : 'شماره تلفن همراه خودت را وارد کن.',
         footer: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,7 +196,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   scrollPadding: const EdgeInsets.only(bottom: 140),
                   decoration: InputDecoration(
                     labelText: codeStep ? 'کد تأیید' : 'شماره تلفن',
-                    hintText: codeStep ? '123456' : '09120000000',
+                    hintText: codeStep
+                        ? (kDebugMode ? '123456' : null)
+                        : '09120000000',
                   ),
                   validator: (value) {
                     final v = latinDigits(value ?? '').trim();
@@ -221,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? 'در حال بررسی…'
                       : codeStep
                       ? 'ورود'
-                      : server
+                      : (server || !kDebugMode)
                       ? 'دریافت کد'
                       : 'دریافت کد نمونه',
                   loading: busy,

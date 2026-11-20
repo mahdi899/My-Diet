@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/demo_store.dart';
 import 'data/connection.dart';
@@ -188,6 +189,42 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
   Timer? _livePoll;
   bool _refreshing = false;
   bool _foreground = true;
+  bool _exitConfirmationOpen = false;
+
+  Future<void> _handleBack() async {
+    if (ModalRoute.of(context)?.willHandlePopInternally == true) {
+      Navigator.of(context).pop();
+      return;
+    }
+    if (_index != 1) {
+      _show(1);
+      return;
+    }
+    if (_exitConfirmationOpen) return;
+    _exitConfirmationOpen = true;
+    try {
+      final exit = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('خروج از برنامه'),
+          content: const Text('می‌خوای از اپ خارج شی؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('نه'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('بله'),
+            ),
+          ],
+        ),
+      );
+      if (exit == true && mounted) await SystemNavigator.pop();
+    } finally {
+      _exitConfirmationOpen = false;
+    }
+  }
 
   @override
   void initState() {
@@ -314,51 +351,57 @@ class _PanelShellState extends State<PanelShell> with WidgetsBindingObserver {
     final gated = !store.userSignedIn && selected == 2
         ? const CustomerSignInPrompt()
         : WeeklyRewardGate(child: page);
-    return Scaffold(
-      backgroundColor: selected == 1 ? AppColors.surface : null,
-      body: SafeArea(
-        bottom: false,
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onHorizontalDragEnd: _swipe,
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  if (store.sessionError != null)
-                    MaterialBanner(
-                      content: Text(store.sessionError!),
-                      actions: [
-                        TextButton(
-                          onPressed: store.refreshServerSession,
-                          child: const Text('تلاش دوباره'),
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_handleBack());
+      },
+      child: Scaffold(
+        backgroundColor: selected == 1 ? AppColors.surface : null,
+        body: SafeArea(
+          bottom: false,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: _swipe,
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    if (store.sessionError != null)
+                      MaterialBanner(
+                        content: Text(store.sessionError!),
+                        actions: [
+                          TextButton(
+                            onPressed: store.refreshServerSession,
+                            child: const Text('تلاش دوباره'),
+                          ),
+                        ],
+                      ),
+                    Expanded(
+                      child: SharedAxisSwitcher(
+                        index: _tabOrder.indexOf(selected),
+                        child: KeyedSubtree(
+                          key: ValueKey('shell-page-$selected'),
+                          child: gated,
                         ),
-                      ],
-                    ),
-                  Expanded(
-                    child: SharedAxisSwitcher(
-                      index: _tabOrder.indexOf(selected),
-                      child: KeyedSubtree(
-                        key: ValueKey('shell-page-$selected'),
-                        child: gated,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (!coach)
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 10 + MediaQuery.paddingOf(context).bottom,
-                  child: ShellTabBar(
-                    selected: selected,
-                    onCoach: () => _show(0),
-                    onHome: () => _show(1),
-                    onPlan: () => _show(2),
-                  ),
+                  ],
                 ),
-            ],
+                if (!coach)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 10 + MediaQuery.paddingOf(context).bottom,
+                    child: ShellTabBar(
+                      selected: selected,
+                      onCoach: () => _show(0),
+                      onHome: () => _show(1),
+                      onPlan: () => _show(2),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

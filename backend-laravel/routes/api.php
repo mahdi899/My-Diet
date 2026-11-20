@@ -184,6 +184,7 @@ Route::middleware('session:specialist,admin')->controller(PlanQuestionController
 
 Route::prefix('v1/me')->middleware('session:user')->controller(PlanQueryController::class)->group(function (): void {
     Route::get('request', 'latest');
+    Route::post('plan/recover', 'recover');
     Route::get('requests', 'requests');
     Route::get('requests/{id}', 'timeline');
     Route::get('plan', 'published');

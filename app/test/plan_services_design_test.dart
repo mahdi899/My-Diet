@@ -111,4 +111,71 @@ void main() {
       store.dispose();
     },
   );
+
+  for (final currentId in ['weekly', 'monthly']) {
+    testWidgets('active $currentId confirms renewal before any payment', (
+      tester,
+    ) async {
+      tester.view.physicalSize = currentId == 'weekly'
+          ? const Size(320, 740)
+          : const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final store = DemoStore()
+        ..login(AppRole.user)
+        ..questionnaireComplete = true
+        ..selectedPlanServiceId = 'new-plan'
+        ..selectedSubscriptionPlanId = 'monthly';
+      final current = store.subscriptionById(currentId)!;
+      final originalEnd = store.today.add(const Duration(days: 10));
+      store.planSubscription = PlanSubscription(
+        planId: currentId,
+        title: current.title,
+        status: 'active',
+        endsAt: originalEnd,
+      );
+      final action = currentId == 'weekly'
+          ? 'تمدید و ارتقا به پلن همراه'
+          : 'تمدید پلن همراه';
+      await tester.pumpWidget(
+        planDesignHost(store, scale: currentId == 'weekly' ? 1.8 : 1),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('subscription-renewal-notice')),
+        findsOneWidget,
+      );
+      expect(find.text('پرداخت و $action'), findsOneWidget);
+      await tester.tap(find.text('پرداخت و $action'));
+      await tester.pumpAndSettle();
+      expect(find.text(action), findsOneWidget);
+      expect(
+        find.textContaining('مبلغ کامل پلن: ۱٬۹۹۰٬۰۰۰ تومان'),
+        findsOneWidget,
+      );
+      expect(store.planPurchases, isEmpty);
+      expect(store.planSubscription!.endsAt, originalEnd);
+      await tester.tap(find.text('انصراف'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PlanPaymentScreen), findsNothing);
+      expect(store.planPurchases, isEmpty);
+      await tester.tap(find.text('پرداخت و $action'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('تأیید و ادامهٔ پرداخت'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PlanPaymentScreen), findsOneWidget);
+      await tester.tap(find.text('پرداخت موفق'));
+      await tester.pumpAndSettle();
+      expect(store.planSubscription!.planId, 'monthly');
+      expect(
+        store.planSubscription!.endsAt,
+        originalEnd.add(const Duration(days: 30)),
+      );
+      expect(store.planPurchases, hasLength(1));
+      expect(find.text('اشتراک با موفقیت تمدید شد'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      store.dispose();
+    });
+  }
 }

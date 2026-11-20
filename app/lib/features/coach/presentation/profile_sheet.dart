@@ -12,6 +12,7 @@ import '../../../presentation/widgets/kit/kit.dart';
 import '../../../presentation/widgets/ui.dart';
 import 'personal_details.dart';
 import 'profile_goal_screen.dart';
+import 'profile_photo_picker.dart';
 
 void showCoachProfileSheet(BuildContext context) {
   unawaited(
@@ -117,11 +118,50 @@ class _SignedIn extends StatelessWidget {
       children: [
         Row(
           children: [
-            PersonAvatar(
-              name,
-              size: 64,
-              color: AppColors.mint,
-              photo: store.profilePhoto,
+            Semantics(
+              button: true,
+              label: 'تغییر عکس پروفایل',
+              child: InkWell(
+                key: const ValueKey('profile-photo-edit'),
+                customBorder: const CircleBorder(),
+                onTap: () => showProfilePhotoPicker(context, store),
+                child: SizedBox.square(
+                  dimension: 72,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: PersonAvatar(
+                            name,
+                            size: 64,
+                            color: AppColors.mint,
+                            photo: store.profilePhoto,
+                          ),
+                        ),
+                      ),
+                      const Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppColors.emeraldDeep,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(5),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -139,6 +179,10 @@ class _SignedIn extends StatelessWidget {
                         ? TextDirection.ltr
                         : TextDirection.rtl,
                     style: const TextStyle(color: AppColors.muted, height: 1.6),
+                  ),
+                  TextButton(
+                    onPressed: () => showProfilePhotoPicker(context, store),
+                    child: const Text('تغییر عکس پروفایل'),
                   ),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'widgets/onboarding_icons.dart';
 import 'package:flutter/services.dart';
@@ -819,7 +820,9 @@ class _PhoneScreenState extends State<_PhoneScreen> {
             _pay
                 ? 'در حالت محلی، با زدن پرداخت وارد اپ می‌شوی.'
                 : _otp
-                ? 'کد پیامک‌شده را وارد کن. در محلی، ۱۲۳۴۵۶ قبول است.'
+                ? (kDebugMode
+                      ? 'کد پیامک‌شده را وارد کن. در محلی، ۱۲۳۴۵۶ قبول است.'
+                      : 'کد پیامک‌شده را وارد کن.')
                 : 'برای ساخت حساب، شماره را تأیید کن.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Color(0xFF6D7F72), height: 1.7),

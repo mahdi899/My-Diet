@@ -110,6 +110,39 @@ final class MySqlPlanGeneration implements PlanGenerationStore
         $this->db->table('plan_requests')->where('id', $requestId)->where('status', 'generating')->update(['status' => 'in_review', 'updated_at' => $this->db->raw('current_timestamp(6)')]);
     }
 
+    /** Retry an empty failed draft using the original paid request and answers. */
+    public function retryForUser(string $user): void
+    {
+        $this->db->transaction(function () use ($user): void {
+            $request = $this->db->table('plan_requests')->where('user_id', $user)
+                ->orderByDesc('created_at')->lockForUpdate()->first();
+            if ($request === null || $request->status !== 'in_review') {
+                return;
+            }
+            $generation = $this->db->table('ai_generations')->where('request_id', $request->id)
+                ->orderByDesc('created_at')->first();
+            if ($generation === null || $generation->status !== 'failed'
+                || ! in_array($generation->skipped_reason, ['provider_error', 'invalid_draft'], true)) {
+                return;
+            }
+            $paid = $this->db->table('orders')->where(['id' => $request->order_id, 'user_id' => $user, 'status' => 'paid'])->exists();
+            $versions = $this->db->table('plan_versions')->where('request_id', $request->id);
+            $hasPublished = (clone $versions)->whereNotNull('published_at')->exists();
+            $hasMeals = $this->db->table('plan_meals as m')->join('plan_days as d', 'd.id', '=', 'm.plan_day_id')
+                ->join('plan_versions as v', 'v.id', '=', 'd.plan_version_id')->where('v.request_id', $request->id)->exists();
+            if (! $paid || $hasPublished || $hasMeals) {
+                return;
+            }
+            if ($this->budgetBlock($user) !== null) {
+                throw new Problem(409, 'ai_budget_blocked', 'در حال حاضر امکان ساخت دوباره نیست؛ کمی بعد تلاش کن یا با پشتیبانی گفتگو کن.');
+            }
+            $this->db->table('ai_execution_claims')->where('request_id', $request->id)->delete();
+            $this->db->table('plan_requests')->where('id', $request->id)->update(['status' => 'generating', 'updated_at' => $this->db->raw('current_timestamp(6)')]);
+            $this->db->table('request_events')->insert(['id' => Crypto::uuid(), 'request_id' => $request->id, 'actor_id' => $user, 'kind' => 'draft_regenerate_requested', 'detail' => '{}']);
+            $this->db->table('outbox_events')->insert(['id' => Crypto::uuid(), 'topic' => 'plan.generate', 'aggregate_id' => $request->id, 'payload' => json_encode(['requestId' => $request->id, 'regenerate' => true], JSON_THROW_ON_ERROR)]);
+        });
+    }
+
     public function regenerate(string $specialist, string $requestId, int $lock): array
     {
         return $this->db->transaction(function () use ($specialist, $requestId, $lock) {

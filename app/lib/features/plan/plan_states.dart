@@ -1,4 +1,3 @@
-import '../../core/icons/diet_icon.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
@@ -58,16 +57,11 @@ class PlanEmpty extends StatelessWidget {
           const Text(
             'اتصال پرداخت به برنامه‌ات در حال بررسی است. وضعیت تحویل همین‌جا به‌روز می‌شود.',
           )
-        else
-          PillButton(
-            label: 'دریافت برنامه',
-            iconWidget: const DietIcon(
-              DietIconKind.meal,
-              color: Colors.white,
-              monochrome: true,
-            ),
-            onPressed: () => openPlanServices(context),
-          ),
+        else ...[
+          const Text('برنامه‌ات بر اساس پاسخ‌های قبلی‌ات آماده می‌شود.'),
+          const SizedBox(height: 12),
+        ],
+        const ReceivePlanButton(),
       ],
     );
   }
@@ -83,7 +77,11 @@ class PlanProblem extends StatelessWidget {
     return ListView(
       key: const ValueKey('plan-error'),
       padding: const EdgeInsets.fromLTRB(20, 28, 20, shellBottomInset),
-      children: [PlanProgressCard(error: message)],
+      children: [
+        PlanProgressCard(error: message),
+        const SizedBox(height: 16),
+        const ReceivePlanButton(),
+      ],
     );
   }
 }
@@ -140,6 +138,8 @@ class PlanWaiting extends StatelessWidget {
           ),
         ),
         const PlanProgressCard(),
+        const SizedBox(height: 16),
+        const ReceivePlanButton(),
         if (store.mealFrequencyNote case final note?) ...[
           const SizedBox(height: 12),
           PlanMealFrequencyNote(note: note),
