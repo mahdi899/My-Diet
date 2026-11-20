@@ -221,6 +221,8 @@ Route::prefix('v1/me')->middleware('session:user')->controller(MoneyController::
 Route::get('v1/specialists', [AdminQueryController::class, 'publicSpecialists']);
 Route::get('v1/specialist/profile', [AdminQueryController::class, 'ownProfile'])->middleware('session:specialist');
 Route::prefix('v1/admin')->middleware('session:admin')->controller(AdminQueryController::class)->group(function (): void {
+    Route::get('plan-deliveries', 'deliveries');
+    Route::post('plan-deliveries/{id}/retry', 'retryDelivery');
     Route::get('dashboard', 'dashboard');
     Route::get('orders', 'orders');
     Route::get('payments', 'payments');

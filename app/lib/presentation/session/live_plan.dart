@@ -47,6 +47,12 @@ void showServerPlan(
 
   final id = plan?.requestId ?? request?.id;
   store.planHoldReason = request?.holdReason;
+  if (profile != null) {
+    store.pendingWebPlanDelivery =
+        profile.hasPendingWebPurchase && request == null;
+  } else if (request != null) {
+    store.pendingWebPlanDelivery = false;
+  }
   store.mealFrequencyNote =
       profile != null &&
           !profile.doctorOnly &&

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { formatFaDate, formatFaNumber, statusLabels, toEnglishDigits } from '@shared/utils'
+import { useQuery } from '@tanstack/react-query'
+import { asRows, formatFaDate, formatFaNumber, statusLabels, toEnglishDigits } from '@shared/utils'
 import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { StatusFilter } from '../../components/StatusFilter'
 import { staff } from '../../session'
@@ -15,6 +16,20 @@ const show = (value: unknown) => String(value ?? '') || '—'
 const planName = (value: unknown) => plans[String(value)] ?? show(value)
 const amount = (value: unknown) => typeof value === 'number' ? <span className="payments-amount"><strong>{formatFaNumber(value)}</strong> <small>تومان</small></span> : '—'
 const phone = (value: unknown) => <bdi dir="ltr">{show(value)}</bdi>
+const deliveryStatus: Record<string, string> = {
+  queued: 'در صف ساخت',
+  generating: 'در حال ساخت',
+  in_review: 'در بررسی متخصص',
+  awaiting_user: 'منتظر پاسخ کاربر',
+  response_received: 'پاسخ کاربر رسید',
+  published: 'منتشر شد',
+  cancelled: 'لغو شد',
+  profile: 'منتظر تکمیل پرونده',
+  consent: 'منتظر موافقت کاربر',
+  reconcile: 'نیازمند تطبیق',
+  first_meal: 'اولین وعده ثبت شد',
+  received: 'دریافت شد',
+}
 
 function PaymentTable({ title, description, rows, columns, searchFields, statusFilter = false }: {
   title: string
@@ -45,7 +60,7 @@ function PaymentTable({ title, description, rows, columns, searchFields, statusF
           onChange={event => { setSearch(event.target.value); setPage(1) }} />
       </label>
       {statusFilter && <StatusFilter label="فیلتر وضعیت پرداخت" value={status}
-        options={Array.from(options, value => [value, statusLabels[value] ?? value] as const)}
+        options={Array.from(options, value => [value, deliveryStatus[value] ?? statusLabels[value] ?? value] as const)}
         onChange={value => { setStatus(value); setPage(1) }} />}
     </div></div>
     <div className="users-table-scroll" tabIndex={0} role="region" aria-label={`جدول ${title}`}>
@@ -116,6 +131,48 @@ function ConfirmTransfer({ row, close, confirmed }: { row: Row; close: () => voi
 export function PaymentsPage({ transfers, payments, preview, onChanged }: { transfers: Row[]; payments: Row[]; preview: boolean; onChanged: () => void }) {
   const [selected, setSelected] = useState<Row | null>(null)
   const [notice, setNotice] = useState('')
+  const [lookup, setLookup] = useState('')
+  const [activeLookup, setActiveLookup] = useState('')
+  const [retrying, setRetrying] = useState<string | null>(null)
+  const deliveries = useQuery({
+    queryKey: ['admin-plan-deliveries', activeLookup],
+    enabled: !preview,
+    refetchInterval: 30_000,
+    queryFn: async () => asRows(await staff.api(`admin/plan-deliveries?q=${encodeURIComponent(activeLookup)}`)).map((row) => ({
+      ...row,
+      status: row.firstMealAt ? 'first_meal' : row.firstReceivedAt ? 'received' : row.publishedAt ? 'published' : row.status ?? row.pendingReason,
+    })),
+  })
+  async function retryDelivery(id: string) {
+    setRetrying(id)
+    try {
+      const result = await staff.api(`admin/plan-deliveries/${encodeURIComponent(id)}/retry`, 'POST', {})
+      setNotice(result && typeof result === 'object' && 'linked' in result && result.linked
+        ? 'پرداخت به درخواست برنامه متصل شد.'
+        : 'اتصال هنوز ممکن نیست. وضعیت پرونده و خریدهای دیگر این حساب را بررسی کنید.')
+      void deliveries.refetch()
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'تلاش دوباره انجام نشد.')
+    } finally {
+      setRetrying(null)
+    }
+  }
+  const deliveryColumns: Column[] = [
+    { title: 'کاربر', render: row => <>{show(row.customer ?? row.phone)}<br />{phone(row.phone)}</> },
+    { title: 'مسیر خرید', render: row => row.source === 'web' ? 'سایت' : 'اپ' },
+    { title: 'پلن', render: row => planName(row.plan) },
+    { title: 'پرداخت', render: row => <>{amount(row.amount)}<br />{formatFaDate(row.paidAt) ?? '—'}</> },
+    { title: 'وضعیت تحویل', render: row => row.generationStatus === 'failed' && row.status === 'in_review' ? 'ساخت خودکار ناموفق · نیازمند بررسی متخصص' : deliveryStatus[String(row.status)] ?? show(row.status) },
+    { title: 'مسئول بررسی', render: row => row.requestId ? show(row.specialist ?? 'در انتظار تخصیص') : '—' },
+    { title: 'نسخه منتشر شد', render: row => formatFaDate(row.publishedAt) ?? '—' },
+    { title: 'اولین دریافت در اپ', render: row => formatFaDate(row.firstReceivedAt) ?? '—' },
+    { title: 'اولین وعده ثبت شد', render: row => formatFaDate(row.firstMealAt) ?? '—' },
+    { title: 'درخواست', render: row => row.requestId
+      ? <bdi title={show(row.requestId)}>{String(row.requestId).slice(0, 8)}</bdi>
+      : row.source === 'web' && row.status === 'reconcile'
+        ? <button className="secondary" type="button" disabled={retrying !== null} onClick={() => void retryDelivery(String(row.id))}>تلاش دوباره</button>
+        : '—' },
+  ]
   const transferColumns: Column[] = [
     { title: 'شماره کاربر', render: row => phone(row.phone_e164) },
     { title: 'پلن', render: row => planName(row.plan) },
@@ -140,6 +197,14 @@ export function PaymentsPage({ transfers, payments, preview, onChanged }: { tran
 
   return <div className="payments-page">
     {notice && <p className="info-note" role="status">{notice}</p>}
+    {!preview && <form className="payments-delivery-lookup" onSubmit={(event) => { event.preventDefault(); setActiveLookup(normalize(lookup)) }}>
+      <label>جست‌وجو در همهٔ خریدهای برنامه<input type="search" placeholder="شماره، نام یا شناسهٔ خرید" value={lookup} onChange={(event) => setLookup(event.target.value)} /></label>
+      <button type="submit">جست‌وجو</button>
+    </form>}
+    {deliveries.isPending && !preview && <p className="info-note" role="status">در حال دریافت وضعیت تحویل برنامه‌ها…</p>}
+    {deliveries.isError && <p className="info-note" role="alert">وضعیت تحویل برنامه‌ها دریافت نشد.</p>}
+    {deliveries.data && <PaymentTable title="تحویل برنامه‌های خریداری‌شده" description="حداکثر ۲۵۰ نتیجه، با اولویت خریدهای نیازمند پیگیری. تاریخ انتشار، اولین دریافت و اولین وعدهٔ ثبت‌شده در جدول دیده می‌شود."
+      rows={deliveries.data} columns={deliveryColumns} searchFields={row => [row.customer, row.phone, row.id, row.orderId, row.requestId, planName(row.plan), deliveryStatus[String(row.status)]]} statusFilter />}
     <PaymentTable title="واریزهای آنبوردینگ" description="مبلغ را با گردش حساب تطبیق دهید و شناسه پیگیری بانکی را ثبت کنید."
       rows={transfers} columns={transferColumns} searchFields={row => [row.phone_e164, planName(row.plan), row.bank_reference, row.zibal_track_id, row.amount_toman]} />
     <PaymentTable title="پرداخت‌ها" description={`${formatFaNumber(payments.length)} مورد در فهرست`}
@@ -148,6 +213,7 @@ export function PaymentsPage({ transfers, payments, preview, onChanged }: { tran
       setSelected(null)
       setNotice(message)
       onChanged()
+      void deliveries.refetch()
     }} />}
   </div>
 }

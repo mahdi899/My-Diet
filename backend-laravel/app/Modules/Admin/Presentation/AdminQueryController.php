@@ -3,11 +3,26 @@
 namespace App\Modules\Admin\Presentation;
 
 use App\Modules\Admin\Application\AdminQueries;
+use App\Modules\Onboarding\Application\WebPlanDelivery;
+use App\Modules\Plans\Infrastructure\MySqlPlanDelivery;
+use App\Shared\Presentation\StrictInput;
 use Illuminate\Http\Request;
 
 final class AdminQueryController
 {
-    public function __construct(private AdminQueries $queries) {}
+    public function __construct(private AdminQueries $queries, private MySqlPlanDelivery $delivery) {}
+
+    public function deliveries(Request $request): array
+    {
+        $q = $request->query('q');
+
+        return $this->delivery->report(is_string($q) ? mb_substr(trim($q), 0, 100) : '');
+    }
+
+    public function retryDelivery(WebPlanDelivery $delivery, string $id): array
+    {
+        return $delivery->retry(StrictInput::uuid($id));
+    }
 
     public function dashboard(Request $request): array
     {

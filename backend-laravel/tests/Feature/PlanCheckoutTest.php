@@ -47,6 +47,9 @@ final class PlanCheckoutTest extends MySqlTestCase
         $this->postJson('/v1/me/checkouts/'.$payment['paymentId'].'/sandbox', ['success' => true])->assertNotFound();
         $this->getJson('/v1/me/subscription')->assertOk()->assertJsonPath('subscription', null);
         $this->getJson('/v1/me/orders')->assertOk()->assertJsonCount(0);
+        $this->actor('admin');
+        $this->getJson('/v1/admin/plan-deliveries?q='.$payment['paymentId'])->assertOk()->assertJsonCount(1)
+            ->assertJsonPath('0.source', 'app')->assertJsonPath('0.requestId', $result['requestId']);
     }
 
     public function test_failed_payment_never_activates_access_and_new_attempt_can_succeed(): void

@@ -26,7 +26,7 @@ interface OnboardingStore
 
     public function phone(string $user): ?string;
 
-    public function lead(string $hash): ?array;
+    public function lead(string $hash, ?string $id = null): ?array;
 
     public function claimLead(string $user, string $lead): void;
 

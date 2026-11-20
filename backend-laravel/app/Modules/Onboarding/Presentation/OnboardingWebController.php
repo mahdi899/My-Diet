@@ -53,9 +53,9 @@ final class OnboardingWebController
 
     public function verify(Request $request, string $id): JsonResponse
     {
-        $body = trim($request->getContent()) === 'null' ? [] : Input::body($request, ['journeyId'], true);
+        $body = trim($request->getContent()) === 'null' ? [] : Input::body($request, ['journeyId', 'consent'], true);
         $journey = ($body['journeyId'] ?? null) === null || $body['journeyId'] === '' ? null : Input::uuid(is_string($body['journeyId']) ? $body['journeyId'] : '');
 
-        return response()->json($this->service->verify($request->attributes->get('actor')['id'], Input::uuid($id), $journey), 201);
+        return response()->json($this->service->verify($request->attributes->get('actor')['id'], Input::uuid($id), $journey, ($body['consent'] ?? false) === true), 201);
     }
 }

@@ -131,9 +131,10 @@ final class MySqlOnboarding implements OnboardingStore
         return $this->db->table('users')->where('id', $user)->value('phone_e164');
     }
 
-    public function lead(string $hash): ?array
+    public function lead(string $hash, ?string $id = null): ?array
     {
-        return $this->row($this->db->table('demo_lead_submissions')->where('phone_hash', $hash)->whereNull('claimed_user_id')->orderByDesc('created_at')->lock('for update skip locked')->first());
+        return $this->row($this->db->table('demo_lead_submissions')->where('phone_hash', $hash)->whereNull('claimed_user_id')
+            ->when($id !== null, fn ($query) => $query->where('id', $id))->orderByDesc('created_at')->lock('for update skip locked')->first());
     }
 
     public function claimLead(string $user, string $lead): void

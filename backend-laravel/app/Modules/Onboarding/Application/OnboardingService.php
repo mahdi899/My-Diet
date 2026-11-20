@@ -14,7 +14,7 @@ use App\Shared\Domain\Problem;
 final class OnboardingService
 {
     public function __construct(private OnboardingStore $store, private Rules $rules, private AnswerMapping $mapping,
-        private QuestionnaireService $questionnaires, private QuestionnaireRules $questionnaireRules, private IdentitySettings $settings) {}
+        private QuestionnaireService $questionnaires, private QuestionnaireRules $questionnaireRules, private IdentitySettings $settings, private WebPlanDelivery $delivery) {}
 
     public function spec(): array
     {
@@ -36,6 +36,9 @@ final class OnboardingService
         }
         if ($latest) {
             $profile = $this->ensureProfile($user);
+            if ($profile && $profile['consented_at']) {
+                $this->delivery->sync($user);
+            }
 
             return ['specVersion' => 2, 'status' => 'complete', 'nextStep' => $profile && $profile['consented_at'] ? 'enter_app' : 'consent', 'claimedFromDemo' => $claimed,
                 'track' => $profile['track'] ?? null, 'missing' => [], 'draft' => null, 'profile' => $profile ? $this->summary($profile) : null];
@@ -99,7 +102,10 @@ final class OnboardingService
             throw new Problem(422, 'consent_required', 'برای ادامه باید با پردازش اطلاعات سلامت موافقت کنی');
         }
 
-        return $this->finish($user, $draft['track'], $answers, $draft['source'], true);
+        $result = $this->finish($user, $draft['track'], $answers, $draft['source'], true);
+        $this->delivery->sync($user);
+
+        return $result;
     }
 
     public function consent(string $user): array
@@ -111,21 +117,25 @@ final class OnboardingService
             $this->store->consent($user);
             $this->store->audit($user, 'onboarding_consent', 'nutrition_profile', $user, ['specVersion' => 2]);
         });
+        $this->delivery->sync($user);
 
         return ['ok' => true];
     }
 
-    private function finish(string $user, string $track, array $answers, string $source, bool $consented): array
+    private function finish(string $user, string $track, array $answers, string $source, bool $consented, ?string $leadId = null): array
     {
         $submission = $this->mapping->submission($track, $answers);
         $validated = $this->questionnaireRules->validate($submission);
         $profile = Rules::profile($track, $validated['answers'], $validated['riskFlags'], AnswerMapping::preferences($track, $answers), $answers);
 
-        return $this->store->transaction($user, function () use ($user, $submission, $profile, $source, $consented, $track, $answers): array {
+        return $this->store->transaction($user, function () use ($user, $submission, $profile, $source, $consented, $track, $answers, $leadId): array {
             $created = $this->questionnaires->submit($user, $submission);
             $this->store->storeProfile($user, $created['id'], $source, $profile, $consented);
             $this->store->facts($created['id'], $this->rules->facts($track, $answers));
             $this->store->deleteDraft($user);
+            if ($source === 'demo') {
+                $this->delivery->linkSubmission($user, $created['id'], $leadId);
+            }
             if ($consented) {
                 $this->store->audit($user, 'onboarding_consent', 'nutrition_profile', $user, ['specVersion' => 2]);
             }
@@ -158,15 +168,15 @@ final class OnboardingService
         });
     }
 
-    public function importDemo(string $user): bool
+    public function importDemo(string $user, ?string $leadId = null, bool $consented = false): bool
     {
         $phone = $this->store->phone($user);
         if (! $phone) {
             return false;
         }
         $hash = hash_hmac('sha256', $phone, $this->settings->fieldKey);
-        $imported = $this->store->transaction($user, function () use ($user, $hash): ?array {
-            $lead = $this->store->lead($hash);
+        $imported = $this->store->transaction($user, function () use ($user, $hash, $leadId): ?array {
+            $lead = $this->store->lead($hash, $leadId);
             if (! $lead) {
                 return null;
             }
@@ -186,14 +196,14 @@ final class OnboardingService
             $this->store->claimLead($user, $lead['id']);
             $this->store->audit($user, 'demo_lead_claimed', 'demo_lead', $lead['id'], ['track' => $mapped['track']]);
 
-            return $mapped;
+            return [...$mapped, 'leadId' => $lead['id']];
         });
         if (! $imported) {
             return false;
         }
         if (! $this->rules->missing($imported['track'], $imported['answers'])) {
             try {
-                $this->finish($user, $imported['track'], $imported['answers'], 'demo', false);
+                $this->finish($user, $imported['track'], $imported['answers'], 'demo', $consented, $imported['leadId']);
             } catch (\Throwable) {
                 /** Keep the imported draft available when legacy clinical answers need review. */
             }
@@ -207,6 +217,7 @@ final class OnboardingService
         $reported = isset($row['meals_per_day']) ? (int) $row['meals_per_day'] : null;
 
         return ['track' => $row['track'], 'source' => $row['source'], 'bmi' => (float) $row['bmi'], 'weightKg' => (float) $row['weight_kg'], 'targetWeightKg' => $row['target_weight_kg'] === null ? null : (float) $row['target_weight_kg'],
+            'hasPendingWebPurchase' => $this->delivery->pending($row['user_id']),
             'reportedMealsPerDay' => $reported, 'plannedMealsPerDay' => EnergyEngine::plannedMealCount($reported),
             'heightCm' => (float) $row['height_cm'], 'age' => $row['age'], 'bmrKcal' => $row['bmr_kcal'], 'tdeeKcal' => $row['tdee_kcal'], 'targetKcal' => $row['target_kcal'],
             'proteinG' => $row['protein_g'], 'carbsG' => $row['carbs_g'], 'fatG' => $row['fat_g'], 'safetyTier' => $row['safety_tier'], 'safetyReasons' => $row['safety_reasons'], 'dietStyle' => $row['diet_style'], 'consented' => $row['consented_at'] !== null];

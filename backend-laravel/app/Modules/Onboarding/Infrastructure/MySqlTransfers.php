@@ -89,7 +89,7 @@ final class MySqlTransfers implements TransferStore
         }
         $this->db->table('onboarding_transfers')->where('id', $id)->update(['confirmed_at' => $this->db->raw('current_timestamp(6)'), 'bank_reference' => $reference, 'sms_status' => 'sending']);
 
-        return ['phone' => $this->db->table('users')->where('id', $row->user_id)->value('phone_e164'), 'amountToman' => Amount::safe($row->amount_toman)];
+        return ['userId' => $row->user_id, 'phone' => $this->db->table('users')->where('id', $row->user_id)->value('phone_e164'), 'amountToman' => Amount::safe($row->amount_toman)];
     }
 
     public function audit(?string $actor, string $action, string $id, array $detail): void

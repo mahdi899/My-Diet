@@ -40,6 +40,8 @@ final class PlanEditorContractTest extends MySqlTestCase
         self::assertSame(21, $this->db->table('plan_meal_options as o')->join('plan_meals as m', 'm.id', '=', 'o.meal_id')->join('plan_days as d', 'd.id', '=', 'm.plan_day_id')->where('d.plan_version_id', $published)->where('o.approved_by', $doctor['id'])->count());
         $this->withToken($user['token']);
         $this->getJson('/v1/me/plan')->assertOk()->assertJsonCount(7, 'days')->assertJsonPath('versionId', $published);
+        $this->getJson('/v1/me/plan')->assertOk();
+        self::assertSame(1, $this->db->table('plan_first_reads')->where('request_id', $ids['request'])->count());
         $this->withToken($doctor['token']);
         $this->getJson('/v1/specialist/patients/'.$user['id'].'/plan-versions')->assertOk()->assertJsonCount(1);
         $this->postJson($url.'/corrections')->assertCreated()->assertExactJson(['status' => 'in_review']);
@@ -53,6 +55,9 @@ final class PlanEditorContractTest extends MySqlTestCase
         self::assertSame($draft->id, $this->db->table('active_plan_versions')->where('user_id', $user['id'])->value('version_id'));
         self::assertSame(2, $this->db->table('outbox_events')->where(['aggregate_id' => $user['id'], 'topic' => 'shopping.invalidate'])->count());
         $this->actor('admin');
+        $delivery = $this->getJson('/v1/admin/plan-deliveries?q='.$ids['request'])->assertOk()->assertJsonCount(1)->json('0');
+        self::assertNotNull($delivery['publishedAt']);
+        self::assertNotNull($delivery['firstReceivedAt']);
         $this->getJson('/v1/admin/plan-versions/'.$published)->assertStatus(400)->assertJsonPath('code', 'reason_required');
         $this->getJson('/v1/admin/plan-versions/'.$published.'?reason='.urlencode('بررسی بالینی'))->assertOk()->assertJsonPath('status', 'superseded')->assertJsonCount(7, 'days');
     }

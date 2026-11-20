@@ -30,6 +30,7 @@ class ProfileSummary {
     required this.consented,
     this.reportedMealsPerDay,
     this.plannedMealsPerDay,
+    this.hasPendingWebPurchase = false,
   });
   factory ProfileSummary.fromJson(Map<String, dynamic> j) => ProfileSummary(
     track: j['track'] as String,
@@ -49,6 +50,7 @@ class ProfileSummary {
     consented: j['consented'] == true,
     reportedMealsPerDay: (j['reportedMealsPerDay'] as num?)?.toInt(),
     plannedMealsPerDay: (j['plannedMealsPerDay'] as num?)?.toInt(),
+    hasPendingWebPurchase: j['hasPendingWebPurchase'] == true,
   );
   final String track;
   final double bmi, weightKg, heightCm;
@@ -56,6 +58,7 @@ class ProfileSummary {
   final int age, bmrKcal, tdeeKcal, targetKcal, proteinG, carbsG, fatG;
   final bool doctorOnly, consented;
   final int? reportedMealsPerDay, plannedMealsPerDay;
+  final bool hasPendingWebPurchase;
   final List<String> safetyReasons;
 }
 

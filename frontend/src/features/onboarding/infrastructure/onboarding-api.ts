@@ -26,8 +26,8 @@ export class OnboardingApi implements OnboardingGateway {
     return session.accessToken
   }
 
-  verifySubmission(id: string, token: string, journeyId: string) {
-    return publicRequest('onboarding/submissions/' + id + '/verify', 'POST', journeyId ? { journeyId } : {}, token)
+  verifySubmission(id: string, token: string, journeyId: string, consent?: boolean) {
+    return publicRequest('onboarding/submissions/' + id + '/verify', 'POST', { ...(journeyId ? { journeyId } : {}), ...(consent ? { consent } : {}) }, token)
   }
 
   async refreshToken(current: string) {

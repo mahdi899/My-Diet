@@ -91,6 +91,7 @@ final class MySqlTracking implements TrackingStore
     {
         $current = $this->log($user, $date, $meal);
         $encoded = $this->json($details);
+        $this->recordFirstMeal($request, $eaten || in_array($details['state'] ?? null, ['less', 'more', 'different'], true));
         if ($current === null) {
             $this->db->table('meal_logs')->insert(['id' => Crypto::uuid(), 'user_id' => $user, 'request_id' => $request, 'scheduled_date' => $date, 'meal_uid' => $meal,
                 'eaten' => $eaten, 'plan_version_id' => $version, 'plan_meal_id' => $mealId, 'option_uid' => $option, 'details' => $encoded]);
@@ -173,6 +174,14 @@ final class MySqlTracking implements TrackingStore
     {
         $this->db->statement('insert into meal_logs(id,user_id,request_id,scheduled_date,meal_uid,eaten,plan_version_id,plan_meal_id,option_uid) values(?,?,?,?,?,?,?,?,?) as new
             on duplicate key update eaten=new.eaten,updated_at=current_timestamp(6)', [Crypto::uuid(), $user, $request, $date, $meal, $eaten, $version, $mealId, $option]);
+        $this->recordFirstMeal($request, $eaten);
+    }
+
+    private function recordFirstMeal(string $request, bool $consumed): void
+    {
+        if ($consumed) {
+            $this->db->table('plan_first_meal_logs')->insertOrIgnore(['request_id' => $request]);
+        }
     }
 
     public function rewardForMeal(string $user, string $request): ?array

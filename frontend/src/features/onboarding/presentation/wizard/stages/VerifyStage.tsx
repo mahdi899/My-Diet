@@ -90,6 +90,7 @@ export function VerifyStage() {
   const [busy, setBusy] = useState(false)
   const [otpSuccess, setOtpSuccess] = useState(false)
   const [otpShake, setOtpShake] = useState(false)
+  const [consent, setConsent] = useState(false)
   const plan = plans.find((item) => item.id === wizard.plan) ?? plans[1]
   const localPreview = isLocalOnboardingPreview()
 
@@ -159,6 +160,7 @@ export function VerifyStage() {
           code: value,
           submissionId: wizard.submissionId,
           journeyId: audience.journeyId(),
+          consent,
         })
         wizard.setToken(token)
         writeCheckoutSession({ token, submissionId: wizard.submissionId, plan: wizard.plan })
@@ -251,6 +253,10 @@ export function VerifyStage() {
               <span>{plan.days}</span>
               <span id="step2PlanPrice">{plan.price} تومان</span>
             </p>
+            {mode === 'otp' && !localPreview && <label className="verify-plan-summary">
+              <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} disabled={busy || otpSuccess} />
+              برای ساخت و بررسی برنامه، با پردازش پاسخ‌های تغذیه و سلامت موافقم.
+            </label>}
           </form>
         </div>
       </div>

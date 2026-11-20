@@ -40,7 +40,7 @@ final class WebIntakeService
         return ['saved' => true, 'id' => $input['id'], 'phoneVerified' => false];
     }
 
-    public function verify(string $user, string $id, ?string $journey): array
+    public function verify(string $user, string $id, ?string $journey, bool $consent = false): array
     {
         $phone = $this->store->phone($user);
         if (! $phone) {
@@ -49,7 +49,7 @@ final class WebIntakeService
         if (! $this->store->verifyLead($id, hash_hmac('sha256', $phone, $this->settings->fieldKey))) {
             throw new Problem(404, 'not_found', 'اطلاعات ثبت‌شده پیدا نشد');
         }
-        $this->onboarding->importDemo($user);
+        $this->onboarding->importDemo($user, $id, $consent);
         if ($journey !== null) {
             $this->store->linkJourney($journey, $user, $phone, $id);
         }

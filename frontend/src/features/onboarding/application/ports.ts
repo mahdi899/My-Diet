@@ -20,7 +20,7 @@ export interface OnboardingGateway {
   submit(body: { id: string; phone: string; goal?: string; specialistId: string; answers: SubmissionAnswer[] }): Promise<unknown>
   requestOtp(phone: string): Promise<unknown>
   verifyOtp(phone: string, code: string): Promise<string>
-  verifySubmission(id: string, token: string, journeyId: string): Promise<unknown>
+  verifySubmission(id: string, token: string, journeyId: string, consent?: boolean): Promise<unknown>
   transfer<T>(path: string, body: unknown, token: string): Promise<T>
   communityCount(completionId: string): Promise<number | null>
 }
@@ -44,9 +44,9 @@ export async function requestSms(gateway: OnboardingGateway, input: SmsRequest) 
   await gateway.requestOtp(input.phone)
 }
 
-export async function confirmSms(gateway: OnboardingGateway, input: { phone: string; code: string; submissionId: string; journeyId: string }) {
+export async function confirmSms(gateway: OnboardingGateway, input: { phone: string; code: string; submissionId: string; journeyId: string; consent?: boolean }) {
   const token = await gateway.verifyOtp(input.phone, input.code)
-  await gateway.verifySubmission(input.submissionId, token, input.journeyId)
+  await gateway.verifySubmission(input.submissionId, token, input.journeyId, input.consent)
   return token
 }
 

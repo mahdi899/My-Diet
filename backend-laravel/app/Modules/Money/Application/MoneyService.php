@@ -3,13 +3,14 @@
 namespace App\Modules\Money\Application;
 
 use App\Modules\Money\Domain\SubscriptionPlans;
+use App\Modules\Onboarding\Application\WebPlanDelivery;
 use App\Shared\Domain\Amount;
 use App\Shared\Domain\LegacyCrypto as Crypto;
 use App\Shared\Domain\Problem;
 
 final class MoneyService
 {
-    public function __construct(private MoneyStore $store, private PaymentGateways $gateways, private MoneySettings $settings) {}
+    public function __construct(private MoneyStore $store, private PaymentGateways $gateways, private MoneySettings $settings, private WebPlanDelivery $webDelivery) {}
 
     public function catalog(): array
     {
@@ -80,6 +81,9 @@ final class MoneyService
             }
             if ($this->store->priorOrder($user, $key) !== null) {
                 return ['status' => 'paid', ...$this->place($user, $key, $service, $expected, $parent)];
+            }
+            if ($service === 'new_plan' && $this->webDelivery->pending($user)) {
+                throw new Problem(409, 'web_payment_received', 'پرداخت سایت تأیید شده است. وضعیت تحویل را در تب برنامه ببین.');
             }
             $context = $this->store->admission($user, $parent);
             if ($context['open']) {
@@ -369,6 +373,9 @@ final class MoneyService
                 return $prior['response'] ?? throw new Problem(409, 'idempotency_pending', 'درخواست قبلی هنوز تمام نشده است');
             }
             $this->store->beginOrder($user, $key, $hash);
+            if ($service === 'new_plan' && $this->webDelivery->pending($user)) {
+                throw new Problem(409, 'web_payment_received', 'پرداخت سایت تأیید شده است. وضعیت تحویل را در تب برنامه ببین.');
+            }
             if ($this->store->pendingCheckout($user) !== null) {
                 throw new Problem(409, 'payment_in_progress', 'ابتدا پرداخت قبلی را تکمیل کن');
             }

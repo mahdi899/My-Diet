@@ -85,7 +85,8 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
     if (store.serverAuthEnabled && !store.liveReady) {
       return const PlanSkeleton();
     }
-    if (!store.hasUserRequest) return const PlanEmpty();
+    if (!store.hasUserRequest)
+      return PlanEmpty(awaitingWebDelivery: store.pendingWebPlanDelivery);
     final request = store.planOverview;
     final week = request.programWeek;
     if (request.isPublished &&

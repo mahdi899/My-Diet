@@ -35,7 +35,9 @@ class PlanSkeleton extends StatelessWidget {
 }
 
 class PlanEmpty extends StatelessWidget {
-  const PlanEmpty({super.key});
+  const PlanEmpty({super.key, this.awaitingWebDelivery = false});
+
+  final bool awaitingWebDelivery;
 
   @override
   Widget build(BuildContext context) {
@@ -46,19 +48,26 @@ class PlanEmpty extends StatelessWidget {
         const BrandScene(kind: BrandSceneKind.emptyPlan, height: 200),
         const SizedBox(height: 12),
         Text(
-          'هنوز برنامه‌ای نداری',
+          awaitingWebDelivery
+              ? 'پرداخت سایت تأیید شده'
+              : 'هنوز برنامه‌ای نداری',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 18),
-        PillButton(
-          label: 'دریافت برنامه',
-          iconWidget: const DietIcon(
-            DietIconKind.meal,
-            color: Colors.white,
-            monochrome: true,
+        if (awaitingWebDelivery)
+          const Text(
+            'اتصال پرداخت به برنامه‌ات در حال بررسی است. وضعیت تحویل همین‌جا به‌روز می‌شود.',
+          )
+        else
+          PillButton(
+            label: 'دریافت برنامه',
+            iconWidget: const DietIcon(
+              DietIconKind.meal,
+              color: Colors.white,
+              monochrome: true,
+            ),
+            onPressed: () => openPlanServices(context),
           ),
-          onPressed: () => openPlanServices(context),
-        ),
       ],
     );
   }

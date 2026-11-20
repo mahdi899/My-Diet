@@ -3,13 +3,14 @@
 namespace App\Modules\Plans\Presentation;
 
 use App\Modules\Plans\Application\PlanQueries;
+use App\Modules\Plans\Infrastructure\MySqlPlanDelivery;
 use App\Shared\Presentation\StrictInput;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final class PlanQueryController
 {
-    public function __construct(private PlanQueries $queries) {}
+    public function __construct(private PlanQueries $queries, private MySqlPlanDelivery $delivery) {}
 
     private function actor(Request $request): string
     {
@@ -19,6 +20,9 @@ final class PlanQueryController
     public function published(Request $request): Response
     {
         $plan = $this->queries->published($this->actor($request));
+        if ($plan !== null && array_any($plan['days'], fn ($day) => $day['meals'] !== [])) {
+            $this->delivery->markReceived($plan['requestId']);
+        }
 
         return $plan === null ? response('', 200) : response()->json($plan);
     }

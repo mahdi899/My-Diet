@@ -10,7 +10,7 @@ use App\Shared\Domain\Problem;
 
 final class TransferService
 {
-    public function __construct(private TransferStore $store, private TransferGateway $gateway, private PurchaseConfirmation $confirmation, private IdentitySettings $settings, private MoneyStore $prices) {}
+    public function __construct(private TransferStore $store, private TransferGateway $gateway, private PurchaseConfirmation $confirmation, private IdentitySettings $settings, private MoneyStore $prices, private WebPlanDelivery $delivery) {}
 
     public function create(string $user, string $plan, string $submission): array
     {
@@ -102,6 +102,7 @@ final class TransferService
             });
             if ($updated) {
                 $this->sendConfirmation($row['id'], $updated['phone']);
+                $this->deliver($updated['userId']);
             }
 
             return $url;
@@ -136,7 +137,19 @@ final class TransferService
             return $updated;
         });
 
-        return ['confirmed' => true, 'smsStatus' => $this->sendConfirmation($id, $row['phone'])];
+        $sms = $this->sendConfirmation($id, $row['phone']);
+        $this->deliver($row['userId']);
+
+        return ['confirmed' => true, 'smsStatus' => $sms];
+    }
+
+    private function deliver(string $user): void
+    {
+        try {
+            $this->delivery->sync($user);
+        } catch (\Throwable $error) {
+            report($error);
+        }
     }
 
     private function sendConfirmation(string $id, string $phone): string

@@ -29,11 +29,14 @@ final class TrackingContractTest extends MySqlTestCase
         $this->getJson('/v1/me/substitution-reasons')->assertOk()->assertJsonFragment(['id' => 'preference']);
         $command = $this->activity($plan, 'as_planned');
         $recorded = $this->postJson('/v1/me/meal-consumption', $command)->assertOk()->assertJsonPath('consumedCalories', 300)->assertJsonPath('revision', 1)->json();
+        $firstLoggedAt = $this->db->table('plan_first_meal_logs')->where('request_id', $plan['request'])->value('logged_at');
+        self::assertNotNull($firstLoggedAt);
         $this->postJson('/v1/me/meal-consumption', $command)->assertOk()->assertJsonPath('revision', 1);
         $this->postJson('/v1/me/meal-consumption', [...$command, 'state' => 'skipped'])->assertStatus(409)->assertJsonPath('code', 'idempotency_conflict');
         $this->postJson('/v1/me/meal-selections', $this->selection($plan))->assertStatus(409)->assertJsonPath('code', 'consumption_exists');
         $correction = $this->activity($plan, 'less', ['expectedRevision' => 1, 'actual' => ['quantity' => 0.5, 'unit' => 'serving', 'basis' => 'as_served']]);
         $this->postJson('/v1/me/meal-consumption', $correction)->assertOk()->assertJsonPath('consumedCalories', 150)->assertJsonPath('revision', 2);
+        self::assertSame($firstLoggedAt, $this->db->table('plan_first_meal_logs')->where('request_id', $plan['request'])->value('logged_at'));
         $this->postJson('/v1/me/meal-consumption', $this->activity($plan, 'less', ['expectedRevision' => 2, 'actual' => ['quantity' => 2, 'unit' => 'serving', 'basis' => 'as_served']]))->assertStatus(400);
         $this->postJson('/v1/me/meal-consumption', $this->activity($plan, 'less', ['expectedRevision' => 2, 'actual' => ['quantity' => 100, 'unit' => 'g', 'basis' => 'cooked']]))->assertOk()->assertJsonPath('consumedCalories', null);
         $this->getJson('/v1/me/meal-activity/2026-11-14/history')->assertOk()->assertJsonCount(3, 'consumption');
