@@ -62,6 +62,11 @@ final class AuditGapsTest extends MySqlTestCase
         $before = array_column(app(FollowUpQuestions::class)->forUser($userId), 'key');
         self::assertNotContains('region', $before);
         self::assertContains('weight', $before);
+        self::assertContains('routine', $before);
+
+        app(CoachChatActions::class)->remember($userId, 'ناهار را با خودم می‌برم');
+        self::assertTrue($this->db->table('coach_preferences')->where(['user_id' => $userId, 'pref_key' => 'pattern', 'value' => 'packed_lunch', 'active' => 1])->exists());
+        self::assertNotContains('routine', array_column(app(FollowUpQuestions::class)->forUser($userId), 'key'));
 
         app(CoachChatActions::class)->remember($userId, 'وقت آشپزی ندارم و غذای سریع می‌خواهم');
         $after = array_column(app(FollowUpQuestions::class)->forUser($userId), 'key');

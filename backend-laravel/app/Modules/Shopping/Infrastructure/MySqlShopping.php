@@ -42,11 +42,15 @@ final class MySqlShopping implements ShoppingStore
             $meals = $this->db->select('select id,meal_uid,title,position from plan_meals where plan_day_id=? order by position,id', [$day->day_id]);
             foreach ($meals as $meal) {
                 $covered[$date] = true;
-                $selection = $this->db->selectOne('select option_uid,revision from meal_selections where user_id=? and civil_date=? and meal_uid=? and version_id=?', [$user, $date, $meal->meal_uid, $day->version_id]);
+                $selection = $this->db->selectOne('select option_uid,revision,updated_at from meal_selections where user_id=? and civil_date=? and meal_uid=? and version_id=?', [$user, $date, $meal->meal_uid, $day->version_id]);
                 $option = $selection === null
                     ? $this->db->selectOne("select document from plan_meal_options where meal_id=? and kind='primary' and approved_by is not null", [$meal->id])
                     : $this->db->selectOne('select document from plan_meal_options where meal_id=? and option_uid=? and approved_by is not null', [$meal->id, $selection->option_uid]);
                 $document = $option === null ? null : json_decode($option->document, true, 512, JSON_THROW_ON_ERROR);
+                $swap = $this->db->table('meal_swap_logs')->where(['meal_id' => $meal->id, 'user_id' => $user])->latest('created_at')->first(['food_snapshot', 'created_at']);
+                if (isset($swap->food_snapshot) && $swap->created_at > ($selection->updated_at ?? '')) {
+                    $document = json_decode($swap->food_snapshot, true, 512, JSON_THROW_ON_ERROR);
+                }
                 $items = is_array($document) && array_key_exists('ingredients', $document) ? $document['ingredients'] : array_map(fn ($item) => ['name' => $item->name, 'quantity' => $item->quantity === null ? null : (float) $item->quantity, 'unit' => $item->unit], $this->db->select('select name,quantity,unit from plan_meal_items where meal_id=? order by position', [$meal->id]));
                 if ($items === []) {
                     $ingredients[] = ['name' => $meal->title, 'quantity' => null, 'unit' => null, 'basis' => 'unknown', 'source' => $date.':'.$meal->meal_uid.':missing'];

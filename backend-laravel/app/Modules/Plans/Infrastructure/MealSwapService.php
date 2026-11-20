@@ -37,6 +37,7 @@ final class MealSwapService
         if ($profile === null) {
             throw new Problem(422, 'no_profile', 'پروفایل تغذیه‌ای کاربر یافت نشد');
         }
+        $this->requireSelfServiceProfile($profile);
 
         $dislikes = $this->db->table('coach_preferences')
             ->where('user_id', $userId)->where('pref_key', 'food_dislike')->where('active', 1)
@@ -54,7 +55,7 @@ final class MealSwapService
         ];
     }
 
-    public function apply(string $userId, string $mealId, string $foodSlug, string $reason): array
+    public function apply(string $userId, string $mealId, string $foodSlug, string $reason, bool $budgetOk = false): array
     {
         $meal = $this->loadMeal($userId, $mealId);
         if ($meal === null) {
@@ -64,7 +65,8 @@ final class MealSwapService
         if ($food === null || empty($food['active'])) {
             throw new Problem(404, 'food_not_found', 'غذای انتخاب‌شده در کاتالوگ نیست');
         }
-        $profile = $this->loadProfile($userId) ?? [];
+        $profile = $this->loadProfile($userId) ?? throw new Problem(422, 'no_profile', 'پروفایل تغذیه‌ای کاربر یافت نشد');
+        $this->requireSelfServiceProfile($profile);
         if ($this->blockedByAllergen($food, $profile['allergens'] ?? [])) {
             throw new Problem(422, 'allergen_blocked', 'این غذا با حساسیت ثبت‌شده سازگار نیست');
         }
@@ -72,11 +74,20 @@ final class MealSwapService
             ->where('user_id', $userId)->where('pref_key', 'specialist_note')->where('active', 1)->pluck('value')->all();
         $avoid = $this->db->table('coach_preferences')
             ->where('user_id', $userId)->where('pref_key', 'food_dislike')->where('active', 1)->pluck('value')->all();
-        if (! (new CatalogConstraints)->allows($food, $profile, $avoid, $notes, false)) {
+        $food['cookMinutes'] = (int) ($food['recipe']['cookMinutes'] ?? 0);
+        if ($this->candidates($meal, $profile, $reason, $budgetOk, $avoid, $notes, [$food]) === []) {
             throw new Problem(422, 'food_blocked', 'این غذا با ترجیح، دستور متخصص یا وضعیت تأیید تغذیه سازگار نیست');
         }
 
-        $this->db->transaction(function () use ($meal, $food, $userId, $reason, $foodSlug): void {
+        $snapshot = [
+            'portion' => ['quantity' => 1, 'unit' => 'serving', 'basis' => 'as_served'],
+            'servingDisplay' => $food['servingLabel'],
+            'ingredients' => array_map(fn ($item) => [...$item, 'basis' => 'as_served'], $food['ingredients']),
+            'instructions' => (string) ($food['recipe']['instructions'] ?? ''),
+            'preparationMinutes' => $this->totalMinutes($food),
+            'nutrition' => array_intersect_key($food, array_flip(['proteinG', 'carbsG', 'fatG', 'fiberG'])),
+        ];
+        $this->db->transaction(function () use ($meal, $food, $userId, $reason, $foodSlug, $snapshot): void {
             // Published plan rows are protected by a database trigger.
             if ($meal['status'] === 'draft') {
                 $this->db->table('plan_meals')->where('id', $meal['id'])->update([
@@ -92,6 +103,7 @@ final class MealSwapService
                 'new_food_slug' => $foodSlug,
                 'new_title' => $food['nameFa'],
                 'new_kcal' => (int) $food['kcal'],
+                'food_snapshot' => json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 'reason' => $reason,
                 'created_at' => $this->db->raw('current_timestamp(6)'),
             ]);
@@ -107,14 +119,17 @@ final class MealSwapService
     private function loadMeal(string $userId, string $mealId): ?array
     {
         $row = $this->db->selectOne(
-            'SELECT m.id, m.meal_type, m.title, m.calories AS kcal, v.status
+            "SELECT m.id, m.meal_type, m.title, m.calories AS kcal, v.status, o.document
              FROM plan_meals m
              JOIN plan_days d ON d.id = m.plan_day_id
              JOIN plan_versions v ON v.id = d.plan_version_id
              JOIN plan_requests r ON r.id = v.request_id
-             WHERE r.user_id = ? AND (m.id = ? OR m.meal_uid = ?)',
+             LEFT JOIN plan_meal_options o ON o.meal_id = m.id AND o.kind = 'primary'
+             WHERE r.user_id = ? AND (m.id = ? OR m.meal_uid = ?)",
             [$userId, $mealId, $mealId]
         );
+
+        $nutrition = $row?->document === null ? [] : (json_decode($row->document, true)['nutrition'] ?? []);
 
         return $row === null ? null : [
             'id' => $row->id,
@@ -122,6 +137,7 @@ final class MealSwapService
             'title' => $row->title,
             'kcal' => (int) $row->kcal,
             'status' => $row->status,
+            'protein' => (float) ($nutrition['proteinG'] ?? 0),
         ];
     }
 
@@ -157,7 +173,7 @@ final class MealSwapService
         return array_map(fn ($row) => mb_strtolower($row->title, 'UTF-8'), $rows);
     }
 
-    private function candidates(array $meal, array $profile, string $reason, bool $budgetOk, array $dislikes, array $notes): array
+    private function candidates(array $meal, array $profile, string $reason, bool $budgetOk, array $dislikes, array $notes, ?array $catalog = null): array
     {
         $budgetMap = ['low' => 1, 'medium' => 2, 'high' => 3];
         $budget = $budgetMap[$profile['budget']] ?? 2;
@@ -166,7 +182,7 @@ final class MealSwapService
 
         $gate = new CatalogConstraints;
 
-        return array_values(array_filter($this->foods->all(), function (array $food) use ($meal, $profile, $reason, $budgetOk, $budget, $lo, $hi, $dislikes, $notes, $gate): bool {
+        return array_values(array_filter($catalog ?? $this->foods->all(), function (array $food) use ($meal, $profile, $reason, $budgetOk, $budget, $lo, $hi, $dislikes, $notes, $gate): bool {
             if (empty($food['active']) || (int) $food['kcal'] <= 0) {
                 return false;
             }
@@ -193,7 +209,7 @@ final class MealSwapService
             if (! $budgetOk && $reason !== 'budget' && abs($tier - $budget) > 1) {
                 return false;
             }
-            if ($reason === 'time' && (int) ($food['prepMinutes'] ?? 99) > 20) {
+            if ($reason === 'time' && ($this->totalMinutes($food) === 0 || $this->totalMinutes($food) > 20)) {
                 return false;
             }
             if (! $gate->allows($food, $profile, $dislikes, $notes, false)) {
@@ -224,6 +240,18 @@ final class MealSwapService
         return $allergens !== [] && array_intersect($allergens, $food['allergens'] ?? []) !== [];
     }
 
+    private function totalMinutes(array $food): int
+    {
+        return (int) ($food['prepMinutes'] ?? 0) + (int) ($food['cookMinutes'] ?? 0);
+    }
+
+    private function requireSelfServiceProfile(array $profile): void
+    {
+        if ($profile['safety_tier'] === 'doctor_only' || in_array('other', $profile['allergens'], true)) {
+            throw new Problem(409, 'profile_requires_review', 'برای تغییر این وعده از گزینه‌های تأییدشدهٔ متخصص استفاده کن');
+        }
+    }
+
     private function score(array $foods, array $meal, string $reason, array $usedTitles): array
     {
         $ranked = [];
@@ -235,7 +263,11 @@ final class MealSwapService
             if ($reason === 'budget' && (int) ($food['costTier'] ?? 3) === 1) {
                 $score += 15;
             }
-            if ($reason === 'time' && (int) ($food['prepMinutes'] ?? 99) <= 15) {
+            $protein = (float) $food['proteinG'];
+            $score += $meal['protein'] > 0
+                ? 20 * min(1, $protein / $meal['protein'])
+                : min(12, $protein * 0.4);
+            if ($reason === 'time' && $this->totalMinutes($food) <= 15) {
                 $score += 15;
             }
             if ((float) ($food['fiberG'] ?? 0) >= 5) {
@@ -249,7 +281,7 @@ final class MealSwapService
                 'carbs' => round((float) ($food['carbsG'] ?? 0), 1),
                 'fat' => round((float) ($food['fatG'] ?? 0), 1),
                 'costTier' => (int) ($food['costTier'] ?? 2),
-                'prepMinutes' => (int) ($food['prepMinutes'] ?? 0),
+                'prepMinutes' => $this->totalMinutes($food),
                 'score' => round($score, 1),
             ];
         }

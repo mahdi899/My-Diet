@@ -67,7 +67,9 @@ final class PlanQueries
         $meals = array_map(function ($meal) use ($activity, $chosen): array {
             $selection = array_values(array_filter($activity['selections'], fn ($row) => $row['meal_uid'] === $meal['mealUid']))[0] ?? null;
             $log = array_values(array_filter($activity['logs'], fn ($row) => $row['meal_uid'] === $meal['mealUid']))[0] ?? null;
-            $selected = array_values(array_filter($meal['options'], fn ($option) => $selection && $selection['version_id'] === $chosen['version_id'] ? $option['optionId'] === $selection['option_uid'] : $option['kind'] === 'primary'))[0] ?? null;
+            $useSelection = $selection && $selection['version_id'] === $chosen['version_id'] && ($meal['catalogSwapAt'] ?? '') <= ($selection['updated_at'] ?? '');
+            $selected = array_values(array_filter($meal['options'], fn ($option) => $useSelection ? $option['optionId'] === $selection['option_uid'] : $option['kind'] === 'primary'))[0] ?? null;
+            unset($meal['catalogSwapAt']);
             $details = $log['details'] ?? [];
             $consumption = $log === null ? null : ['versionId' => $log['plan_version_id'], 'optionId' => $log['option_uid'], 'eaten' => (bool) $log['eaten'], ...$details,
                 'consumedCalories' => is_int($details['consumedCalories'] ?? null) || is_float($details['consumedCalories'] ?? null) ? $details['consumedCalories'] : null];

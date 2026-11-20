@@ -274,16 +274,16 @@ final class CoachController
         $mealId = Input::uuid($body['mealId']);
 
         $swap = app(MealSwapService::class);
+        $budgetOk = ($body['budgetOk'] ?? false) === true;
 
         // If foodSlug provided, apply the swap; otherwise return alternatives
         if (isset($body['foodSlug']) && is_string($body['foodSlug'])) {
             $reason = Input::optional($body, 'reason', 32) ?? 'variety';
 
-            return $swap->apply($this->actor($request), $mealId, $body['foodSlug'], $reason);
+            return $swap->apply($this->actor($request), $mealId, $body['foodSlug'], $reason, $budgetOk);
         }
 
         $reason = Input::optional($body, 'reason', 32) ?? 'variety';
-        $budgetOk = isset($body['budgetOk']) && $body['budgetOk'] === true;
 
         return $swap->alternatives($this->actor($request), $mealId, $reason, $budgetOk);
     }

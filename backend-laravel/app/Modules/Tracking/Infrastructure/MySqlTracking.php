@@ -50,7 +50,7 @@ final class MySqlTracking implements TrackingStore
 
     public function approvedOption(string $user, string $version, string $meal, string $option, string $date): ?array
     {
-        $row = $this->db->selectOne("select m.id as meal_id,r.id as request_id,o.document from plan_meals m
+        $row = $this->db->selectOne("select m.id as meal_id,r.id as request_id,o.kind,o.document from plan_meals m
             join plan_days d on d.id=m.plan_day_id join plan_versions v on v.id=d.plan_version_id
             join plan_requests r on r.id=v.request_id join orders paid on paid.id=r.order_id and paid.status='paid'
             join plan_meal_options o on o.meal_id=m.id and o.option_uid=?
@@ -60,6 +60,12 @@ final class MySqlTracking implements TrackingStore
             return null;
         }
         $document = $this->decode($row->document);
+        if ($row->kind === 'primary' && is_array($document)) {
+            $swap = $this->db->table('meal_swap_logs')->where(['meal_id' => $row->meal_id, 'user_id' => $user])->latest('created_at')->first(['food_snapshot', 'new_title', 'new_kcal']);
+            if (isset($swap->food_snapshot)) {
+                $document = [...$document, ...$this->decode($swap->food_snapshot), 'title' => $swap->new_title, 'calories' => (int) $swap->new_kcal];
+            }
+        }
 
         return ['meal_id' => $row->meal_id, 'request_id' => $row->request_id, 'document' => is_array($document) ? $document : []];
     }

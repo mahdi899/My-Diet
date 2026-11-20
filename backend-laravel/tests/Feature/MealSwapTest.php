@@ -98,6 +98,23 @@ final class MealSwapTest extends MySqlTestCase
         $days = app(MySqlPlanQueries::class)->days($this->planIds['version']);
         self::assertSame('برنج پخته', $days[0]['meals'][0]['title']);
         self::assertSame('عدسی', $days[0]['meals'][0]['plannedTitle']);
+        self::assertSame('برنج پخته', $days[0]['meals'][0]['options'][0]['title']);
+        self::assertSame(280, $days[0]['meals'][0]['options'][0]['calories']);
+    }
+
+    public function test_apply_rejects_a_food_outside_the_suggested_meal_energy_range(): void
+    {
+        $this->food('tea-2', 'چای ساده', 2, '[]');
+        $service = app(MealSwapService::class);
+        self::assertNotContains('tea-2', array_column($service->alternatives($this->userId, $this->planIds['meal'])['alternatives'], 'slug'));
+
+        try {
+            $service->apply($this->userId, $this->planIds['meal'], 'tea-2', 'variety');
+            self::fail('A drink cannot replace the entire lunch');
+        } catch (Problem $error) {
+            self::assertSame('food_blocked', $error->problemCode);
+        }
+        self::assertFalse($this->db->table('meal_swap_logs')->where('meal_id', $this->planIds['meal'])->exists());
     }
 
     public function test_unknown_food_and_meal_are_rejected(): void

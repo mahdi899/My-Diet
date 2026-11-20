@@ -38,12 +38,16 @@ final class MySqlFoods implements FoodStore
     public function all(): array
     {
         $foods = array_map($this->view(...), $this->db->table('food_catalog')->orderBy('slug')->get()->all());
+        $recipeDetails = $this->db->table('food_recipe_details')->get(['food_id', 'cook_minutes', 'instructions'])->keyBy('food_id');
         $linked = $this->db->table('food_recipe_ingredients as r')->join('food_ingredients as i', 'i.code', '=', 'r.ingredient_code')->join('food_recipe_details as d', 'd.food_id', '=', 'r.food_id')->orderBy('r.position')->get(['r.food_id', 'i.name_fa', 'i.category', 'r.quantity', 'r.unit', 'd.servings']);
         $groups = [];
         foreach ($linked as $item) {
             $groups[$item->food_id][] = ['name' => $item->name_fa, 'quantity' => (float) $item->quantity / $item->servings, 'unit' => $item->unit, 'category' => $item->category];
         }
         foreach ($foods as &$food) {
+            $detail = $recipeDetails[$food['id']] ?? null;
+            $food['cookMinutes'] = (int) ($detail->cook_minutes ?? 0);
+            $food['instructions'] = $detail->instructions ?? '';
             if (isset($groups[$food['id']])) {
                 $food['ingredients'] = $groups[$food['id']];
             }
@@ -63,7 +67,10 @@ final class MySqlFoods implements FoodStore
         $details = $this->db->table('food_recipe_details')->where('food_id', $row->id)->first();
         if ($details) {
             $food['recipe'] = ['sourceCode' => $details->source_code, 'servings' => $details->servings, 'cookMinutes' => $details->cook_minutes, 'instructions' => $details->instructions, 'metadata' => json_decode($details->metadata, true, 512, JSON_THROW_ON_ERROR), 'sourceMarkdown' => $details->source_markdown];
-            $food['ingredients'] = $this->db->table('food_recipe_ingredients as r')->join('food_ingredients as i', 'i.code', '=', 'r.ingredient_code')->where('r.food_id', $row->id)->orderBy('r.position')->get()->map(fn ($i) => ['name' => $i->name_fa, 'quantity' => (float) $i->quantity / $details->servings, 'unit' => $i->unit, 'category' => $i->category])->all();
+            $ingredients = $this->db->table('food_recipe_ingredients as r')->join('food_ingredients as i', 'i.code', '=', 'r.ingredient_code')->where('r.food_id', $row->id)->orderBy('r.position')->get()->map(fn ($i) => ['name' => $i->name_fa, 'quantity' => (float) $i->quantity / $details->servings, 'unit' => $i->unit, 'category' => $i->category])->all();
+            if ($ingredients !== []) {
+                $food['ingredients'] = $ingredients;
+            }
         }
 
         return $food;

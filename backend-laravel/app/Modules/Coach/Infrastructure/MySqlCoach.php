@@ -221,7 +221,9 @@ final class MySqlCoach implements CoachGateway
         $options = [];
         if ($follow !== []) {
             $brief .= "\n".$follow[0]['text'];
-            if (($follow[0]['key'] ?? '') === 'kitchen') {
+            if (isset($follow[0]['options'])) {
+                $options = $follow[0]['options'];
+            } elseif (($follow[0]['key'] ?? '') === 'kitchen') {
                 $options = [
                     ['label' => 'وقت آشپزی دارم', 'value' => 'وقت آشپزی دارم'],
                     ['label' => 'غذای سریع می‌خواهم', 'value' => 'غذای سریع می‌خواهم'],

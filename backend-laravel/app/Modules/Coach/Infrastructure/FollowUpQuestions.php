@@ -22,17 +22,24 @@ final class FollowUpQuestions
             ->where(['user_id' => $userId, 'pref_key' => 'followup_answered', 'active' => 1])
             ->pluck('value')->all();
         $questions = [];
-        if (($profile->region === null || trim((string) $profile->region) === '') && ! in_array('region', $answered, true)) {
-            $questions[] = ['key' => 'region', 'text' => 'غذاهای معمول شهرت چیست؟ تا برنامه به مواد در دسترس نزدیک‌تر شود.'];
-        }
         if ($profile->safety_tier === 'doctor_only' && ! in_array('safety', $answered, true)) {
-            $questions[] = ['key' => 'safety', 'text' => 'اگر توصیه تازه پزشکی داری بنویس. تا تأیید متخصص، رژیم اجرایی فعال نمی‌شود.'];
+            return [['key' => 'safety', 'text' => 'متخصص برای بررسی برنامه‌ات آماده است. اگر محدودیت غذایی مشخصی از پزشکت داری، برای متخصص بنویس.']];
+        }
+        if (! in_array('routine', $answered, true)) {
+            $questions[] = ['key' => 'routine', 'text' => 'بیشتر روزها ناهار را کجا می‌خوری؟ پیشنهادهایی می‌چینیم که همان‌جا شدنی باشند.', 'options' => [
+                ['label' => 'ناهار در خانه', 'value' => 'ناهار را در خانه می‌خورم'],
+                ['label' => 'غذا را با خودم می‌برم', 'value' => 'ناهار را با خودم می‌برم'],
+                ['label' => 'از بیرون می‌گیرم', 'value' => 'ناهار را از بیرون می‌گیرم'],
+            ]];
         }
         $recentWeight = $this->db->table('weight_entries')->where('user_id', $userId)
             ->where('civil_date', '>=', CivilDates::add(CivilDates::today(), -7))
             ->exists();
         if ($profile->goal === 'weight_loss' && ! $recentWeight && ! in_array('weight', $answered, true) && count($questions) < 2) {
             $questions[] = ['key' => 'weight', 'text' => 'وزن این هفته را هنوز ندارم. اگر خواستی عدد امروز را بنویس تا روند را حدس نزنم.'];
+        }
+        if (! in_array('favorites', $answered, true)) {
+            $questions[] = ['key' => 'favorites', 'text' => 'کدام غذای خانگی را دوست داری در برنامه بماند؟ نامش را با «دوست دارم» بنویس، مثلاً «دوست دارم عدس‌پلو».'];
         }
         $hasPattern = $this->db->table('coach_preferences')->where(['user_id' => $userId, 'pref_key' => 'pattern', 'active' => 1])->exists();
         if (! $hasPattern && ! in_array('kitchen', $answered, true) && count($questions) < 2) {

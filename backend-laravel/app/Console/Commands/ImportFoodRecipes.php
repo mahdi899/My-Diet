@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Modules\Food\Infrastructure\MarkdownRecipes;
+use Database\Seeders\EverydayFoodSeeder;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -83,8 +84,9 @@ class ImportFoodRecipes extends Command
             if ($db->table('food_catalog')->count() !== 998) {
                 throw new \RuntimeException('Import count mismatch');
             }
+            app(EverydayFoodSeeder::class)->run();
         });
-        $this->info('Imported 998 foods without images. Backup: '.Storage::disk('local')->path($backup));
+        $this->info('Imported 998 source recipes and seeded the everyday catalogue. Backup: '.Storage::disk('local')->path($backup));
 
         return self::SUCCESS;
     }

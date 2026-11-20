@@ -107,7 +107,7 @@ final class EnergyEngine
         $breakfast = min(10, max(7, ($wake ?? 7) + 1));
         $shape = ($meals ?? 3) <= 2 ? [['breakfast', .35, sprintf('%02d:30', $breakfast)], ['lunch', .65, '14:00']]
             : (($meals ?? 3) >= 4 ? [['breakfast', .25, sprintf('%02d:00', $breakfast)], ['lunch', .3, '13:00'], ['snack', .15, '16:30'], ['dinner', .3, '20:00']]
-                : [['breakfast', .28, sprintf('%02d:00', $breakfast)], ['lunch', .37, '13:30'], ['snack', .1, '17:00'], ['dinner', .25, '20:00']]);
+                : [['breakfast', .28, sprintf('%02d:00', $breakfast)], ['lunch', .4, '13:30'], ['dinner', .32, '20:00']]);
         $slots = array_map(fn ($row) => ['mealType' => $row[0], 'suggestedTime' => $row[2], 'kcal' => self::rounded($target * $row[1] / 5) * 5], $shape);
         $slots[count($slots) - 1]['kcal'] += $target - array_sum(array_column($slots, 'kcal'));
 

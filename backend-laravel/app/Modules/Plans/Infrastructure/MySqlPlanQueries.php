@@ -41,16 +41,32 @@ final class MySqlPlanQueries implements PlanQueryStore
         foreach ($swaps as $swap) {
             $latestSwap[$swap->meal_id] = $swap;
         }
+        $documents = function (object $meal) use ($options, $latestSwap): array {
+            $swap = $latestSwap[$meal->id] ?? null;
+            $snapshot = isset($swap->food_snapshot) ? json_decode($swap->food_snapshot, true, 512, JSON_THROW_ON_ERROR) : null;
+
+            return array_values(array_map(function ($option) use ($swap, $snapshot): array {
+                $document = json_decode($option->document, true, 512, JSON_THROW_ON_ERROR);
+                if ($snapshot !== null && $option->kind === 'primary') {
+                    return [...$document, ...$snapshot, 'title' => $swap->new_title, 'calories' => (int) $swap->new_kcal];
+                }
+
+                return $document;
+            }, array_filter($options, fn ($option) => $option->meal_id === $meal->id)));
+        };
 
         return array_map(fn ($day) => ['id' => $day->id, 'dayIndex' => $day->day_index, 'meals' => array_map(fn ($meal) => [
             'id' => $meal->id,
-            'mealUid' => $meal->meal_uid, 'options' => array_map(fn ($option) => json_decode($option->document, true, 512, JSON_THROW_ON_ERROR), array_values(array_filter($options, fn ($option) => $option->meal_id === $meal->id))),
+            'mealUid' => $meal->meal_uid, 'options' => $documents($meal),
+            'catalogSwapAt' => isset($latestSwap[$meal->id]->food_snapshot) ? $latestSwap[$meal->id]->created_at : null,
             'mealType' => $meal->meal_type, 'suggestedTime' => $meal->suggested_time,
             'title' => isset($latestSwap[$meal->id]) ? $latestSwap[$meal->id]->new_title : $meal->title,
             'calories' => isset($latestSwap[$meal->id]) && $latestSwap[$meal->id]->new_kcal !== null ? (int) $latestSwap[$meal->id]->new_kcal : $meal->calories,
             'plannedTitle' => $meal->title,
             'notes' => $meal->notes,
-            'items' => array_map(fn ($item) => ['name' => $item->name, 'quantity' => $item->quantity === null ? null : (float) $item->quantity, 'unit' => $item->unit], array_values(array_filter($items, fn ($item) => $item->meal_id === $meal->id))),
+            'items' => isset($latestSwap[$meal->id]->food_snapshot)
+                ? json_decode($latestSwap[$meal->id]->food_snapshot, true, 512, JSON_THROW_ON_ERROR)['ingredients']
+                : array_map(fn ($item) => ['name' => $item->name, 'quantity' => $item->quantity === null ? null : (float) $item->quantity, 'unit' => $item->unit], array_values(array_filter($items, fn ($item) => $item->meal_id === $meal->id))),
         ], array_values(array_filter($meals, fn ($meal) => $meal->plan_day_id === $day->id)))], $days->all());
     }
 

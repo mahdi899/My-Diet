@@ -35,7 +35,9 @@ final class ConfiguredDraftProvider implements DraftProvider
             throw new Problem(409, 'profile_requires_review', 'پرونده باید توسط متخصص بررسی شود');
         }
         $this->enforceSafetyGates($profile);
-        $slots = EnergyEngine::slots((int) $profile['target_kcal'], $profile['meals_per_day']);
+        $preferences = (array) ($profile['preferences'] ?? []);
+        $sleepWake = (array) ($preferences['sleep_wake'] ?? []);
+        $slots = EnergyEngine::slots((int) $profile['target_kcal'], $profile['meals_per_day'], $sleepWake['wake'] ?? null);
         $learned = $this->learned($user);
         $gate = new CatalogConstraints;
         $foods = array_filter($this->foods->all(), fn ($f) => $f['active'] && $f['kcal'] > 0 && $f['ingredients'] !== [] &&
@@ -76,6 +78,8 @@ final class ConfiguredDraftProvider implements DraftProvider
             $catalogPrompt[$mealType] = implode("\n", $rows);
         }
         $safe = array_intersect_key($profile, array_flip(['track', 'sex', 'age', 'allergens', 'conditions', 'diet_style', 'target_kcal', 'protein_g', 'carbs_g', 'fat_g']));
+        $safe['budget'] = $profile['budget'];
+        $safe['habits'] = array_intersect_key($preferences, array_flip(['job_activity', 'hunger_time', 'bread_type', 'rice_frequency', 'region', 'guest_meals']));
         $safe['learned'] = $learned;
         $prompt = $this->db->table('ai_prompt_templates')->where(['key' => 'plan_draft', 'status' => 'active'])->orderByDesc('version')->first();
         $schema = '{"days":[{"day":1,"meals":[{"mealType":"breakfast","primary":[{"slug":"catalog_slug","servings":1}],"alternative":[{"slug":"different_slug","servings":1}],"note":""}]}]}';
@@ -121,7 +125,7 @@ final class ConfiguredDraftProvider implements DraftProvider
             }
 
             // Only retry if the error is potentially fixable by better instructions
-            $retryableErrors = ['seven_days_required', 'meal_energy_invalid', 'daily_energy_invalid', 'alternative_same', 'unknown_food_or_portion'];
+            $retryableErrors = ['seven_days_required', 'meal_energy_invalid', 'daily_energy_invalid', 'weekly_energy_invalid', 'weekly_protein_short', 'weekly_variety_low', 'alternative_same', 'unknown_food_or_portion'];
             $errorCode = $error->messageFa;
 
             if (! $this->isRetryable($errorCode, $retryableErrors)) {
@@ -178,6 +182,8 @@ final class ConfiguredDraftProvider implements DraftProvider
         $lines = [
             'قیدهای قطعی: دقیقاً ۷ روز با day از ۱ تا ۷ و همهٔ وعده‌های هر روز. JSON را ناقص رها نکن.',
             "جمع کالری primary هر روز باید بین {$lowDay} و {$highDay} باشد.",
+            "میانگین کالری هفته حداکثر ۶ درصد با {$target} فاصله داشته باشد. به هدف پروتئین پروفایل هم نزدیک بمان.",
+            'برای تنوع سفره، چند شام بدون برنج انتخاب کن و نسخه‌های مختلف یک غذای واحد را در روزهای پیاپی تکرار نکن. برای میان‌وعده، خوراکی ساده مناسب‌تر از وعدهٔ کامل است.',
         ];
         foreach ($slots as $slot) {
             $kcal = (int) $slot['kcal'];
@@ -327,6 +333,12 @@ final class ConfiguredDraftProvider implements DraftProvider
             $bestFiber += $top;
         }
         $days = [];
+        $weekCalories = 0;
+        $weekProtein = 0.0;
+        $hasProteinData = true;
+        $nonRiceDinners = 0;
+        $dinnerTarget = array_column($slots, 'kcal', 'mealType')['dinner'] ?? 0;
+        $viableNonRiceDinners = count(array_filter($offered['dinner'] ?? [], fn ($food) => ! FoodSelectionEngine::containsRice($food) && $dinnerTarget * .65 <= $food['kcal'] * 2));
         foreach ($value['days'] as $index => $day) {
             if (($day['day'] ?? null) !== $index + 1 || count($day['meals'] ?? []) !== count($slots)) {
                 throw new \InvalidArgumentException('day_slots_invalid');
@@ -348,6 +360,11 @@ final class ConfiguredDraftProvider implements DraftProvider
                     $ingredients = [];
                     $names = [];
                     $calories = 0;
+                    $minutes = 0;
+                    $nutrition = array_fill_keys(['proteinG', 'carbsG', 'fatG', 'fiberG'], 0.0);
+                    $directions = [];
+                    $servingLabels = [];
+                    $hasRice = false;
                     foreach ($items as $item) {
                         $food = $offered[$slot['mealType']][$item['slug'] ?? ''] ?? null;
                         $servings = $item['servings'] ?? null;
@@ -355,34 +372,61 @@ final class ConfiguredDraftProvider implements DraftProvider
                             throw new \InvalidArgumentException('unknown_food_or_portion');
                         }
                         $calories += $food['kcal'] * $servings;
+                        $hasRice = $hasRice || FoodSelectionEngine::containsRice($food);
+                        $minutes += (int) ($food['prepMinutes'] ?? 0) + (int) ($food['cookMinutes'] ?? 0);
+                        $servingLabels[] = $food['nameFa'].'، '.$servings.' × '.$food['servingLabel'];
+                        if (! empty($food['instructions'])) {
+                            $directions[] = $food['nameFa']."\n".$food['instructions'];
+                        }
+                        foreach ($nutrition as $metric => $total) {
+                            $nutrition[$metric] = $total + (float) ($food[$metric] ?? 0) * $servings;
+                        }
                         if ($key === 'primary') {
                             $dayFiber += (float) ($food['fiberG'] ?? 0) * (float) $servings;
+                            $hasProteinData = $hasProteinData && ((float) ($food['proteinG'] ?? 0) + (float) ($food['carbsG'] ?? 0) + (float) ($food['fatG'] ?? 0) > 0);
                         }
                         $names[] = $food['nameFa'];
                         foreach ($food['ingredients'] as $i) {
-                            $ingredients[] = ['name' => $i['name'], 'quantity' => round($i['quantity'] * $servings, 2), 'unit' => $i['unit'], 'basis' => 'raw', 'category' => $i['category'] ?? 'other'];
+                            $basis = str_contains($i['name'], 'پخته') ? 'cooked' : (str_contains($i['name'], 'خام') || str_contains($i['name'], 'خشک') ? 'raw' : 'unknown');
+                            $ingredients[] = ['name' => $i['name'], 'quantity' => round($i['quantity'] * $servings, 2), 'unit' => $i['unit'], 'basis' => $basis, 'category' => $i['category'] ?? 'other'];
                         }
                     }
                     if (abs($calories - $slot['kcal']) > $slot['kcal'] * 0.35 || count($ingredients) > 30) {
                         throw new \InvalidArgumentException('meal_energy_invalid');
                     }
+                    if ($key === 'primary' && $slot['mealType'] === 'dinner' && ! $hasRice) {
+                        $nonRiceDinners++;
+                    }
                     $options[] = ['optionId' => Crypto::uuid(), 'kind' => $kind, 'title' => mb_substr(implode(' + ', $names), 0, 200), 'calories' => (int) round($calories),
                         'portion' => ['quantity' => 1, 'unit' => 'serving', 'basis' => 'as_served'], 'ingredients' => $ingredients,
-                        'instructions' => mb_substr((string) ($found[0]['note'] ?? ''), 0, 4000), 'preparationMinutes' => 0, 'approved' => false];
+                        'instructions' => mb_substr($directions ? implode("\n\n", $directions) : (string) ($found[0]['note'] ?? ''), 0, 4000),
+                        'servingDisplay' => implode(' + ', $servingLabels), 'preparationMinutes' => $minutes, 'nutrition' => array_map(fn ($grams) => round($grams, 1), $nutrition), 'approved' => false];
                 }
+                $weekProtein += $options[0]['nutrition']['proteinG'];
                 if ($options[0]['title'] === $options[1]['title']) {
                     throw new \InvalidArgumentException('alternative_same');
                 }
                 $meals[] = ['mealType' => $slot['mealType'], 'suggestedTime' => $slot['suggestedTime'], 'title' => $options[0]['title'], 'calories' => $options[0]['calories'], 'notes' => '',
                     'items' => array_map(fn ($i) => array_intersect_key($i, array_flip(['name', 'quantity', 'unit'])), $options[0]['ingredients']), 'options' => $options];
             }
-            if (abs(array_sum(array_column($meals, 'calories')) - $target) > $target * 0.15) {
+            $dayCalories = array_sum(array_column($meals, 'calories'));
+            $weekCalories += $dayCalories;
+            if (abs($dayCalories - $target) > $target * 0.15) {
                 throw new \InvalidArgumentException('daily_energy_invalid');
             }
             if ($gate->fiberShort((string) ($profile['track'] ?? ''), $dayFiber, $bestFiber)) {
                 throw new \InvalidArgumentException('micronutrient_short');
             }
             $days[] = ['meals' => $meals];
+        }
+        if (abs($weekCalories / 7 - $target) > $target * .06) {
+            throw new \InvalidArgumentException('weekly_energy_invalid');
+        }
+        if ($hasProteinData && $weekProtein / 7 < (float) $profile['protein_g'] * .90) {
+            throw new \InvalidArgumentException('weekly_protein_short');
+        }
+        if ($viableNonRiceDinners >= 2 && $nonRiceDinners < 2) {
+            throw new \InvalidArgumentException('weekly_variety_low');
         }
 
         return $days;

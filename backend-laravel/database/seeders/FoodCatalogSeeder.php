@@ -43,5 +43,6 @@ class FoodCatalogSeeder extends Seeder
                 }
             }
         });
+        $this->call(EverydayFoodSeeder::class);
     }
 }

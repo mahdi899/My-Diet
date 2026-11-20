@@ -125,7 +125,23 @@ DayNutrition nutritionOn(NutritionSource store, DateTime date) {
   var eatenProtein = 0, eatenCarbs = 0, eatenFat = 0;
   for (var i = 0; i < meals.length; i++) {
     final meal = meals[i];
-    final planned = macrosFor(meal.calories, meal.name);
+    final hasNutrition = [
+      'proteinG',
+      'carbsG',
+      'fatG',
+    ].every(meal.nutrition.containsKey);
+    MacroGrams macros(int kcal) {
+      if (!hasNutrition || meal.calories <= 0)
+        return macrosFor(kcal, meal.name);
+      final ratio = kcal / meal.calories;
+      return MacroGrams(
+        (meal.nutrition['proteinG']! * ratio).round(),
+        (meal.nutrition['carbsG']! * ratio).round(),
+        (meal.nutrition['fatG']! * ratio).round(),
+      );
+    }
+
+    final planned = macros(meal.calories);
     protein += planned.protein;
     carbs += planned.carbs;
     fat += planned.fat;
@@ -133,7 +149,9 @@ DayNutrition nutritionOn(NutritionSource store, DateTime date) {
     final record = store.consumedMealOn(date, i);
     final recorded = record?['calories'];
     final kcal = recorded is num ? recorded.round() : meal.calories;
-    final eaten = macrosFor(kcal, meal.name);
+    final eaten = record?['state'] == 'different'
+        ? macrosFor(kcal, meal.name)
+        : macros(kcal);
     eatenProtein += eaten.protein;
     eatenCarbs += eaten.carbs;
     eatenFat += eaten.fat;
@@ -148,7 +166,10 @@ DayNutrition nutritionOn(NutritionSource store, DateTime date) {
   }
   final mealKcal = meals.fold<int>(0, (sum, meal) => sum + meal.calories);
   final targetKcal = store.calorieTarget(date);
-  if (mealKcal > 0 && targetKcal > 0 && targetKcal != mealKcal) {
+  if (mealKcal > 0 &&
+      targetKcal > 0 &&
+      targetKcal != mealKcal &&
+      meals.every((meal) => meal.nutrition.isEmpty)) {
     final scale = targetKcal / mealKcal;
     protein = (protein * scale).round();
     carbs = (carbs * scale).round();

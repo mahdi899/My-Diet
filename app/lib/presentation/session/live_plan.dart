@@ -118,7 +118,19 @@ PlanStatus _status(PlanRequestInfo? request, PublishedPlan? plan) {
 
 Meal _meal(MealView meal) {
   Meal from(MealOptionView option) {
-    final items = option.ingredients.isEmpty
+    final items = option.ingredientDetails.isNotEmpty
+        ? [
+            for (final (index, item) in option.ingredientDetails.indexed)
+              MealIngredient(
+                '${option.id}-$index',
+                item['name'] as String? ?? '',
+                (item['quantity'] as num?)?.toDouble(),
+                item['unit'] as String? ?? '',
+                category: item['category'] as String? ?? 'سایر',
+                basis: item['basis'] as String? ?? '',
+              ),
+          ]
+        : option.ingredients.isEmpty
         ? [MealIngredient(option.id, option.title, 1, 'وعده')]
         : [
             for (final name in option.ingredients)
@@ -128,7 +140,9 @@ Meal _meal(MealView meal) {
       name: meal.typeLabel,
       title: option.title,
       time: meal.time ?? '',
-      amount: option.ingredients.isEmpty
+      amount: option.servingDisplay.isNotEmpty
+          ? option.servingDisplay
+          : option.ingredients.isEmpty
           ? '۱ وعده'
           : option.ingredients.join('، '),
       details: meal.notes,
@@ -139,6 +153,7 @@ Meal _meal(MealView meal) {
           : option.instructions,
       quantityBasis: 'آمادهٔ سرو',
       ingredients: items,
+      nutrition: option.nutrition,
     );
   }
 

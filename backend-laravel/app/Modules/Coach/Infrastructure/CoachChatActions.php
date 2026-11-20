@@ -25,6 +25,20 @@ final class CoachChatActions
 
     public function remember(string $userId, string $text): ?string
     {
+        $routine = [
+            'ناهار را در خانه می‌خورم' => 'lunch_at_home',
+            'ناهار را با خودم می‌برم' => 'packed_lunch',
+            'ناهار را از بیرون می‌گیرم' => 'bought_lunch',
+        ][trim($text)] ?? null;
+        if ($routine !== null) {
+            foreach (array_diff(['lunch_at_home', 'packed_lunch', 'bought_lunch'], [$routine]) as $previous) {
+                $this->preferences->deactivate($userId, 'pattern', $previous);
+            }
+            $this->preferences->recordUserStatement($userId, 'pattern', $routine);
+            $this->preferences->recordUserStatement($userId, 'followup_answered', 'routine');
+
+            return 'یادداشت کردم. موقع چیدن ناهار این شرایط را در نظر می‌گیرم. اگر غذای خانگی محبوبی داری، مثلاً بنویس «دوست دارم عدس‌پلو».';
+        }
         $disliked = $this->afterPhrase($text, 'دوست ندارم');
         if ($disliked !== null) {
             $this->preferences->recordUserStatement($userId, 'food_dislike', $disliked);
@@ -34,6 +48,7 @@ final class CoachChatActions
         $liked = $this->afterPhrase($text, 'دوست دارم');
         if ($liked !== null) {
             $this->preferences->recordUserStatement($userId, 'food_like', $liked);
+            $this->preferences->recordUserStatement($userId, 'followup_answered', 'favorites');
 
             return 'یادداشت کردم که «'.$liked.'» را دوست داری.';
         }

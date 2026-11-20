@@ -71,6 +71,9 @@ class MealOptionView {
     required this.prepMinutes,
     required this.instructions,
     required this.ingredients,
+    this.ingredientDetails = const [],
+    this.nutrition = const {},
+    this.servingDisplay = '',
   });
   factory MealOptionView.fromJson(Map<String, dynamic> j) => MealOptionView(
     id: j['optionId'] as String,
@@ -79,15 +82,28 @@ class MealOptionView {
     calories: (j['calories'] as num?)?.round(),
     prepMinutes: (j['preparationMinutes'] as num?)?.round() ?? 0,
     instructions: j['instructions'] as String? ?? '',
+    servingDisplay: j['servingDisplay'] as String? ?? '',
     ingredients: [
       for (final i in (j['ingredients'] as List?) ?? const [])
         '${(i as Map)['name']}',
     ],
+    ingredientDetails: [
+      for (final item in (j['ingredients'] as List?) ?? const [])
+        Map<String, dynamic>.from(item as Map),
+    ],
+    nutrition: {
+      for (final entry in ((j['nutrition'] as Map?) ?? const {}).entries)
+        if (entry.key is String && entry.value is num)
+          entry.key as String: entry.value as num,
+    },
   );
   final String id, kind, title, instructions;
   final int? calories;
   final int prepMinutes;
   final List<String> ingredients;
+  final List<Map<String, dynamic>> ingredientDetails;
+  final Map<String, num> nutrition;
+  final String servingDisplay;
 
   String get kindLabel => switch (kind) {
     'primary' => 'پیشنهاد اصلی',

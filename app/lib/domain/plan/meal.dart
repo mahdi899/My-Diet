@@ -14,12 +14,14 @@ class Meal {
     this.quantityBasis = '',
     this.ingredients = const [],
     this.alternatives = const [],
+    this.nutrition = const {},
   });
   final String name, title, time, amount, details, instructions, quantityBasis;
   final int kind, calories;
   final int? preparationMinutes;
   final List<MealIngredient> ingredients;
   final List<MealAlternative> alternatives;
+  final Map<String, num> nutrition;
   Meal copyWith({
     String? name,
     String? title,
@@ -33,6 +35,7 @@ class Meal {
     String? quantityBasis,
     List<MealIngredient>? ingredients,
     List<MealAlternative>? alternatives,
+    Map<String, num>? nutrition,
   }) => Meal(
     name: name ?? this.name,
     title: title ?? this.title,
@@ -46,6 +49,7 @@ class Meal {
     quantityBasis: quantityBasis ?? this.quantityBasis,
     ingredients: List.unmodifiable(ingredients ?? this.ingredients),
     alternatives: List.unmodifiable(alternatives ?? this.alternatives),
+    nutrition: nutrition ?? this.nutrition,
   );
   bool get hasPortion =>
       title.trim().isNotEmpty && amount.trim().isNotEmpty && calories > 0;

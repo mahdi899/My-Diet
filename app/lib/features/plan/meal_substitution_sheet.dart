@@ -3,6 +3,7 @@ import '../../core/theme/tokens.dart';
 import '../../data/day.dart';
 import '../../data/demo_store.dart';
 import '../../presentation/widgets/kit/kit.dart';
+import '../../presentation/session/live_session.dart';
 import 'ai_swap_sheet.dart';
 
 /// Keeps approved alternatives and their confirmation flow out of the meal overview.
@@ -135,23 +136,32 @@ class _MealSubstitutionSheetState extends State<MealSubstitutionSheet> {
                 ),
                 const SizedBox(height: 16),
                 if (store.serverAuthEnabled && store.customerAuth != null)
-                  Builder(builder: (context) {
-                    final mealId = store.serverMealUids['${dateKey(widget.date)}|${widget.index}'];
-                    if (mealId == null) return const SizedBox.shrink();
-                    return Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: TextButton.icon(
-                        onPressed: () => openAiSwapSheet(
-                          context,
-                          mealId: mealId,
-                          mealTitle: meal.title,
-                          auth: store.customerAuth!,
+                  Builder(
+                    builder: (context) {
+                      final mealId = store
+                          .serverMealUids['${dateKey(widget.date)}|${widget.index}'];
+                      if (mealId == null) return const SizedBox.shrink();
+                      return Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton.icon(
+                          onPressed: () async {
+                            final changed = await openAiSwapSheet(
+                              context,
+                              mealId: mealId,
+                              mealTitle: meal.title,
+                              auth: store.customerAuth!,
+                            );
+                            if (changed == true) {
+                              await refreshLive(store);
+                              if (context.mounted) Navigator.pop(context, true);
+                            }
+                          },
+                          icon: const Icon(Icons.auto_awesome),
+                          label: const Text('جایگزین از کاتالوگ'),
                         ),
-                        icon: const Icon(Icons.auto_awesome),
-                        label: const Text('جایگزین از کاتالوگ'),
-                      ),
-                    );
-                  }),
+                      );
+                    },
+                  ),
                 if (alternatives.isEmpty)
                   const Text(
                     'جایگزین تأییدشده‌ای نیست',
