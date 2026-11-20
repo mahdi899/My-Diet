@@ -22,7 +22,7 @@ interface CoachGateway
 
     public function action(string $user, string $client, string $action, array $args = [], ?string $label = null, ?string $threadId = null): array;
 
-    public function patch(string $user, string $entry, string $title): array;
+    public function patch(string $user, string $entry, string $title, ?string $mealType = null, ?array $items = null): array;
 
     public function proactive(): int;
 }

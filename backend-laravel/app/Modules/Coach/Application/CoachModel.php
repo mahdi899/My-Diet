@@ -18,5 +18,5 @@ interface CoachModel
     /**
      * @return array{foods: list<array>, confidence: float, questions: list<string>, needsConfirmation: bool, tokensIn: int, tokensOut: int, costMicros: int, text: string}
      */
-    public function analyzePhoto(string $userId, string $imageBase64, string $caption = ''): array;
+    public function analyzePhoto(string $userId, string $imageBase64, string $caption = '', string $mime = 'image/jpeg'): array;
 }

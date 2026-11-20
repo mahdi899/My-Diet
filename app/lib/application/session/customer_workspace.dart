@@ -28,6 +28,7 @@ abstract interface class CustomerWorkspace implements NutritionSource {
   bool get serverAuthEnabled;
   bool get liveReady;
   String? get liveNotice;
+  String? get mealFrequencyNote;
   bool get hasUserRequest;
   PlanOverview get planOverview;
   bool get hasActiveShoppingPlan;

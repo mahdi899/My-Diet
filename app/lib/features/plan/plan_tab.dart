@@ -126,6 +126,10 @@ class _PlanTabState extends State<PlanTab> with WidgetsBindingObserver {
               ],
               const PlanQuestions(),
               GoalHero(goal: goal, nutrition: nutrition).rise(),
+              if (store.mealFrequencyNote case final note?) ...[
+                const SizedBox(height: 12),
+                PlanMealFrequencyNote(note: note),
+              ],
               const SizedBox(height: 16),
               JourneyMap(
                 goal: goal,

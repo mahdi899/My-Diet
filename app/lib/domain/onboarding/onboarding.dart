@@ -28,6 +28,8 @@ class ProfileSummary {
     required this.doctorOnly,
     required this.safetyReasons,
     required this.consented,
+    this.reportedMealsPerDay,
+    this.plannedMealsPerDay,
   });
   factory ProfileSummary.fromJson(Map<String, dynamic> j) => ProfileSummary(
     track: j['track'] as String,
@@ -45,12 +47,15 @@ class ProfileSummary {
     doctorOnly: j['safetyTier'] == 'doctor_only',
     safetyReasons: ((j['safetyReasons'] as List?) ?? const []).cast<String>(),
     consented: j['consented'] == true,
+    reportedMealsPerDay: (j['reportedMealsPerDay'] as num?)?.toInt(),
+    plannedMealsPerDay: (j['plannedMealsPerDay'] as num?)?.toInt(),
   );
   final String track;
   final double bmi, weightKg, heightCm;
   final double? targetWeightKg;
   final int age, bmrKcal, tdeeKcal, targetKcal, proteinG, carbsG, fatG;
   final bool doctorOnly, consented;
+  final int? reportedMealsPerDay, plannedMealsPerDay;
   final List<String> safetyReasons;
 }
 

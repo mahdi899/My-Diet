@@ -2283,6 +2283,8 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   @override
   String? liveNotice;
   String? planHoldReason;
+  @override
+  String? mealFrequencyNote;
 
   /// Pushes a shopping tick to the server. Null in fixture mode.
   Future<void> Function(String ingredientName, String? status)? reportShopping;

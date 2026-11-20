@@ -32,18 +32,21 @@ final class FollowUpQuestions
                 ['label' => 'از بیرون می‌گیرم', 'value' => 'ناهار را از بیرون می‌گیرم'],
             ]];
         }
+        if (! in_array('cook_source', $answered, true)) {
+            $questions[] = ['key' => 'cook_source', 'text' => 'بیشتر روزها غذایت چطور آماده می‌شود؟', 'options' => [
+                ['label' => 'خودم می‌پزم', 'value' => 'بیشتر روزها خودم غذا می‌پزم'],
+                ['label' => 'در خانه برایم می‌پزند', 'value' => 'بیشتر روزها در خانه برایم غذا می‌پزند'],
+                ['label' => 'غذای آماده می‌گیرم', 'value' => 'بیشتر روزها غذای آماده می‌گیرم'],
+            ]];
+        }
         $recentWeight = $this->db->table('weight_entries')->where('user_id', $userId)
             ->where('civil_date', '>=', CivilDates::add(CivilDates::today(), -7))
             ->exists();
-        if ($profile->goal === 'weight_loss' && ! $recentWeight && ! in_array('weight', $answered, true) && count($questions) < 2) {
-            $questions[] = ['key' => 'weight', 'text' => 'وزن این هفته را هنوز ندارم. اگر خواستی عدد امروز را بنویس تا روند را حدس نزنم.'];
+        if ($profile->goal === 'weight_loss' && ! $recentWeight && ! in_array('weight', $answered, true)) {
+            array_splice($questions, 1, 0, [['key' => 'weight', 'text' => 'وزن این هفته را هنوز ندارم. اگر خواستی عدد امروز را بنویس تا روند را حدس نزنم.']]);
         }
         if (! in_array('favorites', $answered, true)) {
             $questions[] = ['key' => 'favorites', 'text' => 'کدام غذای خانگی را دوست داری در برنامه بماند؟ نامش را با «دوست دارم» بنویس، مثلاً «دوست دارم عدس‌پلو».'];
-        }
-        $hasPattern = $this->db->table('coach_preferences')->where(['user_id' => $userId, 'pref_key' => 'pattern', 'active' => 1])->exists();
-        if (! $hasPattern && ! in_array('kitchen', $answered, true) && count($questions) < 2) {
-            $questions[] = ['key' => 'kitchen', 'text' => 'معمولاً وقت آشپزی داری یا غذای سریع برایت مناسب‌تر است؟'];
         }
 
         return array_slice($questions, 0, 2);

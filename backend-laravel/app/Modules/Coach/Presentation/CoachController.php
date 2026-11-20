@@ -195,7 +195,13 @@ final class CoachController
     {
         $body = Input::body($request, ['title', 'mealType', 'items', 'planMealUid']);
 
-        return $this->coach->patch($this->actor($request), Input::uuid($id), Input::string($body, 'title', 120));
+        $items = $body['items'] ?? null;
+        $mealType = Input::optional($body, 'mealType', 20);
+        if (($items !== null && (! is_array($items) || ! array_is_list($items))) || ($mealType !== null && ! in_array($mealType, ['breakfast', 'lunch', 'dinner', 'snack'], true))) {
+            throw new Problem(400, 'validation', 'جزئیات وعده معتبر نیست');
+        }
+
+        return $this->coach->patch($this->actor($request), Input::uuid($id), Input::string($body, 'title', 120), $mealType, $items);
     }
 
     public function today(Request $request): array

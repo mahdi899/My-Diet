@@ -93,68 +93,44 @@ TEXT;
      * @param  string  $caption  Optional user caption
      * @return array{foods: array, confidence: float, questions: array, tokensIn: int, tokensOut: int, costMicros: int}
      */
-    public function analyzePhoto(string $userId, string $imageBase64, string $caption = ''): array
+    public function analyzePhoto(string $userId, string $imageBase64, string $caption = '', string $mime = 'image/jpeg'): array
     {
-        $contextBuilder = app(CoachContextBuilder::class);
-        $context = $contextBuilder->buildForVision($userId);
-
-        $systemPrompt = <<<'PROMPT'
-تو یک مربی تغذیه هستی که باید از روی عکس، غذا را تشخیص بدهی.
-
-برنامه امروز کاربر:
-{{TODAY_PLAN}}
-
-وظیفه: 
-1. غذاها را شناسایی کن
-2. مقدار تقریبی را حدس بزن (بر اساس اندازه بشقاب و مقایسه)
-3. کالری تقریبی محاسبه کن
-4. اگر مطمئن نیستی، سوال بپرس
-
-پاسخ را به این فرمت JSON بده:
-```json
-{
-  "foods": [
-    {"name": "نام غذا", "amount": "مقدار تقریبی", "kcal": 123, "confidence": 0.8}
-  ],
-  "questions": ["سوال روشن‌کننده اگر لازم باشد"],
-  "needsConfirmation": true/false
-}
-```
-PROMPT;
-
-        $systemPrompt = str_replace('{{TODAY_PLAN}}', $this->formatTodayPlan($context['todayPlan']), $systemPrompt);
-
         $userContent = $caption ? "عکس غذا: $caption" : 'عکس غذا';
 
-        $configured = $this->pools->promptMessages('coach_vision', ['context' => json_encode($context, JSON_UNESCAPED_UNICODE), 'input' => $userContent]);
+        $configured = $this->pools->promptMessages('coach_vision', ['context' => '{}', 'input' => $userContent]);
+        $configured[0]['content'] .= "\nاگر عکس غذا نیست یا قابل تشخیص نیست، foods را خالی برگردان و یک سؤال کوتاه بپرس. فقط خوراکی‌های قابل مشاهده را گزارش کن. مقدار، دستور پخت و کالری از روی عکس تخمینی‌اند. برای غذاهای ایرانی تفاوت پلو، خورش، ته‌دیگ و مخلفات را لحاظ کن. برای ابهام مقدار یا روغن یک سؤال مشخص بپرس.";
+        $configured[0]['content'] .= "\n".'ساختار خروجی: {"foods":[{"name":"نام غذا","amount":"سهم تخمینی","kcal":123,"confidence":0.8}],"questions":[]}';
         $messages = [
             $configured[0],
             [
                 'role' => 'user',
                 'content' => [
                     ['type' => 'text', 'text' => $configured[1]['content']],
-                    ['type' => 'image_url', 'image_url' => ['url' => 'data:image/jpeg;base64,'.$imageBase64]],
+                    ['type' => 'image_url', 'image_url' => ['url' => 'data:'.$mime.';base64,'.$imageBase64]],
                 ],
             ],
         ];
 
-        $result = $this->pools->run('nutrition_vision', $messages, null, $userId, true);
-        $parsed = $this->parseVisionResponse((string) ($result['text'] ?? ''));
-        $foods = $parsed['foods'] ?? [];
-        $confidence = 0.0;
-        foreach ($foods as $food) {
-            $confidence = max($confidence, (float) ($food['confidence'] ?? 0));
+        $result = $this->pools->run('nutrition_vision', $messages, null, $userId, true, $this->parseVisionResponse(...));
+        $parsed = $result['value'];
+        $foods = [];
+        foreach (array_slice(is_array($parsed['foods'] ?? null) ? $parsed['foods'] : [], 0, 12) as $food) {
+            if (! is_array($food) || ! is_string($food['name'] ?? null) || trim($food['name']) === '' || ! is_numeric($food['kcal'] ?? null) || $food['kcal'] < 0 || $food['kcal'] > 2500) {
+                continue;
+            }
+            $foods[] = ['name' => mb_substr(trim($food['name']), 0, 100), 'kcal' => (int) round($food['kcal']), 'servingLabel' => is_string($food['amount'] ?? null) ? mb_substr($food['amount'], 0, 90) : 'سهم تخمینی', 'confidence' => max(0, min(1, (float) ($food['confidence'] ?? 0)))];
         }
+        $confidence = $foods === [] ? 0.0 : min(array_column($foods, 'confidence'));
 
         return [
             'foods' => $foods,
             'confidence' => $confidence,
-            'questions' => $parsed['questions'] ?? [],
-            'needsConfirmation' => (bool) ($parsed['needsConfirmation'] ?? $confidence < 0.7),
+            'questions' => array_slice(array_values(array_filter((array) ($parsed['questions'] ?? []), 'is_string')), 0, 2),
+            'needsConfirmation' => true,
             'tokensIn' => (int) ($result['tokensIn'] ?? 0),
             'tokensOut' => (int) ($result['tokensOut'] ?? 0),
             'costMicros' => (int) ($result['costMicros'] ?? 0),
-            'text' => (string) ($result['text'] ?? ''),
+            'text' => '',
         ];
     }
 
@@ -182,6 +158,7 @@ PROMPT;
         if (! str_contains($content, 'محدوده گفتگو:')) {
             $content = rtrim($content)."\n\n".self::SCOPE_RULE;
         }
+        $content .= "\nدر صورت امکان، پیشنهاد را با غذای معمول سفرهٔ ایرانی و واحد خانگی مثل کف دست، قاشق و پیمانه توضیح بده. برای مهمانی، غذای خانواده، غذای بیرون و غذای مانده راهکار عملی متناسب با شرایط بده. اگر سهم در برنامه مشخص است، همان را مرجع قرار بده. اگر مقدار یا دستور نامشخص است، یک سؤال مشخص بپرس و نسبت ثابت، مقدار قطعی یا مقایسهٔ سهم‌ها را حدس نزن. وقتی کاربر از بیماری، دارو یا علائم نگران‌کننده می‌گوید، نسخه یا تغییر دارو پیشنهاد نده و موضوع را برای بررسی به متخصص ارجاع بده. تنها وقتی ثبت غذا یا تغییر برنامه را تأیید کن که نتیجهٔ ثبت در گفتگو موجود باشد.";
         if (trim($context) !== '') {
             $content = rtrim($content)."\n\n".$context;
         }
@@ -356,15 +333,18 @@ TEXT;
         } elseif (preg_match('/\{.*\}/s', $content, $matches)) {
             $json = $matches[0];
         } else {
-            return ['foods' => [], 'questions' => ['پاسخ قابل تحلیل نبود'], 'needsConfirmation' => true];
+            throw new Problem(502, 'invalid_vision_response', 'پاسخ تحلیل عکس قابل پردازش نیست');
         }
 
         try {
             $parsed = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-
-            return $parsed;
         } catch (\JsonException $e) {
-            return ['foods' => [], 'questions' => ['پاسخ قابل تحلیل نبود'], 'needsConfirmation' => true];
+            throw new Problem(502, 'invalid_vision_response', 'پاسخ تحلیل عکس قابل پردازش نیست');
         }
+        if (! is_array($parsed['foods'] ?? null) || ! array_is_list($parsed['foods'])) {
+            throw new Problem(502, 'invalid_vision_response', 'فهرست غذاهای تشخیص‌داده‌شده معتبر نیست');
+        }
+
+        return $parsed;
     }
 }

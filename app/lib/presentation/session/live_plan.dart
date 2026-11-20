@@ -47,6 +47,13 @@ void showServerPlan(
 
   final id = plan?.requestId ?? request?.id;
   store.planHoldReason = request?.holdReason;
+  store.mealFrequencyNote =
+      profile != null &&
+          !profile.doctorOnly &&
+          (profile.reportedMealsPerDay ?? 3) < 3 &&
+          profile.plannedMealsPerDay == 3
+      ? 'برای اینکه مقدار روزانه در یک یا دو وعده جمع نشود، الگوی پیشنهادی برنامهٔ جدیدت سه وعده است. اگر خوردن وعدهٔ بیشتر برایت سخت است، با متخصصت هماهنگ کن.'
+      : null;
   if (id == null) {
     store.userRequestId = null;
     store.liveReady = true;

@@ -37,7 +37,22 @@ final class CoachChatActions
             $this->preferences->recordUserStatement($userId, 'pattern', $routine);
             $this->preferences->recordUserStatement($userId, 'followup_answered', 'routine');
 
-            return 'یادداشت کردم. موقع چیدن ناهار این شرایط را در نظر می‌گیرم. اگر غذای خانگی محبوبی داری، مثلاً بنویس «دوست دارم عدس‌پلو».';
+            return 'یادداشت کردم. یک سؤال دیگر کمک می‌کند: معمولاً خودت غذا می‌پزی، در خانه برایت می‌پزند یا غذای آماده می‌گیری؟';
+        }
+        $sources = [
+            'بیشتر روزها خودم غذا می‌پزم' => 'self_cooks',
+            'بیشتر روزها در خانه برایم غذا می‌پزند' => 'household_cooks',
+            'بیشتر روزها غذای آماده می‌گیرم' => 'ready_food',
+        ];
+        if (isset($sources[trim($text)])) {
+            $selected = $sources[trim($text)];
+            foreach (array_diff($sources, [$selected]) as $previous) {
+                $this->preferences->deactivate($userId, 'pattern', $previous);
+            }
+            $this->preferences->recordUserStatement($userId, 'pattern', $selected);
+            $this->preferences->recordUserStatement($userId, 'followup_answered', 'cook_source');
+
+            return 'ثبت کردم. اگر یک غذای معمول سفره‌ات را هم بگویی، پیشنهادها به همان عادت نزدیک‌تر می‌شوند.';
         }
         $disliked = $this->afterPhrase($text, 'دوست ندارم');
         if ($disliked !== null) {
@@ -279,6 +294,8 @@ final class CoachChatActions
             ->join('plan_meals as m', 'm.id', '=', 'l.plan_meal_id')
             ->where('l.user_id', $userId)->where('l.scheduled_date', $today)->where('l.eaten', 1)
             ->sum('m.calories');
+        $photoKcal = (int) $this->db->table('coach_food_entries')->where(['user_id' => $userId, 'civil_date' => $today, 'status' => 'logged'])
+            ->pluck('totals')->sum(fn ($totals) => (int) (json_decode($totals, true)['kcal'] ?? 0));
         $protein = (int) round((float) $this->db->table('meal_logs as l')
             ->join('plan_meals as m', 'm.id', '=', 'l.plan_meal_id')
             ->leftJoin('food_catalog as f', 'f.name_fa', '=', 'm.title')
@@ -289,8 +306,8 @@ final class CoachChatActions
             'title' => 'مصرف امروز',
             'kind' => 'nutrition',
             'items' => [
-                ['title' => $this->digits($kcal).' کالری ثبت‌شده'],
-                ['title' => $this->digits($protein).' گرم پروتئین'],
+                ['title' => $this->digits($kcal + $photoKcal).' کالری ثبت‌شده'],
+                ['title' => $photoKcal > 0 ? 'کالری ثبت‌های عکس تخمینی است.' : $this->digits($protein).' گرم پروتئین'],
             ],
         ]);
     }

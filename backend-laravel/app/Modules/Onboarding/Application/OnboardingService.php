@@ -4,6 +4,7 @@ namespace App\Modules\Onboarding\Application;
 
 use App\Modules\Identity\Application\IdentitySettings;
 use App\Modules\Onboarding\Domain\AnswerMapping;
+use App\Modules\Onboarding\Domain\EnergyEngine;
 use App\Modules\Onboarding\Domain\OnboardingRules as Rules;
 use App\Modules\Questionnaire\Application\QuestionnaireService;
 use App\Modules\Questionnaire\Domain\QuestionnaireRules;
@@ -203,7 +204,10 @@ final class OnboardingService
 
     private function summary(array $row): array
     {
+        $reported = isset($row['meals_per_day']) ? (int) $row['meals_per_day'] : null;
+
         return ['track' => $row['track'], 'source' => $row['source'], 'bmi' => (float) $row['bmi'], 'weightKg' => (float) $row['weight_kg'], 'targetWeightKg' => $row['target_weight_kg'] === null ? null : (float) $row['target_weight_kg'],
+            'reportedMealsPerDay' => $reported, 'plannedMealsPerDay' => EnergyEngine::plannedMealCount($reported),
             'heightCm' => (float) $row['height_cm'], 'age' => $row['age'], 'bmrKcal' => $row['bmr_kcal'], 'tdeeKcal' => $row['tdee_kcal'], 'targetKcal' => $row['target_kcal'],
             'proteinG' => $row['protein_g'], 'carbsG' => $row['carbs_g'], 'fatG' => $row['fat_g'], 'safetyTier' => $row['safety_tier'], 'safetyReasons' => $row['safety_reasons'], 'dietStyle' => $row['diet_style'], 'consented' => $row['consented_at'] !== null];
     }

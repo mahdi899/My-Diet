@@ -131,6 +131,10 @@ class PlanWaiting extends StatelessWidget {
           ),
         ),
         const PlanProgressCard(),
+        if (store.mealFrequencyNote case final note?) ...[
+          const SizedBox(height: 12),
+          PlanMealFrequencyNote(note: note),
+        ],
         const PlanQuestions(),
         if (!store.serverAuthEnabled && request.canApproveInformation) ...[
           const SizedBox(height: 8),
@@ -145,6 +149,27 @@ class PlanWaiting extends StatelessWidget {
       ],
     );
   }
+}
+
+class PlanMealFrequencyNote extends StatelessWidget {
+  const PlanMealFrequencyNote({super.key, required this.note});
+
+  final String note;
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'تعداد وعده‌های پیشنهادی',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        Text(note),
+      ],
+    ),
+  );
 }
 
 /// Reflects server state supplied by the shell's automatic synchronization.

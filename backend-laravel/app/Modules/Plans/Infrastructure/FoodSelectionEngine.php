@@ -114,10 +114,12 @@ final class FoodSelectionEngine
 
         // 7. Preparation time penalty for busy users
         $minutes = (int) ($food['prepMinutes'] ?? 30) + (int) ($food['cookMinutes'] ?? 0);
-        if ($minutes > 45) {
+        $patterns = $this->learned['patterns'] ?? [];
+        $needsFastPrep = in_array('fast_meals', $patterns, true) && ! array_intersect($patterns, ['household_cooks', 'ready_food']);
+        if ($needsFastPrep && $minutes > 45) {
             $score -= 5;
         }
-        if (in_array('fast_meals', $this->learned['patterns'] ?? [], true) && $minutes <= 20) {
+        if ($needsFastPrep && $minutes <= 20) {
             $score += 10;
         }
 

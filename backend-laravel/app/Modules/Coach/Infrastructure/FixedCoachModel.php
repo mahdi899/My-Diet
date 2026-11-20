@@ -21,10 +21,13 @@ final class FixedCoachModel implements CoachModel
         return ['text' => 'پاسخ آزمایشی', 'tokensIn' => 10, 'tokensOut' => 5, 'costMicros' => 100];
     }
 
-    public function analyzePhoto(string $userId, string $imageBase64, string $caption = ''): array
+    public function analyzePhoto(string $userId, string $imageBase64, string $caption = '', string $mime = 'image/jpeg'): array
     {
         $this->calls++;
 
-        return ['foods' => [], 'confidence' => 0.0, 'questions' => [], 'needsConfirmation' => true, 'tokensIn' => 0, 'tokensOut' => 0, 'costMicros' => 0, 'text' => 'تحلیل آزمایشی'];
+        return ['foods' => [
+            ['name' => 'عدسی', 'kcal' => 250, 'servingLabel' => 'یک کاسهٔ تقریبی', 'confidence' => .8],
+            ['name' => 'نان سنگک', 'kcal' => 80, 'servingLabel' => 'حدود یک کف دست', 'confidence' => .8],
+        ], 'confidence' => .8, 'questions' => [], 'needsConfirmation' => true, 'tokensIn' => 0, 'tokensOut' => 0, 'costMicros' => 0, 'text' => 'تحلیل آزمایشی'];
     }
 }

@@ -119,6 +119,24 @@ final class AuditGapsTest extends MySqlTestCase
         self::assertSame(1, $coach->today($userId)['meals']);
     }
 
+    public function test_photo_card_confirm_saves_edited_portion_once_and_updates_today(): void
+    {
+        ['id' => $userId] = $this->actor();
+        $plan = $this->planFixture($userId);
+        $this->profile($userId, $plan['submission']);
+        $coach = app(MySqlCoach::class);
+        $photo = $coach->photo($userId, LegacyCrypto::uuid(), "\xFF\xD8\xFF\x00", 'image/jpeg');
+        $route = '/v1/me/coach/meals/'.$photo['entryId'];
+        self::assertSame('meal_card', $photo['messages'][0]['type']);
+        self::assertSame(0, $coach->today($userId)['calories']['consumed']);
+
+        $this->patchJson($route, ['title' => 'عدسی', 'mealType' => 'dinner', 'items' => [['name' => 'عدسی', 'servings' => 1.5, 'kcal' => 1]]])
+            ->assertOk()->assertJsonPath('message.payload.status', 'logged')->assertJsonPath('message.payload.mealType', 'dinner')->assertJsonCount(1, 'message.payload.items')->assertJsonPath('today.calories.consumed', 375);
+        $this->patchJson($route, ['title' => 'عدسی', 'mealType' => 'dinner', 'items' => [['name' => 'عدسی', 'servings' => 1.5]]])
+            ->assertOk()->assertJsonPath('replay', true);
+        self::assertSame(1, $coach->today($userId)['meals']);
+    }
+
     public function test_eating_risk_message_notifies_the_assigned_specialist(): void
     {
         ['id' => $userId] = $this->actor();

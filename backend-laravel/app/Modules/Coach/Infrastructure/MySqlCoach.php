@@ -140,11 +140,13 @@ final class MySqlCoach implements CoachGateway
             $stored = json_decode($prior->payload, true);
             $caption = $stored['caption'] ?? $prior->fallback_text;
             $mealType = $stored['mealType'] ?? 'lunch';
-            $bytes = $this->db->table('coach_media')->where(['id' => $media, 'user_id' => $user])->value('content');
+            $savedMedia = $this->db->table('coach_media')->where(['id' => $media, 'user_id' => $user])->first(['content', 'mime']);
+            $bytes = $savedMedia->content;
+            $detected = $savedMedia->mime;
         }
         app(CoachThreads::class)->touch($thread->id, 'عکس غذا');
         try {
-            $analysis = $this->model->analyzePhoto($user, base64_encode($bytes), 'وعده: '.$mealType."\n".$caption);
+            $analysis = $this->model->analyzePhoto($user, base64_encode($bytes), 'وعده: '.$mealType."\n".$caption, $detected);
         } catch (\Throwable $error) {
             Log::error('Coach photo failed', ['type' => $error::class, 'message' => $error->getMessage(), 'file' => $error->getFile(), 'line' => $error->getLine()]);
             throw $error instanceof Problem ? $error : new Problem(503, 'outcome_unknown', 'الان نتوانستم عکس را بخوانم. یک بار دیگر بفرست.');
@@ -152,24 +154,33 @@ final class MySqlCoach implements CoachGateway
         $assistant = Crypto::uuid();
         $foods = $analysis['foods'] ?? [];
         $kcal = (int) array_sum(array_map(fn ($food) => (int) ($food['kcal'] ?? 0), $foods));
-        $title = $foods[0]['name'] ?? 'غذای عکس';
-        $text = $analysis['needsConfirmation']
-            ? 'این تشخیص قطعی نیست. اگر درست است تأیید کن تا در مصرف امروز ثبت شود.'
-            : 'اگر این غذا همان چیزی است که خوردی، تأیید کن تا ثبت شود.';
-        if ($analysis['text'] !== '') {
-            $text = $analysis['text']."\n".$text;
+        $entry = $foods === [] ? null : Crypto::uuid();
+        $text = $entry === null
+            ? 'غذا را با اطمینان تشخیص ندادم. اسم غذا و مقدار تقریبی‌اش را بنویس یا یک عکس واضح‌تر بفرست.'
+            : 'از روی عکس مقدار را تخمین زدم. سهم و نوع وعده را بررسی کن و بعد ثبت کن.';
+        $questions = array_values(array_filter($analysis['questions'] ?? [], 'is_string'));
+        if ($questions !== []) {
+            $text .= "\n".mb_substr($questions[0], 0, 180);
         }
-        $entry = Crypto::uuid();
-        $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'text', 'fallback_text' => $text, 'reply_to' => $message, 'tokens_in' => $analysis['tokensIn'], 'tokens_out' => $analysis['tokensOut'], 'payload' => json_encode(['entryId' => $entry, 'foods' => $foods, 'confidence' => $analysis['confidence'], 'needsConfirmation' => true], JSON_UNESCAPED_UNICODE)]);
-        $this->db->table('coach_food_entries')->insert([
-            'id' => $entry, 'user_id' => $user, 'thread_id' => $thread->id, 'message_id' => $assistant, 'media_id' => $media,
-            'civil_date' => CivilDates::today(), 'meal_type' => $mealType, 'title' => $title, 'source' => 'photo',
-            'items' => json_encode($foods, JSON_UNESCAPED_UNICODE), 'totals' => json_encode(['kcal' => $kcal]),
-            'confidence' => max(0, min(1, (float) $analysis['confidence'])), 'status' => 'suggested',
-        ]);
-        $this->usage($user, $analysis['costMicros'], 0, 1);
+        $title = implode(' و ', array_column(array_slice($foods, 0, 2), 'name'));
+        $title = mb_substr($title, 0, 120);
+        $items = array_map(fn ($food, $index) => [...$food, 'servings' => 1, 'lineIndex' => $index], $foods, array_keys($foods));
+        $totals = ['kcal' => $kcal];
+        $payload = ['entryId' => $entry, 'mediaId' => $media, 'title' => $title, 'mealType' => $mealType, 'items' => $items, 'totals' => $totals, 'status' => 'suggested', 'confidence' => $analysis['confidence'], 'needsConfirmation' => true, 'questions' => $questions, 'estimated' => true];
+        $this->db->transaction(function () use ($assistant, $thread, $user, $entry, $message, $media, $analysis, $text, $payload, $mealType, $title, $items, $totals): void {
+            $this->db->table('coach_messages')->insert(['id' => $assistant, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => $entry === null ? 'text' : 'meal_card', 'fallback_text' => $text, 'reply_to' => $message, 'tokens_in' => $analysis['tokensIn'], 'tokens_out' => $analysis['tokensOut'], 'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+            if ($entry !== null) {
+                $this->db->table('coach_food_entries')->insert([
+                    'id' => $entry, 'user_id' => $user, 'thread_id' => $thread->id, 'message_id' => $assistant, 'media_id' => $media,
+                    'civil_date' => CivilDates::today(), 'meal_type' => $mealType, 'title' => $title, 'source' => 'photo',
+                    'items' => json_encode($items, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'totals' => json_encode($totals),
+                    'confidence' => max(0, min(1, (float) $analysis['confidence'])), 'status' => 'suggested',
+                ]);
+            }
+            $this->usage($user, $analysis['costMicros'], 0, 1);
+        });
 
-        return ['replay' => false, 'mediaId' => $media, 'messageId' => $message, 'entryId' => $entry, 'status' => 'suggested', 'analysis' => $analysis, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $message)->first()), 'messages' => $this->replies($message)];
+        return ['replay' => false, 'mediaId' => $media, 'messageId' => $message, 'entryId' => $entry, 'status' => $entry === null ? 'unrecognized' : 'suggested', 'analysis' => $analysis, 'userMessage' => $this->message($this->db->table('coach_messages')->where('id', $message)->first()), 'messages' => $this->replies($message)];
     }
 
     public function followUps(string $user): array
@@ -179,18 +190,7 @@ final class MySqlCoach implements CoachGateway
 
     public function confirmPhoto(string $user, string $entryId): array
     {
-        $entry = $this->db->table('coach_food_entries')->where(['id' => $entryId, 'user_id' => $user])->first();
-        if ($entry === null) {
-            throw new Problem(404, 'not_found', 'غذای پیشنهادی پیدا نشد');
-        }
-        if ($entry->status === 'logged') {
-            return ['entryId' => $entryId, 'status' => 'logged', 'replay' => true];
-        }
-        $this->db->table('coach_food_entries')->where('id', $entryId)->update([
-            'status' => 'logged', 'logged_at' => $this->db->raw('current_timestamp(6)'),
-        ]);
-
-        return ['entryId' => $entryId, 'status' => 'logged', 'replay' => false, 'kcal' => json_decode($entry->totals, true)['kcal'] ?? 0];
+        return $this->savePhoto($user, $entryId);
     }
 
     public function media(string $user, string $id): ?array
@@ -204,9 +204,14 @@ final class MySqlCoach implements CoachGateway
     {
         $day = CivilDates::today();
         $water = (int) ($this->db->table('coach_water')->where(['user_id' => $user, 'civil_date' => $day])->value('ml') ?? 0);
-        $meals = $this->db->table('coach_food_entries')->where(['user_id' => $user, 'civil_date' => $day, 'status' => 'logged'])->count();
+        $entries = $this->db->table('coach_food_entries')->where(['user_id' => $user, 'civil_date' => $day, 'status' => 'logged'])->pluck('totals');
+        $photoKcal = $entries->sum(fn ($row) => (int) (json_decode($row, true)['kcal'] ?? 0));
+        $plannedKcal = $this->db->table('meal_logs as l')->join('plan_meals as m', 'm.id', '=', 'l.plan_meal_id')
+            ->where(['l.user_id' => $user, 'l.scheduled_date' => $day, 'l.eaten' => true])
+            ->get(['l.details', 'm.calories'])->sum(fn ($row) => (int) (json_decode($row->details, true)['consumedCalories'] ?? $row->calories));
+        $target = $this->db->table('nutrition_profiles')->where('user_id', $user)->value('target_kcal');
 
-        return ['date' => $day, 'waterMl' => $water, 'meals' => $meals, 'notADiagnosis' => true];
+        return ['date' => $day, 'waterMl' => $water, 'water' => ['ml' => $water], 'meals' => $entries->count(), 'calories' => ['consumed' => $photoKcal + $plannedKcal, 'target' => $target], 'notADiagnosis' => true];
     }
 
     public function dayBrief(string $user, ?string $threadId = null): array
@@ -232,10 +237,11 @@ final class MySqlCoach implements CoachGateway
                 $options = [['label' => 'ثبت وزن', 'value' => 'می‌خواهم وزن امروز را ثبت کنم']];
             }
         }
-        $this->db->table('coach_messages')->insert(['id' => Crypto::uuid(), 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'day_brief', 'fallback_text' => $brief, 'payload' => json_encode(['note' => $brief, 'followUps' => $follow, 'options' => $options], JSON_UNESCAPED_UNICODE)]);
+        $messageId = Crypto::uuid();
+        $this->db->table('coach_messages')->insert(['id' => $messageId, 'thread_id' => $thread->id, 'user_id' => $user, 'role' => 'assistant', 'type' => 'day_brief', 'fallback_text' => $brief, 'payload' => json_encode(['note' => $brief, 'followUps' => $follow, 'options' => $options], JSON_UNESCAPED_UNICODE)]);
         $this->db->table('coach_threads')->where('id', $thread->id)->update(['day_brief_date' => $today]);
 
-        return ['date' => $today, 'created' => true];
+        return ['date' => $today, 'created' => true, 'message' => $this->message($this->db->table('coach_messages')->where('id', $messageId)->first())];
     }
 
     public function action(string $user, string $client, string $action, array $args = [], ?string $label = null, ?string $threadId = null): array
@@ -286,10 +292,13 @@ final class MySqlCoach implements CoachGateway
         }
     }
 
-    public function patch(string $user, string $entry, string $title): array
+    public function patch(string $user, string $entry, string $title, ?string $mealType = null, ?array $items = null): array
     {
         if (! $this->db->table('nutrition_profiles')->where('user_id', $user)->exists()) {
             throw new Problem(409, 'no_profile', 'اول پرسش‌نامهٔ تغذیه را کامل کن.');
+        }
+        if ($items !== null) {
+            return $this->savePhoto($user, $entry, $title, $mealType, $items);
         }
         $updated = $this->db->table('coach_food_entries')->where(['id' => $entry, 'user_id' => $user])->update(['title' => $title]);
         if ($updated === 0) {
@@ -297,6 +306,57 @@ final class MySqlCoach implements CoachGateway
         }
 
         return ['entry' => ['id' => $entry, 'title' => $title], 'today' => $this->today($user)];
+    }
+
+    private function savePhoto(string $user, string $entryId, ?string $title = null, ?string $mealType = null, ?array $edited = null): array
+    {
+        return $this->db->transaction(function () use ($user, $entryId, $title, $mealType, $edited): array {
+            $entry = $this->db->table('coach_food_entries')->where(['id' => $entryId, 'user_id' => $user, 'source' => 'photo'])->lockForUpdate()->first();
+            if ($entry === null) {
+                throw new Problem(404, 'not_found', 'غذای پیشنهادی پیدا نشد');
+            }
+            $message = $this->db->table('coach_messages')->where('id', $entry->message_id)->first();
+            $response = ['entryId' => $entryId, 'status' => 'logged', 'replay' => $entry->status === 'logged'];
+            if ($entry->status === 'logged') {
+                return [...$response, 'message' => $message ? $this->message($message) : null];
+            }
+            $items = json_decode($entry->items, true, 512, JSON_THROW_ON_ERROR);
+            $originalCount = count($items);
+            if ($items === [] || $edited === [] || ($edited !== null && count($edited) > count($items))) {
+                throw new Problem(422, 'invalid_meal_items', 'ابتدا غذای تشخیص‌داده‌شده و مقدار آن را بررسی کن');
+            }
+            $selected = [];
+            $edits = $edited ?? array_map(fn ($item) => ['name' => $item['name'], 'servings' => 1], $items);
+            foreach ($edits as $index => $edit) {
+                $edit = (array) $edit;
+                $line = $edit['lineIndex'] ?? $index;
+                $quantity = $edit['servings'] ?? null;
+                if (! is_int($line) || ! isset($items[$line]) || isset($selected[$line]) || ! is_numeric($quantity) || $quantity < .25 || $quantity > 8 || ($edit['name'] ?? '') !== $items[$line]['name']) {
+                    throw new Problem(422, 'invalid_portion', 'مقدار این سهم معتبر نیست');
+                }
+                $item = $items[$line];
+                $selected[$line] = [...$item, 'servings' => (float) $quantity, 'kcal' => (int) round($item['kcal'] * $quantity)];
+            }
+            $items = array_values($selected);
+            if (count($items) < $originalCount) {
+                $title = mb_substr(implode(' و ', array_column(array_slice($items, 0, 2), 'name')), 0, 120);
+            }
+            $totals = ['kcal' => array_sum(array_column($items, 'kcal'))];
+            $title ??= $entry->title;
+            $mealType ??= $entry->meal_type;
+            $this->db->table('coach_food_entries')->where('id', $entryId)->update([
+                'title' => $title, 'meal_type' => $mealType, 'items' => json_encode($items, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'totals' => json_encode($totals),
+                'status' => 'logged', 'logged_at' => $this->db->raw('current_timestamp(6)'),
+            ]);
+            if ($message !== null) {
+                $payload = json_decode($message->payload, true) ?: [];
+                $message->payload = json_encode([...$payload, 'title' => $title, 'mealType' => $mealType, 'items' => $items, 'totals' => $totals, 'status' => 'logged', 'needsConfirmation' => false], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+                $message->fallback_text = 'وعده ثبت شد.';
+                $this->db->table('coach_messages')->where('id', $message->id)->update(['payload' => $message->payload, 'fallback_text' => $message->fallback_text]);
+            }
+
+            return [...$response, 'message' => $message ? $this->message($message) : null, 'kcal' => $totals['kcal'], 'today' => $this->today($user)];
+        });
     }
 
     public function proactive(): int

@@ -431,7 +431,6 @@ class CoachSession {
     String? sourceId,
   }) async {
     final version = _conversationVersion;
-    if (sourceId != null) answered.add(sourceId);
     try {
       final message = await repository.patchMeal(entryId, {
         if (title.trim().isNotEmpty) 'title': title.trim(),
@@ -441,6 +440,7 @@ class CoachSession {
           'planMealUid': planMealUid,
       });
       if (_disposed || version != _conversationVersion) return null;
+      if (sourceId != null) answered.add(sourceId);
       if (message != null) _upsert(message);
       onTurnCompleted?.call(saved: true);
       _notify();

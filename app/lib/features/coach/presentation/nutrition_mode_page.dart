@@ -31,6 +31,7 @@ class _Portion {
   _Portion(this.base) : quantity = asDouble(base['quantity'], 1);
   final Map<String, dynamic> base;
   double quantity;
+  bool included = true;
 
   double get _ratio {
     final start = asDouble(base['quantity'], 1);
@@ -51,6 +52,7 @@ class _Portion {
     final slug = base['slug'];
     return {
       'name': asString(base['name'], 'ماده'),
+      if (base['lineIndex'] is int) 'lineIndex': base['lineIndex'],
       if (slug is String && slug.trim().isNotEmpty) 'slug': slug.trim(),
       'servings': double.parse(quantity.toStringAsFixed(2)),
       'kcal': (asDouble(base['kcal'] ?? base['calories']) * ratio).round(),
@@ -91,13 +93,14 @@ class _NutritionModePageState extends State<NutritionModePage> {
       : 'ناهار';
   bool _busy = false;
 
-  int get _calories => _rows.fold(0, (sum, row) => sum + row.calories);
-  int get _protein => _rows.fold(0, (sum, row) => sum + row.protein);
-  int get _carbs => _rows.fold(0, (sum, row) => sum + row.carbs);
-  int get _fat => _rows.fold(0, (sum, row) => sum + row.fat);
+  Iterable<_Portion> get _included => _rows.where((row) => row.included);
+  int get _calories => _included.fold(0, (sum, row) => sum + row.calories);
+  int get _protein => _included.fold(0, (sum, row) => sum + row.protein);
+  int get _carbs => _included.fold(0, (sum, row) => sum + row.carbs);
+  int get _fat => _included.fold(0, (sum, row) => sum + row.fat);
 
   Future<void> _save() async {
-    if (_busy || _rows.isEmpty) return;
+    if (_busy || _included.isEmpty) return;
     setState(() => _busy = true);
     Haptics.confirm();
     final payload = widget.message.payload;
@@ -114,7 +117,7 @@ class _NutritionModePageState extends State<NutritionModePage> {
         entryId: entryId,
         title: asString(payload['title']),
         mealType: mealCode,
-        items: [for (final row in _rows) row.toWire()],
+        items: [for (final row in _included) row.toWire()],
         planMealUid: planMeal is String ? planMeal : null,
         sourceId: widget.message.id,
       );
@@ -210,6 +213,17 @@ class _NutritionModePageState extends State<NutritionModePage> {
                   ),
                   const SizedBox(height: 14),
                   Text(title, style: Theme.of(context).textTheme.titleLarge),
+                  if (payload['estimated'] == true) ...[
+                    const SizedBox(height: 6),
+                    const Text(
+                      'مقدار و کالری از روی عکس تخمین زده شده است. سهمی را که خوردی بررسی کن.',
+                    ),
+                    for (final question
+                        in (payload['questions'] as List?)
+                                ?.whereType<String>() ??
+                            const <String>[])
+                      Text(question),
+                  ],
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -224,10 +238,31 @@ class _NutritionModePageState extends State<NutritionModePage> {
                   ),
                   const SizedBox(height: 14),
                   for (final row in _rows) ...[
-                    _RowEditor(
-                      row: row,
-                      onChanged: (next) => setState(() => row.quantity = next),
-                    ),
+                    if (payload['estimated'] == true &&
+                        payload['status'] != 'logged')
+                      CheckboxListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(asString(row.base['name'])),
+                        subtitle: Text(
+                          row.included
+                              ? 'در این وعده خوردم'
+                              : 'در ثبت این وعده حساب نمی‌شود',
+                        ),
+                        value: row.included,
+                        onChanged: _busy
+                            ? null
+                            : (checked) => setState(
+                                () => row.included = checked ?? false,
+                              ),
+                      ),
+                    if (row.included)
+                      _RowEditor(
+                        row: row,
+                        onChanged: (next) =>
+                            setState(() => row.quantity = next),
+                      ),
                     const SizedBox(height: 8),
                   ],
                   const SizedBox(height: 8),
@@ -246,7 +281,9 @@ class _NutritionModePageState extends State<NutritionModePage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'پروتئین ${fa(_protein)} · کربو ${fa(_carbs)} · چربی ${fa(_fat)}',
+                            payload['estimated'] == true
+                                ? 'کالریِ تخمینی موارد انتخاب‌شده'
+                                : 'پروتئین ${fa(_protein)} · کربو ${fa(_carbs)} · چربی ${fa(_fat)}',
                             style: const TextStyle(height: 1.7),
                           ),
                         ),
@@ -263,7 +300,7 @@ class _NutritionModePageState extends State<NutritionModePage> {
                   PillButton(
                     label: 'ثبت و اضافه کن',
                     loading: _busy,
-                    onPressed: _save,
+                    onPressed: _included.isEmpty ? null : _save,
                   ),
                   const SizedBox(height: 8),
                   PillButton(

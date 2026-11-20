@@ -105,12 +105,17 @@ final class EnergyEngine
     public static function slots(int $target, ?int $meals = null, ?int $wake = null): array
     {
         $breakfast = min(10, max(7, ($wake ?? 7) + 1));
-        $shape = ($meals ?? 3) <= 2 ? [['breakfast', .35, sprintf('%02d:30', $breakfast)], ['lunch', .65, '14:00']]
-            : (($meals ?? 3) >= 4 ? [['breakfast', .25, sprintf('%02d:00', $breakfast)], ['lunch', .3, '13:00'], ['snack', .15, '16:30'], ['dinner', .3, '20:00']]
-                : [['breakfast', .28, sprintf('%02d:00', $breakfast)], ['lunch', .4, '13:30'], ['dinner', .32, '20:00']]);
+        $shape = self::plannedMealCount($meals) === 4
+            ? [['breakfast', .25, sprintf('%02d:00', $breakfast)], ['lunch', .3, '13:00'], ['snack', .15, '16:30'], ['dinner', .3, '20:00']]
+            : [['breakfast', .28, sprintf('%02d:00', $breakfast)], ['lunch', .4, '13:30'], ['dinner', .32, '20:00']];
         $slots = array_map(fn ($row) => ['mealType' => $row[0], 'suggestedTime' => $row[2], 'kcal' => self::rounded($target * $row[1] / 5) * 5], $shape);
         $slots[count($slots) - 1]['kcal'] += $target - array_sum(array_column($slots, 'kcal'));
 
         return $slots;
+    }
+
+    public static function plannedMealCount(?int $reported): int
+    {
+        return ($reported ?? 3) >= 4 ? 4 : 3;
     }
 }
