@@ -326,6 +326,8 @@ Route::put('v1/specialist/profile', [AdminDeskController::class, 'saveProfile'])
 Route::get('v1/specialist/members', [AdminDeskController::class, 'ownMembers'])->middleware('session:specialist');
 Route::get('v1/specialist/members/{userId}', [AdminDeskController::class, 'ownMember'])->middleware('session:specialist');
 Route::get('v1/specialist/members/{userId}/activity', [AdminDeskController::class, 'ownMemberActivity'])->middleware('session:specialist');
+Route::get('v1/admin/reports/user-progress', [AdminDeskController::class, 'userProgress'])->middleware('session:admin');
+Route::get('v1/admin/reports/user-progress/{userId}/activity', [AdminDeskController::class, 'userActivity'])->middleware('session:admin');
 Route::delete('v1/specialist/members/{userId}', [AdminDeskController::class, 'removeOwnMember'])->middleware('session:specialist');
 Route::middleware('session:user')->controller(CoachController::class)->group(function (): void {
     Route::get('v1/me/coach/thread', 'thread');

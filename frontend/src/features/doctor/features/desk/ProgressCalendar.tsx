@@ -30,8 +30,33 @@ function status(day?: ActivityDay) {
   return 'empty'
 }
 
-export function ProgressCalendar({ userId, onBack }: { userId: string; onBack: () => void }) {
-  const query = useQuery({ queryKey: ['doctor', 'activity', userId], queryFn: () => loadMemberActivity(userId) })
+type ReportPerson = { id: string; displayName: string | null; phone: string | null; portrait?: string | null }
+export type ProgressActivity = MemberActivity & { user?: ReportPerson; specialists?: ReportPerson[] }
+
+type ActivitySource = {
+  scope: string
+  activity: (userId: string) => Promise<ProgressActivity>
+  nutrition: (userId: string, date: string) => Promise<ActivityNutrition>
+}
+
+function ReportIdentity({ person, fallbackName }: { person: ReportPerson; fallbackName: string }) {
+  const [failed, setFailed] = useState(false)
+  const name = person.displayName?.trim() || fallbackName
+  return <div className="progress-specialist-identity">
+    <span className="progress-specialist-avatar" aria-hidden="true">
+      {person.portrait && !failed
+        ? <img src={person.portrait} alt="" width={64} height={64} onError={() => setFailed(true)} />
+        : Array.from(name)[0]}
+    </span>
+    <div className="progress-specialist-text">
+      <strong>{name}</strong>
+      {person.phone && <bdi dir="ltr">{person.phone}</bdi>}
+    </div>
+  </div>
+}
+
+export function ProgressCalendar({ userId, onBack, source }: { userId: string; onBack: () => void; source?: ActivitySource }) {
+  const query = useQuery<ProgressActivity>({ queryKey: [source?.scope ?? 'doctor', 'activity', userId], queryFn: () => source ? source.activity(userId) : loadMemberActivity(userId) })
   return <section className="doctor-progress">
     <header className="progress-toolbar">
       <h2>تقویم فعالیت{query.data?.displayName ? ` · ${query.data.displayName}` : ''}</h2>
@@ -39,11 +64,23 @@ export function ProgressCalendar({ userId, onBack }: { userId: string; onBack: (
     </header>
     {query.isPending && <p role="status">در حال دریافت فعالیت‌ها…</p>}
     {query.isError && <div role="alert"><p>{apiError(query.error)}</p><button type="button" className="secondary" onClick={() => void query.refetch()}>تلاش دوباره</button></div>}
-    {query.data && <Calendar key={userId} userId={userId} report={query.data} />}
+    {query.data?.specialists && <section className="card progress-people" aria-label="کاربر و متخصص مرتبط" dir="rtl">
+      <div className="progress-people-section">
+        <h3>کاربر</h3>
+        <ReportIdentity key={userId} person={query.data.user ?? { id: userId, displayName: query.data.displayName, phone: null }} fallbackName="کاربر" />
+      </div>
+      <div className="progress-people-section">
+        <h3>متخصص مرتبط</h3>
+        {query.data.specialists.length > 0 ? <ul className="progress-specialist-list" role="list">
+          {query.data.specialists.map(person => <li key={person.id}><ReportIdentity person={person} fallbackName="متخصص" /></li>)}
+        </ul> : <p>این کاربر زیرمجموعهٔ متخصصی نیست.</p>}
+      </div>
+    </section>}
+    {query.data && <Calendar key={userId} userId={userId} report={query.data} source={source} />}
   </section>
 }
 
-function Calendar({ userId, report }: { userId: string; report: MemberActivity }) {
+function Calendar({ userId, report, source }: { userId: string; report: MemberActivity; source?: ActivitySource }) {
   const [selected, setSelected] = useState(report.today)
   const label = month(selected)
   let start = selected
@@ -86,7 +123,7 @@ function Calendar({ userId, report }: { userId: string; report: MemberActivity }
         <span>خلاصهٔ روز</span>
         <h3>{formatFaDay(selected)}</h3>
         <p className="progress-status">{statusLabels[status(day)]}</p>
-        <DayNutrition userId={userId} date={selected} />
+        <DayNutrition userId={userId} date={selected} source={source} />
         <dl>
           <div><dt>وعده‌های برنامه</dt><dd>{day?.planned ? `${formatFaNumber(day.recorded)} از ${formatFaNumber(day.planned)} ثبت شده` : 'بدون برنامه'}</dd></div>
           {Object.entries(day?.mealStates ?? {}).map(([state, count]) => <div key={state}><dt>{mealLabels[state] ?? 'وضعیت دیگر'}</dt><dd>{formatFaNumber(count)} وعده</dd></div>)}
@@ -102,10 +139,10 @@ function Calendar({ userId, report }: { userId: string; report: MemberActivity }
 const mealTypes: Record<string, string> = { breakfast: 'صبحانه', lunch: 'ناهار', dinner: 'شام', snack: 'میان‌وعده', side: 'کنار غذا' }
 const kcal = (value: number) => `${formatFaNumber(value)} کیلوکالری`
 
-function DayNutrition({ userId, date }: { userId: string; date: string }) {
+function DayNutrition({ userId, date, source }: { userId: string; date: string; source?: ActivitySource }) {
   const day = useQuery({
-    queryKey: ['doctor', 'activity-nutrition', userId, date],
-    queryFn: () => loadActivityNutrition(userId, date),
+    queryKey: [source?.scope ?? 'doctor', 'activity-nutrition', userId, date],
+    queryFn: () => source ? source.nutrition(userId, date) : loadActivityNutrition(userId, date),
   })
   if (day.isPending) return <p role="status">در حال دریافت وعده‌ها و کالری…</p>
   if (day.isError) return <div role="alert"><p>{apiError(day.error)}</p><button type="button" className="secondary" onClick={() => void day.refetch()}>تلاش دوباره</button></div>

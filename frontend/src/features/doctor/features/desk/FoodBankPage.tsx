@@ -1,5 +1,5 @@
-import { useDeferredValue, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useDeferredValue, useEffect, useState } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { asRecord, formatFaNumber } from '@shared/utils'
 import { AdminIcon as Icon } from '../../../admin/components/AdminIcon'
 import { categories, costs, display, foodError, meals, seasons, values, type FoodRow } from '../../../admin/features/foods/catalog'
@@ -7,8 +7,11 @@ import { readIngredients, RecipeDetails } from '../../../admin/features/foods/Re
 import { doctorPreviewEnabled } from '../../data/preview'
 import { staff } from '../../session'
 import { DoctorDialog } from './PeoplePage'
+import { FoodImage } from '../../../admin/features/foods/FoodImage'
+import '../../../admin/features/users/users.css'
+import '../../../admin/features/foods/foods.css'
 
-const pageSize = 20
+const pageSize = 15
 const normalize = (value: string) => value.trim().toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک')
 const units: Record<string, string> = { g: 'گرم', kg: 'کیلوگرم', ml: 'میلی‌لیتر', piece: 'عدد' }
 const format = (value: unknown, unit: string) => value == null ? '—' : formatFaNumber(Number(value)) + ' ' + unit
@@ -53,7 +56,7 @@ function FoodDetails({ row, preview, close }: { row: FoodRow; preview: boolean; 
     {query.isLoading && <p role="status">در حال دریافت جزئیات…</p>}
     {query.isError && <p role="alert">{foodError(query.error)} <button type="button" className="secondary" onClick={() => void query.refetch()}>تلاش دوباره</button></p>}
     {food && <>
-      {image && <img className="doctor-food-photo" src={image} alt={display(food.nameFa)} />}
+      {image && <FoodImage food={food} />}
       <dl className="doctor-detail-grid">{fields.map(([label, value]) => <div key={String(label)}><dt>{String(label)}</dt><dd>{display(value)}</dd></div>)}</dl>
       {ingredients.length > 0 && <section><h3>مواد اولیهٔ هر پرس</h3><ul className="doctor-food-ingredients">
         {ingredients.map((item, index) => <li key={index}><span>{item.name}</span><span>{format(item.quantity, units[item.unit] ?? item.unit)}</span></li>)}
@@ -67,79 +70,71 @@ export function FoodBankPage() {
   const preview = doctorPreviewEnabled()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
-  const [meal, setMeal] = useState('')
   const [active, setActive] = useState('')
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [cursors, setCursors] = useState([''])
+  const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<FoodRow | null>(null)
   const term = useDeferredValue(normalize(search))
-  const cursor = cursors[cursors.length - 1] ?? ''
-  const query = useQuery({
-    queryKey: ['doctor', 'food-bank', preview, term, category, meal, active, cursor],
-    queryFn: async () => {
-      const params = new URLSearchParams({ limit: String(pageSize) })
+  const query = useInfiniteQuery({
+    queryKey: ['doctor', 'food-bank', preview, term, category, active],
+    initialPageParam: '',
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({ limit: '100' })
       if (term) params.set('q', term)
       if (category) params.set('category', category)
-      if (meal) params.set('meal', meal)
       if (active) params.set('active', active)
-      if (cursor) params.set('cursor', cursor)
+      if (pageParam) params.set('cursor', pageParam)
       return readFoodBank<{ items: FoodRow[]; nextCursor: string | null }>('?' + params, preview)
     },
+    getNextPageParam: last => last.nextCursor || undefined,
   })
-  const rows = query.data?.items ?? []
-  const nextCursor = query.data?.nextCursor
-  const filterCount = [category, meal, active].filter(Boolean).length
-
-  return <section className="doctor-food-bank" aria-label="بانک غذا">
-    <header className="doctor-food-toolbar">
-      <label className="doctor-food-search">
-        <Icon name="search" />
-        <input type="search" aria-label="جست‌وجوی غذا" placeholder="نام یا شناسهٔ غذا…" value={search}
-          onChange={event => { setSearch(event.target.value); setCursors(['']) }} />
-      </label>
-      <div className="doctor-food-controls">
-        {filterCount > 0 && <button className="secondary" type="button" onClick={() => { setCategory(''); setMeal(''); setActive(''); setCursors(['']) }}>حذف فیلترها</button>}
-        <button className="secondary icon-button" type="button" aria-label="فیلترهای بانک غذا" aria-expanded={filtersOpen}
-          aria-controls="doctor-food-filters" onClick={() => setFiltersOpen(open => !open)}>
-          <Icon name="filter" />{filterCount > 0 && <span>{formatFaNumber(filterCount)}</span>}
-        </button>
+  useEffect(() => {
+    if (query.hasNextPage && !query.isFetching && !query.isFetchNextPageError) void query.fetchNextPage()
+  }, [query.hasNextPage, query.isFetching, query.isFetchNextPageError, query.fetchNextPage])
+  const rows = query.data?.pages.flatMap(result => result.items) ?? []
+  const last = Math.max(1, Math.ceil(rows.length / pageSize))
+  const current = Math.min(page, last)
+  const start = (current - 1) * pageSize
+  const visible = rows.slice(start, start + pageSize)
+  return <div className="food-catalog doctor-food-catalog">
+    <section className="users-table-card food-catalog-card" aria-label="بانک غذا">
+      <header className="food-table-toolbar">
+        <div className="food-table-search">
+          <label className="users-search"><Icon name="search" /><span className="sr-only">جست‌وجوی نام یا شناسه غذا</span>
+            <input type="search" placeholder="جست‌وجوی نام یا slug…" value={search}
+              onChange={event => { setSearch(event.target.value); setPage(1) }} /></label>
+          {query.data && <p role="status">{formatFaNumber(rows.length)} غذا{query.hasNextPage ? ' تا اینجا؛ در حال بارگذاری…' : ''}</p>}
+        </div>
+        <div className="food-catalog-filters">
+          <select aria-label="دسته غذا" value={category} onChange={event => { setCategory(event.target.value); setPage(1) }}>
+            <option value="">همهٔ دسته‌ها</option>{Object.entries(categories).map(([key, name]) => <option key={key} value={key}>{name}</option>)}
+          </select>
+          <select aria-label="وضعیت غذا" value={active} onChange={event => { setActive(event.target.value); setPage(1) }}>
+            <option value="">همهٔ وضعیت‌ها</option><option value="true">فعال</option><option value="false">غیرفعال</option>
+          </select>
+        </div>
+      </header>
+      <div className="users-table-scroll" role="region" aria-label="جدول غذاها" tabIndex={0}>
+        <table><thead><tr>{['عکس', 'غذا', 'دسته', 'وعده‌ها', 'وضعیت', 'جزئیات'].map(title => <th scope="col" key={title}>{title}</th>)}</tr></thead>
+          <tbody>{visible.map(food => <tr key={String(food.slug)}>
+            <td><FoodImage key={String(food.image ?? '')} food={food} /></td>
+            <td><div className="food-name"><strong>{display(food.nameFa)}</strong><small><bdi>{display(food.slug)}</bdi></small></div></td>
+            <td>{categories[String(food.category)] ?? display(food.category)}</td>
+            <td>{labels(food.mealTypes, meals) || '—'}</td>
+            <td><span className="food-status" data-active={!!food.active}><i aria-hidden="true" />{food.active ? 'فعال' : 'غیرفعال'}</span></td>
+            <td><button type="button" className="secondary" aria-label={`جزئیات ${display(food.nameFa)}`} onClick={() => setSelected(food)}><Icon name="eye" />جزئیات</button></td>
+          </tr>)}
+          {!visible.length && <tr><td colSpan={6} className="users-empty">{query.isPending ? 'در حال دریافت…' : query.isError ? foodError(query.error) : 'غذایی با این مشخصات پیدا نشد.'}</td></tr>}
+          </tbody>
+        </table>
       </div>
-    </header>
-    <div id="doctor-food-filters" className="doctor-food-filters" hidden={!filtersOpen}>
-      <label>دستهٔ غذا<select value={category} onChange={event => { setCategory(event.target.value); setCursors(['']) }}>
-        <option value="">همهٔ دسته‌ها</option>
-        {Object.entries(categories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-      </select></label>
-      <label>وعده<select value={meal} onChange={event => { setMeal(event.target.value); setCursors(['']) }}>
-        <option value="">همهٔ وعده‌ها</option>
-        {Object.entries(meals).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-      </select></label>
-      <label>وضعیت<select value={active} onChange={event => { setActive(event.target.value); setCursors(['']) }}>
-        <option value="">همهٔ وضعیت‌ها</option>
-        <option value="true">فعال</option>
-        <option value="false">غیرفعال</option>
-      </select></label>
-    </div>
-    <table className="doctor-food-table">
-      <thead><tr>{['غذا', 'وزن یک پرس', 'انرژی هر پرس', 'جزئیات'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
-      <tbody>{rows.map(food => <tr key={String(food.slug)}>
-        <th scope="row">{display(food.nameFa)}<small>{categories[String(food.category)] ?? display(food.category)}{!food.active && ' · غیرفعال'}</small></th>
-        <td>{format(food.servingG, 'گرم')}</td>
-        <td>{format(food.kcal, 'کیلوکالری')}</td>
-        <td><button type="button" className="secondary icon-button" aria-label={`جزئیات ${display(food.nameFa)}`} onClick={() => setSelected(food)}><Icon name="eye" /></button></td>
-      </tr>)}
-      {!rows.length && <tr><td colSpan={4} className="doctor-food-message">
-        {query.isPending ? <span role="status">در حال دریافت غذاها…</span> : query.isError
-          ? <span role="alert">{foodError(query.error)} <button type="button" className="secondary" onClick={() => void query.refetch()}>تلاش دوباره</button></span>
-          : 'غذایی با این معیارها پیدا نشد.'}
-      </td></tr>}</tbody>
-    </table>
-    {(nextCursor || cursors.length > 1) && <footer className="doctor-food-pagination" aria-label="صفحه‌بندی غذاها">
-      <button type="button" className="secondary" disabled={cursors.length === 1} onClick={() => setCursors(previous => previous.slice(0, -1))}>قبلی</button>
-      <span>صفحهٔ {formatFaNumber(cursors.length)}</span>
-      <button type="button" className="secondary" disabled={!nextCursor || query.isFetching || term !== normalize(search)}
-        onClick={() => { if (nextCursor) setCursors(previous => [...previous, nextCursor]) }}>بعدی</button>
-    </footer>}
+      {query.isError && <div className="food-catalog-message" role="alert"><p>{foodError(query.error)}</p>
+        <button type="button" className="secondary" onClick={() => void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch())}>تلاش دوباره</button></div>}
+      <footer className="users-pagination"><span role="status">{rows.length ? `${formatFaNumber(start + 1)} تا ${formatFaNumber(start + visible.length)} از ${formatFaNumber(rows.length)} مورد` : '۰ مورد'}</span>
+        <div><button type="button" className="users-page-button" disabled={current === 1} onClick={() => setPage(current - 1)}><Icon name="chevron-right" />قبلی</button>
+          <span className="users-current" aria-current="page">{formatFaNumber(current)}</span>
+          <button type="button" className="users-page-button" disabled={current === last} onClick={() => setPage(current + 1)}>بعدی<Icon name="chevron-left" /></button></div>
+      </footer>
+    </section>
     {selected && <FoodDetails row={selected} preview={preview} close={() => setSelected(null)} />}
-  </section>
+  </div>
 }

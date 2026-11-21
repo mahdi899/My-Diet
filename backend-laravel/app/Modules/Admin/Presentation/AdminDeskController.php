@@ -141,6 +141,16 @@ final class AdminDeskController
         return $this->desk->doctorMemberActivity($this->actor($request), Input::uuid($userId), $request->query('date'));
     }
 
+    public function userProgress(): array
+    {
+        return $this->desk->userProgress();
+    }
+
+    public function userActivity(Request $request, string $userId): array
+    {
+        return $this->desk->userActivity(Input::uuid($userId), $request->query('date'));
+    }
+
     public function members(Request $request, string $id): array
     {
         $available = $request->query('available');

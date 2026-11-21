@@ -7,22 +7,13 @@ import { CatalogImport, FoodEditor } from './FoodDialogs'
 import { categories, display, exportFoodFile, foodError, foodPath, meals, sampleFoods, values, type FoodRow } from './catalog'
 import '../users/users.css'
 import './foods.css'
+import { FoodImage } from './FoodImage'
 
 const catalogKey = ['admin-food-catalog']
 const pageSize = 15
 const columns = ['عکس', 'غذا', 'دسته', 'وعده‌ها', 'وضعیت', 'عملیات']
 const normalize = (value: string) => value.trim().toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک')
 const number = (value: unknown) => value == null ? '—' : formatFaNumber(Number(value))
-
-function FoodImage({ food }: { food: FoodRow }) {
-  const slug = String(food.slug ?? '')
-  const filename = /^[a-z0-9_-]{1,80}$/.test(slug) ? slug + '.jpg' : ''
-  const stored = typeof food.image === 'string' && /^\/(?!\/)/.test(food.image) ? food.image : ''
-  const sources = [...new Set([stored, ...(filename ? ['/foods/' + filename, '/assets/foods/' + filename] : [])].filter(Boolean))]
-  const [attempt, setAttempt] = useState(0)
-  return sources[attempt] ? <img className="food-thumb" src={sources[attempt]} alt="" width={56} height={56}
-    loading="lazy" onError={() => setAttempt(attempt + 1)} /> : <span className="food-thumb food-thumb-empty"><Icon name="clipboard" /></span>
-}
 
 type Modal = { kind: 'editor'; food: FoodRow | null } | { kind: 'import' | 'replace' }
 
@@ -82,20 +73,25 @@ export function FoodsPage({ preview }: { preview: boolean }) {
       <button type="button" className="secondary" disabled={preview || download.isPending} onClick={() => { setError(''); download.mutate('json') }}><Icon name="clipboard" />پشتیبان کامل JSON</button>
       <button type="button" className="secondary" onClick={() => setModal({ kind: 'replace' })}><Icon name="send" />جایگزینی کاتالوگ</button>
     </div>
-    <div className="food-catalog-filters">
+    {notice && <p className="info-note" role="status">{notice}</p>}
+    {error && <p className="form-error" role="alert">{error}</p>}
+    <section className="users-table-card food-catalog-card" aria-label="کاتالوگ غذاهای ایرانی">
+      <header className="food-table-toolbar">
+        <div className="food-table-search">
       <label className="users-search"><Icon name="search" /><span className="sr-only">جست‌وجوی نام یا شناسه غذا</span>
         <input type="search" placeholder="جست‌وجوی نام یا slug…" value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} /></label>
+          {query.data && <p role="status">{number(rows.length)} غذا{query.hasNextPage ? ' تا اینجا؛ در حال بارگذاری…' : ''}</p>}
+        </div>
+        <div className="food-catalog-filters">
+
       <select aria-label="دسته غذا" value={category} onChange={event => { setCategory(event.target.value); setPage(1) }}>
         <option value="">همهٔ دسته‌ها</option>{Object.entries(categories).map(([key, name]) => <option key={key} value={key}>{name}</option>)}
       </select>
       <select aria-label="وضعیت غذا" value={status} onChange={event => { setStatus(event.target.value); setPage(1) }}>
         <option value="">همهٔ وضعیت‌ها</option><option value="true">فعال</option><option value="false">غیرفعال</option>
       </select>
-    </div>
-    {notice && <p className="info-note" role="status">{notice}</p>}
-    {error && <p className="form-error" role="alert">{error}</p>}
-    <section className="users-table-card food-catalog-card" aria-label="کاتالوگ غذاهای ایرانی">
-      <header><h2>کاتالوگ غذاهای ایرانی</h2>{query.data && <p>{number(rows.length)} غذا{query.hasNextPage ? ' تا اینجا؛ بقیه در حال بارگذاری است' : ''}</p>}</header>
+        </div>
+      </header>
       {query.data ? <>
         <div className="users-table-scroll" role="region" aria-label="جدول غذاها" tabIndex={0}>
           <table><thead><tr>{columns.map(title => <th scope="col" key={title}>{title === 'عملیات' ? <span className="sr-only">{title}</span> : title}</th>)}</tr></thead>

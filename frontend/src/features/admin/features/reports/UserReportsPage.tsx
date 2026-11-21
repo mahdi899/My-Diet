@@ -1,104 +1,58 @@
-import { FormEvent, useState } from 'react'
+import { useDeferredValue, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { StaffError } from '@shared/api/staff-session'
+import { formatFaNumber } from '@shared/utils'
+import { AdminIcon as Icon } from '../../components/AdminIcon'
 import { staff } from '../../session'
-import { rangeLabel, retentionEvents, sampleUserReport, userReportFromApi, type ReportQuery, type RetentionEvent, type UserReport } from './user-report'
+import { ProgressCalendar, type ProgressActivity } from '../../../doctor/features/desk/ProgressCalendar'
+import { type DoctorMember, type ActivityNutrition } from '../../../doctor/data/api'
+import { formatFaDay, trackLabels } from '../../../doctor/data/labels'
+import '../users/users.css'
 import './user-reports.css'
+import './user-progress.css'
 
-const initial: ReportQuery = { from: '2026-08-01', to: '2026-10-30', event: 'activity' }
-const foodKinds = ['selected', 'alternative', 'disliked', 'reason'] as const
-
-function isEvent(value: string): value is RetentionEvent {
-  return value in retentionEvents
-}
-
-async function loadLive(query: ReportQuery): Promise<UserReport> {
-  const range = `from=${encodeURIComponent(query.from)}&to=${encodeURIComponent(query.to)}`
-  const [retention, ...foods] = await Promise.all([
-    staff.api(`admin/reports/retention?${range}&event=${query.event}`),
-    ...foodKinds.map((kind) => staff.api(`admin/reports/foods?${range}&kind=${kind}`)),
-  ])
-  const feedback = await staff.api(`admin/reports/feedback?${range}`)
-  return userReportFromApi(retention, foods, feedback, query.event)
-}
-
-function Meter({ text, ratio }: { text: string; ratio: number }) {
-  const width = Math.max(0, Math.min(100, ratio))
-  return (
-    <div className="user-report-metric">
-      <p>{text}</p>
-      <div className="user-report-meter" aria-hidden="true"><span style={{ width: `${width}%` }} /></div>
-    </div>
-  )
-}
-
-function ReportBody({ report, query }: { report: UserReport; query: ReportQuery }) {
-  return (
-    <>
-      <section className="user-report-card">
-        <h3>ماندگاری گروه‌ها</h3>
-        <p>بازه: {rangeLabel(query.from, query.to)}. تعریف: {report.definition}. مخرج، تعداد کاربران همان گروه در شروع است.</p>
-        {report.status === 'invalid' && <p>بازهٔ تاریخ را بررسی کن.</p>}
-        {report.status === 'empty' && <p>در این بازه گروهی برای سنجش نیست. این حالت به معنی ماندگاری صفر نیست.</p>}
-        {report.cohorts.map((cohort) => (
-          <div className="user-report-cohort" key={cohort.id}>
-            <strong>{cohort.title}</strong>
-            {cohort.lines.map((line) => line.ratio == null
-              ? <p className="user-report-plain" key={line.key}>{line.text}</p>
-              : <Meter key={line.key} text={line.text} ratio={line.ratio} />)}
-          </div>
-        ))}
-      </section>
-      <section className="user-report-card">
-        <h3>غذاها، جایگزین‌ها و دلایل</h3>
-        {report.foods.map((group) => (
-          <div key={group.title}>
-            <h4>{group.title}</h4>
-            {group.rows ? group.rows.map((item) => <Meter key={item.label} text={item.label} ratio={item.ratio} />) : <p>در این بازه موردی ثبت نشده است.</p>}
-          </div>
-        ))}
-        <h4>بازخورد و ادامهٔ برنامه</h4>
-        <div className="user-report-feedback">
-          <p>شرکت در بازخورد، ارسال نظر برای برنامهٔ همان بازه است. ادامهٔ برنامه خرید یا تمدید است و از روی شرکت در بازخورد حدس زده نمی‌شود.</p>
-          {report.feedback
-            ? <><p>شرکت در بازخورد: {report.feedback.participation}</p><p>ادامهٔ برنامه: {report.feedback.continuation}</p></>
-            : <p>مخرج این بخش مشخص نیست.</p>}
-        </div>
-      </section>
-    </>
-  )
+const endpoint = 'admin/reports/user-progress'
+const source = {
+  scope: 'admin-user-progress',
+  activity: (userId: string) => staff.api<ProgressActivity>(`${endpoint}/${encodeURIComponent(userId)}/activity`),
+  nutrition: (userId: string, date: string) => staff.api<ActivityNutrition>(`${endpoint}/${encodeURIComponent(userId)}/activity?${new URLSearchParams({ date })}`),
 }
 
 export function UserReportsPage({ preview }: { preview: boolean }) {
-  const [draft, setDraft] = useState(initial)
-  const [applied, setApplied] = useState(initial)
-  const live = useQuery({
-    queryKey: ['admin', 'user-reports', applied],
-    queryFn: () => loadLive(applied),
+  const [selected, setSelected] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const term = useDeferredValue(search.trim().toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک'))
+  const query = useQuery({
+    queryKey: ['admin', 'user-progress', preview],
+    queryFn: () => staff.api<DoctorMember[]>(endpoint),
     enabled: !preview,
+    refetchInterval: 86_400_000,
   })
-  const report = preview ? sampleUserReport(applied) : live.data
-
-  function submit(event: FormEvent) {
-    event.preventDefault()
-    setApplied(draft)
-  }
-
-  return (
-    <div className="user-reports">
-      <h2>گزارش کاربران</h2>
-      {preview && <p className="user-report-note">فاز ۹ · این اعداد نمونهٔ طراحی هستند و گزارش زندهٔ سرور نیستند. بازگشت به برنامه، ثبت وعده و خرید دوباره سه رویداد جدا هستند.</p>}
-      <form className="user-report-filters" onSubmit={submit}>
-        <input type="date" aria-label="شروع بازه" value={draft.from} required onChange={(event) => setDraft({ ...draft, from: event.target.value })} />
-        <input type="date" aria-label="پایان بازه" value={draft.to} required onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
-        <select aria-label="رویداد بازگشت" value={draft.event} onChange={(event) => { if (isEvent(event.target.value)) setDraft({ ...draft, event: event.target.value }) }}>
-          {Object.entries(retentionEvents).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
-        <button type="submit">به‌روزرسانی گزارش</button>
-      </form>
-      {!preview && live.isLoading && <p>در حال آماده‌سازی گزارش</p>}
-      {!preview && live.isError && <p>{live.error instanceof StaffError ? live.error.message : 'گزارش دریافت نشد.'}</p>}
-      {report && <ReportBody report={report} query={applied} />}
-    </div>
-  )
+  if (selected) return <div className="admin-user-progress"><ProgressCalendar userId={selected} onBack={() => setSelected(null)} source={source} /></div>
+  const users = query.data ?? []
+  const rows = users.filter(row => `${row.displayName} ${row.phone ?? ''}`.toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک').includes(term))
+  return <div className="admin-user-progress">
+    <p className="info-note">روز کامل یعنی همهٔ وعده‌های برنامه در آن روز ثبت شده‌اند. هفتهٔ برنامه و تغییر وزن هر ۲۴ ساعت محاسبه می‌شوند.</p>
+    {preview && <p className="info-note">برای مشاهدهٔ گزارش کاربران، از حالت پیش‌نمایش خارج شوید.</p>}
+    <section className="users-table-card">
+      <div className="users-toolbar"><label className="users-search"><Icon name="search" />
+        <input aria-label="جست‌وجوی کاربران" type="search" placeholder="نام یا شماره تلفن…" value={search} onChange={event => setSearch(event.target.value)} /></label>
+        <span role="status">{formatFaNumber(users.length)} کاربر</span></div>
+      <div className="users-table-scroll" role="region" aria-label="گزارش پیشرفت همهٔ کاربران" tabIndex={0}>
+        <table><thead><tr>{['نام کاربر', 'شماره تلفن', 'هدف', 'هفتهٔ برنامه', 'تغییر وزن', 'آخرین محاسبه', 'روزهای کامل', 'عملیات'].map(title => <th key={title} scope="col">{title}</th>)}</tr></thead>
+          <tbody>{rows.map(row => <tr key={row.id}>
+            <td>{row.displayName || '—'}</td><td><bdi>{row.phone || '—'}</bdi></td>
+            <td>{trackLabels[row.goal ?? ''] || trackLabels[row.track ?? ''] || row.goal || '—'}</td>
+            <td>{row.week == null ? 'شروع نشده' : formatFaNumber(row.week)}</td>
+            <td>{row.weightChangeKg == null ? 'ثبت وزن کافی نیست' : row.weightChangeKg === 0 ? 'بدون تغییر' : `${formatFaNumber(Math.abs(row.weightChangeKg))} کیلوگرم ${row.weightChangeKg < 0 ? 'کاهش' : 'افزایش'}`}</td>
+            <td>{row.refreshedAt ? formatFaDay(row.refreshedAt) : '—'}</td>
+            <td>{row.completedDays == null ? '—' : formatFaNumber(row.completedDays)}</td>
+            <td><button type="button" className="secondary" aria-label={`جزئیات و تقویم فعالیت ${row.displayName}`} onClick={() => setSelected(row.id)}><Icon name="eye" />جزئیات</button></td>
+          </tr>)}
+          {!rows.length && <tr><td colSpan={8} className="users-empty">{query.isPending && !preview ? 'در حال دریافت اطلاعات…' : query.isError ? 'گزارش دریافت نشد.' : 'کاربری با این مشخصات پیدا نشد.'}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {query.isError && <div className="info-note" role="alert"><p>{query.error instanceof Error ? query.error.message : 'دریافت اطلاعات انجام نشد.'}</p><button type="button" className="secondary" onClick={() => void query.refetch()}>تلاش دوباره</button></div>}
+    </section>
+  </div>
 }
