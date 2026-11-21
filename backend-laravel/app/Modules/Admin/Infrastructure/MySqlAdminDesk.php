@@ -135,6 +135,52 @@ final class MySqlAdminDesk
         if ($row === null) {
             throw new Problem(404, 'not_found', 'این کاربر زیرمجموعهٔ این پزشک نیست');
         }
+
+        return $this->memberActivity($user, $row, $date);
+    }
+
+    public function userProgress(): array
+    {
+        return $this->db->table('users as u')->leftJoin('nutrition_profiles as p', 'p.user_id', '=', 'u.id')
+            ->where('u.role', 'user')->where('u.status', '<>', 'deleted')
+            ->orderBy('u.display_name')->orderBy('u.id')
+            ->get(['u.id', 'u.display_name as displayName', 'u.phone_e164 as phone', 'p.track', 'p.goal', 'u.created_at'])
+            ->map(function ($row): array {
+                $member = (array) $row;
+                unset($member['created_at']);
+
+                return $member + $this->dailyProgress($row->id, CivilDates::today($row->created_at));
+            })->all();
+    }
+
+    public function userActivity(string $user, mixed $date = null): array
+    {
+        $row = $this->db->table('users as u')
+            ->leftJoin('user_personal_details as pd', 'pd.user_id', '=', 'u.id')
+            ->where('u.id', $user)->where('u.role', 'user')->where('u.status', '<>', 'deleted')
+            ->first(['u.id', 'u.created_at', 'u.display_name', 'u.phone_e164', 'pd.details_encrypted']);
+        if ($row === null) {
+            throw new Problem(404, 'not_found', 'کاربر پیدا نشد');
+        }
+        $report = $this->memberActivity($user, $row, $date);
+        if ($date === null) {
+            $report['user'] = [
+                'id' => $row->id,
+                'displayName' => $this->nameOf($row),
+                'phone' => $row->phone_e164,
+                'portrait' => $this->photoOf($row->details_encrypted),
+            ];
+            $report['specialists'] = $this->db->table('specialist_members as m')->join('users as u', 'u.id', '=', 'm.specialist_id')
+                ->leftJoin('specialist_profiles as sp', 'sp.user_id', '=', 'm.specialist_id')
+                ->where('m.user_id', $user)->orderBy('u.display_name')
+                ->get(['u.id', 'u.display_name as displayName', 'u.phone_e164 as phone', 'sp.portrait'])->all();
+        }
+
+        return $report;
+    }
+
+    private function memberActivity(string $user, object $row, mixed $date): array
+    {
         $registeredOn = CivilDates::today($row->created_at);
         $today = CivilDates::today();
         if ($date !== null) {

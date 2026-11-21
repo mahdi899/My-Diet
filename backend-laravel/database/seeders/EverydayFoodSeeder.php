@@ -65,7 +65,20 @@ final class EverydayFoodSeeder extends Seeder
                 }
             }
             foreach ($staples as [$slug, $name, $grams, $portion, $slots, $category, $cost, $minutes, $protein, $carbs, $fat, $fiber, $allergens, $style]) {
-                $this->add($db, $slug, $name, $grams, $portion, $slots, $category, $cost, $minutes, $protein, $carbs, $fat, $fiber, $allergens, $style, [[$name, $grams]]);
+                if (! $db->table('food_ingredients')->where('name_fa', $name)->exists()) {
+                    $ingredientCategory = match ($slug) {
+                        'barbari', 'sangak', 'taftoon', 'rice' => 'grains',
+                        'plain-yogurt', 'milk', 'white-cheese' => 'dairy',
+                        'apple', 'orange', 'date' => 'fruit',
+                        'cucumber', 'tomato' => 'vegetables',
+                        'boiled-egg' => 'protein',
+                        'walnut' => 'nuts',
+                        default => 'other',
+                    };
+                    $db->table('food_ingredients')->insertOrIgnore([
+                        'code' => 'STAPLE-'.$slug, 'name_fa' => $name, 'category' => $ingredientCategory,
+                    ]);
+                }
             }
             foreach ($meals as [$slug, $name, $slots, $minutes, $ingredients, $protein, $carbs, $fat, $fiber, $allergens, $style]) {
                 $category = str_contains($slots, 'breakfast') ? 'breakfast' : ($slots === 'snack' ? 'side' : 'main');

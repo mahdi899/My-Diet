@@ -1,0 +1,51 @@
+.admin-user-progress { display: grid; gap: 20px; }
+.admin-user-progress .users-toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; padding: 20px 24px; }
+.admin-user-progress .users-search { width: min(350px, 100%); }
+.admin-user-progress .users-table-card table { min-width: 1000px; }
+.admin-user-progress .doctor-progress .card { padding: clamp(14px, 2vw, 24px); border: 1px solid var(--line); border-radius: 16px; background: white; }
+.admin-user-progress .progress-people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.progress-people-section { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.progress-people-section + .progress-people-section { border-inline-start: 1px solid var(--line); padding-inline-start: 20px; }
+.admin-user-progress .progress-people h3 { color: var(--muted); font-size: .85rem; }
+.progress-specialist-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (max-width: 600px) {
+  .admin-user-progress .progress-people { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .progress-people-section + .progress-people-section { border-inline-start: 0; border-block-start: 1px solid var(--line); padding: 16px 0 0; }
+}
+.progress-specialist-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+}
+.progress-specialist-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #e1edde;
+  color: #27563f;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.progress-specialist-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.progress-specialist-text { display: grid; justify-items: start; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.progress-specialist-text bdi { color: var(--muted); font-size: .875rem; }
+.admin-user-progress .doctor-progress button.progress-date { display: grid; place-content: center; gap: 0; min-width: 0; min-height: 48px; padding: 3px; background: #f3f5f1; color: #35483d; border: 1px solid transparent; border-radius: 8px; }
+.admin-user-progress .doctor-progress button.progress-date[data-status="complete"] { background: #e0f0e4; color: #215238; }
+.admin-user-progress .doctor-progress button.progress-date[data-status="partial"] { background: #fff0d6; color: #70480b; }
+.admin-user-progress .doctor-progress button.progress-date[data-status="activity"] { background: #e7eef4; color: #27495f; }
+.admin-user-progress .doctor-progress button.progress-date[aria-pressed="true"] { border-color: currentColor; box-shadow: inset 0 0 0 1px currentColor; }
+.admin-user-progress .doctor-progress button.progress-date:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+.admin-user-progress .doctor-progress button.progress-date:disabled { opacity: .4; }
