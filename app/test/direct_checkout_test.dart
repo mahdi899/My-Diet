@@ -57,9 +57,12 @@ class CheckoutApiStub implements ApiClient {
 
 class CheckoutStub implements PlanCheckoutRepository {
   String gateway = 'zarinpal', initialStatus = 'pending';
+  String? storeSku;
+  String? requestedGateway;
   List<String> results = ['pending', 'paid'];
   final keys = <String>[];
   int completions = 0;
+  int storeConfirms = 0;
 
   @override
   Future<PlanCheckout> startCheckout({
@@ -68,13 +71,16 @@ class CheckoutStub implements PlanCheckoutRepository {
     required String idempotencyKey,
     String? parentRequestId,
     String? planId,
+    String? gateway,
   }) async {
     keys.add(idempotencyKey);
+    requestedGateway = gateway;
     return PlanCheckout(
       status: initialStatus,
-      gateway: gateway,
+      gateway: this.gateway,
       paymentId: 'payment-1',
       redirectUrl: 'https://gateway.test/pay',
+      storeSku: storeSku,
     );
   }
 
@@ -89,6 +95,18 @@ class CheckoutStub implements PlanCheckoutRepository {
   }) async {
     completions++;
     return PlanCheckout(status: success ? 'paid' : 'failed');
+  }
+
+  @override
+  Future<PlanCheckout> confirmStorePurchase(
+    String paymentId, {
+    required String productId,
+    required String purchaseToken,
+    String? orderId,
+    String? signature,
+  }) async {
+    storeConfirms++;
+    return const PlanCheckout(status: 'paid');
   }
 
   @override
@@ -218,6 +236,52 @@ void main() {
       expect(commerce.completions, 1);
     },
   );
+
+  test(
+    'Store checkout confirms the receipt and does not open a browser',
+    () async {
+      final commerce = CheckoutStub()
+        ..gateway = 'bazaar'
+        ..storeSku = 'sku_monthly';
+      final purchases = <String>[];
+      await settleCheckout(
+        commerce,
+        serviceCode: 'new_plan',
+        expectedPriceToman: 500000,
+        idempotencyKey: 'store-attempt',
+        confirmSandbox: () async => throw StateError('sandbox'),
+        purchaseInStore: (sku, payload) async {
+          purchases.add('$sku:$payload');
+          return const StoreReceipt(
+            productId: 'sku_monthly',
+            purchaseToken: 'token-1',
+            orderId: 'order-1',
+          );
+        },
+      );
+      expect(purchases, ['sku_monthly:payment-1']);
+      expect(commerce.storeConfirms, 1);
+      expect(commerce.completions, 0);
+    },
+  );
+
+  test('Preview checkout is paid without a store or a confirmation', () async {
+    final commerce = CheckoutStub()
+      ..gateway = 'preview'
+      ..initialStatus = 'paid';
+    await settleCheckout(
+      commerce,
+      serviceCode: 'new_plan',
+      expectedPriceToman: 500000,
+      idempotencyKey: 'preview-attempt',
+      gateway: 'preview',
+      confirmSandbox: () async => throw StateError('preview does not ask'),
+      purchaseInStore: (sku, payload) async => throw StateError('preview has no store'),
+    );
+    expect(commerce.requestedGateway, 'preview');
+    expect(commerce.completions, 0);
+    expect(commerce.storeConfirms, 0);
+  });
 
   test('An already paid checkout never opens a second gateway', () async {
     final commerce = CheckoutStub()..initialStatus = 'paid';

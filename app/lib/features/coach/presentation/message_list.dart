@@ -340,35 +340,49 @@ class _CoachMessageListState extends State<CoachMessageList> {
     BuildContext context,
     CoachController controller,
     CoachMessage message,
+    Offset globalPosition,
   ) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (message.text.isNotEmpty)
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: const Text('کپی متن'),
-                onTap: () => Navigator.pop(context, 'copy'),
-              ),
-            if (!message.pending && !message.failed)
-              ListTile(
-                leading: const Icon(Icons.reply_rounded),
-                title: const Text('پاسخ به همین پیام'),
-                onTap: () => Navigator.pop(context, 'reply'),
-              ),
-            if (message.text.isNotEmpty && !message.pending && !message.failed)
-              ListTile(
-                leading: const Icon(Icons.bookmark_add_outlined),
-                title: const Text('ذخیره در نشان‌شده‌ها'),
-                onTap: () => Navigator.pop(context, 'save'),
-              ),
-          ],
+    Widget option(IconData icon, String label) => Row(
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 12),
+        Flexible(child: Text(label)),
+      ],
+    );
+
+    final items = <PopupMenuEntry<String>>[
+      if (message.text.isNotEmpty)
+        PopupMenuItem(
+          value: 'copy',
+          child: option(Icons.copy_rounded, 'کپی متن'),
         ),
+      if (!message.pending && !message.failed)
+        PopupMenuItem(
+          value: 'reply',
+          child: option(Icons.reply_rounded, 'پاسخ به همین پیام'),
+        ),
+      if (message.text.isNotEmpty && !message.pending && !message.failed)
+        PopupMenuItem(
+          value: 'save',
+          child: option(Icons.bookmark_add_outlined, 'ذخیره در نشان‌شده‌ها'),
+        ),
+    ];
+    if (items.isEmpty) return;
+
+    final overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final position = overlay.globalToLocal(globalPosition);
+    final action = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & const Size(1, 1),
+        Offset.zero & overlay.size,
       ),
+      semanticLabel: 'گزینه‌های پیام',
+      requestFocus: true,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      items: items,
     );
     if (!context.mounted) return;
     if (action == 'copy') {
@@ -414,7 +428,10 @@ class _CoachMessageListState extends State<CoachMessageList> {
   ) {
     final quote = asMap(message.payload['replyTo']);
     return GestureDetector(
-      onLongPress: () => _menu(context, controller, message),
+      onLongPressStart: (details) =>
+          _menu(context, controller, message, details.globalPosition),
+      onSecondaryTapUp: (details) =>
+          _menu(context, controller, message, details.globalPosition),
       child: Column(
         textDirection: TextDirection.ltr,
         crossAxisAlignment: message.isUser
@@ -438,40 +455,27 @@ class _CoachMessageListState extends State<CoachMessageList> {
               ),
             ),
           _tile(context, controller, message),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (message.isUser)
-                Text(
-                  message.pending
-                      ? 'در حال ارسال…'
-                      : message.payload['deliveryUnknown'] == true
-                      ? 'در انتظار تأیید سرور'
-                      : message.failed
-                      ? 'ارسال نشد'
-                      : 'ارسال شد',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: message.failed
-                        ? AppColors.danger
-                        : AppColors.inkSoft,
+          if (message.failed)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (message.isUser)
+                  Text(
+                    'ارسال نشد',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.danger,
+                    ),
                   ),
-                ),
-              if (message.failed && message.clientMessageId != null)
-                TextButton(
-                  onPressed: controller.busy
-                      ? null
-                      : () => controller.retrySend(message.clientMessageId),
-                  child: const Text('تلاش دوباره'),
-                ),
-              IconButton(
-                tooltip: 'گزینه‌های پیام',
-                onPressed: () => _menu(context, controller, message),
-                icon: const Icon(Icons.more_horiz_rounded, size: 18),
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ),
+                if (message.failed && message.clientMessageId != null)
+                  TextButton(
+                    onPressed: controller.busy
+                        ? null
+                        : () => controller.retrySend(message.clientMessageId),
+                    child: const Text('تلاش دوباره'),
+                  ),
+              ],
+            ),
         ],
       ),
     );

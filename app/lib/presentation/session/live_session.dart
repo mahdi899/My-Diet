@@ -8,6 +8,7 @@ import '../../domain/plan/plan.dart';
 import '../../data/session/services.dart';
 import 'live_plan.dart';
 import '../../application/commerce/settle_checkout.dart';
+import '../../data/commerce/store_billing.dart';
 import '../../domain/common/failure.dart';
 
 Services ensureLiveServices(DemoStore store) {
@@ -121,6 +122,8 @@ Future<bool> checkoutLiveService(
   store.liveNotice = null;
   store.liveOrderKey ??= newIdempotencyKey();
   try {
+    final storeName = await StoreBilling.current();
+    final billingStore = storeName == 'bazaar' || storeName == 'myket';
     await settleCheckout(
       commerce as PlanCheckoutRepository,
       serviceCode: _serviceCode(serviceId),
@@ -128,8 +131,11 @@ Future<bool> checkoutLiveService(
       idempotencyKey: store.liveOrderKey!,
       parentRequestId: serviceId == 'new-plan' ? null : store.userRequestId,
       planId: planId,
+      gateway: billingStore || storeName == 'preview' ? storeName : null,
+      purchaseInStore: billingStore ? StoreBilling.purchase : null,
+      consumeStorePurchase: billingStore ? StoreBilling.consume : null,
       openUrl: store.openPaymentUrl,
-      confirmSandbox: confirmSandbox,
+      confirmSandbox: storeName == 'preview' ? () async => true : confirmSandbox,
     );
     store.liveOrderKey = null;
   } on AppFailure catch (error) {

@@ -28,8 +28,10 @@
 
 ```sh
 flutter pub get
-flutter run
+flutter run --flavor bazaar
 ```
+
+نسخهٔ مایکت با `--flavor myket` ساخته می‌شود. هر فلیور فقط پرداخت همان فروشگاه را دارد. نسخهٔ تست، جدا از این دو، با `--flavor preview` ساخته می‌شود و پرداختش بدون پول واقعی ثبت می‌شود.
 
 یا فایل `lib/main.dart` را باز کنید، یک شبیه‌ساز اندروید یا گوشی متصل را انتخاب کنید و Run را بزنید.
 
@@ -107,7 +109,8 @@ test/widget_test.dart       آزمون رفتار و نمایش موبایل
 ```sh
 flutter analyze
 flutter test
-flutter build apk --debug
+flutter build apk --debug --flavor bazaar
+flutter build apk --debug --flavor myket
 ```
 
 برای رندر دوبارهٔ تصویرهای صفحه‌ها:
@@ -116,7 +119,7 @@ flutter build apk --debug
 flutter test tool/capture_screens.dart --update-goldens
 ```
 
-خروجی APK پس از ساخت موفق در `build/app/outputs/flutter-apk/app-debug.apk` قرار می‌گیرد. نسخهٔ Debug برای بررسی است؛ تنظیم امضا و آماده‌سازی انتشار تجاری جزو این نمونه نیست.
+خروجی APK پس از ساخت موفق در `build/app/outputs/flutter-apk/app-bazaar-debug.apk` یا `app-myket-debug.apk` قرار می‌گیرد. نسخهٔ Debug برای بررسی است؛ تنظیم امضا و آماده‌سازی انتشار تجاری جزو این نمونه نیست.
 
 ## مجوز و منابع
 

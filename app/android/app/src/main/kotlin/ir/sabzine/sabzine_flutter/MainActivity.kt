@@ -1,11 +1,11 @@
 package ir.sabzine.sabzine_flutter
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.content.Intent
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     private var smsAutofill: SmsOtpAutofill? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -22,6 +22,24 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 } catch (error: android.content.ActivityNotFoundException) {
                     result.error("no_browser", "No browser available", null)
+                }
+            }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ir.sabzine/store_billing")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "channel" -> result.success(BuildConfig.STORE_CHANNEL)
+                    "purchase" -> {
+                        val sku = call.argument<String>("sku")
+                        val payload = call.argument<String>("payload") ?: ""
+                        if (sku.isNullOrBlank()) result.error("invalid_sku", "شناسه محصول نیست", null)
+                        else StoreBillingBridge.purchase(this, sku, payload, result)
+                    }
+                    "consume" -> {
+                        val token = call.argument<String>("token")
+                        if (token.isNullOrBlank()) result.error("invalid_token", "رسید خرید نیست", null)
+                        else StoreBillingBridge.consume(this, token, result)
+                    }
+                    else -> result.notImplemented()
                 }
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ir.sabzine/share")

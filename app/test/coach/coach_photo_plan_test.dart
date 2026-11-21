@@ -61,7 +61,7 @@ class PhotoPlanRepository extends MockCoachRepository {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('RTL keeps user text, photo, quote and delivery on the right', (
+  testWidgets('RTL keeps user text, photo and quote on the right', (
     tester,
   ) async {
     mobile(tester);
@@ -96,12 +96,7 @@ void main() {
       tester.getCenter(find.text('در پاسخ به: متن قبلی')).dx,
       greaterThan(195),
     );
-    for (final element in find.text('ارسال شد').evaluate()) {
-      expect(
-        tester.getCenter(find.byWidget(element.widget)).dx,
-        greaterThan(195),
-      );
-    }
+    expect(find.text('ارسال شد'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

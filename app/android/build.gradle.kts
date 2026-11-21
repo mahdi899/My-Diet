@@ -4,6 +4,8 @@ allprojects {
         mavenCentral()
         // Engine artifacts for this Flutter revision are not on the Myket mirror.
         maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
+        maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://maven.myket.ir") }
     }
 }
 

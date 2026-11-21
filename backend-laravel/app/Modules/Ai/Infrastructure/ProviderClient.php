@@ -9,6 +9,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 final class ProviderClient
 {
@@ -69,7 +70,7 @@ final class ProviderClient
         }
 
         return Http::withToken($wire['token'])->withHeaders($wire['headers'])
-            ->acceptJson()->asJson()->connectTimeout(5)->timeout(max(1, min(300, $timeout / 1000)))->withOptions($options);
+            ->acceptJson()->asJson()->connectTimeout(20)->timeout(max(1, min(300, $timeout / 1000)))->withOptions($options);
     }
 
     public function complete(array $provider, string $model, array $messages, int $tokens = 1500, int $timeout = 30000, float $temperature = 0.2, bool $json = false, ?callable $onDelta = null): array
@@ -77,6 +78,8 @@ final class ProviderClient
         $body = ['model' => $model, 'messages' => $messages, 'max_tokens' => $tokens, 'temperature' => $temperature];
         if ($json) {
             $body['response_format'] = ['type' => 'json_object'];
+            // Reasoning models can spend the whole token budget thinking and return an empty or truncated body.
+            $body['reasoning'] = ['enabled' => false];
         }
         if (($provider['kind'] ?? '') === 'openrouter') {
             $body['provider'] = ['data_collection' => 'deny'];
@@ -84,10 +87,17 @@ final class ProviderClient
         }
         $response = $this->request($provider, $timeout)->post(rtrim($provider['base_url'], '/').'/chat/completions', $body);
         $this->guardStatus($response);
-        if (strlen($response->body()) > 2_000_000) {
+        $raw = $response->body();
+        if (strlen($raw) > 2_000_000) {
             throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس بیش از حد بزرگ است');
         }
-        return $this->completion($response->json(), $model);
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            Log::warning('AI completion unreadable', ['model' => $model, 'status' => $response->status(), 'bytes' => strlen($raw)]);
+            throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس قابل پردازش نیست');
+        }
+
+        return $this->completion($decoded, $model);
     }
 
     private function guardStatus(Response $response): void
@@ -95,6 +105,7 @@ final class ProviderClient
         if ($response->successful()) {
             return;
         }
+        Log::warning('AI status rejected', ['status' => $response->status(), 'error' => substr($response->body(), 0, 240)]);
         $code = match ($response->status()) {
             401, 402, 403 => 'auth_failed', 429 => 'rate_limited', 408, 504 => 'outcome_unknown', default => 'provider_rejected',
         };
@@ -106,8 +117,18 @@ final class ProviderClient
         if (! is_array($value)) {
             throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس قابل پردازش نیست');
         }
-        $text = $this->messageText($value['choices'][0]['message']['content'] ?? null);
+        $message = $value['choices'][0]['message'] ?? null;
+        $text = $this->messageText(is_array($message) ? ($message['content'] ?? null) : null);
+        if ($text === null || trim($text) === '') {
+            $text = $this->messageText(is_array($message) ? ($message['reasoning'] ?? null) : null);
+        }
         if ($text === null || trim($text) === '' || isset($value['error'])) {
+            Log::warning('AI completion empty', [
+                'model' => $model,
+                'finish' => $value['choices'][0]['finish_reason'] ?? null,
+                'reasoning' => is_array($message) && is_string($message['reasoning'] ?? null) ? strlen($message['reasoning']) : 0,
+                'error' => isset($value['error']) ? substr((string) json_encode($value['error']), 0, 180) : null,
+            ]);
             throw new Problem(502, 'outcome_unknown', 'پاسخ سرویس قابل پردازش نیست');
         }
         $usage = $value['usage'] ?? [];

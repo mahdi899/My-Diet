@@ -47,6 +47,7 @@ class RetryCheckout extends FakeCommerce implements PlanCheckoutRepository {
     required String idempotencyKey,
     String? parentRequestId,
     String? planId,
+    String? gateway,
   }) async {
     keys.add(idempotencyKey);
     if (pending) {
@@ -62,6 +63,14 @@ class RetryCheckout extends FakeCommerce implements PlanCheckoutRepository {
   Future<PlanCheckout> completeCheckoutSandbox(
     String paymentId, {
     required bool success,
+  }) => throw UnimplementedError();
+  @override
+  Future<PlanCheckout> confirmStorePurchase(
+    String paymentId, {
+    required String productId,
+    required String purchaseToken,
+    String? orderId,
+    String? signature,
   }) => throw UnimplementedError();
   @override
   Future<PlanSubscription?> subscription() async => null;
@@ -265,6 +274,17 @@ void main() {
         expect(find.text('برنامه‌ات آماده است'), findsNothing);
         expect(request.isPublished, isFalse);
       }
+      request.status = PlanStatus.reviewing;
+      store.planAwaitingDoctor = true;
+      store.update();
+      await t.pumpAndSettle();
+      expect(find.text('برنامه‌ات در حال تأیید توسط دکتر است'), findsOneWidget);
+      expect(find.text('در حال تأیید دکتر'), findsOneWidget);
+      expect(
+        find.text('پیش‌نویس آماده شده و متخصص تغذیه در حال بررسی آن است.'),
+        findsNothing,
+      );
+      store.planAwaitingDoctor = false;
       request.status = PlanStatus.needsInfo;
       request.infoAnswer = 'حساسیتی ندارم.';
       store.update();

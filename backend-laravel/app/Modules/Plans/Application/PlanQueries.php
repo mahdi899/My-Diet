@@ -102,18 +102,33 @@ final class PlanQueries
 
         $failedDraft = $request['status'] === 'in_review'
             && $this->store->latestGenerationStatus($request['id']) === 'failed';
-        $hold = ($request['safety_tier'] ?? null) === 'doctor_only' && $request['status'] !== 'published'
-            ? 'به‌خاطر گزینه‌ای که در سلامت انتخاب کردی (سابقهٔ اختلال خوردن)، برنامه تا تأیید متخصص در این صفحه فعال نمی‌شود.'
+        $needsDoctor = ($request['safety_tier'] ?? null) === 'doctor_only' || $this->doctorWritesPlan($request);
+        $awaitingDoctor = $needsDoctor && $request['status'] === 'in_review' && ! $failedDraft;
+        $hold = $awaitingDoctor
+            ? 'برنامه ساخته شده و در حال تأیید توسط دکتر است. تا قبل از تأیید دکتر، وعده‌ها نمایش داده نمی‌شوند.'
             : ($failedDraft ? 'ساخت خودکار برنامه ناموفق بود. متخصص تغذیه خودش برنامه را می‌نویسد.' : null);
 
         return ['id' => $request['id'], 'status' => $request['status'], 'kind' => $request['kind'], 'priceToman' => Amount::safe($request['price_toman']),
             'weekStart' => $request['week_start'], 'effectiveFrom' => $request['effective_from'], 'displayName' => $request['display_name'],
-            'conversationId' => $this->store->conversation($request['id']), 'questions' => $questions, 'version' => null, 'holdReason' => $hold];
+            'conversationId' => $this->store->conversation($request['id']), 'questions' => $questions, 'version' => null,
+            'holdReason' => $hold, 'awaitingDoctor' => $awaitingDoctor];
     }
 
     public function requests(string $user): array
     {
         return array_map($this->requestView(...), $this->store->requests($user));
+    }
+
+    private function doctorWritesPlan(array $request): bool
+    {
+        if (($request['profile_track'] ?? null) === 'pregnancy') {
+            return true;
+        }
+        $conditions = json_decode((string) ($request['profile_conditions'] ?? '[]'), true);
+        $allergens = json_decode((string) ($request['profile_allergens'] ?? '[]'), true);
+
+        return (is_array($conditions) && array_intersect(['diabetes', 'kidney', 'heart', 'thyroid', 'pcos'], $conditions) !== [])
+            || (is_array($allergens) && in_array('other', $allergens, true));
     }
 
     private function requestView(array $row): array

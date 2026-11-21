@@ -8,6 +8,9 @@ Future<void> settleCheckout(
   required String idempotencyKey,
   String? parentRequestId,
   String? planId,
+  String? gateway,
+  Future<StoreReceipt> Function(String sku, String payload)? purchaseInStore,
+  Future<void> Function(String token)? consumeStorePurchase,
   Future<void> Function(Uri url)? openUrl,
   required Future<bool> Function() confirmSandbox,
   Duration pollEvery = const Duration(seconds: 2),
@@ -19,6 +22,7 @@ Future<void> settleCheckout(
     idempotencyKey: idempotencyKey,
     parentRequestId: parentRequestId,
     planId: planId,
+    gateway: gateway,
   );
   if (payment.status == 'paid') return;
   if (payment.status == 'failed') {
@@ -29,6 +33,36 @@ Future<void> settleCheckout(
   }
   final id = payment.paymentId;
   if (id == null) throw const CommerceException('اطلاعات پرداخت دریافت نشد.');
+  if (payment.gateway == 'bazaar' || payment.gateway == 'myket') {
+    final sku = payment.storeSku;
+    if (sku == null || purchaseInStore == null) {
+      throw const CommerceException(
+        'پرداخت درون‌برنامه‌ای این فروشگاه آماده نیست.',
+      );
+    }
+    final receipt = await purchaseInStore(sku, id);
+    payment = await commerce.confirmStorePurchase(
+      id,
+      productId: receipt.productId,
+      purchaseToken: receipt.purchaseToken,
+      orderId: receipt.orderId,
+      signature: receipt.signature,
+    );
+    if (payment.status == 'paid') {
+      if (consumeStorePurchase != null) {
+        try {
+          await consumeStorePurchase(receipt.purchaseToken);
+        } on Object {
+          // The plan is already paid. Consumption only lets the same product be bought again.
+        }
+      }
+      return;
+    }
+    throw const AppFailure(
+      'پرداخت فروشگاه هنوز تأیید نشده است.',
+      code: 'payment_pending',
+    );
+  }
   if (payment.gateway == 'sandbox') {
     payment = await commerce.completeCheckoutSandbox(
       id,

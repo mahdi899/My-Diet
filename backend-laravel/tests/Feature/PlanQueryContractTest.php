@@ -28,6 +28,24 @@ final class PlanQueryContractTest extends MySqlTestCase
         $this->getJson('/v1/me/requests/'.$plan['request'])->assertNotFound();
     }
 
+    public function test_doctor_only_profile_tells_the_user_the_doctor_is_confirming(): void
+    {
+        $user = $this->actor();
+        $plan = $this->planFixture($user['id']);
+        $this->db->table('nutrition_profiles')->insert([
+            'user_id' => $user['id'], 'submission_id' => $plan['submission'], 'spec_version' => 2, 'track' => 'weight_loss',
+            'goal' => 'weight_loss', 'source' => 'app', 'sex' => 'female', 'age' => 35, 'height_cm' => 165,
+            'weight_kg' => 54, 'target_weight_kg' => 43, 'activity' => 'moderate', 'bmi' => 19.8, 'bmr_kcal' => 1235, 'tdee_kcal' => 2013,
+            'target_kcal' => 1740, 'protein_g' => 81, 'carbs_g' => 237, 'fat_g' => 52, 'diet_style' => 'omnivore',
+            'meals_per_day' => 3, 'budget' => 'low', 'allergens' => '["egg"]', 'conditions' => '["food_allergy"]',
+            'risk_flags' => '["target_bmi_low"]', 'safety_tier' => 'doctor_only', 'safety_reasons' => '["target_bmi_low"]', 'preferences' => '{}',
+        ]);
+
+        $this->getJson('/v1/me/request')->assertOk()
+            ->assertJsonPath('awaitingDoctor', true)
+            ->assertJsonPath('holdReason', 'برنامه ساخته شده و در حال تأیید توسط دکتر است. تا قبل از تأیید دکتر، وعده‌ها نمایش داده نمی‌شوند.');
+    }
+
     public function test_failed_ai_draft_does_not_claim_the_preview_is_ready(): void
     {
         $user = $this->actor();

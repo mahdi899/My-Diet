@@ -31,10 +31,9 @@ final class ConfiguredDraftProvider implements DraftProvider
     {
         $user = $this->db->table('plan_requests')->where('id', $requestId)->value('user_id');
         $profile = $user ? $this->profiles->profile($user) : null;
-        if (! $profile || $profile['safety_tier'] !== 'ai_ok' || in_array('other', $profile['allergens'], true)) {
-            throw new Problem(409, 'profile_requires_review', 'پرونده باید توسط متخصص بررسی شود');
+        if (! $profile) {
+            throw new Problem(409, 'onboarding_incomplete', 'ابتدا پرسش‌نامه را کامل کن');
         }
-        $this->enforceSafetyGates($profile);
         $preferences = (array) ($profile['preferences'] ?? []);
         $sleepWake = (array) ($preferences['sleep_wake'] ?? []);
         $slots = EnergyEngine::slots((int) $profile['target_kcal'], $profile['meals_per_day'], $sleepWake['wake'] ?? null);
@@ -257,32 +256,6 @@ final class ConfiguredDraftProvider implements DraftProvider
 
         // Reduced from 0.45 to 0.30 for tighter control
         return 0.30;
-    }
-
-    /**
-     * Additional safety gates beyond AI capability checks.
-     * These are hard backend rules that cannot be overridden by AI.
-     */
-    private function enforceSafetyGates(array $profile): void
-    {
-        $track = $profile['track'] ?? '';
-        $conditions = $profile['conditions'] ?? [];
-
-        // Pregnancy and breastfeeding require specialist approval
-        if ($track === 'pregnancy') {
-            $stage = $profile['life_stage'] ?? '';
-            if ($stage === 'pregnant' || $stage === 'breastfeeding') {
-                throw new Problem(409, 'specialist_approval_required',
-                    'برنامه بارداری و شیردهی نیاز به تأیید متخصص دارد');
-            }
-        }
-
-        // Critical medical conditions require specialist
-        $criticalConditions = ['diabetes', 'kidney', 'heart', 'thyroid', 'pcos'];
-        if (array_intersect($criticalConditions, $conditions)) {
-            throw new Problem(409, 'medical_review_required',
-                'وضعیت پزشکی شما نیاز به بررسی متخصص دارد');
-        }
     }
 
     private function learned(string $user): array

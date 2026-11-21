@@ -14,6 +14,19 @@ if (hasReleaseKeystore) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+val storeBilling = Properties()
+val storeBillingFile = rootProject.file("store-billing.properties")
+if (storeBillingFile.exists()) {
+    storeBillingFile.inputStream().use { storeBilling.load(it) }
+}
+
+fun storeRsa(flavor: String): String =
+    (storeBilling.getProperty("$flavor.rsa") ?: "")
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "")
+        .replace("\r", "")
+
 android {
     namespace = "ir.sabzine.sabzine_flutter"
     compileSdk = flutter.compileSdkVersion
@@ -37,6 +50,7 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = "رژیم من"
     }
 
     if (hasReleaseKeystore) {
@@ -59,6 +73,35 @@ android {
             }
         }
     }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    flavorDimensions += "store"
+    productFlavors {
+        create("bazaar") {
+            dimension = "store"
+            buildConfigField("String", "STORE_CHANNEL", "\"bazaar\"")
+            buildConfigField("String", "STORE_RSA_KEY", "\"${storeRsa("bazaar")}\"")
+        }
+        create("myket") {
+            dimension = "store"
+            buildConfigField("String", "STORE_CHANNEL", "\"myket\"")
+            buildConfigField("String", "STORE_RSA_KEY", "\"${storeRsa("myket")}\"")
+            manifestPlaceholders["marketApplicationId"] = "ir.mservices.market"
+            manifestPlaceholders["marketBindAddress"] = "ir.mservices.market.InAppBillingService.BIND"
+            manifestPlaceholders["marketPermission"] = "ir.mservices.market.BILLING"
+        }
+        create("preview") {
+            dimension = "store"
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-test"
+            manifestPlaceholders["appLabel"] = "رژیم من تست"
+            buildConfigField("String", "STORE_CHANNEL", "\"preview\"")
+            buildConfigField("String", "STORE_RSA_KEY", "\"\"")
+        }
+    }
 }
 
 kotlin {
@@ -73,6 +116,8 @@ flutter {
 
 dependencies {
     implementation("com.google.android.gms:play-services-auth-api-phone:18.3.1")
+    "bazaarImplementation"("com.github.cafebazaar.Poolakey:poolakey:2.2.0")
+    "myketImplementation"("ir.myket:billing:2.2")
 }
 
 tasks.register("reverseLocalApi") {

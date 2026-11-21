@@ -67,6 +67,11 @@ final class MySqlMoney implements MoneyStore
         $this->db->table('plan_checkouts')->where('id', $id)->update($changes);
     }
 
+    public function checkoutByStoreToken(string $token): ?array
+    {
+        return $this->row($this->db->table('plan_checkouts')->where('store_token', $token)->first());
+    }
+
     public function activateSubscription(string $user, string $service, int $days): void
     {
         $this->db->statement('insert into user_service_access (user_id, service_code, ends_at) values (?, ?, date_add(current_timestamp(6), interval ? day)) as incoming on duplicate key update service_code=incoming.service_code, ends_at=date_add(greatest(user_service_access.ends_at, current_timestamp(6)), interval ? day), updated_at=current_timestamp(6)', [$user, $service, $days, $days]);

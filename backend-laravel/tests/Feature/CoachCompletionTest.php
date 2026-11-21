@@ -6,11 +6,10 @@ namespace Tests\Feature;
 
 use App\Modules\Coach\Infrastructure\CoachChatActions;
 use App\Modules\Coach\Infrastructure\CoachQuotaService;
-use App\Modules\Plans\Infrastructure\ConfiguredDraftProvider;
+use App\Modules\Plans\Application\DraftProvider;
 use App\Modules\Plans\Infrastructure\MealSwapService;
 use App\Modules\Plans\Infrastructure\NextWeekPlanner;
 use App\Shared\Domain\LegacyCrypto;
-use App\Shared\Domain\Problem;
 use Tests\MySqlTestCase;
 
 final class CoachCompletionTest extends MySqlTestCase
@@ -42,19 +41,60 @@ final class CoachCompletionTest extends MySqlTestCase
         self::assertNotContains('سوپ قارچ', $names, $stored);
     }
 
-    public function test_doctor_only_profile_is_not_drafted_by_ai(): void
+    public function test_doctor_only_profile_is_still_drafted_and_stays_unpublished(): void
     {
-        ['id' => $userId] = $this->actor();
-        $plan = $this->planFixture($userId);
-        $this->profile($userId, $plan['submission'], 'doctor_only');
+        $provider = new class implements DraftProvider
+        {
+            public int $calls = 0;
 
-        try {
-            app(ConfiguredDraftProvider::class)->draft($plan['request']);
-            self::fail('high-risk profile must not be drafted');
-        } catch (Problem $error) {
-            self::assertSame(409, $error->status);
-            self::assertSame(1, $this->db->table('plan_versions')->where('request_id', $plan['request'])->count());
-        }
+            public function name(): string
+            {
+                return 'test-adapter';
+            }
+
+            public function callsExternalNetwork(): bool
+            {
+                return false;
+            }
+
+            public function draft(string $requestId): array
+            {
+                $this->calls++;
+
+                return array_map(fn () => ['meals' => [[
+                    'mealType' => 'lunch', 'title' => 'پیش‌نویس آزمایش', 'calories' => 300, 'notes' => '', 'suggestedTime' => '13:00',
+                    'items' => [['name' => 'عدس', 'quantity' => 80, 'unit' => 'g']],
+                ]]], range(0, 6));
+            }
+        };
+        $this->app->instance(DraftProvider::class, $provider);
+        ['id' => $userId] = $this->actor();
+        $submission = LegacyCrypto::uuid();
+        $order = LegacyCrypto::uuid();
+        $request = LegacyCrypto::uuid();
+        $this->db->table('questionnaire_submissions')->insert([
+            'id' => $submission, 'user_id' => $userId, 'schema_version' => 1, 'answers' => '{}', 'risk_flags' => '["eating_disorder_history"]',
+        ]);
+        $this->db->table('orders')->insert([
+            'id' => $order, 'user_id' => $userId, 'service_code' => 'new_plan', 'price_toman' => 100, 'cash_toman' => 100, 'promo_toman' => 0, 'status' => 'paid', 'idempotency_key' => LegacyCrypto::uuid(),
+        ]);
+        $this->db->table('plan_requests')->insert([
+            'id' => $request, 'user_id' => $userId, 'order_id' => $order, 'kind' => 'new_plan', 'status' => 'queued', 'submission_id' => $submission, 'price_toman' => 100,
+        ]);
+        $this->profile($userId, $submission, 'doctor_only');
+        $this->db->table('outbox_events')->insert([
+            'id' => LegacyCrypto::uuid(), 'topic' => 'plan.generate', 'aggregate_id' => $request, 'payload' => json_encode(['requestId' => $request]),
+        ]);
+
+        self::assertSame(1, $this->app->make(\App\Modules\Worker\Application\WorkerStore::class)->relay());
+        self::assertSame(1, $this->app->make(\App\Modules\Worker\Application\JobWorker::class)->drain());
+        self::assertSame(1, $provider->calls);
+        self::assertSame('in_review', $this->db->table('plan_requests')->where('id', $request)->value('status'));
+        self::assertSame(7, $this->db->table('plan_days as d')->join('plan_versions as v', 'v.id', '=', 'd.plan_version_id')->where('v.request_id', $request)->count());
+        self::assertSame('', $this->getJson('/v1/me/plan')->assertOk()->getContent());
+        $this->getJson('/v1/me/request')->assertOk()
+            ->assertJsonPath('awaitingDoctor', true)
+            ->assertJsonPath('holdReason', 'برنامه ساخته شده و در حال تأیید توسط دکتر است. تا قبل از تأیید دکتر، وعده‌ها نمایش داده نمی‌شوند.');
     }
 
     public function test_ended_week_queues_a_next_draft_without_calling_ai(): void

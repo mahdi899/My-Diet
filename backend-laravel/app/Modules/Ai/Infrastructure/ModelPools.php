@@ -163,7 +163,7 @@ final class ModelPools
             $this->db->statement('insert ignore into ai_pool_health(member_id) values(?)', [$member->id]);
             if ($outcome === 'ok') {
                 $this->db->update('update ai_pool_health set consecutive_failures=0,cooldown_until=null,last_error_code=null,last_ok_at=current_timestamp(6),total_ok=total_ok+1 where member_id=?', [$member->id]);
-            } else {
+            } elseif ($outcome !== 'invalid_plan') {
                 $this->db->update('update ai_pool_health set consecutive_failures=consecutive_failures+1,cooldown_until=date_add(current_timestamp(6),interval 60 second),last_error_code=?,last_fail_at=current_timestamp(6),total_fail=total_fail+1 where member_id=?', [$outcome, $member->id]);
             }
         });

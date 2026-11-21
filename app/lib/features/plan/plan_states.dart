@@ -200,7 +200,15 @@ class PlanProgressCard extends StatelessWidget {
                       store.userRequest.infoAnswer.isEmpty) ||
                   store.userRequest.revisionAwaitingUser);
     final error = this.error ?? store.liveNotice;
-    final (title, message, _, current) = published
+    final awaitingDoctor = !published && store.planAwaitingDoctor;
+    final (title, message, _, current) = awaitingDoctor
+        ? (
+            'برنامه‌ات در حال تأیید توسط دکتر است',
+            'برنامه ساخته شده است. به‌خاطر شرایطی که گفتی، تا تأیید دکتر وعده‌ها نمایش داده نمی‌شوند.',
+            Icons.fact_check_outlined,
+            2,
+          )
+        : published
         ? (
             'برنامه‌ات آماده است',
             'برنامهٔ تأییدشده منتشر شده و وعده‌ها در دسترس‌اند.',
@@ -253,6 +261,8 @@ class PlanProgressCard extends StatelessWidget {
       key: const ValueKey('plan-progress-card'),
       scene: published
           ? BrandSceneKind.planReady
+          : awaitingDoctor
+          ? BrandSceneKind.specialistReview
           : switch (status) {
               PlanStatus.incomplete => BrandSceneKind.needsInformation,
               PlanStatus.queued ||
@@ -266,13 +276,17 @@ class PlanProgressCard extends StatelessWidget {
       title: error == null ? title : 'وضعیت به‌روز نشد',
       message:
           error ??
-          (store.planHoldReason?.trim().isNotEmpty == true
-              ? store.planHoldReason!
-              : message),
+          (awaitingDoctor
+              ? message
+              : (store.planHoldReason?.trim().isNotEmpty == true
+                    ? store.planHoldReason!
+                    : message)),
       badge: error != null
           ? 'در انتظار به‌روزرسانی خودکار'
           : published
           ? 'منتشر شده'
+          : awaitingDoctor
+          ? 'در حال تأیید دکتر'
           : status == PlanStatus.needsInfo && awaitingAnswer
           ? 'منتظر پاسخ تو'
           : status == PlanStatus.reviewing

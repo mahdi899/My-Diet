@@ -10,8 +10,6 @@ use Illuminate\Database\ConnectionInterface;
 
 final class MySqlPlanGeneration implements PlanGenerationStore
 {
-    private const SKIP_FLAGS = ['eating_disorder_history', 'high_risk_pregnancy', 'kidney', 'unintentional_weight_loss'];
-
     public function __construct(private ConnectionInterface $db) {}
 
     public function transaction(callable $work): mixed
@@ -32,8 +30,7 @@ final class MySqlPlanGeneration implements PlanGenerationStore
 
                 return null;
             }
-            $flags = json_decode((string) $request->risk_flags, true);
-            $skip = is_array($flags) && array_intersect(self::SKIP_FLAGS, $flags) !== [] ? 'high_risk' : $this->budgetBlock($request->user_id);
+            $skip = $this->budgetBlock($request->user_id);
             $this->db->statement("insert into ai_execution_claims (request_id,status) values (?, 'started') as incoming on duplicate key update status='started', started_at=current_timestamp(6), finished_at=null, error_code=null", [$requestId]);
             $this->db->table('plan_requests')->where('id', $requestId)->update(['status' => 'generating', 'updated_at' => $this->db->raw('current_timestamp(6)')]);
 
@@ -60,7 +57,7 @@ final class MySqlPlanGeneration implements PlanGenerationStore
                 $this->writeDays($draft->id, $days);
                 $this->db->table('plan_versions')->where('id', $draft->id)->update(['lock_version' => $draft->lock_version + 1]);
                 $versionId = $draft->id;
-            } elseif (! $draft && $this->db->table('plan_versions')->where('request_id', $requestId)->doesntExist() && $reason !== 'high_risk') {
+            } elseif (! $draft && $this->db->table('plan_versions')->where('request_id', $requestId)->doesntExist()) {
                 $versionId = Crypto::uuid();
                 $this->db->table('plan_versions')->insert(['id' => $versionId, 'request_id' => $requestId, 'version_number' => 1, 'status' => 'draft']);
                 $submission = $this->db->table('questionnaire_submissions')->where('id', $request->submission_id)->first();
@@ -99,7 +96,7 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             $this->db->table('ai_execution_claims')->where('request_id', $requestId)->update(['status' => $status === 'failed' ? 'failed' : 'completed', 'finished_at' => $this->db->raw('current_timestamp(6)'), 'error_code' => $status === 'drafted' ? null : $reason]);
             $this->db->table('request_events')->insert(['id' => Crypto::uuid(), 'request_id' => $requestId, 'kind' => $status === 'drafted' ? 'ai_drafted' : 'ai_skipped', 'detail' => json_encode(['status' => $status], JSON_THROW_ON_ERROR)]);
             if (is_string($request->assigned_specialist_id) && $request->assigned_specialist_id !== '') {
-                $kind = $status === 'failed' || $reason === 'high_risk' ? 'specialist_required' : 'draft_ready';
+                $kind = $status === 'failed' ? 'specialist_required' : 'draft_ready';
                 $this->db->table('notifications')->insert(['id' => Crypto::uuid(), 'user_id' => $request->assigned_specialist_id, 'kind' => $kind, 'payload' => json_encode(['requestId' => $requestId, 'reason' => $reason], JSON_THROW_ON_ERROR)]);
             }
         });
@@ -160,10 +157,6 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             if ((int) $draft->lock_version !== $lock) {
                 throw new Problem(409, 'lock_conflict', 'نسخهٔ برنامه تغییر کرده است');
             }
-            $flags = json_decode((string) $this->db->table('questionnaire_submissions')->where('id', $this->db->table('plan_requests')->where('id', $requestId)->value('submission_id'))->value('risk_flags'), true);
-            if (is_array($flags) && array_intersect(self::SKIP_FLAGS, $flags) !== []) {
-                throw new Problem(409, 'high_risk', 'این پرونده پرخطر است و باید کامل توسط متخصص نوشته شود');
-            }
             if ($this->budgetBlock($request->user_id) !== null) {
                 throw new Problem(409, 'ai_budget_blocked', 'سقف هزینهٔ هوش مصنوعی اجازهٔ ساخت دوباره نمی‌دهد');
             }
@@ -189,7 +182,7 @@ final class MySqlPlanGeneration implements PlanGenerationStore
         if ($controls->daily_cost_cap_micros !== null && $spent >= (int) $controls->daily_cost_cap_micros) {
             return 'cost_cap';
         }
-        $own = (int) $this->db->table('ai_generations as g')->join('plan_requests as r', 'r.id', '=', 'g.request_id')->where('r.user_id', $user)->where('g.created_at', '>=', $this->db->raw("date(convert_tz(current_timestamp(6),'+00:00','+03:30'))"))->count();
+        $own = (int) $this->db->table('ai_generations as g')->join('plan_requests as r', 'r.id', '=', 'g.request_id')->where('r.user_id', $user)->where('g.status', 'drafted')->where('g.created_at', '>=', $this->db->raw("date(convert_tz(current_timestamp(6),'+00:00','+03:30'))"))->count();
         if ($own >= (int) $controls->per_user_daily_drafts) {
             return 'user_daily_drafts';
         }
@@ -246,6 +239,10 @@ final class MySqlPlanGeneration implements PlanGenerationStore
             return;
         }
         $request = $this->db->table('plan_requests')->where('id', $requestId)->first();
+        $tier = $request === null ? null : $this->db->table('nutrition_profiles')->where('user_id', $request->user_id)->value('safety_tier');
+        if ($tier === 'doctor_only') {
+            return;
+        }
         $version = $this->db->table('plan_versions')->where('request_id', $requestId)->where('status', 'draft')->first();
         if ($request === null || $version === null) {
             return;

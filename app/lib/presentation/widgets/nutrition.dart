@@ -21,6 +21,9 @@ class EnergyCard extends StatelessWidget {
         target = s.calorieTarget(date),
         consumed = s.consumedCalories(date);
     final remaining = math.max(0, target - consumed);
+    final awaitingDoctor =
+        s.planAwaitingDoctor &&
+        !(s.hasUserRequest && s.userRequest.isPublished);
     return Container(
       key: const ValueKey('daily-energy-card'),
       clipBehavior: Clip.antiAlias,
@@ -109,19 +112,23 @@ class EnergyCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            target > 0
+                            awaitingDoctor
+                                ? 'در حال تأیید توسط دکتر'
+                                : target > 0
                                 ? '${fa(target)} کیلوکالری'
                                 : 'پس از تأیید متخصص',
                             key: const ValueKey('daily-calorie-target'),
                             style: TextStyle(
                               color: const Color(0xFFE0F3CB),
-                              fontSize: target > 0 ? 18 : 13,
+                              fontSize: !awaitingDoctor && target > 0 ? 18 : 13,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            target > 0
+                            awaitingDoctor
+                                ? 'برنامه ساخته شده و تا تأیید دکتر وعده‌ها نمایش داده نمی‌شوند.'
+                                : target > 0
                                 ? (s.hasUnknownCalories(date)
                                       ? 'جمع کالری ناقص است؛ بعضی وعده‌ها محاسبه نشده‌اند'
                                       : consumed > target

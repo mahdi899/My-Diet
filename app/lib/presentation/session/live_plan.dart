@@ -47,6 +47,7 @@ void showServerPlan(
 
   final id = plan?.requestId ?? request?.id;
   store.planHoldReason = request?.holdReason;
+  store.planAwaitingDoctor = request?.awaitingDoctor == true;
   if (profile != null) {
     store.pendingWebPlanDelivery =
         profile.hasPendingWebPurchase && request == null;

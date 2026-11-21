@@ -3,6 +3,7 @@
 namespace App\Modules\Money\Application;
 
 use App\Modules\Money\Domain\SubscriptionPlans;
+use App\Modules\Money\Infrastructure\StorePurchaseVerifier;
 use App\Modules\Onboarding\Application\WebPlanDelivery;
 use App\Shared\Domain\Amount;
 use App\Shared\Domain\LegacyCrypto as Crypto;
@@ -10,7 +11,7 @@ use App\Shared\Domain\Problem;
 
 final class MoneyService
 {
-    public function __construct(private MoneyStore $store, private PaymentGateways $gateways, private MoneySettings $settings, private WebPlanDelivery $webDelivery) {}
+    public function __construct(private MoneyStore $store, private PaymentGateways $gateways, private MoneySettings $settings, private WebPlanDelivery $webDelivery, private StorePurchaseVerifier $storePurchases) {}
 
     public function catalog(): array
     {
@@ -45,7 +46,12 @@ final class MoneyService
 
     private function checkoutResult(array $row): array
     {
-        return ['paymentId' => $row['id'], 'status' => $row['status'], 'gateway' => $row['gateway'], 'redirectUrl' => $row['redirect_url'], 'amountToman' => Amount::safe($row['amount_toman']), 'orderId' => $row['order_id'], 'requestId' => $row['request_id']];
+        $result = ['paymentId' => $row['id'], 'status' => $row['status'], 'gateway' => $row['gateway'], 'redirectUrl' => $row['redirect_url'], 'amountToman' => Amount::safe($row['amount_toman']), 'orderId' => $row['order_id'], 'requestId' => $row['request_id']];
+        if (($row['store_sku'] ?? null) !== null) {
+            $result['storeSku'] = $row['store_sku'];
+        }
+
+        return $result;
     }
 
     public function checkoutStatus(string $user, string $id): array
@@ -67,9 +73,13 @@ final class MoneyService
         if ($plan !== null && $service !== 'new_plan') {
             throw new Problem(400, 'validation', 'پلن انتخابی معتبر نیست');
         }
-        $hash = hash('sha256', json_encode([$service, $expected, $parent, $planId], JSON_THROW_ON_ERROR));
+        $name = $gatewayName ?? $this->settings->defaultGateway;
+        $inApp = in_array($name, ['bazaar', 'myket'], true);
+        $gatewayInfo = $this->gateways->info($name);
+        $instant = is_array($gatewayInfo) && ($gatewayInfo['instant'] ?? false) === true;
+        $hash = hash('sha256', json_encode($inApp ? [$service, $expected, $parent, $planId, $name] : [$service, $expected, $parent, $planId], JSON_THROW_ON_ERROR));
 
-        return $this->store->transaction(function () use ($user, $key, $service, $expected, $parent, $gatewayName, $hash, $plan): array {
+        $result = $this->store->transaction(function () use ($user, $key, $service, $expected, $parent, $hash, $plan, $name): array {
             $this->store->wallet($user, true);
             $prior = $this->store->priorCheckout($user, $key) ?? $this->store->pendingCheckout($user);
             if ($prior !== null) {
@@ -105,7 +115,6 @@ final class MoneyService
             if ($amount <= 0 || $amount !== $expected) {
                 throw new Problem(409, 'price_changed', 'تعرفه تغییر کرده است؛ پلن‌ها را دوباره دریافت کن');
             }
-            $name = $gatewayName ?? $this->settings->defaultGateway;
             $gateway = $this->gateways->info($name) ?? throw new Problem(400, 'unknown_gateway', 'درگاه پرداخت شناخته نشد');
             $origin = rtrim($this->settings->publicApiUrl ?? '', '/');
             if (($gateway['network'] && ! $gateway['hosted']) || ($gateway['hosted'] && $origin === '')) {
@@ -114,6 +123,13 @@ final class MoneyService
             $row = ['id' => Crypto::uuid(), 'user_id' => $user, 'service_code' => $service, 'submission_id' => $context['submission'], 'parent_request_id' => $parent, 'amount_toman' => $amount, 'amount_rial' => Amount::safe((string) ($amount * 10)), 'idempotency_key' => $key, 'request_hash' => $hash, 'gateway' => $name, 'status' => 'pending', 'redirect_url' => null, 'order_id' => null, 'request_id' => null];
             $row['plan_code'] = $plan['id'] ?? null;
             $row['duration_days'] = $plan['days'] ?? null;
+            if (($gateway['inApp'] ?? false) === true) {
+                $sku = $this->storeProduct($name, $plan['id'] ?? $service);
+                if ($sku === null) {
+                    throw new Problem(503, 'store_sku_unconfigured', 'شناسه محصول این پلن در فروشگاه هنوز ثبت نشده است');
+                }
+                $row['store_sku'] = $sku;
+            }
             if ($gateway['hosted']) {
                 try {
                     $started = $this->gateways->start($name, $row['amount_rial'], $origin.'/v1/payments/checkout/callback/'.$name.'?paymentId='.$row['id']);
@@ -127,6 +143,46 @@ final class MoneyService
 
             return $this->checkoutResult($row);
         });
+        if ($instant && ($result['status'] ?? null) === 'pending' && is_string($result['paymentId'] ?? null)) {
+            return $this->completeCheckout($result['paymentId'], $name, 'preview');
+        }
+
+        return $result;
+    }
+
+    public function confirmStorePurchase(string $user, string $id, string $token, ?string $orderId, string $productId, ?string $signature): array
+    {
+        $saved = $this->store->transaction(function () use ($user, $id, $token, $orderId, $productId, $signature): array {
+            $row = $this->store->checkout($id, true) ?? throw new Problem(404, 'not_found', 'پرداخت پیدا نشد');
+            if ($row['user_id'] !== $user || ! in_array($row['gateway'], ['bazaar', 'myket'], true)) {
+                throw new Problem(404, 'not_found', 'پرداخت پیدا نشد');
+            }
+            if ($row['status'] === 'paid') {
+                return $row;
+            }
+            if ($row['status'] !== 'pending') {
+                throw new Problem(409, 'payment_closed', 'این پرداخت بسته شده است');
+            }
+            if (($row['store_sku'] ?? null) !== $productId) {
+                throw new Problem(409, 'store_sku_mismatch', 'محصول خریداری‌شده با این پرداخت یکی نیست');
+            }
+            $other = $this->store->checkoutByStoreToken($token);
+            if ($other !== null && $other['id'] !== $id) {
+                throw new Problem(409, 'store_token_used', 'این رسید خرید قبلاً ثبت شده است');
+            }
+            $this->store->updateCheckout($id, ['store_order_id' => $orderId, 'store_token' => $token, 'store_signature' => $signature]);
+            $row['store_order_id'] = $orderId;
+            $row['store_token'] = $token;
+            $row['store_signature'] = $signature;
+
+            return $row;
+        });
+        if ($saved['status'] === 'paid') {
+            return $this->checkoutResult($saved);
+        }
+        $this->storePurchases->verify($saved['gateway'], $productId, $token, $signature);
+
+        return $this->completeCheckout($id, $saved['gateway'], $orderId);
     }
 
     public function completeCheckout(string $id, string $gateway, ?string $reference = null): array
@@ -474,5 +530,12 @@ final class MoneyService
 
             return $this->wallet($user);
         });
+    }
+
+    private function storeProduct(string $gateway, string $code): ?string
+    {
+        $sku = config("payments.store_skus.$gateway.$code");
+
+        return is_string($sku) && $sku !== '' ? $sku : null;
     }
 }

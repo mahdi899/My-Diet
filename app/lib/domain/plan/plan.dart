@@ -36,6 +36,7 @@ class PlanRequestInfo {
     required this.questions,
     this.displayName,
     this.holdReason,
+    this.awaitingDoctor = false,
   });
   factory PlanRequestInfo.fromJson(Map<String, dynamic> j) => PlanRequestInfo(
     id: j['id'] as String,
@@ -43,6 +44,7 @@ class PlanRequestInfo {
     kind: j['kind'] as String,
     displayName: j['displayName'] as String?,
     holdReason: j['holdReason'] as String?,
+    awaitingDoctor: j['awaitingDoctor'] == true,
     questions: [
       for (final q in (j['questions'] as List?) ?? const [])
         InfoQuestion(
@@ -56,6 +58,7 @@ class PlanRequestInfo {
   final String id, status, kind;
   final String? displayName;
   final String? holdReason;
+  final bool awaitingDoctor;
   final List<InfoQuestion> questions;
   RequestPhase get phase => phaseOf(status);
   List<InfoQuestion> get openQuestions =>

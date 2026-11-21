@@ -17,11 +17,14 @@ final class ConfiguredGateways implements PaymentGateways
         if (! $this->names) {
             $this->names = [$config['default']];
         }
-        if (array_diff($this->names, ['sandbox', 'zarinpal', 'idpay']) || ! in_array($config['default'], $this->names, true)) {
+        if (array_diff($this->names, ['sandbox', 'zarinpal', 'idpay', 'bazaar', 'myket', 'preview']) || ! in_array($config['default'], $this->names, true)) {
             throw new \LogicException('PAYMENT_GATEWAYS must contain valid gateways and include PAYMENT_GATEWAY.');
         }
         if ($environment === 'production' && (in_array('sandbox', $this->names, true) || $config['zarinpal_base_url'] || $config['zarinpal_sandbox'])) {
             throw new \LogicException('Production payments cannot use the sandbox or test gateway overrides.');
+        }
+        if (in_array('preview', $this->names, true) && empty($config['preview_enabled'])) {
+            throw new \LogicException('PREVIEW_PAYMENTS must be true before the preview gateway can be enabled.');
         }
         if ($environment === 'production' && in_array('zarinpal', $this->names, true) && ! $config['zarinpal_merchant']) {
             throw new \LogicException('ZARINPAL_MERCHANT_ID must be configured.');
@@ -36,7 +39,29 @@ final class ConfiguredGateways implements PaymentGateways
 
     public function info(string $name): ?array
     {
-        return in_array($name, $this->names, true) ? ['hosted' => $name === 'zarinpal' && (bool) $this->config['zarinpal_merchant'], 'network' => $name !== 'sandbox'] : null;
+        if ($name === 'preview' && $this->previewOpen()) {
+            return ['hosted' => false, 'network' => false, 'inApp' => false, 'instant' => true];
+        }
+        if (! in_array($name, $this->names, true)) {
+            return null;
+        }
+        if (in_array($name, ['bazaar', 'myket'], true)) {
+            return ['hosted' => false, 'network' => false, 'inApp' => true];
+        }
+        if ($name === 'preview') {
+            return null;
+        }
+
+        return ['hosted' => $name === 'zarinpal' && (bool) $this->config['zarinpal_merchant'], 'network' => $name !== 'sandbox', 'inApp' => false];
+    }
+
+    private function previewOpen(): bool
+    {
+        if (filter_var($this->config['preview_enabled'] ?? false, FILTER_VALIDATE_BOOL)) {
+            return true;
+        }
+
+        return is_file(storage_path('preview-payments.on'));
     }
 
     private function post(string $path, array $payload): array

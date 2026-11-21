@@ -193,7 +193,7 @@ class _Result extends StatelessWidget {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'شرایط تو نیازمند دقت بیشتره؛ برنامه‌ات رو دکتر خودش با دقت می‌نویسه.',
+                          'برنامه ساخته می‌شود. به‌خاطر شرایطی که گفتی، قبل از نمایش باید دکتر آن را تأیید کند.',
                           style: TextStyle(fontSize: 12.5, height: 1.7),
                         ),
                       ),

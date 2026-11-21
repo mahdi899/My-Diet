@@ -185,7 +185,7 @@ void main() {
     },
   );
 
-  testWidgets('message menu can quote and save a message', (t) async {
+  testWidgets('long-press popup can quote and save a message', (t) async {
     final controller = CoachController(repository: MockCoachRepository());
     addTearDown(controller.dispose);
     controller.loading = false;
@@ -198,14 +198,18 @@ void main() {
         child: host(Scaffold(body: CoachMessageList(controller: controller))),
       ),
     );
-    await t.tap(find.byTooltip('گزینه‌های پیام'));
+    expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
+    expect(find.text('کپی متن'), findsNothing);
+    await t.longPress(find.text('توصیه شام'));
     await t.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.byType(PopupMenuItem<String>), findsNWidgets(3));
     await t.tap(find.text('ذخیره در نشان‌شده‌ها'));
     await t.pumpAndSettle();
     expect((await controller.notebook.saved()).single['text'], 'توصیه شام');
     await t.pump(const Duration(seconds: 5));
     await t.pumpAndSettle();
-    await t.tap(find.byTooltip('گزینه‌های پیام'));
+    await t.longPress(find.text('توصیه شام'));
     await t.pumpAndSettle();
     await t.tap(find.text('پاسخ به همین پیام'));
     await t.pumpAndSettle();

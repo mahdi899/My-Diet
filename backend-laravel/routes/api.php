@@ -209,6 +209,7 @@ Route::prefix('v1/me')->middleware('session:user')->controller(MoneyController::
     Route::post('checkouts', 'startCheckout');
     Route::get('checkouts/{id}', 'checkout');
     Route::post('checkouts/{id}/sandbox', 'checkoutSandbox');
+    Route::post('checkouts/{id}/store', 'confirmStore');
     Route::get('wallet', 'wallet');
     Route::get('wallet/ledger', 'ledger');
     Route::get('orders/{id}', 'order');

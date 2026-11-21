@@ -2306,6 +2306,7 @@ class DemoStore extends ChangeNotifier implements CustomerWorkspace {
   @override
   String? liveNotice;
   String? planHoldReason;
+  bool planAwaitingDoctor = false;
   @override
   String? mealFrequencyNote;
   @override

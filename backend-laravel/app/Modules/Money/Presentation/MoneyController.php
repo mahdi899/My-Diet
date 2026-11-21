@@ -80,6 +80,13 @@ final class MoneyController
         return $this->service->completeCheckout($id, 'sandbox');
     }
 
+    public function confirmStore(Request $request, string $id): array
+    {
+        $body = Input::body($request, ['purchaseToken', 'orderId', 'productId', 'signature']);
+
+        return $this->service->confirmStorePurchase($this->actor($request), Input::uuid($id), Input::string($body, 'purchaseToken', 512), Input::optional($body, 'orderId', 128), Input::string($body, 'productId', 80), Input::optional($body, 'signature', 4000));
+    }
+
     public function checkoutCallback(Request $request, string $gateway): Response
     {
         $id = Input::uuid(is_string($request->query('paymentId')) ? $request->query('paymentId') : '');

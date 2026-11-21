@@ -32,6 +32,7 @@ use App\Modules\Money\Application\MoneyStore;
 use App\Modules\Money\Application\PaymentGateways;
 use App\Modules\Money\Infrastructure\ConfiguredGateways;
 use App\Modules\Money\Infrastructure\MySqlMoney;
+use App\Modules\Money\Infrastructure\StorePurchaseVerifier;
 use App\Modules\Onboarding\Application\OnboardingAdminQueries;
 use App\Modules\Onboarding\Application\OnboardingStore;
 use App\Modules\Onboarding\Application\PurchaseConfirmation;
@@ -110,6 +111,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PlanQueryStore::class, MySqlPlanQueries::class);
         $this->app->bind(MoneyStore::class, MySqlMoney::class);
         $this->app->singleton(PaymentGateways::class, fn () => new ConfiguredGateways(config('payments'), config('identity.environment')));
+        $this->app->singleton(StorePurchaseVerifier::class, fn () => new StorePurchaseVerifier(config('payments')));
         $this->app->singleton(MoneySettings::class, fn () => new MoneySettings(config('payments.default'), config('payments.public_api_url')));
         $this->app->bind(AdminQueries::class, MySqlAdminQueries::class);
         $this->app->bind(PublishingStore::class, MySqlPublishing::class);

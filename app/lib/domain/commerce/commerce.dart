@@ -104,9 +104,21 @@ class PlanCheckout {
     this.paymentId,
     this.gateway,
     this.redirectUrl,
+    this.storeSku,
   });
   final String status;
-  final String? paymentId, gateway, redirectUrl;
+  final String? paymentId, gateway, redirectUrl, storeSku;
+}
+
+class StoreReceipt {
+  const StoreReceipt({
+    required this.productId,
+    required this.purchaseToken,
+    this.orderId,
+    this.signature,
+  });
+  final String productId, purchaseToken;
+  final String? orderId, signature;
 }
 
 abstract interface class PlanCheckoutRepository {
@@ -118,11 +130,19 @@ abstract interface class PlanCheckoutRepository {
     required String idempotencyKey,
     String? parentRequestId,
     String? planId,
+    String? gateway,
   });
   Future<PlanCheckout> checkoutStatus(String paymentId);
   Future<PlanCheckout> completeCheckoutSandbox(
     String paymentId, {
     required bool success,
+  });
+  Future<PlanCheckout> confirmStorePurchase(
+    String paymentId, {
+    required String productId,
+    required String purchaseToken,
+    String? orderId,
+    String? signature,
   });
 }
 

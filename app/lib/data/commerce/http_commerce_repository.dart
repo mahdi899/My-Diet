@@ -11,6 +11,7 @@ class HttpCommerceRepository
     paymentId: data['paymentId'] as String?,
     gateway: data['gateway'] as String?,
     redirectUrl: data['redirectUrl'] as String?,
+    storeSku: data['storeSku'] as String?,
   );
 
   @override
@@ -47,6 +48,7 @@ class HttpCommerceRepository
     required String idempotencyKey,
     String? parentRequestId,
     String? planId,
+    String? gateway,
   }) async => _checkout(
     await _api.post(
       'me/checkouts',
@@ -55,8 +57,28 @@ class HttpCommerceRepository
         'expectedPriceToman': expectedPriceToman,
         'parentRequestId': ?parentRequestId,
         'planId': ?planId,
+        'gateway': ?gateway,
       },
       headers: {'Idempotency-Key': idempotencyKey},
+    ),
+  );
+
+  @override
+  Future<PlanCheckout> confirmStorePurchase(
+    String paymentId, {
+    required String productId,
+    required String purchaseToken,
+    String? orderId,
+    String? signature,
+  }) async => _checkout(
+    await _api.post(
+      'me/checkouts/$paymentId/store',
+      body: {
+        'productId': productId,
+        'purchaseToken': purchaseToken,
+        'orderId': ?orderId,
+        'signature': ?signature,
+      },
     ),
   );
 

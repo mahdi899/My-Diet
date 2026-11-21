@@ -16,6 +16,8 @@ interface MoneyStore
 
     public function updateCheckout(string $id, array $changes): void;
 
+    public function checkoutByStoreToken(string $token): ?array;
+
     public function activateSubscription(string $user, string $service, int $days): void;
 
     public function subscription(string $user): ?array;

@@ -31,6 +31,28 @@ class LocalPlanPublishingTest extends MySqlTestCase
         }
     }
 
+    public function test_local_publish_waits_for_the_doctor_when_the_profile_is_high_risk(): void
+    {
+        $user = $this->actor();
+        $plan = $this->planFixture($user['id']);
+        $this->db->table('nutrition_profiles')->insert([
+            'user_id' => $user['id'], 'submission_id' => $plan['submission'], 'spec_version' => 2, 'track' => 'weight_loss',
+            'goal' => 'weight_loss', 'source' => 'app', 'sex' => 'female', 'age' => 35, 'height_cm' => 165,
+            'weight_kg' => 54, 'activity' => 'moderate', 'bmi' => 19.8, 'bmr_kcal' => 1235, 'tdee_kcal' => 2013,
+            'target_kcal' => 1740, 'protein_g' => 81, 'carbs_g' => 237, 'fat_g' => 52, 'diet_style' => 'omnivore',
+            'meals_per_day' => 3, 'budget' => 'low', 'allergens' => '[]', 'conditions' => '[]',
+            'risk_flags' => '["target_bmi_low"]', 'safety_tier' => 'doctor_only', 'safety_reasons' => '["target_bmi_low"]', 'preferences' => '{}',
+        ]);
+        $this->app['env'] = 'local';
+        try {
+            app(MySqlPlanGeneration::class)->publishLocal($plan['request']);
+        } finally {
+            $this->app['env'] = 'testing';
+        }
+        self::assertSame('draft', $this->db->table('plan_versions')->where('id', $plan['version'])->value('status'));
+        self::assertSame('', $this->getJson('/v1/me/plan')->assertOk()->getContent());
+    }
+
     public function test_auto_publish_leaves_drafts_unapproved_outside_local(): void
     {
         $user = $this->actor();

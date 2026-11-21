@@ -175,4 +175,32 @@ final class PlanCheckoutTest extends MySqlTestCase
             $this->db->table('plan_requests')->where('user_id', $user['id'])->update(['status' => 'published']);
         }
     }
+
+    public function test_store_checkout_keeps_the_receipt_until_the_store_api_exists(): void
+    {
+        [, $body] = $this->prepareCheckout();
+        config(['payments.default' => 'sandbox', 'payments.enabled' => 'sandbox,bazaar', 'payments.store_skus.bazaar.new_plan' => 'sku_new_plan']);
+        app()->forgetInstance(PaymentGateways::class);
+        $created = $this->postJson('/v1/me/checkouts', [...$body, 'gateway' => 'bazaar'], ['Idempotency-Key' => 'bazaar-checkout-1'])->assertCreated();
+        $created->assertJsonPath('gateway', 'bazaar')->assertJsonPath('storeSku', 'sku_new_plan')->assertJsonPath('status', 'pending');
+        $id = $created->json('paymentId');
+        $this->postJson('/v1/me/checkouts/'.$id.'/store', ['purchaseToken' => 'token-1', 'orderId' => 'order-1', 'productId' => 'sku_new_plan', 'signature' => 'sig'])
+            ->assertStatus(503)->assertJsonPath('code', 'store_verifier_unconfigured');
+        $stored = $this->db->table('plan_checkouts')->where('id', $id)->first();
+        self::assertSame('pending', $stored->status);
+        self::assertSame('token-1', $stored->store_token);
+        self::assertSame('sku_new_plan', $stored->store_sku);
+    }
+
+    public function test_preview_gateway_marks_the_checkout_paid_without_a_store(): void
+    {
+        [$user, $body] = $this->prepareCheckout();
+        config(['payments.default' => 'sandbox', 'payments.enabled' => 'sandbox,preview', 'payments.preview_enabled' => true]);
+        app()->forgetInstance(PaymentGateways::class);
+        $created = $this->postJson('/v1/me/checkouts', [...$body, 'gateway' => 'preview'], ['Idempotency-Key' => 'preview-checkout-1'])->assertCreated();
+        $created->assertJsonPath('status', 'paid')->assertJsonPath('gateway', 'preview');
+        $id = $created->json('paymentId');
+        $this->postJson('/v1/me/checkouts', [...$body, 'gateway' => 'preview'], ['Idempotency-Key' => 'preview-checkout-1'])->assertCreated()->assertJsonPath('paymentId', $id);
+        self::assertSame(1, $this->db->table('plan_requests')->where('user_id', $user['id'])->count());
+    }
 }
